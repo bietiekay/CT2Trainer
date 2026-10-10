@@ -15,6 +15,18 @@ is maintained in English.
 - [Semantic corpus denominator](native-semantic-denominator.md): the 13 pinned case tables, gap classes and coverage.
 - [../TableReferences/README.md](../TableReferences/README.md): synthetic clean-room corpus and the case-to-origin mapping.
 
+## Agent workflow
+
+- [Native progress ledger](native-progress.md): confirmed state, measured
+  numbers and the prioritized open work (binding result list, referenced by
+  `AGENTS.md` and the continuation plan).
+- [AP-11 game campaign](native-ap11-campaign.md): the real-game campaign
+  manifest, per-table procedure, report format and ingestion tooling.
+- [Subagent lane rules](subagent-lane-rules.md): the operational contract
+  for parallel implementation lanes (workspace, tests, reporting).
+- [New table candidates](native-new-table-candidates.md): historical
+  corpus-selection rationale behind the pinned case tables.
+
 ## Tests and protocols
 
 - [../tests/deck/compatibility-matrix.md](../tests/deck/compatibility-matrix.md): open Proton/Deck protocol for prefix, process effect and touch in both modes.

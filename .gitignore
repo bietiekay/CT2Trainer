@@ -11,3 +11,4 @@ tests/windows/fixture_target/*.exe
 tests/windows/fixture_target/*.obj
 tests/windows/fixture_target/*.o
 tests/windows/fixture_target/*.pdb
+tools/agent_load.py

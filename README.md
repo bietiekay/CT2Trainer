@@ -7,6 +7,15 @@ is a clean-room project: it uses no external trainer source code, binaries or
 data — only the public `.CT`/XML format contract and documented behavior are
 derived.
 
+## Provenance
+
+This repository — code, tests, tooling, documentation and release
+artifacts — is fully AI-generated: developed end-to-end by AI agents
+under human direction. AI-authored commits are welcome; the working
+contract for agents (boundaries, build rules, lane protocol) is
+documented in `AGENTS.md` and
+`plans/native-implementation-continuation.md`.
+
 ## Screenshots
 
 The converter inspects a `.CT` table, takes the exact target EXE name and
@@ -66,7 +75,9 @@ suite, and the release content rules are documented in
 | `gap_inventory/` | committed measurement artifacts (run `repo-reproducible`) |
 | `dependencies/` | hash-pinned offline build inputs (Python, PyInstaller, NASM, iced-x86, Lupa, selected Mono API sources) |
 | `licenses/` | CT2Trainer MIT grant and third-party notices |
-| `documentation/` | build, usage, derivation, runtime and verification docs |
+| `documentation/` | build, usage, derivation, runtime, verification and agent-workflow docs |
+| `AGENTS.md` | agent handoff: project boundaries, workflow and launch rules (local tooling, not shipped) |
+| `plans/` | implementation and continuation plan: work packages, acceptance, open work |
 
 ## Verification status
 

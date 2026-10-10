@@ -47,9 +47,12 @@ Single maintained changelog for CT2Trainer releases.
   `tests/test_native_mono_runtime.py` (`PinnedTablePathTests`) covers
   path resolution in both source and frozen mode.
 - Fresh, fully offline build
-  `native-20261010T165731Z-3d1da645` via `scripts/Build-Native.ps1`:
+  `native-20261010T172336Z-ffe35eb0` via `scripts/Build-Native.ps1`:
   in-build suite 2617 OK / 25 regular skips; `ce_inputs` empty;
-  `runtime_unverified` deliberately kept per gate.
+  `api-prototypes.json` present in both EXE payload inventories;
+  `runtime_unverified` deliberately kept per gate. The portable ZIP of
+  this release was user-tested (converter run plus generated trainer on
+  a machine without CE or Python).
 - Release artifacts for this entry:
   `CT2Trainer-0.9.0-rc2-source.zip`,
   `CT2Trainer-0.9.0-rc2-windows-portable.zip` with the output hashes
