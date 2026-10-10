@@ -1,0 +1,1047 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>10000000</ID>
+      <Description>"SynR Group 001"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>48107</ID>
+        <Description>"Syn11 Item 48107"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB48107,ct2synth11.exe,48 8B 05 01 02 03 04)
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>48108</ID>
+        <Description>"Syn11 Item 48108"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB48108,ct2synth11.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB48108)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB48108)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>48109</ID>
+        <Description>"Syn11 Item 48109"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB48109,ct2synth11.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB48109)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB48109)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1</ID>
+        <Description>"Syn11 Item 1"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+alloc(synCave0001,64)
+aobscanmodule(synAOB0001,ct2synth11.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0001)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0001)
+unregistersymbol(synAOB0001)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>48114</ID>
+        <Description>"Syn11 Item 48114"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB48114,ct2synth11.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB48114)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB48114)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>48119</ID>
+        <Description>"Syn11 Item 48119"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+alloc(synCave48119,64)
+aobscanmodule(synAOB48119,ct2synth11.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB48119)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave48119)
+unregistersymbol(synAOB48119)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>48124</ID>
+        <Description>"Syn11 Item 48124"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB48124,ct2synth11.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB48124)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB48124)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>48136</ID>
+        <Description>"Syn11 Item 48136"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave48136,64)
+aobscanmodule(synAOB48136,ct2synth11.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB48136)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave48136)
+unregistersymbol(synAOB48136)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>2</ID>
+        <Description>"Syn11 Item 2"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>synSym11_02</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>34</ID>
+        <Description>"Syn11 Item 34"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+alloc(synCave0034,64)
+aobscanmodule(synAOB0034,ct2synth11.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0034)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0034)
+unregistersymbol(synAOB0034)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>48131</ID>
+        <Description>"Syn11 Item 48131"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+alloc(synCave48131,64)
+aobscanmodule(synAOB48131,ct2synth11.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB48131)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave48131)
+unregistersymbol(synAOB48131)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>48132</ID>
+        <Description>"Syn11 Item 48132"</Description>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>synSym11_05</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>48134</ID>
+        <Description>"Syn11 Item 48134"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+alloc(synCave48134,64)
+aobscanmodule(synAOB48134,ct2synth11.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB48134)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave48134)
+unregistersymbol(synAOB48134)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>48137</ID>
+        <Description>"Syn11 Item 48137"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+alloc(synCave48137,64)
+aobscanmodule(synAOB48137,ct2synth11.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB48137)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave48137)
+unregistersymbol(synAOB48137)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>113</ID>
+        <Description>"Syn11 Item 113"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0020F</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>114</ID>
+        <Description>"Syn11 Item 114"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00210</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>131</ID>
+        <Description>"Syn11 Item 131"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00211</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>132</ID>
+        <Description>"Syn11 Item 132"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00212</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10000001</ID>
+      <Description>"SynR Group 002"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>141</ID>
+        <Description>"Syn11 Item 141"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00213</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>142</ID>
+        <Description>"Syn11 Item 142"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00214</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>213</ID>
+        <Description>"Syn11 Item 213"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+00215</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>214</ID>
+        <Description>"Syn11 Item 214"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00216</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>215</ID>
+        <Description>"Syn11 Item 215"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00217</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>216</ID>
+        <Description>"Syn11 Item 216"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00218</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>295</ID>
+        <Description>"Syn11 Item 295"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00219</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>296</ID>
+        <Description>"Syn11 Item 296"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0021A</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>321</ID>
+        <Description>"Syn11 Item 321"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0021B</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>322</ID>
+        <Description>"Syn11 Item 322"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0021C</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>329</ID>
+        <Description>"Syn11 Item 329"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+0021D</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>330</ID>
+        <Description>"Syn11 Item 330"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0021E</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>531</ID>
+        <Description>"Syn11 Item 531"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0021F</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>532</ID>
+        <Description>"Syn11 Item 532"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00220</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>873</ID>
+        <Description>"Syn11 Item 873"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00221</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>874</ID>
+        <Description>"Syn11 Item 874"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00222</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10000002</ID>
+      <Description>"SynR Group 003"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>907</ID>
+        <Description>"Syn11 Item 907"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00223</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>908</ID>
+        <Description>"Syn11 Item 908"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00224</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1075</ID>
+        <Description>"Syn11 Item 1075"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+00225</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1076</ID>
+        <Description>"Syn11 Item 1076"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00226</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1309</ID>
+        <Description>"Syn11 Item 1309"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00227</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1310</ID>
+        <Description>"Syn11 Item 1310"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00228</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>2337</ID>
+        <Description>"Syn11 Item 2337"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00229</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>2338</ID>
+        <Description>"Syn11 Item 2338"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0022A</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3321</ID>
+        <Description>"Syn11 Item 3321"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0022B</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3322</ID>
+        <Description>"Syn11 Item 3322"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0022C</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3401</ID>
+        <Description>"Syn11 Item 3401"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+0022D</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3402</ID>
+        <Description>"Syn11 Item 3402"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0022E</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3423</ID>
+        <Description>"Syn11 Item 3423"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0022F</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3424</ID>
+        <Description>"Syn11 Item 3424"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00230</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3427</ID>
+        <Description>"Syn11 Item 3427"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00231</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3428</ID>
+        <Description>"Syn11 Item 3428"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00232</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10000003</ID>
+      <Description>"SynR Group 004"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>3429</ID>
+        <Description>"Syn11 Item 3429"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00233</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3430</ID>
+        <Description>"Syn11 Item 3430"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00234</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3451</ID>
+        <Description>"Syn11 Item 3451"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+00235</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3452</ID>
+        <Description>"Syn11 Item 3452"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00236</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3495</ID>
+        <Description>"Syn11 Item 3495"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00237</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3496</ID>
+        <Description>"Syn11 Item 3496"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00238</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3503</ID>
+        <Description>"Syn11 Item 3503"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00239</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>3504</ID>
+        <Description>"Syn11 Item 3504"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0023A</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>4587</ID>
+        <Description>"Syn11 Item 4587"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0023B</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>4588</ID>
+        <Description>"Syn11 Item 4588"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0023C</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>4737</ID>
+        <Description>"Syn11 Item 4737"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+0023D</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>4738</ID>
+        <Description>"Syn11 Item 4738"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0023E</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5233</ID>
+        <Description>"Syn11 Item 5233"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0023F</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5234</ID>
+        <Description>"Syn11 Item 5234"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00240</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5237</ID>
+        <Description>"Syn11 Item 5237"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00241</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5238</ID>
+        <Description>"Syn11 Item 5238"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00242</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10000004</ID>
+      <Description>"SynR Group 005"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>5257</ID>
+        <Description>"Syn11 Item 5257"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00243</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5258</ID>
+        <Description>"Syn11 Item 5258"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00244</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5263</ID>
+        <Description>"Syn11 Item 5263"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+00245</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5264</ID>
+        <Description>"Syn11 Item 5264"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00246</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5289</ID>
+        <Description>"Syn11 Item 5289"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00247</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5290</ID>
+        <Description>"Syn11 Item 5290"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00248</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5307</ID>
+        <Description>"Syn11 Item 5307"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00249</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5308</ID>
+        <Description>"Syn11 Item 5308"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0024A</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5585</ID>
+        <Description>"Syn11 Item 5585"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0024B</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5586</ID>
+        <Description>"Syn11 Item 5586"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0024C</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5907</ID>
+        <Description>"Syn11 Item 5907"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+0024D</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5908</ID>
+        <Description>"Syn11 Item 5908"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0024E</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5933</ID>
+        <Description>"Syn11 Item 5933"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0024F</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5934</ID>
+        <Description>"Syn11 Item 5934"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00250</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>6131</ID>
+        <Description>"Syn11 Item 6131"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00251</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>6132</ID>
+        <Description>"Syn11 Item 6132"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00252</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10000005</ID>
+      <Description>"SynR Group 006"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>6135</ID>
+        <Description>"Syn11 Item 6135"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00253</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>6136</ID>
+        <Description>"Syn11 Item 6136"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00254</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>7567</ID>
+        <Description>"Syn11 Item 7567"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+00255</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>7568</ID>
+        <Description>"Syn11 Item 7568"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00256</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>7791</ID>
+        <Description>"Syn11 Item 7791"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00257</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>7792</ID>
+        <Description>"Syn11 Item 7792"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00258</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>8669</ID>
+        <Description>"Syn11 Item 8669"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00259</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>8670</ID>
+        <Description>"Syn11 Item 8670"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0025A</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>8671</ID>
+        <Description>"Syn11 Item 8671"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0025B</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>8672</ID>
+        <Description>"Syn11 Item 8672"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0025C</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>8673</ID>
+        <Description>"Syn11 Item 8673"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+0025D</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>8674</ID>
+        <Description>"Syn11 Item 8674"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0025E</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>9813</ID>
+        <Description>"Syn11 Item 9813"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0025F</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>9814</ID>
+        <Description>"Syn11 Item 9814"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00260</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>9987</ID>
+        <Description>"Syn11 Item 9987"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00261</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>9988</ID>
+        <Description>"Syn11 Item 9988"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00262</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10000006</ID>
+      <Description>"SynR Group 007"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>12145</ID>
+        <Description>"Syn11 Item 12145"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00263</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>12146</ID>
+        <Description>"Syn11 Item 12146"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00264</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>12157</ID>
+        <Description>"Syn11 Item 12157"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+00265</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>12158</ID>
+        <Description>"Syn11 Item 12158"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00266</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>23927</ID>
+        <Description>"Syn11 Item 23927"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+00267</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>23928</ID>
+        <Description>"Syn11 Item 23928"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00268</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>26921</ID>
+        <Description>"Syn11 Item 26921"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00269</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>26922</ID>
+        <Description>"Syn11 Item 26922"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0026A</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>27119</ID>
+        <Description>"Syn11 Item 27119"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0026B</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>27120</ID>
+        <Description>"Syn11 Item 27120"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0026C</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>27169</ID>
+        <Description>"Syn11 Item 27169"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>ct2synth11.exe+0026D</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>27170</ID>
+        <Description>"Syn11 Item 27170"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+0026E</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>29711</ID>
+        <Description>"Syn11 Item 29711"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>ct2synth11.exe+0026F</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>29712</ID>
+        <Description>"Syn11 Item 29712"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00270</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>37181</ID>
+        <Description>"Syn11 Item 37181"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth11.exe+00271</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>37182</ID>
+        <Description>"Syn11 Item 37182"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>ct2synth11.exe+00272</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>

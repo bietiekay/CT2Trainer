@@ -1,0 +1,75 @@
+<?xml version='1.0' encoding='utf-8'?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>Own automatic Lua AA</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{$lua}
+function helper() return 17 end
+{$asm}
+[ENABLE]
+{$lua}
+assert(memrec.ID==1 and memrec.Active==false)
+if not syntaxcheck then
+  ownedAA=[[[ENABLE]
+alloc(ownedbuf,1000)
+registersymbol(ownedbuf)
+ownedbuf:
+dd 0
+[DISABLE]
+unregistersymbol(ownedbuf)
+dealloc(ownedbuf)
+]]
+  ok,receipt=autoAssemble(ownedAA)
+  assert(ok and receipt)
+  writeInteger("ownedbuf",helper())
+  w=createThread(function(t) sleep(10); writeInteger("ownedbuf",helper()+2); sleep(1000); writeInteger("ownedbuf",99) end)
+end
+{$asm}
+aobscanmodule(site,NativeHookFixture.exe,8B C1 83 C0 01 90 90 C3)
+alloc(newmem,1000,site)
+label(flag)
+label(ordinary)
+label(return)
+registersymbol(flag)
+newmem:
+mov eax,ecx
+cmp dword [flag],0
+je ordinary
+add eax,#100
+jmp return
+ordinary:
+add eax,1
+jmp return
+flag:
+dd 0
+site:
+jmp newmem
+nop 2
+return:
+[DISABLE]
+{$lua}
+assert(memrec.ID==1 and memrec.Active==true)
+w.terminate()
+assert(autoAssemble(ownedAA,false,receipt))
+{$asm}
+site:
+db 8B C1 83 C0 01 90 90
+unregistersymbol(flag)
+dealloc(newmem)
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>Own literal flag</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+flag:
+dd 1
+[DISABLE]
+flag:
+dd 0</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

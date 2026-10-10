@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID><Description>"Owned executable hook"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(anchor,NativeHookFixture.exe,8B C1 83 C0 01 90 90 C3)
+alloc(newmem,$1000,anchor)
+label(return)
+newmem:
+ mov eax,ecx
+ add eax,#100
+ jmp return
+anchor:
+ jmp newmem
+ nop 2
+return:
+registersymbol(anchor)
+[DISABLE]
+anchor:
+ db 8B C1 83 C0 01 90 90
+unregistersymbol(*)
+dealloc(*)
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

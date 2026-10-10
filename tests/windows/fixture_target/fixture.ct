@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Locate fixture data (enable first)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(FixtureAnchor,FixtureTarget.exe,43 54 32 54 2D 46 49 58 2D 32 30 32 36 2D 30 31)
+registersymbol(FixtureAnchor)
+
+[DISABLE]
+unregistersymbol(FixtureAnchor)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Pause ticks (disable to resume)"</Description>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+assert(FixtureAnchor+14,00 00 00 00)
+FixtureAnchor+14:
+  dd 1
+
+[DISABLE]
+assert(FixtureAnchor+14,01 00 00 00)
+FixtureAnchor+14:
+  dd 0</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Test value (4 Bytes, writable)"</Description>
+      <VariableType>4 Bytes</VariableType>
+      <Address>FixtureAnchor+10</Address>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"Tick counter (4 Bytes, observe)"</Description>
+      <VariableType>4 Bytes</VariableType>
+      <Address>FixtureAnchor+18</Address>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

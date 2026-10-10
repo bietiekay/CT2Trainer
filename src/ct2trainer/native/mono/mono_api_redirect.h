@@ -1,0 +1,48 @@
+/* First-party call indirection. Include after all upstream declarations. */
+#ifndef TF_MONO_API_REDIRECT_H
+#define TF_MONO_API_REDIRECT_H
+#include "mono_api.h"
+static tf_mono_api g_api;
+#define mono_assembly_get_image g_api.tf_assembly_get_image
+#define mono_assembly_get_name g_api.tf_assembly_get_name
+#define mono_assembly_name_get_name g_api.tf_assembly_name_get_name
+#define mono_class_from_name g_api.tf_class_from_name
+#define mono_class_get_methods g_api.tf_class_get_methods
+#define mono_class_get_name g_api.tf_class_get_name
+#define mono_class_get_namespace g_api.tf_class_get_namespace
+#define mono_class_get_type_token g_api.tf_class_get_type_token
+#define mono_compile_method g_api.tf_compile_method
+#define mono_domain_get_by_id g_api.tf_domain_get_by_id
+#define mono_domain_get_id g_api.tf_domain_get_id
+#define mono_domain_is_unloading g_api.tf_domain_is_unloading
+#define mono_free g_api.tf_free
+#define mono_gchandle_get_target g_api.tf_gchandle_get_target
+#define mono_gchandle_new g_api.tf_gchandle_new
+#define mono_get_root_domain g_api.tf_get_root_domain
+#define mono_get_runtime_build_info g_api.tf_get_runtime_build_info
+#define mono_image_get_name g_api.tf_image_get_name
+#define mono_image_get_table_info g_api.tf_image_get_table_info
+#define mono_jit_info_get_code_size g_api.tf_jit_info_get_code_size
+#define mono_jit_info_get_code_start g_api.tf_jit_info_get_code_start
+#define mono_jit_info_get_method g_api.tf_jit_info_get_method
+#define mono_jit_info_table_find g_api.tf_jit_info_table_find
+#define mono_metadata_decode_row_col g_api.tf_metadata_decode_row_col
+#define mono_method_get_class g_api.tf_method_get_class
+#define mono_method_get_name g_api.tf_method_get_name
+#define mono_method_get_token g_api.tf_method_get_token
+#define mono_method_signature g_api.tf_method_signature
+#define mono_object_get_class g_api.tf_object_get_class
+#define mono_object_unbox g_api.tf_object_unbox
+#define mono_runtime_invoke g_api.tf_runtime_invoke
+#define mono_signature_explicit_this g_api.tf_signature_explicit_this
+#define mono_signature_get_call_conv g_api.tf_signature_get_call_conv
+#define mono_signature_get_param_count g_api.tf_signature_get_param_count
+#define mono_signature_get_params g_api.tf_signature_get_params
+#define mono_signature_get_return_type g_api.tf_signature_get_return_type
+#define mono_signature_is_instance g_api.tf_signature_is_instance
+#define mono_table_info_get_rows g_api.tf_table_info_get_rows
+#define mono_thread_attach g_api.tf_thread_attach
+#define mono_thread_detach g_api.tf_thread_detach
+#define mono_type_get_type g_api.tf_type_get_type
+#define mono_type_is_byref g_api.tf_type_is_byref
+#endif

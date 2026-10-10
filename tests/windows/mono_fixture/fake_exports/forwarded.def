@@ -1,0 +1,2 @@
+EXPORTS
+ mono_compile_method=kernel32.Sleep

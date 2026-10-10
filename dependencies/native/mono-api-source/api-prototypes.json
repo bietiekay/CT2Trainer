@@ -1,0 +1,216 @@
+{
+  "schema": "ct2trainer-mono-api-prototypes/v1",
+  "commit": "0cbf0e290c31adb476f9de0fa44b1d8829affa40",
+  "required_exports": [
+    {
+      "export": "mono_assembly_get_image",
+      "field": "tf_assembly_get_image",
+      "prototype": "MonoImage *mono_assembly_get_image (MonoAssembly *assembly)"
+    },
+    {
+      "export": "mono_assembly_get_name",
+      "field": "tf_assembly_get_name",
+      "prototype": "MonoAssemblyName *mono_assembly_get_name (MonoAssembly *assembly)"
+    },
+    {
+      "export": "mono_assembly_name_get_name",
+      "field": "tf_assembly_name_get_name",
+      "prototype": "const char* mono_assembly_name_get_name (MonoAssemblyName *aname)"
+    },
+    {
+      "export": "mono_class_from_name",
+      "field": "tf_class_from_name",
+      "prototype": "MonoClass * mono_class_from_name (MonoImage *image, const char* name_space, const char *name)"
+    },
+    {
+      "export": "mono_class_get_methods",
+      "field": "tf_class_get_methods",
+      "prototype": "MonoMethod* mono_class_get_methods (MonoClass* klass, void **iter)"
+    },
+    {
+      "export": "mono_class_get_name",
+      "field": "tf_class_get_name",
+      "prototype": "const char* mono_class_get_name (MonoClass *klass)"
+    },
+    {
+      "export": "mono_class_get_namespace",
+      "field": "tf_class_get_namespace",
+      "prototype": "const char* mono_class_get_namespace (MonoClass *klass)"
+    },
+    {
+      "export": "mono_class_get_type_token",
+      "field": "tf_class_get_type_token",
+      "prototype": "uint32_t mono_class_get_type_token (MonoClass *klass)"
+    },
+    {
+      "export": "mono_compile_method",
+      "field": "tf_compile_method",
+      "prototype": "void* mono_compile_method (MonoMethod *method)"
+    },
+    {
+      "export": "mono_domain_get_by_id",
+      "field": "tf_domain_get_by_id",
+      "prototype": "MonoDomain * mono_domain_get_by_id (int32_t domainid)"
+    },
+    {
+      "export": "mono_domain_get_id",
+      "field": "tf_domain_get_id",
+      "prototype": "int32_t mono_domain_get_id (MonoDomain *domain)"
+    },
+    {
+      "export": "mono_domain_is_unloading",
+      "field": "tf_domain_is_unloading",
+      "prototype": "mono_bool mono_domain_is_unloading (MonoDomain *domain)"
+    },
+    {
+      "export": "mono_free",
+      "field": "tf_free",
+      "prototype": "void mono_free (void *)"
+    },
+    {
+      "export": "mono_gchandle_get_target",
+      "field": "tf_gchandle_get_target",
+      "prototype": "MonoObject* mono_gchandle_get_target (uint32_t gchandle)"
+    },
+    {
+      "export": "mono_gchandle_new",
+      "field": "tf_gchandle_new",
+      "prototype": "uint32_t mono_gchandle_new (MonoObject *obj, mono_bool pinned)"
+    },
+    {
+      "export": "mono_get_root_domain",
+      "field": "tf_get_root_domain",
+      "prototype": "MonoDomain* mono_get_root_domain (void)"
+    },
+    {
+      "export": "mono_get_runtime_build_info",
+      "field": "tf_get_runtime_build_info",
+      "prototype": "char* mono_get_runtime_build_info (void)"
+    },
+    {
+      "export": "mono_image_get_name",
+      "field": "tf_image_get_name",
+      "prototype": "const char* mono_image_get_name (MonoImage *image)"
+    },
+    {
+      "export": "mono_image_get_table_info",
+      "field": "tf_image_get_table_info",
+      "prototype": "const MonoTableInfo *mono_image_get_table_info (MonoImage *image, int table_id)"
+    },
+    {
+      "export": "mono_jit_info_get_code_size",
+      "field": "tf_jit_info_get_code_size",
+      "prototype": "int mono_jit_info_get_code_size (MonoJitInfo* ji)"
+    },
+    {
+      "export": "mono_jit_info_get_code_start",
+      "field": "tf_jit_info_get_code_start",
+      "prototype": "void* mono_jit_info_get_code_start (MonoJitInfo* ji)"
+    },
+    {
+      "export": "mono_jit_info_get_method",
+      "field": "tf_jit_info_get_method",
+      "prototype": "MonoMethod* mono_jit_info_get_method (MonoJitInfo* ji)"
+    },
+    {
+      "export": "mono_jit_info_table_find",
+      "field": "tf_jit_info_table_find",
+      "prototype": "MonoJitInfo * mono_jit_info_table_find (MonoDomain *domain, void* addr)"
+    },
+    {
+      "export": "mono_metadata_decode_row_col",
+      "field": "tf_metadata_decode_row_col",
+      "prototype": "uint32_t mono_metadata_decode_row_col (const MonoTableInfo *t, int idx, unsigned int col)"
+    },
+    {
+      "export": "mono_method_get_class",
+      "field": "tf_method_get_class",
+      "prototype": "MonoClass* mono_method_get_class (MonoMethod *method)"
+    },
+    {
+      "export": "mono_method_get_name",
+      "field": "tf_method_get_name",
+      "prototype": "const char* mono_method_get_name (MonoMethod *method)"
+    },
+    {
+      "export": "mono_method_get_token",
+      "field": "tf_method_get_token",
+      "prototype": "uint32_t mono_method_get_token (MonoMethod *method)"
+    },
+    {
+      "export": "mono_method_signature",
+      "field": "tf_method_signature",
+      "prototype": "MonoMethodSignature* mono_method_signature (MonoMethod *method)"
+    },
+    {
+      "export": "mono_object_get_class",
+      "field": "tf_object_get_class",
+      "prototype": "MonoClass* mono_object_get_class (MonoObject *obj)"
+    },
+    {
+      "export": "mono_object_unbox",
+      "field": "tf_object_unbox",
+      "prototype": "void* mono_object_unbox (MonoObject *obj)"
+    },
+    {
+      "export": "mono_runtime_invoke",
+      "field": "tf_runtime_invoke",
+      "prototype": "MonoObject* mono_runtime_invoke (MonoMethod *method, void *obj, void **params, MonoObject **exc)"
+    },
+    {
+      "export": "mono_signature_explicit_this",
+      "field": "tf_signature_explicit_this",
+      "prototype": "mono_bool mono_signature_explicit_this (MonoMethodSignature *sig)"
+    },
+    {
+      "export": "mono_signature_get_call_conv",
+      "field": "tf_signature_get_call_conv",
+      "prototype": "uint32_t mono_signature_get_call_conv (MonoMethodSignature *sig)"
+    },
+    {
+      "export": "mono_signature_get_param_count",
+      "field": "tf_signature_get_param_count",
+      "prototype": "uint32_t mono_signature_get_param_count (MonoMethodSignature *sig)"
+    },
+    {
+      "export": "mono_signature_get_params",
+      "field": "tf_signature_get_params",
+      "prototype": "MonoType* mono_signature_get_params (MonoMethodSignature *sig, void **iter)"
+    },
+    {
+      "export": "mono_signature_get_return_type",
+      "field": "tf_signature_get_return_type",
+      "prototype": "MonoType* mono_signature_get_return_type (MonoMethodSignature *sig)"
+    },
+    {
+      "export": "mono_signature_is_instance",
+      "field": "tf_signature_is_instance",
+      "prototype": "mono_bool mono_signature_is_instance (MonoMethodSignature *sig)"
+    },
+    {
+      "export": "mono_table_info_get_rows",
+      "field": "tf_table_info_get_rows",
+      "prototype": "int mono_table_info_get_rows (const MonoTableInfo *table)"
+    },
+    {
+      "export": "mono_thread_attach",
+      "field": "tf_thread_attach",
+      "prototype": "MonoThread *mono_thread_attach (MonoDomain *domain)"
+    },
+    {
+      "export": "mono_thread_detach",
+      "field": "tf_thread_detach",
+      "prototype": "void mono_thread_detach (MonoThread *thread)"
+    },
+    {
+      "export": "mono_type_get_type",
+      "field": "tf_type_get_type",
+      "prototype": "int mono_type_get_type (MonoType *type)"
+    },
+    {
+      "export": "mono_type_is_byref",
+      "field": "tf_type_is_byref",
+      "prototype": "mono_bool mono_type_is_byref (MonoType *type)"
+    }
+  ]
+}

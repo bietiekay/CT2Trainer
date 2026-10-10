@@ -1,0 +1,1685 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="19">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>30</ID>
+      <Description>"Syn02 Item 30"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0030,64)
+aobscanmodule(synAOB0030,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0030)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0030)
+unregistersymbol(synAOB0030)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9100000</ID>
+      <Description>"SynF Group 001"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>975</ID>
+        <Description>"Syn02 Item 975"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+alloc(synCave0975,64)
+aobscanmodule(synAOB0975,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0975)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0975)
+unregistersymbol(synAOB0975)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>104</ID>
+        <Description>"Syn02 Item 104"</Description>
+        <Color>0075EA</Color>
+        <VariableType>String</VariableType>
+        <Address>ct2synth02.exe+00203</Address>
+        <Length>32</Length>
+        <Unicode>0</Unicode>
+        <CodePage>0</CodePage>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>106</ID>
+        <Description>"Syn02 Item 106"</Description>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>+00104</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>107</ID>
+        <Description>"Syn02 Item 107"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>+00105</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>108</ID>
+        <Description>"Syn02 Item 108"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>+00106</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>109</ID>
+        <Description>"Syn02 Item 109"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>+00107</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>110</ID>
+        <Description>"Syn02 Item 110"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>+00108</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>111</ID>
+        <Description>"Syn02 Item 111"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>+00109</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>112</ID>
+        <Description>"Syn02 Item 112"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+alloc(synCave0112,64)
+aobscanmodule(synAOB0112,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0112)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0112)
+unregistersymbol(synAOB0112)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>114</ID>
+        <Description>"Syn02 Item 114"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+alloc(synCave0114,64)
+aobscanmodule(synAOB0114,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0114)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0114)
+unregistersymbol(synAOB0114)</AssemblerScript>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9100001</ID>
+      <Description>"SynF Group 002"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>115</ID>
+        <Description>"Syn02 Item 115"</Description>
+        <Color>0075EA</Color>
+        <VariableType>String</VariableType>
+        <Address>synSym02_05</Address>
+        <Length>32</Length>
+        <Unicode>0</Unicode>
+        <CodePage>0</CodePage>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>124</ID>
+        <Description>"Syn02 Item 124"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+alloc(synCave0124,64)
+aobscanmodule(synAOB0124,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0124)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0124)
+unregistersymbol(synAOB0124)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>125</ID>
+        <Description>"Syn02 Item 125"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym02_07</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>126</ID>
+        <Description>"Syn02 Item 126"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>+0010F</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>128</ID>
+        <Description>"Syn02 Item 128"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>+00110</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>866</ID>
+        <Description>"Syn02 Item 866"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>+00111</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>867</ID>
+        <Description>"Syn02 Item 867"</Description>
+        <Color>0075EA</Color>
+        <VariableType>2 Bytes</VariableType>
+        <Address>+00112</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>868</ID>
+        <Description>"Syn02 Item 868"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>+00113</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>869</ID>
+        <Description>"Syn02 Item 869"</Description>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>+00114</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>870</ID>
+        <Description>"Syn02 Item 870"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>+00115</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9100002</ID>
+      <Description>"SynF Group 003"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>871</ID>
+        <Description>"Syn02 Item 871"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>+00116</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>872</ID>
+        <Description>"Syn02 Item 872"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>+00117</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>880</ID>
+        <Description>"Syn02 Item 880"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>+00118</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>903</ID>
+        <Description>"Syn02 Item 903"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0903,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0903)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB0903)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>904</ID>
+        <Description>"Syn02 Item 904"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0904,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0904)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB0904)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>905</ID>
+        <Description>"Syn02 Item 905"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0905,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0905)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB0905)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>914</ID>
+        <Description>"Syn02 Item 914"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+alloc(synCave0914,64)
+aobscanmodule(synAOB0914,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0914)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0914)
+unregistersymbol(synAOB0914)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>924</ID>
+        <Description>"Syn02 Item 924"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>+0011D</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>927</ID>
+        <Description>"Syn02 Item 927"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>ct2synth02.exe+0021E</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>929</ID>
+        <Description>"Syn02 Item 929"</Description>
+        <Color>0075EA</Color>
+        <VariableType>String</VariableType>
+        <Address>ct2synth02.exe+0021F</Address>
+        <Length>32</Length>
+        <Unicode>0</Unicode>
+        <CodePage>0</CodePage>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9100003</ID>
+      <Description>"SynF Group 004"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>931</ID>
+        <Description>"Syn02 Item 931"</Description>
+        <Color>0075EA</Color>
+        <VariableType>String</VariableType>
+        <Address>+00120</Address>
+        <Length>32</Length>
+        <Unicode>0</Unicode>
+        <CodePage>0</CodePage>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>932</ID>
+        <Description>"Syn02 Item 932"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>+00121</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>933</ID>
+        <Description>"Syn02 Item 933"</Description>
+        <Color>0075EA</Color>
+        <VariableType>String</VariableType>
+        <Address>+00122</Address>
+        <Length>32</Length>
+        <Unicode>0</Unicode>
+        <CodePage>0</CodePage>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>936</ID>
+        <Description>"Syn02 Item 936"</Description>
+        <Color>0075EA</Color>
+        <VariableType>String</VariableType>
+        <Address>ct2synth02.exe+00223</Address>
+        <Length>32</Length>
+        <Unicode>0</Unicode>
+        <CodePage>0</CodePage>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>937</ID>
+        <Description>"Syn02 Item 937"</Description>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>ct2synth02.exe+00224</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>938</ID>
+        <Description>"Syn02 Item 938"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>+00125</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>939</ID>
+        <Description>"Syn02 Item 939"</Description>
+        <Color>0075EA</Color>
+        <VariableType>String</VariableType>
+        <Address>+00126</Address>
+        <Length>32</Length>
+        <Unicode>0</Unicode>
+        <CodePage>0</CodePage>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>943</ID>
+        <Description>"Syn02 Item 943"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>+00127</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>944</ID>
+        <Description>"Syn02 Item 944"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>004140+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1098</ID>
+        <Description>"Syn02 Item 1098"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>synSym02_02</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>7</ID>
+      <Description>"Syn02 Item 7"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0007,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0007)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB0007)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>12</ID>
+      <Description>"Syn02 Item 12"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0012,64)
+aobscanmodule(synAOB0012,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0012)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0012)
+unregistersymbol(synAOB0012)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>43</ID>
+      <Description>"Syn02 Item 43"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0043,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0043)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB0043)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>66</ID>
+      <Description>"Syn02 Item 66"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0066,64)
+aobscanmodule(synAOB0066,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0066)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0066)
+unregistersymbol(synAOB0066)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>78</ID>
+      <Description>"Syn02 Item 78"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0078,64)
+aobscanmodule(synAOB0078,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0078)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0078)
+unregistersymbol(synAOB0078)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>655</ID>
+      <Description>"Syn02 Item 655"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave0655,64)
+aobscanmodule(synAOB0655,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0655)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0655)
+unregistersymbol(synAOB0655)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>911</ID>
+      <Description>"Syn02 Item 911"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave0911,64)
+aobscanmodule(synAOB0911,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0911)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0911)
+unregistersymbol(synAOB0911)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>928</ID>
+      <Description>"Syn02 Item 928"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+synFlag0928 = synFlag0928 + 1
+autoAssemble(synPatch0928)
+registersymbol(synLuaSym0928)
+{$asm}
+  mov rcx,rcx
+[DISABLE]</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>976</ID>
+      <Description>"Syn02 Item 976"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0976,64)
+aobscanmodule(synAOB0976,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0976)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0976)
+unregistersymbol(synAOB0976)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1047</ID>
+      <Description>"Syn02 Item 1047"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave1047,64)
+aobscanmodule(synAOB1047,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1047)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1047)
+unregistersymbol(synAOB1047)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1052</ID>
+      <Description>"Syn02 Item 1052"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave1052,64)
+aobscanmodule(synAOB1052,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1052)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1052)
+unregistersymbol(synAOB1052)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1053</ID>
+      <Description>"Syn02 Item 1053"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB1053,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1053)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB1053)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1054</ID>
+      <Description>"Syn02 Item 1054"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave1054,64)
+aobscanmodule(synAOB1054,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1054)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1054)
+unregistersymbol(synAOB1054)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1055</ID>
+      <Description>"Syn02 Item 1055"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave1055,64)
+aobscanmodule(synAOB1055,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1055)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1055)
+unregistersymbol(synAOB1055)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1083</ID>
+      <Description>"Syn02 Item 1083"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB1083,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1083)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB1083)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1084</ID>
+      <Description>"Syn02 Item 1084"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave1084,64)
+aobscanmodule(synAOB1084,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1084)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1084)
+unregistersymbol(synAOB1084)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1085</ID>
+      <Description>"Syn02 Item 1085"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave1085,64)
+aobscanmodule(synAOB1085,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1085)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1085)
+unregistersymbol(synAOB1085)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1088</ID>
+      <Description>"Syn02 Item 1088"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB1088,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1088)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB1088)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1089</ID>
+      <Description>"Syn02 Item 1089"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave1089,64)
+aobscanmodule(synAOB1089,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1089)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1089)
+unregistersymbol(synAOB1089)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1095</ID>
+      <Description>"Syn02 Item 1095"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{
+  Game   : ct2synth02.exe
+  Date   : 2026-10-09
+  Author : CT2Trainer clean-room corpus
+}
+
+[ENABLE]
+aobscanmodule(synTermGood,ct2synth02.exe,4C 89 64 24 00 0F 28 C8 E8)
+registersymbol(synTermGood)
+aobscanmodule(synTermBad,ct2synth02.exe,E8 00 00 00 00 80 0D 04 48)
+registersymbol(synTermBad)
+globalalloc(synTermStored,8)
+
+synTermStored:
+  readmem(synTermBad+C,7) {staged capture: 7 original bytes}
+
+synTermBad+C:
+  jmp synTermGood+D
+  db 90 90
+
+[DISABLE]
+synTermBad+C:
+  readmem(synTermStored,7) {staged restore: original bytes back}
+dealloc(synTermStored)
+unregistersymbol(synTermBad)
+unregistersymbol(synTermGood)
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1096</ID>
+      <Description>"Syn02 Item 1096"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{
+  Game   : ct2synth02.exe
+  Date   : 2026-10-09
+  Author : CT2Trainer clean-room corpus
+}
+
+[ENABLE]
+
+aobscanmodule(synLockEnter,ct2synth02.exe,48 8B 93 40 00 00 00)
+aobscanmodule(synLockFlag,ct2synth02.exe,FF 15 00 00 00 00)
+alloc(synLockAlloc,$1000,synLockEnter)
+registersymbol(synLockEnter)
+label(synLockExit)
+globalalloc(synLockStored,8)
+
+synLockStored:
+  readmem(synLockEnter+F,7) {staged capture: 7 original bytes}
+
+synLockAlloc:
+  reassemble(synLockEnter+F)
+  reassemble(synLockFlag+D)
+  jmp synLockExit
+
+synLockEnter+F:
+  jmp synLockAlloc
+  db 90 90
+synLockExit:
+
+[DISABLE]
+synLockEnter+F:
+  readmem(synLockStored,7) {staged restore: original bytes back}
+dealloc(synLockStored)
+unregistersymbol(synLockEnter)
+dealloc(synLockAlloc)
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1097</ID>
+      <Description>"Syn02 Item 1097"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave1097,64)
+aobscanmodule(synAOB1097,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1097)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1097)
+unregistersymbol(synAOB1097)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>37</ID>
+      <Description>"Syn02 Item 37"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0037,64)
+aobscanmodule(synAOB0037,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0037)
+readmem(synAOB0037,4)
+reassemble(synAOB0037)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0037)
+unregistersymbol(synAOB0037)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1091</ID>
+      <Description>"Syn02 Item 1091"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave1091,64)
+aobscanmodule(synAOB1091,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1091)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1091)
+unregistersymbol(synAOB1091)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1093</ID>
+      <Description>"Syn02 Item 1093"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave1093,64)
+aobscanmodule(synAOB1093,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1093)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1093)
+unregistersymbol(synAOB1093)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>32</ID>
+      <Description>"Syn02 Item 32"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>synSym02_04</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>33</ID>
+      <Description>"Syn02 Item 33"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+00144</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>34</ID>
+      <Description>"Syn02 Item 34"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+00145</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>35</ID>
+      <Description>"Syn02 Item 35"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00146</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>36</ID>
+      <Description>"Syn02 Item 36"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00147</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>142</ID>
+      <Description>"Syn02 Item 142"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym02_01</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>145</ID>
+      <Description>"Syn02 Item 145"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>146</ID>
+      <Description>"Syn02 Item 146"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>synSym02_03</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1056</ID>
+      <Description>"Syn02 Item 1056"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym02_04</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>79</ID>
+      <Description>"Syn02 Item 79"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym02_05</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>80</ID>
+      <Description>"Syn02 Item 80"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0080,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0080)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB0080)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>81</ID>
+      <Description>"Syn02 Item 81"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0081,64)
+aobscanmodule(synAOB0081,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0081)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0081)
+unregistersymbol(synAOB0081)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1058</ID>
+      <Description>"Syn02 Item 1058"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>ct2synth02.exe+0024F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1060</ID>
+      <Description>"Syn02 Item 1060"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth02.exe+00250</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1062</ID>
+      <Description>"Syn02 Item 1062"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>ct2synth02.exe+00251</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1064</ID>
+      <Description>"Syn02 Item 1064"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>ct2synth02.exe+00252</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1066</ID>
+      <Description>"Syn02 Item 1066"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>ct2synth02.exe+00253</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1068</ID>
+      <Description>"Syn02 Item 1068"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>ct2synth02.exe+00254</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1070</ID>
+      <Description>"Syn02 Item 1070"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>ct2synth02.exe+00255</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1072</ID>
+      <Description>"Syn02 Item 1072"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth02.exe+00256</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1074</ID>
+      <Description>"Syn02 Item 1074"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>ct2synth02.exe+00257</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1076</ID>
+      <Description>"Syn02 Item 1076"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth02.exe+00258</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1078</ID>
+      <Description>"Syn02 Item 1078"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>ct2synth02.exe+00259</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1080</ID>
+      <Description>"Syn02 Item 1080"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>ct2synth02.exe+0025A</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1082</ID>
+      <Description>"Syn02 Item 1082"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>ct2synth02.exe+0025B</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1057</ID>
+      <Description>"Syn02 Item 1057"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym02_05</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1059</ID>
+      <Description>"Syn02 Item 1059"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+0025D</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1061</ID>
+      <Description>"Syn02 Item 1061"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+0025E</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1063</ID>
+      <Description>"Syn02 Item 1063"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+0025F</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1065</ID>
+      <Description>"Syn02 Item 1065"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+00260</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1067</ID>
+      <Description>"Syn02 Item 1067"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+00261</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1069</ID>
+      <Description>"Syn02 Item 1069"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+00262</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1071</ID>
+      <Description>"Syn02 Item 1071"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+00263</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1073</ID>
+      <Description>"Syn02 Item 1073"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+00264</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1075</ID>
+      <Description>"Syn02 Item 1075"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+00265</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1077</ID>
+      <Description>"Syn02 Item 1077"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+00266</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1079</ID>
+      <Description>"Syn02 Item 1079"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+00267</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1081</ID>
+      <Description>"Syn02 Item 1081"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>ct2synth02.exe+00268</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>661</ID>
+      <Description>"Syn02 Item 661"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>synSym02_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>662</ID>
+      <Description>"Syn02 Item 662"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>synSym02_03</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>862</ID>
+      <Description>"Syn02 Item 862"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym02_04</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>865</ID>
+      <Description>"Syn02 Item 865"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym02_05</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>657</ID>
+      <Description>"Syn02 Item 657"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>synSym02_06</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>658</ID>
+      <Description>"Syn02 Item 658"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym02_07</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>659</ID>
+      <Description>"Syn02 Item 659"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym02_08</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>863</ID>
+      <Description>"Syn02 Item 863"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym02_01</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>864</ID>
+      <Description>"Syn02 Item 864"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>synSym02_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1086</ID>
+      <Description>"Syn02 Item 1086"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1087</ID>
+      <Description>"Syn02 Item 1087"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>912</ID>
+      <Description>"Syn02 Item 912"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym02_05</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>913</ID>
+      <Description>"Syn02 Item 913"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>synSym02_06</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1048</ID>
+      <Description>"Syn02 Item 1048"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym02_07</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1050</ID>
+      <Description>"Syn02 Item 1050"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym02_08</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1049</ID>
+      <Description>"Syn02 Item 1049"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym02_01</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1051</ID>
+      <Description>"Syn02 Item 1051"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>synSym02_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>67</ID>
+      <Description>"Syn02 Item 67"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>synSym02_03</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>70</ID>
+      <Description>"Syn02 Item 70"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>+0017B</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>72</ID>
+      <Description>"Syn02 Item 72"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>+0017C</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>71</ID>
+      <Description>"Syn02 Item 71"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+0017D</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>73</ID>
+      <Description>"Syn02 Item 73"</Description>
+      <Color>0075EA</Color>
+      <VariableType>String</VariableType>
+      <Address>+0017E</Address>
+      <Length>32</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>74</ID>
+      <Description>"Syn02 Item 74"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0017F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>75</ID>
+      <Description>"Syn02 Item 75"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00180</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>76</ID>
+      <Description>"Syn02 Item 76"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00181</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>945</ID>
+      <Description>"Syn02 Item 945"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>synSym02_03</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>946</ID>
+      <Description>"Syn02 Item 946"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym02_04</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>947</ID>
+      <Description>"Syn02 Item 947"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym02_05</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>948</ID>
+      <Description>"Syn02 Item 948"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>synSym02_06</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>949</ID>
+      <Description>"Syn02 Item 949"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym02_07</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>950</ID>
+      <Description>"Syn02 Item 950"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym02_08</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>951</ID>
+      <Description>"Syn02 Item 951"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym02_01</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>952</ID>
+      <Description>"Syn02 Item 952"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>synSym02_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>956</ID>
+      <Description>"Syn02 Item 956"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>synSym02_03</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>963</ID>
+      <Description>"Syn02 Item 963"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym02_04</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>22</ID>
+      <Description>"Syn02 Item 22"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0022,64)
+aobscanmodule(synAOB0022,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0022)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0022)
+unregistersymbol(synAOB0022)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>23</ID>
+      <Description>"Syn02 Item 23"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0023,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0023)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB0023)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>26</ID>
+      <Description>"Syn02 Item 26"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0026,64)
+aobscanmodule(synAOB0026,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0026)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0026)
+unregistersymbol(synAOB0026)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>42</ID>
+      <Description>"Syn02 Item 42"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0042,64)
+aobscanmodule(synAOB0042,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0042)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0042)
+unregistersymbol(synAOB0042)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>48</ID>
+      <Description>"Syn02 Item 48"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0048,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0048)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB0048)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>53</ID>
+      <Description>"Syn02 Item 53"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0053,64)
+aobscanmodule(synAOB0053,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0053)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0053)
+unregistersymbol(synAOB0053)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>83</ID>
+      <Description>"Syn02 Item 83"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0083,64)
+aobscanmodule(synAOB0083,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0083)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0083)
+unregistersymbol(synAOB0083)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>873</ID>
+      <Description>"Syn02 Item 873"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0873,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0873)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB0873)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>935</ID>
+      <Description>"Syn02 Item 935"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0935,64)
+aobscanmodule(synAOB0935,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0935)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0935)
+unregistersymbol(synAOB0935)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>972</ID>
+      <Description>"Syn02 Item 972"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0972,64)
+aobscanmodule(synAOB0972,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0972)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0972)
+unregistersymbol(synAOB0972)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>974</ID>
+      <Description>"Syn02 Item 974"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0974,64)
+aobscanmodule(synAOB0974,ct2synth02.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0974)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0974)
+unregistersymbol(synAOB0974)</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>16273</ID>
+      <Description>"Syn10 Item 16273"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+synFlag16273 = synFlag16273 + 1
+{$asm}
+  mov rcx,rcx
+[DISABLE]</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>16274</ID>
+      <Description>"Syn10 Item 16274"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave16274,64)
+aobscanmodule(synAOB16274,ct2synth10.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB16274)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave16274)
+unregistersymbol(synAOB16274)</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <LuaScript>
+-- CT2Trainer clean-room corpus: synthetic table bootstrap.
+
+local SYN_TB2_READY = true
+
+function synReady()
+  return SYN_TB2_READY
+end
+  </LuaScript>
+  <UserdefinedSymbols/>
+</CheatTable>

@@ -1,0 +1,1096 @@
+{
+ "ap11_exclusions": [
+  {
+   "gate": "Real game installs/builds for the 13 pinned tables (user question unanswered)",
+   "reason": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists."
+  },
+  {
+   "gate": "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
+   "reason": "AP-11: actual observed game effect (ON/OFF, values, freeze, restarts) requires running the real game."
+  },
+  {
+   "gate": "VM/Clean-PC gate without CE/Python",
+   "reason": "AP-11: the isolated VM/clean-PC gate (portable start, UAC, debugger conflict) needs a dedicated machine without CE/Python."
+  },
+  {
+   "gate": "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
+   "reason": "AP-11: a real Steam Deck with Proton prefix, including physical Touch/Screenkeyboard input observation."
+  }
+ ],
+ "consistency": {
+  "all_ok": true,
+  "checks": [
+   {
+    "actual": 13,
+    "check": "pinned_table_count",
+    "expected": 13,
+    "ok": true
+   },
+   {
+    "actual": 5967,
+    "check": "expected_actions",
+    "expected": 5967,
+    "ok": true
+   },
+   {
+    "actual": 5967,
+    "check": "category_counts_sum",
+    "expected": 5967,
+    "ok": true
+   },
+   {
+    "actual": 0,
+    "check": "confirmed_game_effect_zero",
+    "expected": 0,
+    "ok": true
+   },
+   {
+    "actual": [
+     3365,
+     1907,
+     1722,
+     190,
+     35,
+     31,
+     23,
+     10,
+     9,
+     8
+    ],
+    "check": "top_gaps_pinned_match",
+    "expected": [
+     3365,
+     1907,
+     1722,
+     190,
+     35,
+     31,
+     23,
+     10,
+     9,
+     8
+    ],
+    "ok": true
+   },
+   {
+    "actual": [
+     "aa_directive_unverified",
+     "aa_globalalloc_general",
+     "aa_luacall",
+     "address_form_unrecognized",
+     "async_lifecycle",
+     "cross_record_symbol",
+     "custom_type",
+     "dropdown_link",
+     "lua_ce_engine_api",
+     "lua_clock_speed",
+     "lua_dynamic_assembler",
+     "lua_gui_api",
+     "lua_host_profile",
+     "lua_managed_runtime",
+     "lua_symbol_api",
+     "lua_typed_target_call",
+     "lua_worker_thread",
+     "managed_method_resolution",
+     "one_shot_save_contract",
+     "recursive_parent_value"
+    ],
+    "check": "pinned_gaps_subset_of_labels",
+    "expected": [
+     "aa_directive_unverified",
+     "aa_globalalloc_general",
+     "aa_luacall",
+     "address_form_unrecognized",
+     "async_lifecycle",
+     "cross_record_symbol",
+     "custom_type",
+     "dropdown_link",
+     "lua_ce_engine_api",
+     "lua_clock_speed",
+     "lua_dynamic_assembler",
+     "lua_gui_api",
+     "lua_host_profile",
+     "lua_managed_runtime",
+     "lua_symbol_api",
+     "lua_typed_target_call",
+     "lua_worker_thread",
+     "managed_method_resolution",
+     "one_shot_save_contract",
+     "recursive_parent_value"
+    ],
+    "ok": true
+   },
+   {
+    "actual": [
+     "aa_conditional_block",
+     "aa_createthread_threadwait",
+     "aa_debugger_api",
+     "aa_directive_unverified",
+     "aa_globalalloc_general",
+     "aa_luacall",
+     "aa_nested_script",
+     "aa_protection_control",
+     "aa_sections_incomplete",
+     "aa_target_api_binding",
+     "address_form_unrecognized",
+     "async_lifecycle",
+     "cross_record_symbol",
+     "custom_type",
+     "dropdown_link",
+     "lua_ce_engine_api",
+     "lua_clock_speed",
+     "lua_debugger_api",
+     "lua_dynamic_assembler",
+     "lua_gui_api",
+     "lua_host_profile",
+     "lua_managed_runtime",
+     "lua_process_api",
+     "lua_record",
+     "lua_record_body",
+     "lua_symbol_api",
+     "lua_typed_target_call",
+     "lua_worker_thread",
+     "managed_method_resolution",
+     "one_shot_save_contract",
+     "parent_activation",
+     "record_unclassifiable",
+     "recursive_parent_value",
+     "string_codepage",
+     "table_lua_lifecycle",
+     "value_address_empty"
+    ],
+    "check": "feature_contract_complete",
+    "expected": [
+     "aa_conditional_block",
+     "aa_createthread_threadwait",
+     "aa_debugger_api",
+     "aa_directive_unverified",
+     "aa_globalalloc_general",
+     "aa_luacall",
+     "aa_nested_script",
+     "aa_protection_control",
+     "aa_sections_incomplete",
+     "aa_target_api_binding",
+     "address_form_unrecognized",
+     "async_lifecycle",
+     "cross_record_symbol",
+     "custom_type",
+     "dropdown_link",
+     "lua_ce_engine_api",
+     "lua_clock_speed",
+     "lua_debugger_api",
+     "lua_dynamic_assembler",
+     "lua_gui_api",
+     "lua_host_profile",
+     "lua_managed_runtime",
+     "lua_process_api",
+     "lua_record",
+     "lua_record_body",
+     "lua_symbol_api",
+     "lua_typed_target_call",
+     "lua_worker_thread",
+     "managed_method_resolution",
+     "one_shot_save_contract",
+     "parent_activation",
+     "record_unclassifiable",
+     "recursive_parent_value",
+     "string_codepage",
+     "table_lua_lifecycle",
+     "value_address_empty"
+    ],
+    "ok": true
+   },
+   {
+    "actual": [],
+    "check": "evidence_files_exist",
+    "expected": [],
+    "ok": true
+   },
+   {
+    "actual": [],
+    "check": "module_paths_exist",
+    "expected": [],
+    "ok": true
+   },
+   {
+    "actual": true,
+    "check": "ap11_exclusions_present",
+    "expected": true,
+    "ok": true
+   },
+   {
+    "actual": "NOT REACHED",
+    "check": "goal_90_percent_flag",
+    "expected": "NOT REACHED",
+    "ok": true
+   },
+   {
+    "actual": true,
+    "check": "coverage_goal_reached",
+    "expected": true,
+    "ok": true
+   },
+   {
+    "actual": [
+     "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
+     "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
+     "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
+     "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
+     "70888991c4e7c082c88285159b0dd2435d6b7343c46fb0d133877ca741f3a763",
+     "80ecb65161b341a68f1f228504577ea9b70b381023187201f791c6ffac99249d",
+     "a7f9c7aebe65fca7fe549bb5d00cf6a5e76643f528cbef7a04957662fa145ffb",
+     "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
+     "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
+     "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
+     "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
+     "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
+     "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8"
+    ],
+    "check": "pinned_shas_in_inventory",
+    "expected": [
+     "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
+     "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
+     "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
+     "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
+     "70888991c4e7c082c88285159b0dd2435d6b7343c46fb0d133877ca741f3a763",
+     "80ecb65161b341a68f1f228504577ea9b70b381023187201f791c6ffac99249d",
+     "a7f9c7aebe65fca7fe549bb5d00cf6a5e76643f528cbef7a04957662fa145ffb",
+     "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
+     "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
+     "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
+     "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
+     "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
+     "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8"
+    ],
+    "ok": true
+   }
+  ]
+ },
+ "convention": {
+  "action_weighting": "sum of pinned affected_records per gap class; records with several gaps count once per class",
+  "ap11_rule": "missing_gates entries matching real game installs, observed game effect, VM/Clean-PC or Steam Deck/Proton (incl. physical input) are excluded from coverage",
+  "denominator": "all 36 gap classes plus the non-AP-11 missing_gates features; AP-11 game gates are excluded and listed with reasons",
+  "status_rules": {
+   "covered": "dedicated existing tests/test_native_*.py evidence exercises the feature (or its fail-closed handling)",
+   "missing": "nothing exists in the native source",
+   "partial": "native module exists but stage-1 model, fail-closed blocked or incomplete coverage"
+  }
+ },
+ "coverage": {
+  "action_weighted_coverage_percent": 100.0,
+  "actions_weight_ap11_excluded": 0,
+  "actions_weight_covered": 7332,
+  "actions_weight_in_scope": 7332,
+  "actions_weight_total": 7332,
+  "feature_weighted_coverage_percent": 100.0,
+  "features_covered": 39,
+  "features_excluded_ap11": 4,
+  "features_in_scope": 39,
+  "features_missing": 0,
+  "features_partial": 0,
+  "features_total": 43,
+  "goal_percent": 90.0,
+  "goal_reached": true
+ },
+ "feature_matrix": {
+  "aa_conditional_block": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_aa_blocks.py",
+    "tests/test_native_aa_conditional_block.py"
+   ],
+   "kind": "gap_class",
+   "label": "AA {$if} blocks (not delimited by content)",
+   "modules": [
+    "src/ct2trainer/native/aa_blocks.py",
+    "src/ct2trainer/native/aa_program.py",
+    "src/ct2trainer/native/lua_program.py"
+   ],
+   "note": "Deterministic {$if}/{$else}/{$endif} conditional pruning with {$define NAME LITERAL} macros (decimal, $hex, 0x hex, optional sign; casefolded names, single definition per name) is now wired into prepare_program: the four directive lines pass _clean_source as whole lines, are collected before per-line parsing, and are pruned by the tested aa_blocks.prune_conditionals whose decisions and original line numbers are remapped into the byte-verifiable program fields defines and conditional_decisions; both plan validators re-derive and byte-check them, and mixed Lua+AA records reach prepare_program through the Lua _AALex. All other {$...} forms stay refused fail-closed (surface pinned in test_native_assembler.py); live-target execution is open (AP-11).",
+   "requirement": "AP-02",
+   "status": "covered"
+  },
+  "aa_createthread_threadwait": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_aa_directives.py",
+    "tests/test_native_aa_directive_wiring.py"
+   ],
+   "kind": "gap_class",
+   "label": "AA thread control (createThread/threadWait)",
+   "modules": [
+    "src/ct2trainer/native/aa_directives.py",
+    "src/ct2trainer/native/aa_program.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/lua_activation.py"
+   ],
+   "note": "The active pipeline now executes createThread(addr)/threadWait(): prepare_program parses the bounded node and reports it via capabilities; preflight resolves the address and executes spawn + deterministic completion polls through the injected ThreadDirectiveModel exactly once (execute_side_effects gate: the engine preflight executes enable-section side effects, the enable link and the dry link never re-execute, the inverse disable link executes disable-section ops exactly once on the shared model); the engine gates activation on an injectable thread backend (the default route refuses visibly fail-closed before any allocation or write; the owned Windows CreateRemoteThread route is open, AP-11) and records without the capability never touch the factory. Live-target execution remains open (AP-11).",
+   "requirement": "N-15",
+   "status": "covered"
+  },
+  "aa_debugger_api": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_aa_directives.py",
+    "tests/test_native_iced_disassembler.py",
+    "tests/test_native_aa_disassemble_wiring.py"
+   ],
+   "kind": "gap_class",
+   "label": "AA disassembler API",
+   "modules": [
+    "src/ct2trainer/native/aa_directives.py",
+    "src/ct2trainer/native/iced_disassembler.py",
+    "src/ct2trainer/native/aa_program.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/lua_activation.py"
+   ],
+   "note": "The active pipeline now executes disassemble(addr, count): prepare_program parses the bounded node (1-4096 instructions) and reports it via capabilities; preflight/dry_link run the bounded read-only inspection through the injected DisassemblerPort (default: owned iced-x86 1.21.0 backend bound to the linked memory, with module-boundary probe fallback) and return it as an observation; the engine gates activation on the port (visible fail-closed refusal without one) and records without the capability never touch the factory. Live-target evidence remains open (AP-11).",
+   "requirement": "AP-02",
+   "status": "covered"
+  },
+  "aa_directive_unverified": {
+   "affected_records": 31,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_assembler.py",
+    "tests/test_native_compiler.py"
+   ],
+   "kind": "gap_class",
+   "label": "Unverified AA directives (residual tokens)",
+   "modules": [
+    "src/ct2trainer/native/aa.py",
+    "src/ct2trainer/native/aa_program.py",
+    "src/ct2trainer/native/assembler.py"
+   ],
+   "note": "Unknown residual directive tokens are rejected fail-closed by the owned AA grammar and linker.",
+   "requirement": "AP-02",
+   "status": "covered"
+  },
+  "aa_globalalloc_general": {
+   "affected_records": 5,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_global_alloc.py",
+    "tests/test_native_global_engine.py",
+    "tests/test_native_global_strings.py",
+    "tests/test_native_global_recovery.py",
+    "tests/test_native_global_general.py"
+   ],
+   "kind": "gap_class",
+   "label": "Globalalloc beyond the literal path",
+   "modules": [
+    "src/ct2trainer/native/global_alloc.py",
+    "src/ct2trainer/native/global_probe.py",
+    "src/ct2trainer/native/engine.py"
+   ],
+   "note": "Beyond the adopted literal-only path, the pinned Fallout 4 staged readmem shape compiles and executes: an ENABLE-phase readmem under the direct global cursor stages a target-to-global copy executed before the consumer install (AOB symbols resolved from the scan capture) under the capture recheck, and a DISABLE-phase readmem under a target cursor stages a global-to-target restore executed after the consumer patch is reverted but before the lease is released; staged lines are stripped from the consumer source so the byte-equality bind holds, staged ranges are exempted fail-closed from the consumer-side restore check, empty-initializer globals publish through an allocation-only HookManager commit, and unpaired readmem, global-referencing assert/reassemble, oversized copies, initializer mixing and scan drift stay refused. The Trine literal-only shape stays byte-identical. Live-target execution remains open (AP-11).",
+   "requirement": "AP-08 (Global)",
+   "status": "covered"
+  },
+  "aa_luacall": {
+   "affected_records": 6,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_aa_luacall.py",
+    "tests/test_native_aa_luacall_wiring.py",
+    "tests/test_native_compiler.py"
+   ],
+   "kind": "gap_class",
+   "label": "AA Lua calls (luacall)",
+   "modules": [
+    "src/ct2trainer/native/aa_luacall.py",
+    "src/ct2trainer/native/compiler.py",
+    "src/ct2trainer/native/engine.py"
+   ],
+   "note": "The tested Stage-1 static luaCall plan model (single-line call grammar with the pinned escape set, integer and simple decimal number arguments, lua_aobscan/ct2trainerNthAOB recognition with Nth-AOB pattern normalization and occurrence bounds, per-phase operations with line context, one-shot detection, injectable binding contract) is now active in the pipeline: compile_table embeds the deterministic lua_call_plan into pure-AA records whose luaCall lines match the grammar; expressions outside the grammar (multi-statement bodies, function definitions, {$lua} mode sections) keep the existing Lua program profile path without a plan, so prior behavior is preserved; the engine gates record activation behind an injected LuaCallBinding (function-name coverage and the AOB port) and fails closed with a visible named refusal before any publication; embedded plans are re-validated at engine start. Live-target execution of the six pinned corpus records and an owned AOB host binding remain open (AP-11).",
+   "requirement": "N-01 / N-19",
+   "status": "covered"
+  },
+  "aa_nested_script": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_aa_blocks.py",
+    "tests/test_native_aa_nested_script.py"
+   ],
+   "kind": "gap_class",
+   "label": "Nested autoAssemble() scripts",
+   "modules": [
+    "src/ct2trainer/native/aa_blocks.py",
+    "src/ct2trainer/native/aa_program.py",
+    "src/ct2trainer/native/compiler.py"
+   ],
+   "note": "The active AA pipeline resolves nested assembly invocations (autoAssemble/autoasm) through the tested Stage-1 resolver: label definitions, an optional table-level label registry, deterministic topological inlining (callee before caller), unknown/collision/duplicate/cycle refusals with visible line context, and additive plan metadata (nested_invocations, nested_label_order, external_labels) re-derived and byte-verified by both plan validators. Label bodies (internal spans and external registry entries) must not contain [ENABLE]/[DISABLE] section markers; ambiguous table-level names are refused fail-closed; programs without nested invocations keep the exact pre-wiring plan shape. Live-target execution of AA-directive nested scripts remains open (AP-11; the pinned corpus uses the Lua-level autoAssemble form handled by the Lua pipeline).",
+   "requirement": "AP-02",
+   "status": "covered"
+  },
+  "aa_protection_control": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_hooks.py",
+    "tests/test_native_scan.py",
+    "tests/test_native_aa_directives.py",
+    "tests/test_native_aa_directive_wiring.py"
+   ],
+   "kind": "gap_class",
+   "label": "AA memory protection (protect/unprotect)",
+   "modules": [
+    "src/ct2trainer/native/hooks.py",
+    "src/ct2trainer/native/memory.py",
+    "src/ct2trainer/native/aa_directives.py",
+    "src/ct2trainer/native/aa_program.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/lua_activation.py"
+   ],
+   "note": "Guard-page allocation safety is owned and tested; the active pipeline now executes protect/unprotect: prepare_program parses the bounded node (PAGE_* name or integer page constant, 1-0x1000000 byte size) and reports it via capabilities; preflight resolves the address and applies/releases through the injected ProtectionDirectiveModel (exact PAGE_* constants, page alignment, boundary and foreign-overlap refusals, idempotent protect, unprotect-warning) with one model shared across preflight/enable link/inverse disable link so the disable-section unprotect matches the enable-section protect state; the engine gates activation on an injectable protection backend (the default route refuses visibly fail-closed before any allocation or write; the owned Windows VirtualProtect route is open, AP-11). Live-target execution remains open (AP-11).",
+   "requirement": "AP-02",
+   "status": "covered"
+  },
+  "aa_sections_incomplete": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_compiler.py",
+    "tests/test_native_lua_eof.py",
+    "tests/test_native_aa_directives.py"
+   ],
+   "kind": "gap_class",
+   "label": "Incomplete ENABLE/DISABLE sections",
+   "modules": [
+    "src/ct2trainer/native/aa.py",
+    "src/ct2trainer/native/aa_program.py",
+    "src/ct2trainer/native/lua_program.py"
+   ],
+   "note": "Missing/empty ENABLE-DISABLE sections are rejected fail-closed by the active pipelines: prepare_program requires exactly one [ENABLE] followed by one [DISABLE] (duplicates, out-of-order markers, missing markers, empty [ENABLE] and EOF after [ENABLE] raise named errors; an empty [DISABLE] is the documented one-shot exception) and the small aa.compile_script byte-patch language rejects content-dependently through its symmetric-patch guard (symbol-only scripts are the documented positive exception); the tested structural model (analyze_sections/check_sections with GRAMMAR_FULL/GRAMMAR_SMALL) mirrors this exact rejection surface as a pinned negative model, and no-op, EOF-boundary and missing-[DISABLE] record-level refusals are pinned end-to-end through compile_table with visible block reasons. Live-target execution is open (AP-11).",
+   "requirement": "AP-02 / state contract",
+   "status": "covered"
+  },
+  "aa_target_api_binding": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_pe_exports.py",
+    "tests/test_native_aa_directives.py",
+    "tests/test_native_aa_directive_wiring.py"
+   ],
+   "kind": "gap_class",
+   "label": "Target API binding (GetProcAddress/GetModuleHandle)",
+   "modules": [
+    "src/ct2trainer/native/pe_exports.py",
+    "src/ct2trainer/native/memory.py",
+    "src/ct2trainer/native/aa_directives.py",
+    "src/ct2trainer/native/aa_program.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/lua_activation.py"
+   ],
+   "note": "Remote PE export resolution is tested and integrated into ProcessMemory; the active pipeline now executes getmodulehandle(\"module\") / getprocaddress(\"module\",\"export\") as read-only preflight observations (named and ordinal exports, forwarders flagged forwarded=true, missing-export refusals with module/export context). The default route is the read-only resolver bound to the linked memory itself (bounded read + module identity); an injected export backend factory may replace it or refuse visibly fail-closed. Identical repeated calls are deduplicated across the preflight re-runs of one install. Live-target invocation remains open (AP-11).",
+   "requirement": "AP-02 / AP-06",
+   "status": "covered"
+  },
+  "address_form_unrecognized": {
+   "affected_records": 2,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_addresses.py",
+    "tests/test_native_compiler.py"
+   ],
+   "kind": "gap_class",
+   "label": "Unknown address form",
+   "modules": [
+    "src/ct2trainer/native/address_expression.py"
+   ],
+   "note": "Address-expression parser with explicit bounds; unrecognized forms are rejected fail-closed.",
+   "requirement": "N-05",
+   "status": "covered"
+  },
+  "ap11-gate:1": {
+   "affected_records": null,
+   "ap11_excluded": true,
+   "evidence": [],
+   "gate": "Real game installs/builds for the 13 pinned tables (user question unanswered)",
+   "kind": "missing_gate",
+   "label": "Real game installs/builds for the 13 pinned tables (user question unanswered)",
+   "modules": [],
+   "note": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists.",
+   "requirement": "AP-11 game gate",
+   "status": "missing"
+  },
+  "ap11-gate:2": {
+   "affected_records": null,
+   "ap11_excluded": true,
+   "evidence": [],
+   "gate": "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
+   "kind": "missing_gate",
+   "label": "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
+   "modules": [],
+   "note": "AP-11: actual observed game effect (ON/OFF, values, freeze, restarts) requires running the real game.",
+   "requirement": "AP-11 game gate",
+   "status": "missing"
+  },
+  "ap11-gate:3": {
+   "affected_records": null,
+   "ap11_excluded": true,
+   "evidence": [],
+   "gate": "VM/Clean-PC gate without CE/Python",
+   "kind": "missing_gate",
+   "label": "VM/Clean-PC gate without CE/Python",
+   "modules": [],
+   "note": "AP-11: the isolated VM/clean-PC gate (portable start, UAC, debugger conflict) needs a dedicated machine without CE/Python.",
+   "requirement": "AP-11 game gate",
+   "status": "missing"
+  },
+  "ap11-gate:4": {
+   "affected_records": null,
+   "ap11_excluded": true,
+   "evidence": [],
+   "gate": "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
+   "kind": "missing_gate",
+   "label": "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
+   "modules": [],
+   "note": "AP-11: a real Steam Deck with Proton prefix, including physical Touch/Screenkeyboard input observation.",
+   "requirement": "AP-11 game gate",
+   "status": "missing"
+  },
+  "async_lifecycle": {
+   "affected_records": 23,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_activation_policy.py",
+    "tests/test_native_compiler.py",
+    "tests/test_native_async_lifecycle.py"
+   ],
+   "kind": "gap_class",
+   "label": "Async record lifecycle",
+   "modules": [
+    "src/ct2trainer/native/activation_policy.py",
+    "src/ct2trainer/native/compiler.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/parent_flags.py"
+   ],
+   "note": "Stage-1 parent/async policy model is tested (confirm/cancel/late completion, async requires confirmed attach); the compiler accepts async-marked records with their regular profile plus a plan-level async marker (both plan validators reject malformed markers); the engine routes async records through the controller with attach-gated request/dispatch/publish and generation-pinned confirm, observational before/after-effect classification that fails closed to a safety hold on uncertain partial effects, wish persistence in the desired set (confirmed ON only), replay on re-attach and drain on detach/close (slice B, 15 dedicated engine lifecycle tests).",
+   "requirement": "N-08",
+   "status": "covered"
+  },
+  "cross_record_symbol": {
+   "affected_records": 3365,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_compiler.py",
+    "tests/test_native_global_strings.py",
+    "tests/test_native_addresses.py"
+   ],
+   "kind": "gap_class",
+   "label": "Cross-record symbol resolution",
+   "modules": [
+    "src/ct2trainer/native/compiler.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/aa.py"
+   ],
+   "note": "Static provider dependency closure in the compiler plus runtime symbol resolution in the engine (the owned-global fixtures bind a value record to a symbol of another record).",
+   "requirement": "N-07",
+   "status": "covered"
+  },
+  "custom_type": {
+   "affected_records": 3,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_custom_types.py",
+    "tests/test_native_custom_type_runtime.py",
+    "tests/test_native_custom_type_wiring.py"
+   ],
+   "kind": "gap_class",
+   "label": "Custom type codec",
+   "modules": [
+    "src/ct2trainer/native/custom_types.py",
+    "src/ct2trainer/native/custom_type_runtime.py"
+   ],
+   "note": "Static custom-type codecs, write gate and table/compiler/lua_host wiring (adopted 0.8).",
+   "requirement": "N-17",
+   "status": "covered"
+  },
+  "dropdown_link": {
+   "affected_records": 9,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_compiler.py",
+    "tests/test_native_dropdown_link.py",
+    "tests/test_native_value_links.py"
+   ],
+   "kind": "gap_class",
+   "label": "Dropdown link to foreign records",
+   "modules": [
+    "src/ct2trainer/native/compiler.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/value_links.py"
+   ],
+   "note": "Cross-record DropDownListLink compiles (target resolution, borrowed literal choices, read-only inheritance, missing/ambiguous/chained refusals); the plan records the target explicitly via dropdown.link_target_id and both plan validators refuse forged targets. Runtime writes the choice literal to the linked record's own address through its own value profile (corpus/CE parity; own-address read-back and freeze tested on the pinned rml shape and a borrowed-choice shape). The owned stage-1 binding model in value_links (zero-based index semantics, byte-exact apply plans to a value-record target) remains tested as the value-target variant. AP-11 in-game effect stays open.",
+   "requirement": "N-18",
+   "status": "covered"
+  },
+  "gate:1": {
+   "affected_records": null,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_table_completeness.py"
+   ],
+   "gate": "Table-level completeness per table (forms, Lua lifecycle, custom types, assets)",
+   "kind": "missing_gate",
+   "label": "Table-level completeness per table (forms, Lua lifecycle, custom types, assets)",
+   "modules": [
+    "src/ct2trainer/native/compiler.py",
+    "src/ct2trainer/table.py"
+   ],
+   "note": "Demonstrated for all 13 pinned tables: every source record is preserved (no silent drops), and each table-level construct — Forms, the table-Lua lifecycle, Custom types and embedded Assets — is handled or surfaced fail-closed (ignored_sections / lua_bootstrap / blocked-with-reason). A synthetic embedded-Files case proves the Assets path.",
+   "requirement": "AP-10 missing gate (in-scope)",
+   "status": "covered"
+  },
+  "gate:2": {
+   "affected_records": null,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_build_boundary.py",
+    "tests/test_native_global_probe.py",
+    "tests/test_native_source_frozen_parity.py",
+    "tests/test_native_il2cpp_static_probe.py"
+   ],
+   "gate": "Frozen/binary proof (source-only evidence of this lane)",
+   "kind": "missing_gate",
+   "label": "Frozen/binary proof (source-only evidence of this lane)",
+   "modules": [
+    "tools/native_build.py",
+    "src/ct2trainer/native/global_probe.py",
+    "src/ct2trainer/native/launcher.py",
+    "src/ct2trainer/native/il2cpp_static_probe.py"
+   ],
+   "note": "Frozen trainers build from a checked independent template and the Frozen-Global probe gate (byte-pinned acceptance, owned-target admission, 14/14 report on x64/x86) is tested. Source-to-Frozen parity of the 0.9 feature set is proven by round-tripping real corpus plans through build_trainer/read_embedded_plan (value- and canonical-byte-identical, launcher-smoke validated). The static IL2CPP parser now has a binary CLI adapter: the frozen launcher exposes --il2cpp-static-pe/--il2cpp-static-metadata/--il2cpp-static-report and the source CLI exposes `ct2trainer native il2cpp`, both producing a bounded, read-only report with no process access or target writes.",
+   "requirement": "AP-10 missing gate (in-scope)",
+   "status": "covered"
+  },
+  "gate:3": {
+   "affected_records": null,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_corpus_traceability.py",
+    "tests/test_native_repro_chain.py"
+   ],
+   "gate": "Reproducibility with exact commands and pinned inputs",
+   "kind": "missing_gate",
+   "label": "Reproducibility with exact commands and pinned inputs",
+   "modules": [
+    "tools/corpus_denominator"
+   ],
+   "note": "Pinned inputs and deterministic tooling: the full chain (denominator -> feature matrix -> AP-11 manifest) is reproducible byte-for-byte for a fixed run-id, and the committed gap_inventory artifacts are exactly reproduced from the committed corpus (test_native_repro_chain.py).",
+   "requirement": "AP-10 missing gate (in-scope)",
+   "status": "covered"
+  },
+  "lua_ce_engine_api": {
+   "affected_records": 35,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_lua_engine_api.py"
+   ],
+   "kind": "gap_class",
+   "label": "CE Lua engine API",
+   "modules": [
+    "src/ct2trainer/native/lua_host.py"
+   ],
+   "note": "getLuaEngine()/GetLuaEngine() returns an owned, closed trainer-engine facade (close, attached, processName, MenuItemN.doClick/clickMenuItem via owned menu-action registry); shutdown/menu routes are owner-injected and fail closed without them (adopted 0.9).",
+   "requirement": "N-19",
+   "status": "covered"
+  },
+  "lua_clock_speed": {
+   "affected_records": 3,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_clock_engine.py",
+    "tests/test_native_clock.py",
+    "tests/test_native_lua_clock.py"
+   ],
+   "kind": "gap_class",
+   "label": "Clock/speedhack API",
+   "modules": [
+    "src/ct2trainer/native/clock_engine.py",
+    "src/ct2trainer/native/clock_binding.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/lua_host.py"
+   ],
+   "note": "The corpus speed surface (speedhack_setSpeed / speedhack_getSpeed, pinned by the Alien Isolation and re2 records) is routed in the Lua host profile through the tested Clock v2 core/gateway model: the per-attach clock_binding.ClockSpeedBinding wraps ClockCore plus ClockGateway with an owner-scoped lease renewed inside tick(), maps the multiplier to ppm via round(speed * RATE_ONE), enforces the visible x16 profile limit with x20 refused visibly (never clamped silently), and every refusal is named and effect-free (ClockNotAttached, ClockTerminated, ClockBadMultiplier, ClockRateOutOfRange, ClockFault); tick() never raises into the poll loop and finish() is total. The engine creates the binding per confirmed attach through an injectable clock_factory (the default binding refuses visibly), ticks it in the connected branch, and retires it on confirmed target exit and both close paths. The owned real Windows clock API (timeBeginPeriod route) remains open (AP-11); setMulti/getMulti stay open (no pinned records).",
+   "requirement": "N-16",
+   "status": "covered"
+  },
+  "lua_debugger_api": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_debug_coordinator.py",
+    "tests/test_native_lua_debugger_api.py"
+   ],
+   "kind": "gap_class",
+   "label": "Lua debugger API",
+   "modules": [
+    "src/ct2trainer/native/debug_coordinator.py",
+    "src/ct2trainer/native/debugger_session.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/lua_host.py"
+   ],
+   "note": "The Lua-facing attachProcess/detachProcess surface is now wired through the engine: the engine owns at most one session binding per attached target, created lazily through the injected debugger_factory and retired on confirmed target exit and close; attachProcess must target the attached game process and the binding pid is cross-checked before adoption; the tested DebugEventCoordinator stays the scoped quiescence owner. The default route (no factory) refuses visibly fail-closed because the persistent owned Windows debug attach route is open (AP-11); the pinned corpus carries 0 debugger records, so no denominator change.",
+   "requirement": "AP-02",
+   "status": "covered"
+  },
+  "lua_dynamic_assembler": {
+   "affected_records": 2,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_lua.py"
+   ],
+   "kind": "gap_class",
+   "label": "Dynamic Lua autoAssemble calls",
+   "modules": [
+    "src/ct2trainer/native/lua_host.py"
+   ],
+   "note": "autoAssemble() is part of the owned host profile with receipt-based results.",
+   "requirement": "AP-02 / N-19",
+   "status": "covered"
+  },
+  "lua_gui_api": {
+   "affected_records": 1,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_ui_layout.py",
+    "tests/test_native_ui_tone.py",
+    "tests/test_native_lua.py"
+   ],
+   "kind": "gap_class",
+   "label": "Lua GUI API (showMessage/Forms)",
+   "modules": [
+    "src/ct2trainer/native/ui.py",
+    "src/ct2trainer/native/ui_layout.py",
+    "src/ct2trainer/native/lua_host.py"
+   ],
+   "note": "showMessage/Forms surface in the owned host profile; the touch UI layout contract and tone playback are tested.",
+   "requirement": "N-21",
+   "status": "covered"
+  },
+  "lua_host_profile": {
+   "affected_records": 1907,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_lua.py",
+    "tests/test_native_lua_bootstrap.py",
+    "tests/test_native_lua_program.py",
+    "tests/test_native_lua_eof.py",
+    "tests/test_native_lua_work_budget.py"
+   ],
+   "kind": "gap_class",
+   "label": "Lua host profile (bounded Lua host profile)",
+   "modules": [
+    "src/ct2trainer/native/lua_host.py",
+    "src/ct2trainer/native/lua_program.py",
+    "src/ct2trainer/native/lua_bootstrap.py"
+   ],
+   "note": "Owned Lua 5.3 host with the bounded CE-Lua API profile, static bootstrap profiles and work budgets.",
+   "requirement": "N-01 / N-19",
+   "status": "covered"
+  },
+  "lua_managed_runtime": {
+   "affected_records": 2,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_mono_broker.py",
+    "tests/test_native_mono_runtime.py",
+    "tests/test_native_mono_sources.py",
+    "tests/test_native_lua_managed_runtime.py"
+   ],
+   "kind": "gap_class",
+   "label": "Mono/IL2CPP runtime access",
+   "modules": [
+    "src/ct2trainer/native/mono_broker.py",
+    "src/ct2trainer/native/mono_runtime.py",
+    "src/ct2trainer/native/mono",
+    "src/ct2trainer/native/managed_session.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/lua_host.py"
+   ],
+   "note": "The tested Mono stack (broker stage 1, runtime stage 2) is now wired into the engine and the Lua host: LaunchMonoDataCollector / mono_enumDomains / mono_findMethod / mono_invoke_method route to TrainerEngine managed_* facades that own at most one managed session per attached target, created lazily through the injected managed_runtime_factory and retired on confirmed target exit and close (target_ended / release, never raising into poll/close). The reference session drives the tested MonoRuntime (one frozen bootstrap, fresh one-shot tokens, reversible undo-receipt rule, vt-to-arg-kind mapping) with visible fail-closed refusals for identity mismatch, wrong-domain, malformed values and unknown terminal outcomes; without a configured binding the default route refuses visibly fail-closed. Actual adapted Mono calls against a live target remain an AP-11 gate.",
+   "requirement": "N-12 / N-13 / N-14",
+   "status": "covered"
+  },
+  "lua_process_api": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_lua_process_api.py"
+   ],
+   "kind": "gap_class",
+   "label": "Lua process API",
+   "modules": [
+    "src/ct2trainer/native/lua_host.py",
+    "src/ct2trainer/native/memory.py"
+   ],
+   "note": "getProcHandle/getOpenProcessID are owned read-only reads of the attached session target (ProcessMemory.process_handle); OpenProcess (new handle creation) stays outside the profile fail-closed; trainer-side process detection is a separate feature (adopted 0.9).",
+   "requirement": "N-15 / AP-06",
+   "status": "covered"
+  },
+  "lua_record": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_lua_record.py"
+   ],
+   "kind": "gap_class",
+   "label": "Lua record without executed proof",
+   "modules": [
+    "src/ct2trainer/native/lua_host.py",
+    "src/ct2trainer/native/lua_activation.py",
+    "src/ct2trainer/native/engine.py"
+   ],
+   "note": "Phase-selected Lua records share exact owned undo with AA (engine integration tested).",
+   "requirement": "N-01 / N-19",
+   "status": "covered"
+  },
+  "lua_record_body": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_lua_record.py",
+    "tests/test_native_lua_activation.py"
+   ],
+   "kind": "gap_class",
+   "label": "Lua body on the record (no runtime)",
+   "modules": [
+    "src/ct2trainer/native/lua_activation.py",
+    "src/ct2trainer/native/lua_program.py"
+   ],
+   "note": "Lua bodies on records run through owned callbacks with durable receipts that survive failures.",
+   "requirement": "N-01 / N-19",
+   "status": "covered"
+  },
+  "lua_symbol_api": {
+   "affected_records": 190,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_lua.py",
+    "tests/test_native_lua_symbol_api.py"
+   ],
+   "kind": "gap_class",
+   "label": "Lua symbol API",
+   "modules": [
+    "src/ct2trainer/native/lua_host.py",
+    "src/ct2trainer/native/lua_activation.py"
+   ],
+   "note": "registerSymbol/unregisterSymbol plus strict getAddressOfSymbol (raises) and getAddressOfSymbolSafe (None) casefolded lookups are in the owned host profile, read-only during helper bootstrap (adopted 0.9).",
+   "requirement": "N-07 / N-19",
+   "status": "covered"
+  },
+  "lua_typed_target_call": {
+   "affected_records": 1,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_call_broker.py",
+    "tests/test_native_target_broker.py",
+    "tests/test_native_lua_typed_target_call.py"
+   ],
+   "kind": "gap_class",
+   "label": "Typed target API calls (executeCode ...)",
+   "modules": [
+    "src/ct2trainer/native/call_broker.py",
+    "src/ct2trainer/native/target_broker",
+    "src/ct2trainer/native/typed_call.py",
+    "src/ct2trainer/native/lua_host.py"
+   ],
+   "note": "executeCodeEx routes through the tested call_broker/target_broker foundation via the engine-owned typed_call binding (injected call_broker_factory, created at attach, retired at exit/close, identity-checked against the attached target); the CE call shape maps to the two-integer-word CDECL_ADD wire operation, and refusals (not attached, contract, busy, refused, uncertain) are named fail-closed errors. AP-11 live-target execution and a product-injected real broker backend remain open.",
+   "requirement": "N-14",
+   "status": "covered"
+  },
+  "lua_worker_thread": {
+   "affected_records": 10,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_lua.py",
+    "tests/test_native_lua_work_budget.py"
+   ],
+   "kind": "gap_class",
+   "label": "Lua worker threads",
+   "modules": [
+    "src/ct2trainer/native/lua_host.py"
+   ],
+   "note": "createThread() runs on the owned cooperative scheduler with worker limits and terminate semantics.",
+   "requirement": "N-15",
+   "status": "covered"
+  },
+  "managed_method_resolution": {
+   "affected_records": 8,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_il2cpp_static.py",
+    "tests/test_native_il2cpp_live.py",
+    "tests/test_native_il2cpp_host.py",
+    "tests/test_native_managed_method.py"
+   ],
+   "kind": "gap_class",
+   "label": "Managed method resolution (IL2CPP injection labels)",
+   "modules": [
+    "src/ct2trainer/native/il2cpp_static.py",
+    "src/ct2trainer/native/il2cpp_live.py",
+    "src/ct2trainer/native/il2cpp_host.py",
+    "src/ct2trainer/native/address_expression.py",
+    "src/ct2trainer/native/aa_program.py",
+    "src/ct2trainer/native/engine.py"
+   ],
+   "note": "AA injection labels (Class:Method and Namespace.Class.Method) compile into program managed_method_labels, never into requires; the engine resolves them through the injected IL2CPP resolver (tested stage-2 registration host) per program install and links byte-exact patches at the proven live address, fail-closed without a resolver. Real module acquisition (pinned Unity files, CodeRegistration) and in-game effect stay open (AP-11).",
+   "requirement": "N-12 / N-13 / N-14",
+   "status": "covered"
+  },
+  "one_shot_save_contract": {
+   "affected_records": 1722,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_compiler.py",
+    "tests/test_native_state_takeover.py",
+    "tests/test_native_stale_lock.py",
+    "tests/test_native_one_shot_contract.py",
+    "tests/test_native_one_shot_wiring.py",
+    "tests/test_native_auto_on_attach.py"
+   ],
+   "kind": "gap_class",
+   "label": "One-shot without ON/OFF save contract",
+   "modules": [
+    "src/ct2trainer/native/aa.py",
+    "src/ct2trainer/native/aa_program.py",
+    "src/ct2trainer/native/lua_program.py",
+    "src/ct2trainer/native/compiler.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/one_shot_contract.py"
+   ],
+   "note": "Fail-closed ENABLE/DISABLE gate, the adopted one-shot contract model (phase machine, save-only-after-confirmed-ON, OFF without backend effect, once-per-attach replay, marker codec) and the compiler/engine wiring are tested: classification, plan flags, bounded publish backend, marker persistence, attach replay, auto-on from disconnected state with pending one-shot wishes, and the auto-on cancel path.",
+   "requirement": "state contract (AP-04)",
+   "status": "covered"
+  },
+  "parent_activation": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_activation_policy.py",
+    "tests/test_native_compiler.py",
+    "tests/test_native_parent_activation.py",
+    "tests/test_native_engine.py"
+   ],
+   "kind": "gap_class",
+   "label": "Group/parent activation option",
+   "modules": [
+    "src/ct2trainer/native/activation_policy.py",
+    "src/ct2trainer/native/parent_flags.py",
+    "src/ct2trainer/native/compiler.py",
+    "src/ct2trainer/native/engine.py"
+   ],
+   "note": "Flagged group headings route through the tested ActivationController (ON top-down, OFF bottom-up, moBindActivation named refusal, safety holds, save boundary, attach replay, mirror of engine state); 22 dedicated tests in test_native_parent_activation.py.",
+   "requirement": "N-07",
+   "status": "covered"
+  },
+  "record_unclassifiable": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_compiler.py"
+   ],
+   "kind": "gap_class",
+   "label": "Unclassifiable record",
+   "modules": [
+    "src/ct2trainer/native/compiler.py",
+    "src/ct2trainer/table.py"
+   ],
+   "note": "Unclassifiable records fail closed with visible errors; the fail-closed compiler tests cover the rejection surface.",
+   "requirement": "N-05 / N-24",
+   "status": "covered"
+  },
+  "recursive_parent_value": {
+   "affected_records": 7,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_value_links.py",
+    "tests/test_native_recursive_parent_value.py"
+   ],
+   "kind": "gap_class",
+   "label": "Recursive parent value (moRecursiveSetValue)",
+   "modules": [
+    "src/ct2trainer/native/compiler.py",
+    "src/ct2trainer/native/value_links.py",
+    "src/ct2trainer/native/engine.py"
+   ],
+   "note": "moRecursiveSetValue value parents compile a deterministic write closure (deepest-first, ties ascending id, target last) into recursive_value.write_ids plan metadata via the shared value_links.recursive_write_closure; both plan validators re-derive and byte-verify the closure and refuse forged metadata. At set-value time the engine re-plans through the tested RecursiveSetValueModel, cross-checks the runtime plan against the compiled closure, and rewrites every descendant in one all-or-nothing transaction, updating frozen closure records so the freeze loop keeps the new bytes; bitfield/string closure members are refused fail-closed. Real in-game effect for the pinned corpus records remains an open AP-11 gate.",
+   "requirement": "N-07",
+   "status": "covered"
+  },
+  "string_codepage": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_string_codec.py",
+    "tests/test_native_strings.py",
+    "tests/test_native_codepage_contract.py",
+    "tests/test_native_string_codepage_wiring.py"
+   ],
+   "kind": "gap_class",
+   "label": "String codepage encoding",
+   "modules": [
+    "src/ct2trainer/native/codepage_contract.py",
+    "src/ct2trainer/native/string_values.py",
+    "src/ct2trainer/native/string_runtime.py",
+    "src/ct2trainer/native/compiler.py"
+   ],
+   "note": "The pinned CodePage contract (cp1250-1254/1257, UTF-8; 0 = ANSI default) is now wired through the string pipeline: an explicit non-default CodePage resolves to the pinned stdlib codec with unit size 1, survives value_types dispatch and plan validation, and round-trips through compile and the engine runtime with exact prefix/terminator semantics; CodePage 0 or an absent attribute keeps the legacy default codec so the 0.8 fixture pins stay byte-stable; unpinned values, Boolean flags, non-integer text and Unicode combinations are refused fail-closed with no writes. The pinned corpus carries 0 records with a foreign CodePage, so no denominator change.",
+   "requirement": "N-18",
+   "status": "covered"
+  },
+  "table_lua_lifecycle": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_lua_bootstrap.py",
+    "tests/test_native_lua_activation.py",
+    "tests/test_native_compiler.py"
+   ],
+   "kind": "gap_class",
+   "label": "Table Lua lifecycle (loads on import)",
+   "modules": [
+    "src/ct2trainer/native/lua_bootstrap.py",
+    "src/ct2trainer/native/lua_activation.py"
+   ],
+   "note": "Table-level Lua is prepared statically without execution; activation receipts and phase boundaries are tested.",
+   "requirement": "N-19",
+   "status": "covered"
+  },
+  "value_address_empty": {
+   "affected_records": 0,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_addresses.py",
+    "tests/test_native_compiler.py"
+   ],
+   "kind": "gap_class",
+   "label": "Value record without address",
+   "modules": [
+    "src/ct2trainer/native/address_expression.py",
+    "src/ct2trainer/native/compiler.py"
+   ],
+   "note": "Empty/null value addresses classify to navigation or are rejected fail-closed; addressless zero arrays navigate without an invented range (tested).",
+   "requirement": "N-05",
+   "status": "covered"
+  }
+ },
+ "generated": "run repo-reproducible",
+ "lane": "AP-10 feature matrix and coverage metric (read-only, static)",
+ "run_id": "repo-reproducible",
+ "schema": "corpus-feature-matrix/v1",
+ "source": {
+  "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
+  "gap_report_sha256": "21e0c98c0b6ca48e058e5b0565604896d6412f1a871571567066de8f0799567e",
+  "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
+  "inventory_sha256": "6363ba5db4065bd99e55f4ef54fab24ece1d2b01fa2fa1610a6350ddfc65746e"
+ },
+ "top10_priority": []
+}

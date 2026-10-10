@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ct2trainer"
+version = "0.9.0-rc2"
+description = "Independent CT converter and Win32 trainer"
+requires-python = ">=3.12"
+dependencies = ["lupa==2.8", "iced-x86==1.21.0"]
+license = {file = "licenses/CT2Trainer-MIT.txt"}
+
+[project.scripts]
+ct2trainer = "ct2trainer.native.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

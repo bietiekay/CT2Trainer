@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="34">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>236</ID>
+      <Description>"Syn05 Item 236"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0236,64)
+aobscanmodule(synAOB0236,ct2synth05.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0236)
+  nop
+[DISABLE]
+dealloc(synCave0236)
+unregistersymbol(synAOB0236)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>46</ID>
+      <Description>"Syn05 Item 46"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+luacall(speedhack_setSpeed(2.5))
+  nop
+[DISABLE]
+luacall(speedhack_setSpeed(1))</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>47</ID>
+      <Description>"Syn05 Item 47"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+luacall(speedhack_setSpeed(2.5))
+  nop
+[DISABLE]
+luacall(speedhack_setSpeed(1))</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>141</ID>
+      <Description>"Syn05 Item 141"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0141,64)
+aobscanmodule(synAOB0141,ct2synth05.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0141)
+  nop
+[DISABLE]
+dealloc(synCave0141)
+unregistersymbol(synAOB0141)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>184</ID>
+      <Description>"Syn05 Item 184"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0184,64)
+aobscanmodule(synAOB0184,ct2synth05.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0184)
+  nop
+[DISABLE]
+dealloc(synCave0184)
+unregistersymbol(synAOB0184)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>197</ID>
+      <Description>"Syn05 Item 197"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0197,ct2synth05.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0197)
+  nop
+[DISABLE]
+unregistersymbol(synAOB0197)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>232</ID>
+      <Description>"Syn05 Item 232"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0232,64)
+aobscanmodule(synAOB0232,ct2synth05.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0232)
+  nop
+[DISABLE]
+dealloc(synCave0232)
+unregistersymbol(synAOB0232)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>235</ID>
+      <Description>"Syn05 Item 235"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0235,64)
+aobscanmodule(synAOB0235,ct2synth05.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0235)
+  nop
+[DISABLE]
+dealloc(synCave0235)
+unregistersymbol(synAOB0235)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>237</ID>
+      <Description>"Syn05 Item 237"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0237,64)
+aobscanmodule(synAOB0237,ct2synth05.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0237)
+  nop
+[DISABLE]
+dealloc(synCave0237)
+unregistersymbol(synAOB0237)</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>

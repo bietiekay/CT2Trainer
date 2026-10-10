@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="52">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"Syn09 Item 3"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0003,64)
+aobscanmodule(synAOB0003,ct2synth09.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0003)
+readmem(synAOB0003,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0003)
+unregistersymbol(synAOB0003)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Syn09 Item 2"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0002,64)
+aobscanmodule(synAOB0002,ct2synth09.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0002)
+readmem(synAOB0002,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0002)
+unregistersymbol(synAOB0002)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>5</ID>
+      <Description>"Syn09 Item 5"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0005,64)
+aobscanmodule(synAOB0005,ct2synth09.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0005)
+readmem(synAOB0005,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0005)
+unregistersymbol(synAOB0005)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9</ID>
+      <Description>"Syn09 Item 9"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0009,64)
+aobscanmodule(synAOB0009,ct2synth09.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0009)
+readmem(synAOB0009,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0009)
+unregistersymbol(synAOB0009)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"Syn09 Item 10"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0010,64)
+aobscanmodule(synAOB0010,ct2synth09.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0010)
+readmem(synAOB0010,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0010)
+unregistersymbol(synAOB0010)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337261275</ID>
+      <Description>"Syn09 Item 1337261275"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave1337261275,64)
+aobscanmodule(synAOB1337261275,ct2synth09.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1337261275)
+readmem(synAOB1337261275,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1337261275)
+unregistersymbol(synAOB1337261275)</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>

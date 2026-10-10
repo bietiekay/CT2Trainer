@@ -1,0 +1,19 @@
+<CheatTable CheatEngineTableVersion="45"><CheatEntries><CheatEntry><ID>1</ID><Description>Global probe (x86)</Description><VariableType>Auto Assembler Script</VariableType><AssemblerScript>[ENABLE]
+aobscanmodule(FixtureAnchor,"NativeGlobalFixture.exe",43 54 32 54 2D 47 4C 42 2D 32 30 32 36 2D 30 31)
+aobscanmodule(ProbeEntry,"NativeGlobalFixture.exe",55 8B EC B8 5D 5C 5B 5A 5D C3)
+globalalloc(globalvalue,4,FixtureAnchor+16)
+globalvalue:
+dd #333
+alloc(cave,16,FixtureAnchor+16)
+cave:
+mov ecx,globalvalue
+mov eax,[ecx]
+ret
+ProbeEntry:
+jmp cave
+db 90 90 90 90 90
+[DISABLE]
+ProbeEntry:
+db 55 8B EC B8 5D 5C 5B 5A 5D C3
+dealloc(cave)
+dealloc(globalvalue)</AssemblerScript></CheatEntry><CheatEntry><ID>2</ID><Description>Global value</Description><VariableType>4 Bytes</VariableType><Address>globalvalue</Address></CheatEntry></CheatEntries></CheatTable>

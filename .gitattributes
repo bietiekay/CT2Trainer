@@ -1,0 +1,9 @@
+dependencies/** -text -whitespace
+dependencies/**/README.md text eol=lf
+TableReferences/** -text
+licenses/MONO-API-SOURCE-LICENSE.txt -text -whitespace
+tests/windows/hook_fixture/*.ct -text
+tests/windows/debug_hook_fixture/*.ct -text
+tests/windows/scan_fixture/*.ct -text
+tests/windows/string_fixture/*.ct -text
+tests/windows/string_fixture/*.c -text

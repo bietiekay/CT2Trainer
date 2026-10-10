@@ -1,0 +1,23 @@
+{
+  "package": "lupa",
+  "version": "2.8",
+  "project_urls": {
+    "Homepage": "https://github.com/scoder/lupa"
+  },
+  "files": [
+    {
+      "filename": "lupa-2.8-cp312-cp312-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/0c/27/05f950d15b8ab120b39c43588b438ff3ace70c1b1b0225a960393a497483/lupa-2.8-cp312-cp312-win_amd64.whl",
+      "sha256": "281bedc5deb92d31e649a3552edd662449365a635904fa4d5cb4509c7245e34e",
+      "bytes": 1941809
+    },
+    {
+      "filename": "lupa-2.8.tar.gz",
+      "url": "https://files.pythonhosted.org/packages/c3/a6/0f869fbb07c393f15473b1eefefb7b5bec162fb7481803d040ed4dc46002/lupa-2.8.tar.gz",
+      "sha256": "d8022641b9ec8ecf2c5ecbe9f47e5a70e0b87c4b5ae921b92cb02a638e0acd08",
+      "bytes": 6156370
+    }
+  ],
+  "license": "MIT",
+  "ce_inputs": []
+}

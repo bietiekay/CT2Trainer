@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="42">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"Syn13 Item 3"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0003,64)
+aobscanmodule(synAOB0003,ct2synth13.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0003)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0003)
+unregistersymbol(synAOB0003)</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>

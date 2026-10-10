@@ -1,0 +1,64 @@
+{
+  "repository": "SamboyCoding/Cpp2IL",
+  "commit": "b5ad444b82267cb1e4b88b8b373c008105bdea52",
+  "license": "MIT",
+  "ce_inputs": [],
+  "upstream_executed": false,
+  "files": [
+    {
+      "path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/SamboyCoding/Cpp2IL/b5ad444b82267cb1e4b88b8b373c008105bdea52/LICENSE",
+      "bytes": 1066,
+      "sha256": "1a80d1b99e958385045da1e383a105895d1c997ef2b36448430dbfe3763fe670"
+    },
+    {
+      "path": "LibCpp2IL/Metadata/Il2CppGlobalMetadataHeader.cs",
+      "url": "https://raw.githubusercontent.com/SamboyCoding/Cpp2IL/b5ad444b82267cb1e4b88b8b373c008105bdea52/LibCpp2IL/Metadata/Il2CppGlobalMetadataHeader.cs",
+      "bytes": 9943,
+      "sha256": "fc19fb0d447a7ea502af494e8e7aea07af7066c6cf877b8fa6f1d2eb3cf70d9a"
+    },
+    {
+      "path": "LibCpp2IL/Metadata/Il2CppGlobalMetadataSectionHeader.cs",
+      "url": "https://raw.githubusercontent.com/SamboyCoding/Cpp2IL/b5ad444b82267cb1e4b88b8b373c008105bdea52/LibCpp2IL/Metadata/Il2CppGlobalMetadataSectionHeader.cs",
+      "bytes": 535,
+      "sha256": "6124c517961279602b595a42b7fa27ed6b63955c46344ed3c5019cd37afdbad7"
+    },
+    {
+      "path": "LibCpp2IL/Metadata/Il2CppImageDefinition.cs",
+      "url": "https://raw.githubusercontent.com/SamboyCoding/Cpp2IL/b5ad444b82267cb1e4b88b8b373c008105bdea52/LibCpp2IL/Metadata/Il2CppImageDefinition.cs",
+      "bytes": 2963,
+      "sha256": "230a81359241ea9f8bbef4af326bcb4d3b88db53b07cbc7df9083f6d30db0998"
+    },
+    {
+      "path": "LibCpp2IL/Metadata/Il2CppMethodDefinition.cs",
+      "url": "https://raw.githubusercontent.com/SamboyCoding/Cpp2IL/b5ad444b82267cb1e4b88b8b373c008105bdea52/LibCpp2IL/Metadata/Il2CppMethodDefinition.cs",
+      "bytes": 8764,
+      "sha256": "169e4fc688fb2f76762817b881e11f105a117cd1a15c243dba3ff7e9070cefc7"
+    },
+    {
+      "path": "LibCpp2IL/Metadata/Il2CppParameterDefinition.cs",
+      "url": "https://raw.githubusercontent.com/SamboyCoding/Cpp2IL/b5ad444b82267cb1e4b88b8b373c008105bdea52/LibCpp2IL/Metadata/Il2CppParameterDefinition.cs",
+      "bytes": 951,
+      "sha256": "bb8c6347716e1690488a4692f9cdaa69301603ce80b4eafd87b8f44b01b8ea8d"
+    },
+    {
+      "path": "LibCpp2IL/Metadata/Il2CppTypeDefinition.cs",
+      "url": "https://raw.githubusercontent.com/SamboyCoding/Cpp2IL/b5ad444b82267cb1e4b88b8b373c008105bdea52/LibCpp2IL/Metadata/Il2CppTypeDefinition.cs",
+      "bytes": 15242,
+      "sha256": "fcde24aa6551858a36ffe7c6676cf399f5eca3b3f434beec1d0794d0979b6677"
+    },
+    {
+      "path": "LibCpp2IL/Metadata/Il2CppVariableWidthIndex.cs",
+      "url": "https://raw.githubusercontent.com/SamboyCoding/Cpp2IL/b5ad444b82267cb1e4b88b8b373c008105bdea52/LibCpp2IL/Metadata/Il2CppVariableWidthIndex.cs",
+      "bytes": 5748,
+      "sha256": "8e9276a89f0ee975be45596b31e12bb1941892c7df191c43614c2ddd684ed5ee"
+    },
+    {
+      "path": "LibCpp2IL/PE/PE.cs",
+      "url": "https://raw.githubusercontent.com/SamboyCoding/Cpp2IL/b5ad444b82267cb1e4b88b8b373c008105bdea52/LibCpp2IL/PE/PE.cs",
+      "bytes": 10479,
+      "sha256": "9c05c00e9186f9653292e96844d83e8c6366a3b57824f5b64461fe8c3af564c8"
+    }
+  ],
+  "tree_sha256": "f5dfc84f8e6926766a7ce8de88262f45e123548dab60647d803debc508c2fe9e"
+}

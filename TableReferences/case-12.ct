@@ -1,0 +1,670 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="52">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1337261282</ID>
+      <Description>"Syn12 Item 1337261282"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave1337261282,64)
+aobscanmodule(synAOB1337261282,ct2synth12.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1337261282)
+readmem(synAOB1337261282,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1337261282)
+unregistersymbol(synAOB1337261282)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100000</ID>
+      <Description>"SynS Group 001"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261283</ID>
+        <Description>"Syn12 Item 1337261283"</Description>
+        <Color>0075EA</Color>
+        <VariableType>2 Bytes</VariableType>
+        <Address>synSym12_03+10</Address>
+        <Value>0</Value>
+        <Hotkeys>
+          <Hotkey>
+            <Key>114</Key>
+            <Activate>Release</Activate>
+          </Hotkey>
+        </Hotkeys>
+        <DropDownList>
+          1: synOptA1337261283
+          2: synOptB1337261283
+          3: synOptC1337261283
+        </DropDownList>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261335</ID>
+        <Description>"Syn12 Item 1337261335"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>+00103</Address>
+        <Value>0</Value>
+        <DropDownListLink>Syn12 Item 1337261283</DropDownListLink>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100001</ID>
+      <Description>"SynS Group 002"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261315</ID>
+        <Description>"Syn12 Item 1337261315"</Description>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>synSym12_05+10</Address>
+        <Value>0</Value>
+        <Hotkeys>
+          <Hotkey>
+            <Key>114</Key>
+            <Activate>Release</Activate>
+          </Hotkey>
+        </Hotkeys>
+        <DropDownList>
+          1: synOptA1337261315
+          2: synOptB1337261315
+          3: synOptC1337261315
+        </DropDownList>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261336</ID>
+        <Description>"Syn12 Item 1337261336"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>+00105</Address>
+        <Value>0</Value>
+        <DropDownListLink>Syn12 Item 1337261315</DropDownListLink>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100002</ID>
+      <Description>"SynS Group 003"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261365</ID>
+        <Description>"Syn12 Item 1337261365"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym12_07+10</Address>
+        <Value>0</Value>
+        <Hotkeys>
+          <Hotkey>
+            <Key>114</Key>
+            <Activate>Release</Activate>
+          </Hotkey>
+        </Hotkeys>
+        <DropDownList>
+          1: synOptA1337261365
+          2: synOptB1337261365
+          3: synOptC1337261365
+        </DropDownList>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261337</ID>
+        <Description>"Syn12 Item 1337261337"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>+00107</Address>
+        <Value>0</Value>
+        <DropDownListLink>Syn12 Item 1337261365</DropDownListLink>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100003</ID>
+      <Description>"SynS Group 004"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261350</ID>
+        <Description>"Syn12 Item 1337261350"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym12_01+10</Address>
+        <Value>0</Value>
+        <DropDownList>
+          1: synOptA1337261350
+          2: synOptB1337261350
+          3: synOptC1337261350
+        </DropDownList>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261338</ID>
+        <Description>"Syn12 Item 1337261338"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>+00109</Address>
+        <Value>0</Value>
+        <DropDownListLink>Syn12 Item 1337261350</DropDownListLink>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100004</ID>
+      <Description>"SynS Group 005"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261310</ID>
+        <Description>"Syn12 Item 1337261310"</Description>
+        <Color>0075EA</Color>
+        <VariableType>2 Bytes</VariableType>
+        <Address>synSym12_03+10</Address>
+        <Value>0</Value>
+        <DropDownList>
+          1: synOptA1337261310
+          2: synOptB1337261310
+          3: synOptC1337261310
+        </DropDownList>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261339</ID>
+        <Description>"Syn12 Item 1337261339"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>+0010B</Address>
+        <Value>0</Value>
+        <DropDownListLink>Syn12 Item 1337261310</DropDownListLink>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100005</ID>
+      <Description>"SynS Group 006"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261311</ID>
+        <Description>"Syn12 Item 1337261311"</Description>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>synSym12_05+10</Address>
+        <Value>0</Value>
+        <DropDownList>
+          1: synOptA1337261311
+          2: synOptB1337261311
+          3: synOptC1337261311
+        </DropDownList>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261340</ID>
+        <Description>"Syn12 Item 1337261340"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>+0010D</Address>
+        <Value>0</Value>
+        <DropDownListLink>Syn12 Item 1337261311</DropDownListLink>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100006</ID>
+      <Description>"SynS Group 007"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261313</ID>
+        <Description>"Syn12 Item 1337261313"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym12_07+10</Address>
+        <Value>0</Value>
+        <DropDownList>
+          1: synOptA1337261313
+          2: synOptB1337261313
+          3: synOptC1337261313
+        </DropDownList>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261341</ID>
+        <Description>"Syn12 Item 1337261341"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>+0010F</Address>
+        <Value>0</Value>
+        <DropDownListLink>Syn12 Item 1337261313</DropDownListLink>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100007</ID>
+      <Description>"SynS Group 008"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261304</ID>
+        <Description>"Syn12 Item 1337261304"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym12_01+10</Address>
+        <Value>0</Value>
+        <DropDownList>
+          1: synOptA1337261304
+          2: synOptB1337261304
+          3: synOptC1337261304
+        </DropDownList>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261342</ID>
+        <Description>"Syn12 Item 1337261342"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>+00111</Address>
+        <Value>0</Value>
+        <DropDownListLink>Syn12 Item 1337261304</DropDownListLink>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100008</ID>
+      <Description>"SynS Group 009"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261353</ID>
+        <Description>"Syn12 Item 1337261353"</Description>
+        <Color>0075EA</Color>
+        <VariableType>2 Bytes</VariableType>
+        <Address>synSym12_03+10</Address>
+        <Value>0</Value>
+        <DropDownList>
+          1: synOptA1337261353
+          2: synOptB1337261353
+          3: synOptC1337261353
+        </DropDownList>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261343</ID>
+        <Description>"Syn12 Item 1337261343"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>+00113</Address>
+        <Value>0</Value>
+        <DropDownListLink>Syn12 Item 1337261353</DropDownListLink>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100009</ID>
+      <Description>"SynS Group 010"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261367</ID>
+        <Description>"Syn12 Item 1337261367"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave1337261367,64)
+aobscanmodule(synAOB1337261367,ct2synth12.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1337261367)
+readmem(synAOB1337261367,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1337261367)
+unregistersymbol(synAOB1337261367)</AssemblerScript>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261266</ID>
+        <Description>"Syn12 Item 1337261266"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>synSym12_06</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261267</ID>
+        <Description>"Syn12 Item 1337261267"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym12_07</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100010</ID>
+      <Description>"SynS Group 011"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261368</ID>
+        <Description>"Syn12 Item 1337261368"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synSym12_08</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261300</ID>
+        <Description>"Syn12 Item 1337261300"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>+00118</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100011</ID>
+      <Description>"SynS Group 012"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261302</ID>
+        <Description>"Syn12 Item 1337261302"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>+00119</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261354</ID>
+        <Description>"Syn12 Item 1337261354"</Description>
+        <Color>0075EA</Color>
+        <VariableType>2 Bytes</VariableType>
+        <Address>synSym12_03+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100012</ID>
+      <Description>"SynS Group 013"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261359</ID>
+        <Description>"Syn12 Item 1337261359"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synSym12_04+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261361</ID>
+        <Description>"Syn12 Item 1337261361"</Description>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>synSym12_05+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100013</ID>
+      <Description>"SynS Group 014"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261363</ID>
+        <Description>"Syn12 Item 1337261363"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>synSym12_06+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261364</ID>
+        <Description>"Syn12 Item 1337261364"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym12_07+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100014</ID>
+      <Description>"SynS Group 015"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261347</ID>
+        <Description>"Syn12 Item 1337261347"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synSym12_08+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261348</ID>
+        <Description>"Syn12 Item 1337261348"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym12_01+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100015</ID>
+      <Description>"SynS Group 016"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261351</ID>
+        <Description>"Syn12 Item 1337261351"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>synSym12_02+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261352</ID>
+        <Description>"Syn12 Item 1337261352"</Description>
+        <Color>0075EA</Color>
+        <VariableType>2 Bytes</VariableType>
+        <Address>synSym12_03+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100016</ID>
+      <Description>"SynS Group 017"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261355</ID>
+        <Description>"Syn12 Item 1337261355"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synSym12_04+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261356</ID>
+        <Description>"Syn12 Item 1337261356"</Description>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>synSym12_05+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100017</ID>
+      <Description>"SynS Group 018"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261357</ID>
+        <Description>"Syn12 Item 1337261357"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>synSym12_06+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261358</ID>
+        <Description>"Syn12 Item 1337261358"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym12_07+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>10100018</ID>
+      <Description>"SynS Group 019"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1337261360</ID>
+        <Description>"Syn12 Item 1337261360"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synSym12_08+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>1337261362</ID>
+        <Description>"Syn12 Item 1337261362"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym12_01+10</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337261254</ID>
+      <Description>"Syn12 Item 1337261254"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave1337261254,64)
+aobscanmodule(synAOB1337261254,ct2synth12.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1337261254)
+readmem(synAOB1337261254,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1337261254)
+unregistersymbol(synAOB1337261254)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337261275</ID>
+      <Description>"Syn12 Item 1337261275"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave1337261275,64)
+aobscanmodule(synAOB1337261275,ct2synth12.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1337261275)
+readmem(synAOB1337261275,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1337261275)
+unregistersymbol(synAOB1337261275)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337261287</ID>
+      <Description>"Syn12 Item 1337261287"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave1337261287,64)
+aobscanmodule(synAOB1337261287,ct2synth12.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1337261287)
+readmem(synAOB1337261287,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1337261287)
+unregistersymbol(synAOB1337261287)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337261293</ID>
+      <Description>"Syn12 Item 1337261293"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave1337261293,64)
+aobscanmodule(synAOB1337261293,ct2synth12.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1337261293)
+readmem(synAOB1337261293,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1337261293)
+unregistersymbol(synAOB1337261293)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337261298</ID>
+      <Description>"Syn12 Item 1337261298"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave1337261298,64)
+aobscanmodule(synAOB1337261298,ct2synth12.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1337261298)
+readmem(synAOB1337261298,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1337261298)
+unregistersymbol(synAOB1337261298)</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+  <Structures>
+    <Type name="synStruct12">
+      <Variable Name="synField12" Offset="0" Size="4" Type="dword" Description="synthetic"/>
+    </Type>
+  </Structures>
+  <UserdefinedSymbols/>
+</CheatTable>

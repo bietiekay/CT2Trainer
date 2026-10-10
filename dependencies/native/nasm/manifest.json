@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "component": "NASM",
+  "version": "3.02",
+  "license": "BSD-2-Clause",
+  "acquired_utc": "2026-09-30",
+  "executable": {
+    "archive_member": "nasm-3.02/nasm.exe",
+    "sha256": "04ec2385879f7e1c45dbe76c4020970555de48eeb97c23f59620ede061328f51"
+  },
+  "files": [
+    {
+      "path": "nasm-3.02-win64.zip",
+      "size": 641314,
+      "sha256": "161d0bfaff53c2f9e9f3e69fd0672323ebabafd1268976a5cec11be92a19aee7",
+      "source_url": "https://www.nasm.us/pub/nasm/releasebuilds/3.02/win64/nasm-3.02-win64.zip"
+    },
+    {
+      "path": "nasm-3.02.tar.xz",
+      "size": 1531636,
+      "sha256": "87336eba53b4acfe917424ab5d500d2b0054d9f5148d35c2273ccf2cfb712f0d",
+      "source_url": "https://www.nasm.us/pub/nasm/releasebuilds/3.02/nasm-3.02.tar.xz"
+    },
+    {
+      "path": "LICENSE.txt",
+      "size": 1554,
+      "sha256": "7436a7c46b6e4d969b41e1ce387885ae4ced25710662189ff2983665253729ac",
+      "source_url": "https://raw.githubusercontent.com/netwide-assembler/nasm/nasm-3.02/LICENSE"
+    }
+  ]
+}

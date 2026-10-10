@@ -1,0 +1,76 @@
+CT2Trainer third-party notices
+
+CT2Trainer contains independently authored Python source (scoped MIT
+license in CT2Trainer-MIT.txt) and redistributable third-party runtimes.
+No Cheat Engine, CE-derived Lua DLL, CE stub, CE resource or CE driver is included.
+The original third-party license texts are embedded in both binaries and copied
+alongside the portable converter. Python itself is not modified.
+
+NASM 3.02: BSD-2-Clause. Pinned upstream executable supplies instruction
+encoding; the AA grammar/linker and target lifecycle are CT2Trainer code.
+Exact upstream LICENSE.txt is retained as NASM-LICENSE.txt.
+https://www.nasm.us/doc/nasmab.html
+
+iced-x86 1.21.0: MIT. Decodes instructions and relocates supported blocks.
+Exact wheel LICENSE.txt is retained as ICED-X86-LICENSE.txt.
+https://github.com/icedland/iced
+
+Lupa 2.8 and its upstream Lua 5.3 implementation: MIT. Only the Lua53 extension
+is used by Native. The exact wheel license contains both copyrights/notices,
+retained as LUPA-LICENSE.txt. This is not a CE Lua binary.
+https://github.com/scoder/lupa
+
+Selected LibCpp2IL source adaptation: MIT, Copyright (c) 2020 Sam Byass.
+Pinned SamboyCoding/Cpp2IL commit b5ad444b82267cb1e4b88b8b373c008105bdea52.
+CT2Trainer adapts the selected PE file mapper and declared metadata-v29
+identity layouts into a bounded stdlib-only Python reader. Original source,
+file/commit pins and local change records are retained under
+dependencies/native/libcpp2il-static. This is a static file identity subset;
+it provides no Unity runtime, live method pointer or invocation capability.
+Exact original MIT text is retained as LIBCPP2IL-STATIC-LICENSE.txt.
+https://github.com/SamboyCoding/Cpp2IL
+
+Python 3.12: Python Software Foundation License and incorporated component
+notices, copied from the exact build runtime's LICENSE.txt as PYTHON-LICENSE.txt.
+https://docs.python.org/3.12/license.html
+
+Tcl/Tk 8.6: retained license.terms, copied from the exact build runtime where
+available (TCL-LICENSE.txt and TK-LICENSE.txt). Windows standard Python uses Tk
+for this edition's interface; there is no CE-LCL/CE-Lua UI.
+https://www.tcl-lang.org/software/tcltk/license.html
+
+PyInstaller 6.22.3: GPL with bootloader exception; unmodified bundler. Generated
+applications may be distributed under their own license subject to dependencies.
+The bundler is a build dependency; the bootloader is in the resulting EXE.
+https://pyinstaller.org/en/stable/license.html
+
+Microsoft Visual C++ runtime DLLs supplied by Windows Python: Microsoft's
+redistribution terms apply to those DLLs, separately from MIT/Python/Tcl.
+https://learn.microsoft.com/en-us/cpp/windows/redistributing-visual-cpp-files
+
+User-selected CT content is a separate input with its author's rights. No
+TableReferences game table or game code is included in the portable converter
+or source ZIP. Building a trainer does not license somebody else's CT.
+
+Selected Mono public API source adaptation: MIT source scope only.
+
+First-party adapter and owned fixtures: scoped CT2Trainer MIT grant;
+tests/windows/mono_fixture/ is included in that first-party grant.
+
+Selected public Mono API declarations: Mono MIT scope, mono/mono commit
+0cbf0e290c31adb476f9de0fa44b1d8829affa40 (mono-6.12.0.206). Exact project LICENSE
+and PATENTS.TXT and all original per-file notices are retained. Several selected
+headers name Xamarin, Novell or .NET Foundation notices; preserve those originals.
+The full root LICENSE includes disclosures/text for unselected mixed-license
+parts. No claim is made that all Mono code or an MSI is MIT.
+
+No Mono DLL/MSI/import library/mscorlib/runtime is redistributed. A target's
+existing approved runtime is a prerequisite. Any later runtime bundle needs its
+own source, build and mixed-license closure. Windows/MSVC/CRT prerequisites keep
+their separate platform/redistribution terms. Header hashes and ABI version text
+are not runtime ownership, a domain-unload fence or permission to call a game.
+
+Primary source references:
+https://github.com/mono/mono/tree/0cbf0e290c31adb476f9de0fa44b1d8829affa40
+https://www.mono-project.com/docs/advanced/embedding/
+https://learn.microsoft.com/windows/win32/api/libloaderapi/nf-libloaderapi-getmodulehandleexw

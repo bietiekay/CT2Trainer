@@ -1,0 +1,68 @@
+{
+  "case-06.ct": {
+    "sha256": "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
+    "table_version": 31,
+    "cheat_entries": 331,
+    "assembler_scripts": 31,
+    "table_lua_blocks": 1,
+    "pointer_offsets": 33,
+    "hotkeys": 1,
+    "async_scripts": 21,
+    "dropdown_links": 0
+  },
+  "case-09.ct": {
+    "sha256": "a7f9c7aebe65fca7fe549bb5d00cf6a5e76643f528cbef7a04957662fa145ffb",
+    "table_version": 52,
+    "cheat_entries": 6,
+    "assembler_scripts": 6,
+    "table_lua_blocks": 0,
+    "pointer_offsets": 0,
+    "hotkeys": 0,
+    "async_scripts": 0,
+    "dropdown_links": 0
+  },
+  "case-10.ct": {
+    "sha256": "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
+    "table_version": 45,
+    "cheat_entries": 2,
+    "assembler_scripts": 2,
+    "table_lua_blocks": 1,
+    "pointer_offsets": 0,
+    "hotkeys": 0,
+    "async_scripts": 0,
+    "dropdown_links": 0
+  },
+  "case-11.ct": {
+    "sha256": "80ecb65161b341a68f1f228504577ea9b70b381023187201f791c6ffac99249d",
+    "table_version": 45,
+    "cheat_entries": 121,
+    "assembler_scripts": 12,
+    "table_lua_blocks": 0,
+    "pointer_offsets": 1,
+    "hotkeys": 0,
+    "async_scripts": 0,
+    "dropdown_links": 0
+  },
+  "case-12.ct": {
+    "sha256": "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
+    "table_version": 52,
+    "cheat_entries": 64,
+    "assembler_scripts": 7,
+    "table_lua_blocks": 0,
+    "pointer_offsets": 0,
+    "hotkeys": 3,
+    "async_scripts": 0,
+    "dropdown_links": 9
+  },
+  "case-13.ct": {
+    "sha256": "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
+    "table_version": 42,
+    "cheat_entries": 1,
+    "assembler_scripts": 1,
+    "table_lua_blocks": 0,
+    "pointer_offsets": 0,
+    "hotkeys": 0,
+    "async_scripts": 0,
+    "dropdown_links": 0
+  }
+}

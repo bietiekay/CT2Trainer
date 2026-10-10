@@ -1,0 +1,362 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>182</ID>
+      <Description>"Main Script (Synthetic v2026-10-09)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+synFlag0182 = synFlag0182 + 1
+local synMono0182 = getMonoMethod("synClass0182","synMethod0182")
+{$asm}
+  mov rcx,rcx
+[DISABLE]
+{$lua}
+synFlag0182 = 0
+{$asm}
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9300000</ID>
+      <Description>"SynD Group 001"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>202</ID>
+        <Description>"Syn04 Item 202"</Description>
+        <Color>0075EA</Color>
+        <VariableType>2 Bytes</VariableType>
+        <Address>synSym04_03</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>204</ID>
+        <Description>"Syn04 Item 204"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synSym04_04</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9300001</ID>
+      <Description>"SynD Group 002"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>205</ID>
+        <Description>"Syn04 Item 205"</Description>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>synSym04_05</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>207</ID>
+        <Description>"Syn04 Item 207"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Double</VariableType>
+        <Address>synSym04_06</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9300002</ID>
+      <Description>"SynD Group 003"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>208</ID>
+        <Description>"Syn04 Item 208"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym04_07</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>210</ID>
+        <Description>"Syn04 Item 210"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synSym04_08</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9300003</ID>
+      <Description>"SynD Group 004"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>211</ID>
+        <Description>"Syn04 Item 211"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym04_01</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>212</ID>
+        <Description>"Syn04 Item 212"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>synSym04_02</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>10</Offset>
+          <Offset>18</Offset>
+        </Offsets>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>185</ID>
+      <Description>"Syn04 Item 185"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0185,64)
+aobscanmodule(synAOB0185,ct2synth04.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0185)
+readmem(synAOB0185,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0185)
+unregistersymbol(synAOB0185)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>189</ID>
+      <Description>"Syn04 Item 189"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0189,64)
+aobscanmodule(synAOB0189,ct2synth04.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0189)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0189)
+unregistersymbol(synAOB0189)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>194</ID>
+      <Description>"Syn04 Item 194"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0194,64)
+aobscanmodule(synAOB0194,ct2synth04.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0194)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0194)
+unregistersymbol(synAOB0194)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>209</ID>
+      <Description>"Syn04 Item 209"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave0209,64)
+aobscanmodule(synAOB0209,ct2synth04.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0209)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave0209)
+unregistersymbol(synAOB0209)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>216</ID>
+      <Description>"Syn04 Item 216"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+synClass0216.synMethod0216+1234:
+  db 90
+  mov rcx,rcx
+[DISABLE]
+synClass0216.synMethod0216+1234:
+  db 48</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>223</ID>
+      <Description>"Syn04 Item 223"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0223,ct2synth04.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0223)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB0223)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>224</ID>
+      <Description>"Syn04 Item 224"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synAOB0224,ct2synth04.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB0224)
+  mov rcx,rcx
+[DISABLE]
+unregistersymbol(synAOB0224)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>190</ID>
+      <Description>"Syn04 Item 190"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>synSym04_02</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>191</ID>
+      <Description>"Syn04 Item 191"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>synSym04_03</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>192</ID>
+      <Description>"Syn04 Item 192"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym04_04</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>193</ID>
+      <Description>"Syn04 Item 193"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym04_05</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>195</ID>
+      <Description>"Syn04 Item 195"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>synSym04_06</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>196</ID>
+      <Description>"Syn04 Item 196"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym04_07</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>198</ID>
+      <Description>"Syn04 Item 198"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym04_08</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>199</ID>
+      <Description>"Syn04 Item 199"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym04_01</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>201</ID>
+      <Description>"Syn04 Item 201"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>synSym04_02</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+  </CheatEntries>
+  <Structures>
+    <Type name="synStruct04">
+      <Variable Name="synField04" Offset="0" Size="4" Type="dword" Description="synthetic"/>
+    </Type>
+  </Structures>
+  <UserdefinedSymbols/>
+</CheatTable>

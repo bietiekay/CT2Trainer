@@ -1,0 +1,38 @@
+MIT License
+
+Copyright (c) 2026 CT2Trainer contributors
+
+This grant applies only to the independently authored Native edition files:
+src/ct2trainer/native/, src/ct2trainer/table.py,
+src/ct2trainer/capability.py, src/ct2trainer/local_processes.py,
+src/ct2trainer/__init__.py, src/ct2trainer/assets/,
+tools/native_*.py, scripts/Build-Native.ps1, tests/test_native_*.py,
+tests/*_fixture_data.py, tests/native_il2cpp_static_fixtures.py,
+tests/windows/native_probe.py, the owned fixture_target.c / fixture.ct,
+tests/windows/hook_fixture/, tests/windows/debug_hook_fixture/,
+tests/windows/clock_fixture/, tests/windows/scan_fixture/,
+tests/windows/target_broker_fixture/, tests/windows/string_fixture/,
+tests/windows/mono_fixture/, tests/windows/global_fixture/,
+tests/fixtures/, TableReferences/, tools/create_icons.py, and tests/deck/.
+The Native evaluation and verification documentation is included in this grant.
+TableReferences/ is the synthetic clean-room test corpus and is first-party
+material covered by this grant. User-supplied CT content and external
+trainer code are not covered by this grant.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

@@ -1,0 +1,3089 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="31">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>9500000</ID>
+      <Description>"SynR Group 001"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>17258</ID>
+        <Description>"Syn06 Item 17258"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript Async="1">[ENABLE]
+{$lua}
+createThread(function() end)
+speedhack_setSpeed(0.4)
+{$asm}
+alloc(synClockCave,64)
+registersymbol(synClockAOB)
+synClockAOB:
+  mov rcx,rcx
+[DISABLE]
+{$lua}
+speedhack_setSpeed(1)
+{$asm}
+unregistersymbol(synClockAOB)
+synClockAOB:
+  db 48 8B 05 01 02 03 04
+dealloc(synClockCave)
+</AssemblerScript>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500001</ID>
+      <Description>"SynR Group 002"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>14690</ID>
+        <Description>"Syn06 Item 14690"</Description>
+        <Color>0075EA</Color>
+        <VariableType>2 Bytes</VariableType>
+        <Address>+00102</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500002</ID>
+      <Description>"SynR Group 003"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>14691</ID>
+        <Description>"Syn06 Item 14691"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>+00103</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500003</ID>
+      <Description>"SynR Group 004"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>14693</ID>
+        <Description>"Syn06 Item 14693"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>synSym06_05</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500004</ID>
+      <Description>"SynR Group 005"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>14695</ID>
+        <Description>"Syn06 Item 14695"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Array of byte</VariableType>
+        <Address>synSym06_06</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500005</ID>
+      <Description>"SynR Group 006"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>14697</ID>
+        <Description>"Syn06 Item 14697"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym06_07</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500006</ID>
+      <Description>"SynR Group 007"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>14339</ID>
+        <Description>"Syn06 Item 14339"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synSym06_08</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500007</ID>
+      <Description>"SynR Group 008"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>14343</ID>
+        <Description>"Syn06 Item 14343"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synSym06_01</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500008</ID>
+      <Description>"SynR Group 009"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>14344</ID>
+        <Description>"Syn06 Item 14344"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Byte</VariableType>
+        <Address>synSym06_02</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500009</ID>
+      <Description>"SynR Group 010"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>14299</ID>
+        <Description>"Syn06 Item 14299"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+{$lua}
+synFlag14299 = synFlag14299 + 1
+createThread(function() end)
+{$asm}
+  mov rcx,rcx
+[DISABLE]
+{$lua}
+synFlag14299 = 0
+{$asm}
+db 90</AssemblerScript>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500010</ID>
+      <Description>"SynR Group 011"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>14340</ID>
+        <Description>"Syn06 Item 14340"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synSym06_04</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500011</ID>
+      <Description>"SynR Group 012"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>13572</ID>
+        <Description>"Syn06 Item 13572"</Description>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>synSym06_05</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500012</ID>
+      <Description>"SynR Group 013"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500013</ID>
+      <Description>"SynR Group 014"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500014</ID>
+      <Description>"SynR Group 015"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500015</ID>
+      <Description>"SynR Group 016"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500016</ID>
+      <Description>"SynR Group 017"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500017</ID>
+      <Description>"SynR Group 018"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>9500018</ID>
+      <Description>"SynR Group 019"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>12997</ID>
+      <Description>"Syn06 Item 12997"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+synFlag12997 = synFlag12997 + 1
+createThread(function() end)
+{$asm}
+alloc(synCave12997,64)
+aobscanmodule(synAOB12997,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB12997)
+readmem(synAOB12997,4)
+reassemble(synAOB12997)
+  mov rcx,rcx
+[DISABLE]
+{$lua}
+synFlag12997 = 0
+{$asm}
+dealloc(synCave12997)
+unregistersymbol(synAOB12997)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13008</ID>
+      <Description>"Syn06 Item 13008"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+0010E</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13021</ID>
+      <Description>"Syn06 Item 13021"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0010F</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13074</ID>
+      <Description>"Syn06 Item 13074"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00110</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13130</ID>
+      <Description>"Syn06 Item 13130"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00111</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13131</ID>
+      <Description>"Syn06 Item 13131"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+00112</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13132</ID>
+      <Description>"Syn06 Item 13132"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00113</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13133</ID>
+      <Description>"Syn06 Item 13133"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+00114</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13574</ID>
+      <Description>"Syn06 Item 13574"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+00115</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13575</ID>
+      <Description>"Syn06 Item 13575"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00116</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14342</ID>
+      <Description>"Syn06 Item 14342"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00117</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14694</ID>
+      <Description>"Syn06 Item 14694"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00118</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14696</ID>
+      <Description>"Syn06 Item 14696"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00119</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>12998</ID>
+      <Description>"Syn06 Item 12998"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+alloc(synCave12998,64)
+registersymbol(synAOB12998)
+readmem(synAOB12998,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave12998)
+unregistersymbol(synAOB12998)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13001</ID>
+      <Description>"Syn06 Item 13001"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+alloc(synCave13001,64)
+aobscanmodule(synAOB13001,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB13001)
+readmem(synAOB13001,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave13001)
+unregistersymbol(synAOB13001)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13004</ID>
+      <Description>"Syn06 Item 13004"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+float 1.0
+alloc(synCave13004,64)
+aobscanmodule(synAOB13004,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB13004)
+readmem(synAOB13004,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave13004)
+unregistersymbol(synAOB13004)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13005</ID>
+      <Description>"Syn06 Item 13005"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+synFlag13005 = synFlag13005 + 1
+createThread(function() end)
+{$asm}
+alloc(synCave13005,64)
+aobscanmodule(synAOB13005,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB13005)
+readmem(synAOB13005,4)
+  mov rcx,rcx
+[DISABLE]
+{$lua}
+synFlag13005 = 0
+{$asm}
+dealloc(synCave13005)
+unregistersymbol(synAOB13005)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13013</ID>
+      <Description>"Syn06 Item 13013"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+synFlag13013 = synFlag13013 + 1
+createThread(function() end)
+{$asm}
+alloc(synCave13013,64)
+aobscanmodule(synAOB13013,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB13013)
+readmem(synAOB13013,4)
+reassemble(synAOB13013)
+  mov rcx,rcx
+[DISABLE]
+{$lua}
+synFlag13013 = 0
+{$asm}
+dealloc(synCave13013)
+unregistersymbol(synAOB13013)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13025</ID>
+      <Description>"Syn06 Item 13025"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+float 1.0
+alloc(synCave13025,64)
+aobscanmodule(synAOB13025,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB13025)
+readmem(synAOB13025,4)
+reassemble(synAOB13025)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave13025)
+unregistersymbol(synAOB13025)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13030</ID>
+      <Description>"Syn06 Item 13030"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+alloc(synCave13030,64)
+aobscanmodule(synAOB13030,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB13030)
+readmem(synAOB13030,4)
+reassemble(synAOB13030)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave13030)
+unregistersymbol(synAOB13030)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13062</ID>
+      <Description>"Syn06 Item 13062"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+float 1.0
+alloc(synCave13062,64)
+registersymbol(synAOB13062)
+readmem(synAOB13062,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave13062)
+unregistersymbol(synAOB13062)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13134</ID>
+      <Description>"Syn06 Item 13134"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+alloc(synCave13134,64)
+aobscanmodule(synAOB13134,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB13134)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave13134)
+unregistersymbol(synAOB13134)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13179</ID>
+      <Description>"Syn06 Item 13179"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+alloc(synCave13179,64)
+registersymbol(synAOB13179)
+readmem(synAOB13179,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave13179)
+unregistersymbol(synAOB13179)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13409</ID>
+      <Description>"Syn06 Item 13409"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+alloc(synCave13409,64)
+aobscanmodule(synAOB13409,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB13409)
+readmem(synAOB13409,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave13409)
+unregistersymbol(synAOB13409)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13488</ID>
+      <Description>"Syn06 Item 13488"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+alloc(synCave13488,64)
+aobscanmodule(synAOB13488,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB13488)
+readmem(synAOB13488,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave13488)
+unregistersymbol(synAOB13488)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13551</ID>
+      <Description>"Syn06 Item 13551"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+alloc(synCave13551,64)
+aobscanmodule(synAOB13551,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB13551)
+readmem(synAOB13551,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave13551)
+unregistersymbol(synAOB13551)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14338</ID>
+      <Description>"Syn06 Item 14338"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+float 1.0
+luacall(synTick14338())
+alloc(synCave14338,64)
+aobscanmodule(synAOB14338,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB14338)
+readmem(synAOB14338,4)
+  mov rcx,rcx
+[DISABLE]
+db 90
+dealloc(synCave14338)
+unregistersymbol(synAOB14338)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14630</ID>
+      <Description>"Syn06 Item 14630"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+luacall(synTick14630())
+alloc(synCave14630,64)
+aobscanmodule(synAOB14630,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB14630)
+readmem(synAOB14630,4)
+reassemble(synAOB14630)
+  mov rcx,rcx
+[DISABLE]
+db 90
+dealloc(synCave14630)
+unregistersymbol(synAOB14630)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14721</ID>
+      <Description>"Syn06 Item 14721"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+synFlag14721 = synFlag14721 + 1
+createThread(function() end)
+{$asm}
+alloc(synCave14721,64)
+aobscanmodule(synAOB14721,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB14721)
+readmem(synAOB14721,4)
+  mov rcx,rcx
+[DISABLE]
+{$lua}
+synFlag14721 = 0
+{$asm}
+dealloc(synCave14721)
+unregistersymbol(synAOB14721)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14823</ID>
+      <Description>"Syn06 Item 14823"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+luacall(synTick14823())
+alloc(synCave14823,64)
+registersymbol(synAOB14823)
+  mov rcx,rcx
+[DISABLE]
+db 90
+dealloc(synCave14823)
+unregistersymbol(synAOB14823)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14689</ID>
+      <Description>"Syn06 Item 14689"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0012B</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13060</ID>
+      <Description>"Syn06 Item 13060"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym06_05</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13693</ID>
+      <Description>"Syn06 Item 13693"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13694</ID>
+      <Description>"Syn06 Item 13694"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+synFlag13694 = synFlag13694 + 1
+createThread(function() end)
+{$asm}
+float 1.0
+alloc(synCave13694,64)
+aobscanmodule(synAOB13694,ct2synth06.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB13694)
+readmem(synAOB13694,4)
+reassemble(synAOB13694)
+  mov rcx,rcx
+[DISABLE]
+{$lua}
+synFlag13694 = 0
+{$asm}
+dealloc(synCave13694)
+unregistersymbol(synAOB13694)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13063</ID>
+      <Description>"Syn06 Item 13063"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym06_08</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13580</ID>
+      <Description>"Syn06 Item 13580"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_01</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13587</ID>
+      <Description>"Syn06 Item 13587"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_02</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13619</ID>
+      <Description>"Syn06 Item 13619"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_03</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13581</ID>
+      <Description>"Syn06 Item 13581"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+00133</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13614</ID>
+      <Description>"Syn06 Item 13614"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+00134</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13613</ID>
+      <Description>"Syn06 Item 13613"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+00135</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13615</ID>
+      <Description>"Syn06 Item 13615"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+00136</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13616</ID>
+      <Description>"Syn06 Item 13616"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+00137</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13621</ID>
+      <Description>"Syn06 Item 13621"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+00138</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13617</ID>
+      <Description>"Syn06 Item 13617"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00139</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13623</ID>
+      <Description>"Syn06 Item 13623"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+0013A</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13618</ID>
+      <Description>"Syn06 Item 13618"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0013B</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>0</Offset>
+        <Offset>0</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13582</ID>
+      <Description>"Syn06 Item 13582"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+0013C</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13586</ID>
+      <Description>"Syn06 Item 13586"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+0013D</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13583</ID>
+      <Description>"Syn06 Item 13583"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>1234h</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13584</ID>
+      <Description>"Syn06 Item 13584"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0013F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13585</ID>
+      <Description>"Syn06 Item 13585"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00140</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13592</ID>
+      <Description>"Syn06 Item 13592"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00141</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13593</ID>
+      <Description>"Syn06 Item 13593"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+00142</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13594</ID>
+      <Description>"Syn06 Item 13594"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00143</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13595</ID>
+      <Description>"Syn06 Item 13595"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+00144</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13596</ID>
+      <Description>"Syn06 Item 13596"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+00145</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13597</ID>
+      <Description>"Syn06 Item 13597"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00146</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13598</ID>
+      <Description>"Syn06 Item 13598"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00147</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13599</ID>
+      <Description>"Syn06 Item 13599"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00148</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13600</ID>
+      <Description>"Syn06 Item 13600"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00149</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13601</ID>
+      <Description>"Syn06 Item 13601"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+0014A</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13602</ID>
+      <Description>"Syn06 Item 13602"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0014B</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13603</ID>
+      <Description>"Syn06 Item 13603"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+0014C</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13604</ID>
+      <Description>"Syn06 Item 13604"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+0014D</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13605</ID>
+      <Description>"Syn06 Item 13605"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+0014E</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13606</ID>
+      <Description>"Syn06 Item 13606"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0014F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13607</ID>
+      <Description>"Syn06 Item 13607"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00150</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13608</ID>
+      <Description>"Syn06 Item 13608"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00151</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13609</ID>
+      <Description>"Syn06 Item 13609"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+00152</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13610</ID>
+      <Description>"Syn06 Item 13610"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00153</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13611</ID>
+      <Description>"Syn06 Item 13611"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+00154</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13612</ID>
+      <Description>"Syn06 Item 13612"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+00155</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13622</ID>
+      <Description>"Syn06 Item 13622"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+00156</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13624</ID>
+      <Description>"Syn06 Item 13624"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00157</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13625</ID>
+      <Description>"Syn06 Item 13625"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00158</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13626</ID>
+      <Description>"Syn06 Item 13626"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00159</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13627</ID>
+      <Description>"Syn06 Item 13627"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+0015A</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13628</ID>
+      <Description>"Syn06 Item 13628"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0015B</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13629</ID>
+      <Description>"Syn06 Item 13629"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+0015C</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13630</ID>
+      <Description>"Syn06 Item 13630"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+0015D</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13631</ID>
+      <Description>"Syn06 Item 13631"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+0015E</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13632</ID>
+      <Description>"Syn06 Item 13632"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0015F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17860</ID>
+      <Description>"Syn06 Item 17860"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym06_01</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17862</ID>
+      <Description>"Syn06 Item 17862"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>synSym06_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17910</ID>
+      <Description>"Syn06 Item 17910"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_03</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337092275</ID>
+      <Description>"Syn06 Item 1337092275"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym06_04</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17870</ID>
+      <Description>"Syn06 Item 17870"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym06_05</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17871</ID>
+      <Description>"Syn06 Item 17871"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_06</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17872</ID>
+      <Description>"Syn06 Item 17872"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_07</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17873</ID>
+      <Description>"Syn06 Item 17873"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_08</Address>
+      <Value>0</Value>
+      <Options moRecursiveSetValue="1"/>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17890</ID>
+      <Description>"Syn06 Item 17890"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00168</Address>
+      <Value>0</Value>
+      <Options moRecursiveSetValue="1"/>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17891</ID>
+      <Description>"Syn06 Item 17891"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00169</Address>
+      <Value>0</Value>
+      <Options moRecursiveSetValue="1"/>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17892</ID>
+      <Description>"Syn06 Item 17892"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+0016A</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17908</ID>
+      <Description>"Syn06 Item 17908"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0016B</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17893</ID>
+      <Description>"Syn06 Item 17893"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+0016C</Address>
+      <Value>0</Value>
+      <Options moRecursiveSetValue="1"/>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17894</ID>
+      <Description>"Syn06 Item 17894"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+0016D</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17909</ID>
+      <Description>"Syn06 Item 17909"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+0016E</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17861</ID>
+      <Description>"Syn06 Item 17861"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0016F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14134</ID>
+      <Description>"Syn06 Item 14134"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym06_01</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14135</ID>
+      <Description>"Syn06 Item 14135"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>synSym06_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14824</ID>
+      <Description>"Syn06 Item 14824"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave14824,64)
+registersymbol(synAOB14824)
+readmem(synAOB14824,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave14824)
+unregistersymbol(synAOB14824)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14855</ID>
+      <Description>"Syn06 Item 14855"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+float 1.0
+alloc(synCave14855,64)
+registersymbol(synAOB14855)
+readmem(synAOB14855,4)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave14855)
+unregistersymbol(synAOB14855)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14825</ID>
+      <Description>"Syn06 Item 14825"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym06_05</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14826</ID>
+      <Description>"Syn06 Item 14826"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_06</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14827</ID>
+      <Description>"Syn06 Item 14827"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00176</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14828</ID>
+      <Description>"Syn06 Item 14828"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00177</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14829</ID>
+      <Description>"Syn06 Item 14829"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00178</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14830</ID>
+      <Description>"Syn06 Item 14830"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00179</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14831</ID>
+      <Description>"Syn06 Item 14831"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+0017A</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14832</ID>
+      <Description>"Syn06 Item 14832"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0017B</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14833</ID>
+      <Description>"Syn06 Item 14833"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+0017C</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14834</ID>
+      <Description>"Syn06 Item 14834"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+0017D</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14835</ID>
+      <Description>"Syn06 Item 14835"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+0017E</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14836</ID>
+      <Description>"Syn06 Item 14836"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0017F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14837</ID>
+      <Description>"Syn06 Item 14837"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00180</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14838</ID>
+      <Description>"Syn06 Item 14838"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00181</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14839</ID>
+      <Description>"Syn06 Item 14839"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+00182</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14840</ID>
+      <Description>"Syn06 Item 14840"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00183</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14841</ID>
+      <Description>"Syn06 Item 14841"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+00184</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14842</ID>
+      <Description>"Syn06 Item 14842"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+00185</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14843</ID>
+      <Description>"Syn06 Item 14843"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00186</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14844</ID>
+      <Description>"Syn06 Item 14844"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00187</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14845</ID>
+      <Description>"Syn06 Item 14845"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00188</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14846</ID>
+      <Description>"Syn06 Item 14846"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00189</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14847</ID>
+      <Description>"Syn06 Item 14847"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+0018A</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14848</ID>
+      <Description>"Syn06 Item 14848"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0018B</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14849</ID>
+      <Description>"Syn06 Item 14849"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+0018C</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14850</ID>
+      <Description>"Syn06 Item 14850"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+0018D</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14851</ID>
+      <Description>"Syn06 Item 14851"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+0018E</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14852</ID>
+      <Description>"Syn06 Item 14852"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0018F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14853</ID>
+      <Description>"Syn06 Item 14853"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00190</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14854</ID>
+      <Description>"Syn06 Item 14854"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00191</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14856</ID>
+      <Description>"Syn06 Item 14856"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>synSym06_03</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14857</ID>
+      <Description>"Syn06 Item 14857"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_04</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14858</ID>
+      <Description>"Syn06 Item 14858"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+00194</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14859</ID>
+      <Description>"Syn06 Item 14859"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+00195</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14860</ID>
+      <Description>"Syn06 Item 14860"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00196</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14861</ID>
+      <Description>"Syn06 Item 14861"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00197</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14862</ID>
+      <Description>"Syn06 Item 14862"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00198</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14863</ID>
+      <Description>"Syn06 Item 14863"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00199</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14864</ID>
+      <Description>"Syn06 Item 14864"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+0019A</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14865</ID>
+      <Description>"Syn06 Item 14865"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0019B</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14866</ID>
+      <Description>"Syn06 Item 14866"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+0019C</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14867</ID>
+      <Description>"Syn06 Item 14867"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+0019D</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14868</ID>
+      <Description>"Syn06 Item 14868"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+0019E</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14869</ID>
+      <Description>"Syn06 Item 14869"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0019F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14870</ID>
+      <Description>"Syn06 Item 14870"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+001A0</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14871</ID>
+      <Description>"Syn06 Item 14871"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+001A1</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14872</ID>
+      <Description>"Syn06 Item 14872"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+001A2</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14873</ID>
+      <Description>"Syn06 Item 14873"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+001A3</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14874</ID>
+      <Description>"Syn06 Item 14874"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+001A4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14875</ID>
+      <Description>"Syn06 Item 14875"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+001A5</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14722</ID>
+      <Description>"Syn06 Item 14722"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym06_07</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14723</ID>
+      <Description>"Syn06 Item 14723"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym06_08</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14725</ID>
+      <Description>"Syn06 Item 14725"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym06_01</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13007</ID>
+      <Description>"Syn06 Item 13007"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+001A9</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13020</ID>
+      <Description>"Syn06 Item 13020"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+001AA</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14341</ID>
+      <Description>"Syn06 Item 14341"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+001AB</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14726</ID>
+      <Description>"Syn06 Item 14726"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+001AC</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13019</ID>
+      <Description>"Syn06 Item 13019"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>synSym06_06</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13006</ID>
+      <Description>"Syn06 Item 13006"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym06_07</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>16232</ID>
+      <Description>"Syn06 Item 16232"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym06_08</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17259</ID>
+      <Description>"Syn06 Item 17259"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym06_01</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17260</ID>
+      <Description>"Syn06 Item 17260"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>synSym06_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17261</ID>
+      <Description>"Syn06 Item 17261"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>synSym06_03</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13180</ID>
+      <Description>"Syn06 Item 13180"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_04</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13181</ID>
+      <Description>"Syn06 Item 13181"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Custom</VariableType>
+      <CustomType>synHrs</CustomType>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13182</ID>
+      <Description>"Syn06 Item 13182"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Custom</VariableType>
+      <CustomType>synMins</CustomType>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13183</ID>
+      <Description>"Syn06 Item 13183"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Custom</VariableType>
+      <CustomType>synSecs</CustomType>
+      <Hotkeys>
+        <Hotkey>
+          <Key>115</Key>
+          <Activate>Release</Activate>
+        </Hotkey>
+      </Hotkeys>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13184</ID>
+      <Description>"Syn06 Item 13184"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+001B7</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13014</ID>
+      <Description>"Syn06 Item 13014"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym06_01</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13015</ID>
+      <Description>"Syn06 Item 13015"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>1234h</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13016</ID>
+      <Description>"Syn06 Item 13016"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>synSym06_03</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13017</ID>
+      <Description>"Syn06 Item 13017"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym06_04</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13018</ID>
+      <Description>"Syn06 Item 13018"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym06_05+10</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13058</ID>
+      <Description>"Syn06 Item 13058"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+001BD</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13059</ID>
+      <Description>"Syn06 Item 13059"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+001BE</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13186</ID>
+      <Description>"Syn06 Item 13186"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym06_08</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13187</ID>
+      <Description>"Syn06 Item 13187"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+001C0</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13188</ID>
+      <Description>"Syn06 Item 13188"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+001C1</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13498</ID>
+      <Description>"Syn06 Item 13498"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>synSym06_03</Address>
+      <Value>0</Value>
+      <Options moRecursiveSetValue="1"/>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13499</ID>
+      <Description>"Syn06 Item 13499"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym06_04</Address>
+      <Value>0</Value>
+      <Options moRecursiveSetValue="1"/>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13500</ID>
+      <Description>"Syn06 Item 13500"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym06_05</Address>
+      <Value>0</Value>
+      <Options moRecursiveSetValue="1"/>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13552</ID>
+      <Description>"Syn06 Item 13552"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_06</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13553</ID>
+      <Description>"Syn06 Item 13553"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+001C6</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13554</ID>
+      <Description>"Syn06 Item 13554"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+001C7</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13555</ID>
+      <Description>"Syn06 Item 13555"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+001C8</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13556</ID>
+      <Description>"Syn06 Item 13556"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>synSym06_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13557</ID>
+      <Description>"Syn06 Item 13557"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+001CA</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13558</ID>
+      <Description>"Syn06 Item 13558"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+001CB</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13559</ID>
+      <Description>"Syn06 Item 13559"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+001CC</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13560</ID>
+      <Description>"Syn06 Item 13560"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+001CD</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13565</ID>
+      <Description>"Syn06 Item 13565"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+001CE</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13566</ID>
+      <Description>"Syn06 Item 13566"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+001CF</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13748</ID>
+      <Description>"Syn06 Item 13748"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_01+10</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13967</ID>
+      <Description>"Syn06 Item 13967"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13968</ID>
+      <Description>"Syn06 Item 13968"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+001D2</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13969</ID>
+      <Description>"Syn06 Item 13969"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+001D3</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13970</ID>
+      <Description>"Syn06 Item 13970"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+001D4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13971</ID>
+      <Description>"Syn06 Item 13971"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+001D5</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13972</ID>
+      <Description>"Syn06 Item 13972"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+001D6</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13973</ID>
+      <Description>"Syn06 Item 13973"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+001D7</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14049</ID>
+      <Description>"Syn06 Item 14049"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym06_01</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14262</ID>
+      <Description>"Syn06 Item 14262"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001D9</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14263</ID>
+      <Description>"Syn06 Item 14263"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001DA</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14264</ID>
+      <Description>"Syn06 Item 14264"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+001DB</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14265</ID>
+      <Description>"Syn06 Item 14265"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+001DC</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14306</ID>
+      <Description>"Syn06 Item 14306"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14876</ID>
+      <Description>"Syn06 Item 14876"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+001DE</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14877</ID>
+      <Description>"Syn06 Item 14877"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+001DF</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14878</ID>
+      <Description>"Syn06 Item 14878"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+001E0</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13026</ID>
+      <Description>"Syn06 Item 13026"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13168</ID>
+      <Description>"Syn06 Item 13168"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13189</ID>
+      <Description>"Syn06 Item 13189"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13974</ID>
+      <Description>"Syn06 Item 13974"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13143</ID>
+      <Description>"Syn06 Item 13143"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001E5</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13144</ID>
+      <Description>"Syn06 Item 13144"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001E6</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13145</ID>
+      <Description>"Syn06 Item 13145"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001E7</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13146</ID>
+      <Description>"Syn06 Item 13146"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001E8</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13147</ID>
+      <Description>"Syn06 Item 13147"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001E9</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13148</ID>
+      <Description>"Syn06 Item 13148"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001EA</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13149</ID>
+      <Description>"Syn06 Item 13149"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001EB</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13150</ID>
+      <Description>"Syn06 Item 13150"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001EC</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13410</ID>
+      <Description>"Syn06 Item 13410"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_06</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13413</ID>
+      <Description>"Syn06 Item 13413"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_07</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13415</ID>
+      <Description>"Syn06 Item 13415"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_08</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13418</ID>
+      <Description>"Syn06 Item 13418"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14234</ID>
+      <Description>"Syn06 Item 14234"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13411</ID>
+      <Description>"Syn06 Item 13411"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001F2</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13412</ID>
+      <Description>"Syn06 Item 13412"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001F3</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13975</ID>
+      <Description>"Syn06 Item 13975"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001F4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14236</ID>
+      <Description>"Syn06 Item 14236"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001F5</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14237</ID>
+      <Description>"Syn06 Item 14237"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001F6</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13414</ID>
+      <Description>"Syn06 Item 13414"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001F7</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13416</ID>
+      <Description>"Syn06 Item 13416"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001F8</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13417</ID>
+      <Description>"Syn06 Item 13417"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>+001F9</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13489</ID>
+      <Description>"Syn06 Item 13489"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>synSym06_03</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13573</ID>
+      <Description>"Syn06 Item 13573"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_04</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13562</ID>
+      <Description>"Syn06 Item 13562"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>synSym06_05+10</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13966</ID>
+      <Description>"Syn06 Item 13966"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>synSym06_06</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14331</ID>
+      <Description>"Syn06 Item 14331"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+001FE</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14260</ID>
+      <Description>"Syn06 Item 14260"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+001FF</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14634</ID>
+      <Description>"Syn06 Item 14634"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym06_01</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14637</ID>
+      <Description>"Syn06 Item 14637"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_02</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14648</ID>
+      <Description>"Syn06 Item 14648"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Array of byte</VariableType>
+      <Address>synSym06_03</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14692</ID>
+      <Description>"Syn06 Item 14692"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14715</ID>
+      <Description>"Syn06 Item 14715"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave14715,64)
+registersymbol(synAOB14715)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave14715)
+unregistersymbol(synAOB14715)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17237</ID>
+      <Description>"Syn06 Item 17237"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>synSym06_06</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14716</ID>
+      <Description>"Syn06 Item 14716"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym06_07</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14638</ID>
+      <Description>"Syn06 Item 14638"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00207</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14639</ID>
+      <Description>"Syn06 Item 14639"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00208</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14640</ID>
+      <Description>"Syn06 Item 14640"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00209</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14641</ID>
+      <Description>"Syn06 Item 14641"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+0020A</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14642</ID>
+      <Description>"Syn06 Item 14642"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0020B</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14643</ID>
+      <Description>"Syn06 Item 14643"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+0020C</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14644</ID>
+      <Description>"Syn06 Item 14644"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+0020D</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14645</ID>
+      <Description>"Syn06 Item 14645"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+0020E</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14646</ID>
+      <Description>"Syn06 Item 14646"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0020F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14647</ID>
+      <Description>"Syn06 Item 14647"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00210</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14649</ID>
+      <Description>"Syn06 Item 14649"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00211</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14650</ID>
+      <Description>"Syn06 Item 14650"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+00212</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14651</ID>
+      <Description>"Syn06 Item 14651"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00213</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14652</ID>
+      <Description>"Syn06 Item 14652"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+00214</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14653</ID>
+      <Description>"Syn06 Item 14653"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+00215</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14654</ID>
+      <Description>"Syn06 Item 14654"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00216</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14655</ID>
+      <Description>"Syn06 Item 14655"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00217</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14656</ID>
+      <Description>"Syn06 Item 14656"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00218</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14657</ID>
+      <Description>"Syn06 Item 14657"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00219</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14658</ID>
+      <Description>"Syn06 Item 14658"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+0021A</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14659</ID>
+      <Description>"Syn06 Item 14659"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0021B</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14660</ID>
+      <Description>"Syn06 Item 14660"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+0021C</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14661</ID>
+      <Description>"Syn06 Item 14661"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+0021D</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14662</ID>
+      <Description>"Syn06 Item 14662"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+0021E</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14663</ID>
+      <Description>"Syn06 Item 14663"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0021F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14664</ID>
+      <Description>"Syn06 Item 14664"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00220</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14665</ID>
+      <Description>"Syn06 Item 14665"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00221</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14666</ID>
+      <Description>"Syn06 Item 14666"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+00222</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14667</ID>
+      <Description>"Syn06 Item 14667"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00223</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14668</ID>
+      <Description>"Syn06 Item 14668"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+00224</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14669</ID>
+      <Description>"Syn06 Item 14669"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+00225</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14670</ID>
+      <Description>"Syn06 Item 14670"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00226</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14671</ID>
+      <Description>"Syn06 Item 14671"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00227</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14672</ID>
+      <Description>"Syn06 Item 14672"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00228</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14673</ID>
+      <Description>"Syn06 Item 14673"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00229</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14674</ID>
+      <Description>"Syn06 Item 14674"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+0022A</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14675</ID>
+      <Description>"Syn06 Item 14675"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0022B</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14676</ID>
+      <Description>"Syn06 Item 14676"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+0022C</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14677</ID>
+      <Description>"Syn06 Item 14677"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+0022D</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14678</ID>
+      <Description>"Syn06 Item 14678"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+0022E</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14679</ID>
+      <Description>"Syn06 Item 14679"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+0022F</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14680</ID>
+      <Description>"Syn06 Item 14680"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00230</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14681</ID>
+      <Description>"Syn06 Item 14681"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Byte</VariableType>
+      <Address>+00231</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14682</ID>
+      <Description>"Syn06 Item 14682"</Description>
+      <Color>0075EA</Color>
+      <VariableType>2 Bytes</VariableType>
+      <Address>+00232</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14683</ID>
+      <Description>"Syn06 Item 14683"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00233</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14684</ID>
+      <Description>"Syn06 Item 14684"</Description>
+      <Color>0075EA</Color>
+      <VariableType>8 Bytes</VariableType>
+      <Address>+00234</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14685</ID>
+      <Description>"Syn06 Item 14685"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Double</VariableType>
+      <Address>+00235</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14686</ID>
+      <Description>"Syn06 Item 14686"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00236</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14687</ID>
+      <Description>"Syn06 Item 14687"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>+00237</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14688</ID>
+      <Description>"Syn06 Item 14688"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>+00238</Address>
+      <Value>0</Value>
+    </CheatEntry>
+  </CheatEntries>
+  <LuaScript>
+-- CT2Trainer clean-room corpus: synthetic table bootstrap for re2.CT.
+-- Installs the reviewed Nth-AOB helper and registers the synthetic
+-- time custom types used by the three custom-type records.
+
+registerCustomTypeAutoAssembler("synHrs", "1")
+registerCustomTypeAutoAssembler("synMins", "2")
+registerCustomTypeAutoAssembler("synSecs", "1")
+
+local SYN_BOOTSTRAP_DONE = false
+
+function synBootstrapStatus()
+  return SYN_BOOTSTRAP_DONE
+end
+
+function lua_aobscan(name,module,bytes,index)
+  local hits = {}
+  if module and module ~= "" then
+    hits = aobscanmodule(name, module, bytes)
+  else
+    hits = aobscan(name, bytes)
+  end
+  if hits and index and hits[index] then
+    return hits[index]
+  end
+  return nil
+end
+
+SYN_BOOTSTRAP_DONE = true
+  </LuaScript>
+  <UserdefinedSymbols/>
+</CheatTable>

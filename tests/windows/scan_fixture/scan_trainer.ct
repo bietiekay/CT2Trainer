@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45"><CheatEntries>
+<CheatEntry><ID>1</ID><Description>"Owned private process scan"</Description>
+<VariableType>Auto Assembler Script</VariableType><AssemblerScript><![CDATA[[ENABLE]
+aobscan(privateAnchor,4433221178499AEB3C0D5EAFF0C11263B485D6270859AAFBCC1D6EBF80D12273)
+assert(privateAnchor,44 33 22 11 78 49 9A EB 3C 0D 5E AF F0 C1 12 63 B4 85 D6 27 08 59 AA FB CC 1D 6E BF 80 D1 22 73)
+privateAnchor:
+dd #1432778632
+registersymbol(privateAnchor)
+[DISABLE]
+privateAnchor:
+dd #287454020
+unregistersymbol(privateAnchor)]]></AssemblerScript></CheatEntry>
+<CheatEntry><ID>2</ID><Description>"Owned second module occurrence"</Description>
+<VariableType>Auto Assembler Script</VariableType><AssemblerScript><![CDATA[[ENABLE]
+luaCall(ct2trainerNthAOB("nthAnchor","NativeScanFixture.exe","11 00 00 00 11 32 D7 C8 ED 8E A3 44 79 1A 3F D0",2))
+assert(nthAnchor,11 00 00 00 11 32 D7 C8 ED 8E A3 44 79 1A 3F D0)
+nthAnchor:
+dd #2
+[DISABLE]
+nthAnchor:
+dd #17]]></AssemblerScript></CheatEntry>
+</CheatEntries></CheatTable>

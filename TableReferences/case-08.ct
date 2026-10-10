@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1337320459</ID>
+      <Description>"Syn08 Item 1337320459"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+float 1.0
+alloc(synCave1337320459,64)
+aobscanmodule(synAOB1337320459,ct2synth08.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB1337320459)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave1337320459)
+unregistersymbol(synAOB1337320459)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>88095</ID>
+      <Description>"Syn08 Item 88095"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synCave88095,64)
+aobscanmodule(synAOB88095,ct2synth08.exe,48 8B 05 01 02 03 04)
+registersymbol(synAOB88095)
+  mov rcx,rcx
+[DISABLE]
+dealloc(synCave88095)
+unregistersymbol(synAOB88095)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320460</ID>
+      <Description>"Syn08 Item 1337320460"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320461</ID>
+      <Description>"Syn08 Item 1337320461"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320462</ID>
+      <Description>"Syn08 Item 1337320462"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320463</ID>
+      <Description>"Syn08 Item 1337320463"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320543</ID>
+      <Description>"Syn08 Item 1337320543"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym08_08</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320545</ID>
+      <Description>"Syn08 Item 1337320545"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+synFlag1337320545 = synFlag1337320545 + 1
+{$asm}
+  mov rcx,rcx
+[DISABLE]
+{$lua}
+synFlag1337320545 = 0
+{$asm}
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320546</ID>
+      <Description>"Syn08 Item 1337320546"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320547</ID>
+      <Description>"Syn08 Item 1337320547"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+synFlag1337320547 = synFlag1337320547 + 1
+{$asm}
+  mov rcx,rcx
+[DISABLE]
+{$lua}
+synFlag1337320547 = 0
+{$asm}
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320548</ID>
+      <Description>"Syn08 Item 1337320548"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym08_04+10</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>18</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320549</ID>
+      <Description>"Syn08 Item 1337320549"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320550</ID>
+      <Description>"Syn08 Item 1337320550"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+synFlag1337320550 = synFlag1337320550 + 1
+executeCodeEx("synByteCode1337320550")
+{$asm}
+  mov rcx,rcx
+[DISABLE]</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320556</ID>
+      <Description>"Syn08 Item 1337320556"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+db 90
+  mov rcx,rcx
+[DISABLE]
+db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320555</ID>
+      <Description>"Syn08 Item 1337320555"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synSym08_08</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1337320507</ID>
+      <Description>"Syn08 Item 1337320507"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synSym08_01</Address>
+      <Value>0</Value>
+    </CheatEntry>
+  </CheatEntries>
+  <CheatCodes></CheatCodes>
+  <UserdefinedSymbols/>
+</CheatTable>
