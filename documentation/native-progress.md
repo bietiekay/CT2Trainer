@@ -49,7 +49,7 @@ code/build boundaries in
 | Test suite | **2671 OK / 25 expected skips, 0 failures** (full local dev suite on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`, verified 2026-10-11 at the canonical path); latest in-build suite still 2617/25 (rc2 build) |
 | Feature matrix | **42/42 covered** (100% feature-weighted, 7361/7361 action-weighted; run `wp14-staged-20261011T093320Z`) — `gap_inventory/feature-coverage.json` |
 | AP-11 manifest | 14 tables, 6011 expected actions, 0 confirmed, all consistency gates `all_ok` (run `wp14-staged-20261011T093320Z`) — `gap_inventory/ap11-campaign.json` |
-| Latest verified build | `native-20261010T172336Z-ffe35eb0` via `scripts/Build-Native.ps1`: both ZIPs, in-build suite 2617/25, `ce_inputs: []`, `api-prototypes.json` present in both EXE payload inventories, `runtime_unverified` deliberately set. WP-14 work is not yet in a verified build; the 0.10 build is cut from `main` after the WP-14 merge |
+| Latest verified build | `native-20261011T121914Z-bfc5fc11` (0.10) via `scripts/Build-Native.ps1` from `main` @ `64b1e63` (2026-10-11): both ZIPs (`CT2Trainer-0.10-source.zip`, `CT2Trainer-0.10-windows-portable.zip`), in-build suite 2671/25 passed, `ce_inputs: []`, `runtime_unverified` deliberately set, source inputs unchanged. Previous: `native-20261010T172336Z-ffe35eb0` (rc2, in-build suite 2617/25, `api-prototypes.json` present in both EXE payload inventories, user-tested portable) |
 | User-tested portable | run `native-20261010T165731Z-3d1da645`: converter run + generated trainer verified by the user on a machine without CE/Python |
 
 ### Portable frozen-build fix (2026-10-10)
