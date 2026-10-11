@@ -1,6 +1,7 @@
 # CT2Trainer: Named Table-Lua Tabs (WP-16, L5-19)
 
-**Status:** Plan (2026-10-11) — Baseline: `main` @ `af7f099` (0.10, suite
+**Status:** Implemented (2026-10-11) on branch `wp16-tablua` @ `38a830d`
+(commits `3a81af0`, `38a830d`) — Baseline: `main` @ `af7f099` (0.10, suite
 2671 OK / 25 expected skips)
 
 Closes **L5-19** from the CE7.5 comparison: the table-Lua section can hold
@@ -111,3 +112,4 @@ integration.
 | Date | Change / next checkpoint | Evidence / open work |
 | --- | --- | --- |
 | 11.10.2026 | WP-16 plan; L5-19 gap confirmed (detection vs preparation mismatch at `table.py:457` / `compiler.py:397`) | baseline `main` @ `af7f099` (0.10) |
+| 11.10.2026 | WP-16 implemented: `_table_lua_source(root)` gather in `compiler.py` (single call-site swap), 8 new tests in `tests/test_native_table_lua_tabs.py`; pinned corpus verified free of `LuaScript` child elements; zero `gap_inventory/` impact | lane `wp16-tablua` @ `38a830d` (commits `3a81af0`, `38a830d`); canonical-path suite 2679 OK / 25 skips |
