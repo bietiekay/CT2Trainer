@@ -12,6 +12,7 @@ from .engine import (TrainerEngine, NativeRuntimeError, parse_value, format_valu
                      StaleStateRecoverable, StaleArtifactsRecoverable,
                      perform_stale_recovery,
                      LiveStateConflict, terminate_live_session)
+from .about_ui import repo_link, trainer_title
 from .architecture import plan_architecture
 from .window_icon import window_icon_path
 from .ui_layout import (
@@ -94,7 +95,7 @@ class TrainerWindow:
         self.status_text = tk.StringVar(value=engine.status)
         self.search_text = tk.StringVar()
         self.page_text = tk.StringVar()
-        root.title(engine.plan["title"] + " — CT2Trainer")
+        root.title(trainer_title(engine.plan["title"]))
         width = min(1600, max(400, root.winfo_screenwidth() - 100))
         height = min(900, max(620, root.winfo_screenheight() - 100))
         root.geometry(f"{width}x{height}")
@@ -105,6 +106,7 @@ class TrainerWindow:
         header.pack(fill="x")
         tk.Label(header, text=engine.plan["title"], bg=BG_HEADER, fg=FG, font=("Segoe UI", 20, "bold"), anchor="w").pack(side="left", fill="x", expand=True)
         self._button(header, "Close", self.close, width=8, bg=BG_CLOSE, activebackground=BG_CLOSE_ACTIVE, fg=FG).pack(side="right")
+        repo_link(header, bg=BG_HEADER, fg=FG).pack(side="right")
         status = tk.Frame(root, bg=BG, padx=12)
         status.pack(fill="x")
         tk.Label(status, textvariable=self.status_text, anchor="w", justify="left", wraplength=900, bg=BG, fg=FG).pack(side="left", fill="x", expand=True)

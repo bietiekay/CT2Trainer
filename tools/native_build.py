@@ -110,6 +110,29 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def verify_version_sync(version_file=None, init_file=None):
+    """Fail-closed version sync: the runtime __version__ constant must equal VERSION.
+
+    The root VERSION file is the single version source for Native builds;
+    the package constant is what the converter and trainer window titles
+    display. Raises ValueError when the constant is missing, the VERSION
+    file is empty, or the two differ. Paths are injectable for testing.
+    """
+    version_file = Path(version_file) if version_file is not None else ROOT / 'VERSION'
+    init_file = Path(init_file) if init_file is not None else ROOT / 'src/ct2trainer/__init__.py'
+    expected = version_file.read_text(encoding='utf-8').strip()
+    if not expected:
+        raise ValueError('VERSION file is empty')
+    match = re.search(r"^__version__\s*=\s*[\"']([^\"']*)[\"']",
+                      init_file.read_text(encoding='utf-8'), re.MULTILINE)
+    if match is None:
+        raise ValueError('__version__ constant missing from ' + init_file.as_posix())
+    actual = match.group(1)
+    if actual != expected:
+        raise ValueError('__version__ %r does not match VERSION file %r' % (actual, expected))
+    return expected
+
+
 def source_files():
     """One explicit redistributable allowlist shared by build and docs refresh."""
     files = list((ROOT / 'src/ct2trainer/native').glob('*.py'))
@@ -254,6 +277,7 @@ def _copy_mono_notice(notices):
 
 def build(output):
     output = Path(output).resolve()
+    verify_version_sync()
     files=source_files()
     snapshots={path.relative_to(ROOT).as_posix():digest(path) for path in files}
     notices = output / "notices"

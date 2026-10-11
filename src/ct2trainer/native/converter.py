@@ -5,6 +5,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
+from .about_ui import converter_title, repo_link
 from .compiler import compile_table
 from .bundle import build_trainer
 from .process_detect import find_candidates
@@ -13,7 +14,7 @@ from .window_icon import window_icon_path
 
 def main() -> int:
     root = tk.Tk()
-    root.title("CT2Trainer — independent CT converter")
+    root.title(converter_title())
     root.geometry("1080x780")
     root.minsize(650, 610)
     try:
@@ -172,6 +173,7 @@ def main() -> int:
     bottom.pack(fill="x")
     for text, callback in (("Include / remove selection", select_record), ("Save source plan…", export), ("Build trainer EXE…", build)):
         ttk.Button(bottom, text=text, command=callback, style="Native.TButton").pack(side="left", padx=(0, 8))
+    repo_link(bottom).pack(side="right")
     ttk.Label(root, textvariable=status, wraplength=950, padding=12).pack(fill="x")
     root.mainloop()
     return 0
