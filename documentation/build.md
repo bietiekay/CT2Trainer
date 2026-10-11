@@ -63,15 +63,15 @@ Fresh builds produce, in the run folder:
 Each build reports the exact output hashes in the run folder
 (`build.json`), e.g. for the current state:
 
-- `CT2Trainer-0.9.0-rc2-source.zip`
-- `CT2Trainer-0.9.0-rc2-windows-portable.zip`
+- `CT2Trainer-0.10-source.zip`
+- `CT2Trainer-0.10-windows-portable.zip`
 
 **Version:** the release version is the content of the root `VERSION`
 file; it is the single version source for Native builds, and
 `tools/native_build.py` refuses to run when the file is missing or
 empty. Fresh builds are named `CT2Trainer-<version>-source.zip` and
 `CT2Trainer-<version>-windows-portable.zip`, where `<version>` is the
-current content of `VERSION` (currently `0.9.0-rc2`).
+current content of `VERSION` (currently `0.10`).
 
 The build report deliberately keeps `runtime_unverified: true` until the
 broader acceptance gates pass; a green build is not a game-compatibility
@@ -89,9 +89,9 @@ $env:CT2TRAINER_NASM=(Resolve-Path .tools/native-tools/nasm.exe).Path
 & .tools\native-build-env\Scripts\python.exe -m unittest discover -s tests -p test_native_*.py -q
 ```
 
-Baseline: **2617 OK / 25 skips** (corpus-dependent tests pinned to the
+Baseline: **2671 OK / 25 skips** (corpus-dependent tests pinned to the
 synthetic clean-room corpus, confirmed by the in-build suite of the
-0.9.0-rc2 offline build).
+0.10 offline build `native-20261011T121914Z-bfc5fc11`).
 
 ## 4. Corpus denominator tool
 

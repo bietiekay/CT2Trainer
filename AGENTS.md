@@ -5,8 +5,9 @@
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-11, 0.9.0-rc2 released, WP-14 "Staged
-Capabilities" in cycle on working branch `native-0.9-staged`):** the
+**CT2Trainer (status 2026-10-11, 0.10 released with WP-14 "Staged
+Capabilities"; 0.9.0-rc2 was the last user-tested release; working
+branch `native-0.9-staged` tracks the milestone):** the
 repository is a
 self-contained, clean-room development base for an independently designed,
 source/binary-redistributable converter and trainer with **no CE

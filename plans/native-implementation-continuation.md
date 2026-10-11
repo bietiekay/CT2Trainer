@@ -197,8 +197,8 @@ one-off final build.
 | AP-09 | Product UX | **complete** — process finder, hotkeys, sounds, frozen-recovery GUI, forms/assets, group navigation; physical touch/keyboard/DPI observation remains AP-11 |
 | AP-10 | Corpus + measurement | **complete** — deterministic denominator, feature matrix, AP-11 manifest, gates 1–3; committed artifacts under `gap_inventory/` |
 | AP-11 | Real games, clean PC, Deck | **OPEN — the separate end goal** (6011 expected actions, 0 confirmed) |
-| WP-14 | Staged capabilities (signed offsets, script-parent cascades, staged gating, record-ID activation sets, 14th corpus table) | **in progress** — see [native-staged-capabilities.md](native-staged-capabilities.md); code + corpus + artifacts done, gate-test rework in flight |
-| AP-12 | Final assessment + maintainability | **OPEN** — `runtime_unverified`, Windows + Deck acceptance, 0.9.0 release |
+| WP-14 | Staged capabilities (signed offsets, script-parent cascades, staged gating, record-ID activation sets, 14th corpus table) | **complete** — released in 0.10 (build `native-20261011T121914Z-bfc5fc11`, gate-test rework `54b172e`); see [native-staged-capabilities.md](native-staged-capabilities.md) |
+| AP-12 | Final assessment + maintainability | **OPEN** — `runtime_unverified`, Windows + Deck acceptance, 0.10 release closure |
 
 ### AP-11: Real games, clean PC and Deck (open)
 

@@ -1,7 +1,7 @@
 # CT2Trainer: Native progress ledger
 
 Status: **October 11, 2026** (0.10 in cycle on working branch
-`native-0.9-staged`; latest release 0.9.0-rc2). This is the binding result list:
+`native-0.9-staged`; latest release 0.10). This is the binding result list:
 confirmed state, measured numbers, and the prioritized open work. The
 plan (work packages, protocol) lives in
 [`plans/native-implementation-continuation.md`](../plans/native-implementation-continuation.md);
@@ -40,13 +40,13 @@ code/build boundaries in
   CE/Python) and on a real Steam Deck under Proton with touch operation.
   `runtime_unverified` stays set until both pass.
 
-## 2. Confirmed state (0.9.0-rc2 + WP-14 staged capabilities, 2026-10-11)
+## 2. Confirmed state (0.9.0-rc2 + WP-14 + 0.10 build, 2026-10-11)
 
 | Item | Value |
 | --- | --- |
 | Repository baseline | `main` @ `b6c48cc` "initial 0.9 version" (self-contained clean-room tree) |
-| Version | `0.9.0-rc2` (root `VERSION` file) |
-| Test suite | **2671 OK / 25 expected skips, 0 failures** (full local dev suite on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`, verified 2026-10-11 at the canonical path); latest in-build suite still 2617/25 (rc2 build) |
+| Version | `0.10` (root `VERSION` file; 0.9.0-rc2 was the last user-tested release) |
+| Test suite | **2671 OK / 25 expected skips, 0 failures** (full local dev suite on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`, verified 2026-10-11 at the canonical path); in-build suite 2671/25 passed (0.10 build `native-20261011T121914Z-bfc5fc11`) |
 | Feature matrix | **42/42 covered** (100% feature-weighted, 7361/7361 action-weighted; run `wp14-staged-20261011T093320Z`) — `gap_inventory/feature-coverage.json` |
 | AP-11 manifest | 14 tables, 6011 expected actions, 0 confirmed, all consistency gates `all_ok` (run `wp14-staged-20261011T093320Z`) — `gap_inventory/ap11-campaign.json` |
 | Latest verified build | `native-20261011T121914Z-bfc5fc11` (0.10) via `scripts/Build-Native.ps1` from `main` @ `64b1e63` (2026-10-11): both ZIPs (`CT2Trainer-0.10-source.zip`, `CT2Trainer-0.10-windows-portable.zip`), in-build suite 2671/25 passed, `ce_inputs: []`, `runtime_unverified` deliberately set, source inputs unchanged. Previous: `native-20261010T172336Z-ffe35eb0` (rc2, in-build suite 2617/25, `api-prototypes.json` present in both EXE payload inventories, user-tested portable) |
@@ -106,9 +106,10 @@ mapping), 148 distinct SHA-256 hashes collapsed to 14 pinned cases,
 3. **Final acceptance Steam Deck:** real Proton prefix, touch operation,
    x86/x64 targets, screen keyboard, hotkeys, state/freeze/clock, exit
    behavior (protocol: `tests/deck/compatibility-matrix.md`).
-4. **0.9.0 final release** after (1)–(3): bump `VERSION`, fresh offline
-   build, record the observed build (versions, hashes, setup, result) in
-   this ledger and `native-verification.md`, then flip
+4. **0.10 release closure** after (1)–(3): the 0.10 build
+   `native-20261011T121914Z-bfc5fc11` is already cut from `main`; record
+   the observed build (versions, hashes, setup, result) from the
+   acceptance runs in this ledger and `native-verification.md`, then flip
    `runtime_unverified`.
 5. **Maintenance:** keep `runtime_unverified` honest; record every
    Windows/Deck observation with build id, hashes, setup and result
