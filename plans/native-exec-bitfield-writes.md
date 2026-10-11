@@ -142,3 +142,4 @@ integration.
 | Date | Change / next checkpoint | Evidence / open work |
 | --- | --- | --- |
 | 11.10.2026 | WP-15 plan; investigation report (refusal map R1–R11, data model, behaviour matrix, test inventory) | baseline `main` @ `7927cb4` (0.10) |
+| 11.10.2026 | **WP-15 complete**: lane `wp15-exec-bitfield` (tests-first `78b2385`, implementation `8dcd92d`) merged into `main` @ `d3316aa`; root docs updated at integration | worktree suite 2680 OK / 25 skips / 3 expected provenance failures; canonical-path suite **2688 OK / 25 skips / 0 failures** (2026-10-11); exactly 3 files changed: `engine.py`, `tests/test_native_exec_bitfield_runtime.py` (new, 9 tests), `tests/test_native_value_runtime.py` (one in-place supersession per §2.5) |

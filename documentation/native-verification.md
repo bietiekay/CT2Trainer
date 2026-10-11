@@ -15,7 +15,7 @@ committed.
 | --- | --- |
 | Release version | `0.9.0-rc2` released; `0.10` in the root `VERSION` file, build `native-20261011T121914Z-bfc5fc11` cut from `main` @ `64b1e63` (2026-10-11) |
 | Build entry point | `scripts/Build-Native.ps1` (fully offline, no network) |
-| Full native suite | **2671 OK / 25 expected skips, 0 failures** (full local dev suite on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`, verified 2026-10-11 at the canonical path); in-build suite 2671/25 passed (build `native-20261011T121914Z-bfc5fc11`) |
+| Full native suite | **2688 OK / 25 expected skips, 0 failures** (full local dev suite on `main` after the WP-15 merge `d3316aa`, verified 2026-10-11 at the canonical path; previously 2679 after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2671/25 passed (build `native-20261011T121914Z-bfc5fc11`) |
 | CE inputs in the build | none (`ce_inputs: []` in `build.json`) |
 | Runtime acceptance | `runtime_unverified: true`, deliberately kept |
 | Corpus denominator | 6,011 expected actions, 1,282 groups (14 pinned case tables, run `wp14-staged-20261011T093320Z`) |
