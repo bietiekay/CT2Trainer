@@ -338,6 +338,26 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None) -> None
                 changed = True
 
 
+def _table_lua_source(root) -> str:
+    """Gather the table-Lua source per the load-time contract (L5-19).
+
+    A table-Lua section may hold the main body as the direct text of
+    <LuaScript> plus several named script tabs as direct child elements;
+    CE combines them at load time.  The combined source is the direct text
+    (main body), then, in document order, the full text of every direct
+    child element.  Empty/whitespace-only parts are skipped and the
+    remaining parts join with a single newline.  A main-body-only section
+    yields exactly the legacy findtext result.
+    """
+    lua = root.find('LuaScript')
+    if lua is None:
+        return ''
+    parts = [lua.text or '']
+    for child in lua:
+        parts.append(''.join(child.itertext()))
+    return '\n'.join(part for part in parts if part.strip())
+
+
 def compile_table(path: str | Path, process_name: str, title: str | None = None,
                   selected_ids: list[int] | set[int] | tuple[int, ...] | None = None,
                   *, architecture: str = "x64") -> dict:
@@ -394,7 +414,7 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     bootstrap = None
     if table.has_table_lua:
         from .lua_bootstrap import prepare_lua_bootstrap
-        bootstrap = prepare_lua_bootstrap(root.findtext('LuaScript') or '')
+        bootstrap = prepare_lua_bootstrap(_table_lua_source(root))
     from .nth_aob import prepare_helper_contract
     nth_helper=prepare_helper_contract(bootstrap) if bootstrap is not None else None
     entries: list[dict] = []
