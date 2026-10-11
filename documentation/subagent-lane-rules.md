@@ -86,8 +86,10 @@ $env:PYTHONIOENCODING = "utf-8"
 Get-Content $env:TEMP\lane-full.log | Select-String -CaseSensitive 'Ran \d+ tests|^OK|FAILED' | Select-Object -Last 3
 ```
 
-Baseline at the lane base commit: **2617 OK / 25 skips**. Your final full
-suite must be that baseline plus your new tests, zero failures.
+Baseline at the lane base commit: **2698 OK / 25 skips** (verified on
+`main` after the WP-17 integration; re-verify against your exact base
+commit before relying on it). Your final full suite must be that
+baseline plus your new tests, zero failures.
 
 PowerShell pitfalls (learned the hard way):
 
