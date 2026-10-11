@@ -2,9 +2,10 @@
 
 **Status:** Plan (2026-10-10) · Baseline: `main` @ `b6c48cc` (0.9.0-rc2, suite
 2617 OK / 25 skips) · Working branch for this cycle: **`native-0.9-staged`**
-(create from latest `main`; the currently checked-out `analysis-ce75` branch
-and its untracked `analysis/` dir belong to the user's own work — do not
-touch, merge, or delete).
+(created from latest `main`; the `analysis-ce75` branch and untracked
+`analysis/` dir referenced here belonged to the user's local CE7.5
+comparison work and were deleted 2026-10-11 after the comparison was
+consolidated, reviewed and scrubbed).
 
 **Incorporated as an active session goal on 2026-10-11** (goal id recorded in
 the session). The user-provided text below is preserved as given; the tail of
