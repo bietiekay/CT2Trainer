@@ -80,15 +80,18 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261010T172336Z-ffe35eb0` (in-build
-suite 2617 OK / 25 regular skips, `ce_inputs: []`, `runtime_unverified`
-deliberately kept per gate). The portable ZIP was user-tested on a
-machine without CE or Python (converter run plus generated trainer).
-WP-14 work (14-table corpus, staged capabilities) is not yet in a
-verified build; the 0.10 build will be cut from `main` after the
-WP-14 merge including the gate-test rework
-(`54b172e`; full local dev suite at the canonical path: 2671 OK / 25
-skips, 0 failures).
+**Latest verified build:** `native-20261011T121914Z-bfc5fc11` (0.10,
+cut from `main` @ `64b1e63`; in-build suite 2671 OK / 25 regular skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per gate; source
+ZIP `CT2Trainer-0.10-source.zip` sha256
+`93f1f353abaf399287ebf27b90dcb794793658cd6663a6fc68d25998e5f2eb83`,
+portable ZIP `CT2Trainer-0.10-windows-portable.zip` sha256
+`833441069b078d352a556d650ccb7ddbbc8604aacc6e752adfd869d8b11f36f1`).
+The 0.10 build contains the full WP-14 work (14-table corpus, staged
+capabilities, gate-test rework `54b172e`). The previous portable ZIP
+(0.9.0-rc2, run `native-20261010T172336Z-ffe35eb0`, in-build suite
+2617 OK / 25 regular skips) was user-tested on a machine without CE or
+Python (converter run plus generated trainer).
 
 Workflow policy: each implementation cycle (milestone 0.9 and beyond)
 runs on its own working branch (e.g. `native-0.9`); within a cycle, after

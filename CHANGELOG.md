@@ -57,9 +57,19 @@ Single maintained changelog for CT2Trainer releases.
   9 blocked (2 records with a strict `"$process"` address plus an
   anonymous assembly label; 7 `i_base_*` children without a unique
   supported provider — each individually justified).
-- Release build: pending at the end of the cycle (0.10); the
-  in-build suite line and ZIP hashes are recorded here when the build
-  lands.
+- Release build 0.10: run `native-20261011T121914Z-bfc5fc11` cut from
+  `main` @ `64b1e63` via `scripts/Build-Native.ps1` (2026-10-11);
+  in-build suite 2671 OK / 25 regular skips, `ce_inputs: []`,
+  `runtime_unverified` deliberately kept per gate, source inputs
+  unchanged. Artifacts: `CT2Trainer-0.10-source.zip` (sha256
+  `93f1f353abaf399287ebf27b90dcb794793658cd6663a6fc68d25998e5f2eb83`,
+  12,729,937 bytes) and `CT2Trainer-0.10-windows-portable.zip` (sha256
+  `833441069b078d352a556d650ccb7ddbbc8604aacc6e752adfd869d8b11f36f1`,
+  28,231,325 bytes); EXEs: `CT2Trainer-Template.exe` (sha256
+  `1ae0d2163bac4271711f7a7e826346cd1513ce3b231563b9f64ddc0526f93c14`,
+  14,475,270 bytes), `CT2Trainer-Converter.exe` (sha256
+  `a8e3005ed6bc7c18092ac0fcd28e42495c0573e87abe4fb3e5f0f79c9094eb89`,
+  28,490,774 bytes).
 
 ## 0.9.0-rc2 (2026-10-10)
 
