@@ -121,3 +121,4 @@ full suite at the canonical path at integration.
 | Date | Change / next checkpoint | Evidence / open work |
 | --- | --- | --- |
 | 11.10.2026 | WP-17 plan | base `main` @ `42464d1` (0.10, after WP-15 merge `d3316aa`) |
+| 11.10.2026 | **WP-17 complete**: lane `wp17-version-ui` @ `557b2ac` (6 files, 10 tests); merged into `main` @ `557b2ac`; canonical suite 2698 OK / 25 skips / 0 failures; root docs updated at integration | Open gate: visual confirmation of the title strings and the link click on the next Windows/Deck acceptance session (AP-12) |

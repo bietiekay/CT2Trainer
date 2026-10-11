@@ -200,6 +200,7 @@ one-off final build.
 | WP-14 | Staged capabilities (signed offsets, script-parent cascades, staged gating, record-ID activation sets, 14th corpus table) | **complete** — released in 0.10 (build `native-20261011T121914Z-bfc5fc11`, gate-test rework `54b172e`); see [native-staged-capabilities.md](native-staged-capabilities.md) |
 | WP-15 | Executable literal bit-field writes (L2-37) | **complete** — bit-field writes/freezes on fully permitted executable literal spans via the literal-data hook path under single-permit full coverage; under-covered/mixed spans keep named fail-closed refusals; merged at `d3316aa`; see [native-exec-bitfield-writes.md](native-exec-bitfield-writes.md) |
 | WP-16 | Named table-Lua tabs (L5-19) | **complete** — `_table_lua_source` gather + dedicated tests; see [native-table-lua-tabs.md](native-table-lua-tabs.md) |
+| WP-17 | Version display + repository link in both windows | **complete** — window titles carry the build version (fail-closed `verify_version_sync` in the build); clickable `https://github.com/bietiekay/CT2Trainer` label in the converter and trainer windows; merged at `557b2ac`; see [native-version-repo-link.md](native-version-repo-link.md) |
 | AP-12 | Final assessment + maintainability | **OPEN** — `runtime_unverified`, Windows + Deck acceptance, 0.10 release closure |
 
 ### AP-11: Real games, clean PC and Deck (open)
