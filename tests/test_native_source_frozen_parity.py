@@ -1,12 +1,14 @@
 """Gate:2 evidence (parity half) — Source-to-Frozen parity of the 0.9 feature set.
 
-The 0.9 feature set (custom types, table-Lua lifecycle, Auto Assembler scripts,
-nth-of-block AOB) must survive the source -> frozen round-trip exactly. These
-tests compile real pinned corpus tables that exercise those features, freeze
-them into a trainer via ``build_trainer`` (appended to a checked independent
-template), read the plan back out of the produced EXE, and assert the frozen
-plan is byte- and value-identical to the source-compiled plan. The frozen
-runtime (launcher smoke) is then shown to read the same plan.
+The 0.9 feature set (custom types, table-Lua lifecycle, Auto Assembler
+scripts, nth-of-block AOB) plus the WP-14 staged fields (staged metadata,
+activation sets, parent relations, one-shot flags) must survive the source
+-> frozen round-trip exactly. These tests compile real pinned corpus tables
+that exercise those features, freeze them into a trainer via
+``build_trainer`` (appended to a checked independent template), read the
+plan back out of the produced EXE, and assert the frozen plan is byte- and
+value-identical to the source-compiled plan. The frozen runtime (launcher
+smoke) is then shown to read the same plan.
 
 No game process is touched; the template is an inert owned PE stub.
 """
@@ -32,9 +34,12 @@ if not CORPUS.is_dir():
 # Pinned tables chosen to exercise the 0.9 feature set:
 #   case-06.ct (origin: Resident Evil 2)  -> custom types + table-Lua lifecycle + AA scripts
 #   case-07.ct (origin: Borderlands 3)    -> Forms + large entry set + AA
+#   case-14.ct (origin: PRAGMATA, WP-14)  -> staged values, script-parent flag
+#       classes, lua-static activation sets, one-shot AA, signed offsets
 _PARITY_TABLES = (
     ("case-06.ct", "x64", "ct2synth06.exe"),
     ("case-07.ct", "x64", "ct2synth07.exe"),
+    ("case-14.ct", "x64", "ct2synth14.exe"),
 )
 
 
@@ -93,6 +98,63 @@ class SourceFrozenParityTests(unittest.TestCase):
     def test_borderlands3_feature_set_round_trips(self):
         self._parity("case-07.ct", "x64",
                      "ct2synth07.exe")
+
+    def test_case14_feature_set_round_trips(self):
+        self._parity("case-14.ct", "x64", "ct2synth14.exe")
+
+    def test_case14_staged_metadata_round_trips(self):
+        """WP-14 staged fields survive the freeze byte- and value-identically.
+
+        If canonical_bytes or the frozen plan path dropped any staged field
+        (staged metadata, activation sets, parent relations, one-shot flags),
+        the frozen plan would differ from the source plan for the same entry
+        ids; that is a product bug and is reported, not worked around.
+        """
+        source = compile_table(str(CORPUS / "case-14.ct"), "ct2synth14.exe",
+                               architecture="x64")
+        exe, _report = build_trainer(source, self.root / "trainer.exe",
+                                     self.template)
+        frozen = read_embedded_plan(exe)
+
+        # Byte parity of the canonical plan bytes the runtime trusts.
+        self.assertEqual(canonical_bytes(frozen), canonical_bytes(source),
+                         "canonical frozen plan bytes differ from source")
+
+        # Plan-level staged structure.
+        self.assertEqual(frozen.get("parent_relations"),
+                         source.get("parent_relations"),
+                         "parent_relations differ between source and frozen")
+
+        # Value parity for the staged fields, per entry id.
+        frozen_by_id = {entry["id"]: entry for entry in frozen["entries"]}
+        diffs = []
+        for entry in source["entries"]:
+            other = frozen_by_id.get(entry["id"])
+            if other is None:
+                diffs.append("entry %s missing from frozen plan" % entry["id"])
+                continue
+            for field in ("staged", "activation_sets", "one_shot"):
+                if entry.get(field) != other.get(field):
+                    diffs.append("entry %s %s: %r != %r" % (
+                        entry["id"], field, entry.get(field),
+                        other.get(field)))
+        self.assertEqual(diffs, [],
+                         "staged metadata lost in freeze: "
+                         + "; ".join(diffs[:5]))
+
+        # The exact staged record set of case-14 is intact in the frozen plan.
+        source_staged = {entry["id"]: entry["staged"]
+                         for entry in source["entries"] if "staged" in entry}
+        frozen_staged = {entry["id"]: entry["staged"]
+                         for entry in frozen["entries"] if "staged" in entry}
+        self.assertEqual(len(source_staged), 33,
+                         "case-14 must stage exactly 33 records")
+        self.assertEqual(set(source_staged), set(frozen_staged),
+                         "staged record set changed in freeze")
+        for entry_id in sorted(source_staged):
+            self.assertEqual(frozen_staged[entry_id], source_staged[entry_id],
+                             "staged metadata differs for entry %s"
+                             % entry_id)
 
     def test_09_features_present_in_source_plan(self):
         plan = compile_table(str(CORPUS / "case-06.ct"), "ct2synth06.exe",
