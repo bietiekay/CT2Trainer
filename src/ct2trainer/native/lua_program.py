@@ -426,6 +426,15 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *, nt
             'one_shot': bool(one_shot),
             'requires': list(static_program['requires']) if static_program is not None else [],
             'provides': list(static_program['provides']) if static_program is not None else []}
+    # WP-14 (C1): PRAGMATA-class tables register their base symbols inside
+    # the embedded Lua (registerSymbol / symbol='...' table field) and
+    # release them on disable; static proof of that pair makes the record
+    # a provider for staged dependency analysis.  Pure text, no execution.
+    from .lua_symbol_providers import extract_lua_symbol_providers
+    lua_provides = extract_lua_symbol_providers(parts)
+    if lua_provides:
+        result['provides'] = sorted(set(result['provides']) | set(lua_provides),
+                                    key=str.casefold)
     if definitions:
         locals_ = set()
         for node in [] if static_program is None else static_program['preamble'] + static_program['enable']:

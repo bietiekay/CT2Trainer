@@ -5,7 +5,7 @@ Read-only against the committed ``gap_inventory`` artifacts (this tool never
 touches the corpus directory). It builds, in ``--output``:
 
   feature-coverage.json
-    feature_matrix   one row per gap class (36) plus one row per
+    feature_matrix   one row per gap class (39) plus one row per
                      missing-gates entry; each row carries status
                      (covered | partial | missing), the dedicated
                      tests/test_native_*.py evidence files, the native
@@ -32,7 +32,7 @@ Status rules (static contract, documented per feature):
   missing  nothing exists in the native source
 
 AP-11 rule: the missing_gates entries that can only be satisfied on the
-user's other machine are excluded from the coverage denominator; all 36
+user's other machine are excluded from the coverage denominator; all 39
 gap classes have an in-machine static/fixture verification path and stay
 in scope.
 
@@ -110,7 +110,7 @@ GATE_FEATURES = {
         "evidence": ("tests/test_native_table_completeness.py",),
         "modules": ("src/ct2trainer/native/compiler.py",
                     "src/ct2trainer/table.py"),
-        "note": "Demonstrated for all 13 pinned tables: every source "
+        "note": "Demonstrated for all 14 pinned tables: every source "
                 "record is preserved (no silent drops), and each table-level "
                 "construct — Forms, the table-Lua lifecycle, Custom types and "
                 "embedded Assets — is handled or surfaced fail-closed "
@@ -155,7 +155,7 @@ GATE_FEATURES = {
 
 # ---------------------------------------------------------------------------
 # Static feature contract: one entry per gap class from
-# gap-report.json -> gap_labels (36). Each entry fixes the deterministic
+# gap-report.json -> gap_labels (39). Each entry fixes the deterministic
 # status, the dedicated tests/test_native_*.py evidence files, the native
 # modules involved and a note. Paths are repo-relative POSIX. The
 # consistency section verifies that this contract covers exactly the
@@ -432,14 +432,22 @@ FEATURES = {
         "status": "covered",
         "evidence": ("tests/test_native_compiler.py",
                      "tests/test_native_global_strings.py",
-                     "tests/test_native_addresses.py"),
+                     "tests/test_native_addresses.py",
+                     "tests/test_native_staged_capability.py"),
         "modules": ("src/ct2trainer/native/compiler.py",
                     "src/ct2trainer/native/engine.py",
-                    "src/ct2trainer/native/aa.py"),
+                    "src/ct2trainer/native/aa.py",
+                    "src/ct2trainer/native/lua_symbol_providers.py"),
         "note": "Static provider dependency closure in the compiler plus "
                 "runtime symbol resolution in the engine (the owned-global "
                 "fixtures bind a value record to a symbol of another "
-                "record).",
+                "record). WP-14 adds staged runtime gating on top: a "
+                "supported record whose required symbols are all uniquely "
+                "provided by supported providers carries staged plan "
+                "metadata (provider IDs and labels), and the engine gates "
+                "value read/write/freeze on provider liveness (named "
+                "fail-closed error while the provider is off; freeze "
+                "released when the provider deactivates).",
     },
     "custom_type": {
         "status": "covered",
@@ -722,6 +730,25 @@ FEATURES = {
                 "boundary, attach replay, mirror of engine state); "
                 "22 dedicated tests in test_native_parent_activation.py.",
     },
+    "record_activation_set": {
+        "status": "covered",
+        "evidence": ("tests/test_native_activation_sets.py",
+                     "tests/test_native_compiler.py"),
+        "modules": ("src/ct2trainer/native/lua_activation_sets.py",
+                    "src/ct2trainer/native/compiler.py",
+                    "src/ct2trainer/native/engine.py"),
+        "note": "The converter statically extracts record-ID enable/disable "
+                "sets from embedded {$lua} blocks (narrow grammar: one "
+                "getMemoryRecordByID(<id>).Active = true|false line per "
+                "record ID, uniform direction per section, every ID must "
+                "exist; any ambiguity fails closed without metadata). "
+                "Toggling such a record applies the set through the "
+                "engine's dependency-ordered per-record activation path "
+                "instead of executing the CE-coupled Lua; both plan "
+                "validators re-derive and refuse tampered sets. Corpus "
+                "case-14 pins the master-toggle shape (async record 0, "
+                "set {2,6,8,11,14,25}).",
+    },
     "record_unclassifiable": {
         "status": "covered",
         "evidence": ("tests/test_native_compiler.py",),
@@ -751,6 +778,40 @@ FEATURES = {
                 "the new bytes; bitfield/string closure members are refused "
                 "fail-closed. Real in-game effect for the pinned corpus "
                 "records remains an open AP-11 gate.",
+    },
+    "script_parent_activation": {
+        "status": "covered",
+        "evidence": ("tests/test_native_parent_activation.py",
+                     "tests/test_native_staged_capability.py",
+                     "tests/test_native_compiler.py"),
+        "modules": ("src/ct2trainer/native/compiler.py",
+                    "src/ct2trainer/native/engine.py",
+                    "src/ct2trainer/native/parent_flags.py"),
+        "note": "Script records with child-activation propagation options "
+                "inherit the tested flag classes (both flags = "
+                "required_dependency, moActivateChildrenAsWell only = "
+                "direct_activation, moDeactivateChildrenAsWell only = "
+                "collective_off; moBindActivation on a non-heading parent "
+                "stays a visible named block). The engine activates the "
+                "provider script first on ON and releases staged-child "
+                "freezes before provider deactivation on OFF; "
+                "parent_relations plan metadata is re-derived and "
+                "tamper-refused by both plan validators. Value parents "
+                "carrying the same flags stay inert (they compile as "
+                "ordinary values).",
+    },
+    "signed_pointer_offset": {
+        "status": "covered",
+        "evidence": ("tests/test_native_compiler.py",),
+        "modules": ("src/ct2trainer/native/compiler.py",),
+        "note": "Pointer offset literals accept an explicit +/- sign with "
+                "hex semantics preserved (+28 = 0x28, -0x10 = -16, "
+                "+0x28 = 0x28); malformed forms ('++10', a bare sign, "
+                "'0x', '10-', 'x1', whitespace) are rejected fail-closed. "
+                "Signed offsets flow through value address chains and "
+                "group-heading chains; corpus case-14 pins a heading-level "
+                "signed chain (Offsets [0, +28]). Real in-game effect for "
+                "the pinned corpus records remains an open AP-11 gate.",
     },
     "string_codepage": {
         "status": "covered",

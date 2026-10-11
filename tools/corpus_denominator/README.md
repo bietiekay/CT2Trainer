@@ -80,13 +80,13 @@ fallback.
 
 ## Limits
 
-- The shipped `.CT` corpus (`TableReferences/`, 13 synthetic case tables,
+- The shipped `.CT` corpus (`TableReferences/`, 14 synthetic case tables,
   see `TableReferences/README.md`) is read-only test input;
-  `tests/fixtures/reference-inventory.json` additionally pins six of the
+  `tests/fixtures/reference-inventory.json` additionally pins seven of the
   tables byte-exactly.
 - Static syntax assumptions only: no attach proof, no CE/Windows runtime
   gate, no game-effect evidence. `confirmed_game_effect_actions` stays `0`.
-- The 13 pinned start tables are part of the tool's contract
+- The 14 pinned start tables are part of the tool's contract
   (`PINNED` in `__main__.py`); a missing pinned path fails the run.
 - The `generated` field carries the run-id stamp, not a wall-clock time;
   the committed reference artifacts use `repo-reproducible`.

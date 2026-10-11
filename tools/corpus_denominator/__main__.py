@@ -44,7 +44,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(_PKG_DIR))
 REFERENCE_INVENTORY = os.path.join(REPO_ROOT, "tests", "fixtures",
                                    "reference-inventory.json")
 
-# Pinned start corpus (AP-10): 13 tables, 6 of them byte-pinned in
+# Pinned start corpus (AP-10): 14 tables, 7 of them byte-pinned in
 # tests/fixtures/reference-inventory.json. Paths relative to the corpus root, "/".
 PINNED = [
     "case-01.ct",
@@ -60,6 +60,7 @@ PINNED = [
     "case-11.ct",
     "case-12.ct",
     "case-13.ct",
+    "case-14.ct",
 ]
 
 # gap id -> (label, requirement/package mapping)
@@ -89,6 +90,9 @@ GAP_LABELS = {
     "recursive_parent_value": ("Recursive parent value (moRecursiveSetValue)", "N-07"),
     "cross_record_symbol": ("Cross-record symbol resolution", "N-07"),
     "one_shot_save_contract": ("One-shot without ON/OFF save contract", "state contract (AP-04)"),
+    "script_parent_activation": ("Script parent with child-activation propagation (staged unlock)", "WP-14 (extends AP-07)"),
+    "record_activation_set": ("Embedded-Lua master toggle (record-ID activation sets)", "WP-14"),
+    "signed_pointer_offset": ("Signed pointer-offset literal (`+`/`-` in `<Offsets>`)", "WP-14 (format contract)"),
     "lua_clock_speed": ("Clock/speedhack API", "N-16"),
     "lua_worker_thread": ("Lua worker threads", "N-15"),
     "lua_gui_api": ("Lua GUI API (showMessage/Forms)", "N-21"),
@@ -103,7 +107,7 @@ GAP_LABELS = {
 }
 
 MISSING_GATES = [
-    "Real game installs/builds for the 13 pinned tables (user question unanswered)",
+    "Real game installs/builds for the 14 pinned tables (user question unanswered)",
     "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
     "VM/Clean-PC gate without CE/Python",
     "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -584,7 +588,7 @@ def run(args):
     pinned_expected = len(pinned_records) - pinned_nav
 
     denominator = {
-        "scope": "13 pinned start-corpus tables (hash-deduplicated, static)",
+        "scope": "14 pinned start-corpus tables (hash-deduplicated, static)",
         "unique_tables": len(pinned_info),
         "records_total": len(pinned_records),
         "navigation_excluded": pinned_nav,

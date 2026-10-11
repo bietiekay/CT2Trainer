@@ -17,6 +17,7 @@ from .window_icon import window_icon_path
 from .ui_layout import (
     BREADCRUMB_ROW_HEIGHT,
     MIN_WINDOW_HEIGHT_WIDE,
+    activation_set_summary,
     breadcrumb_labels,
     cards_area_height,
     enter_group,
@@ -25,6 +26,9 @@ from .ui_layout import (
     is_navigable_group,
     level_entries,
     page_size_for_cards,
+    staged_card_state,
+    staged_provider_labels,
+    STAGED_PENDING,
 )
 
 
@@ -164,9 +168,15 @@ class TrainerWindow:
         path = entry.get("path", [])
         if isinstance(path, list):
             path = " / ".join(map(str, path))
+        staged = entry.get("staged")
+        staged_line = (("\nStaged: unlocks when active: " + ", ".join(staged.get("provider_labels", ())))
+                       if staged else "")
+        set_summary = activation_set_summary(entry, self.engine.entries)
+        set_line = ("\n" + set_summary + " (source: %s)"
+                    % entry["activation_sets"].get("source", "unknown")) if set_summary else ""
         messagebox.showinfo("Entry information", f"{entry['label']}\nID: {entry['id']}\nPath: {path}\n" +
             f"Type: {entry.get('variable_type', entry['kind'])}\n" +
-            (entry.get("reason") or "Supported by the bounded native engine") + "\n" +
+            (entry.get("reason") or "Supported by the bounded native engine") + staged_line + set_line + "\n" +
             self.engine.entry_errors.get(entry["id"], "") +
             "\nRequired symbols: " + ", ".join(entry.get("requires", [])), parent=self.root)
 
@@ -344,8 +354,15 @@ class TrainerWindow:
                 continue
             if entry["kind"] == "script":
                 active = identifier in self.engine.applied
+                master = entry.get("activation_sets") is not None
                 current = ("Unknown" if self.engine.blocked else ("ON" if active else "OFF")) if self.engine.memory else "Disconnected"
+                if master and self.engine.memory is not None:
+                    current = "Set applied" if active else "Set not applied"
                 tk.Label(card, text=f"Current: {current}   Next game launch: {'ON' if identifier in self.engine.desired else 'OFF'}", anchor="w", bg=BG_CARD, fg=FG_DIM).pack(fill="x")
+                set_summary = activation_set_summary(entry, self.engine.entries)
+                if set_summary:
+                    tk.Label(card, text=set_summary, anchor="w", justify="left", bg=BG_CARD, fg=FG_DIM,
+                             wraplength=max(280, self.root.winfo_width() - 60)).pack(fill="x")
                 if self.engine.memory is None:
                     if identifier in self.engine.desired:
                         button = self._button(card, "Cancel auto-on on next game launch", lambda i=identifier: self.action(lambda: self.engine.clear_desired(i)))
@@ -354,7 +371,10 @@ class TrainerWindow:
                     if self.engine.blocked:
                         button.configure(state="disabled")
                 else:
-                    label = "ON" if active else "OFF"
+                    if master:
+                        label = "Clear set" if active else "Apply set"
+                    else:
+                        label = "ON" if active else "OFF"
                     bg_color = ON_BG if active else OFF_BG
                     fg_color = ON_FG if active else OFF_FG
                     button = self._button(card, label, lambda i=identifier: self.action(lambda i=i: self._toggle_with_sound(i)),
@@ -364,7 +384,14 @@ class TrainerWindow:
                         button.configure(state="disabled")
                 button.pack(fill="x")
             else:
-                current = tk.Label(card, text="Current: unavailable", anchor="w", bg=BG_CARD, fg=FG_DIM)
+                staged_pending = staged_card_state(entry, self.engine.applied) == STAGED_PENDING
+                if staged_pending:
+                    providers = ", ".join(staged_provider_labels(entry))
+                    tk.Label(card, text="Pending - unlocks when active: " + (providers or "unknown provider"),
+                             anchor="w", justify="left", bg=BG_CARD, fg=FG_DIM,
+                             wraplength=max(280, self.root.winfo_width() - 60)).pack(fill="x")
+                current = tk.Label(card, text="Current: unavailable" + (" - provider inactive" if staged_pending else ""),
+                                   anchor="w", bg=BG_CARD, fg=FG_DIM)
                 current.pack(fill="x")
                 self.current_labels[identifier] = current
                 row = tk.Frame(card, bg=BG_CARD)
@@ -383,7 +410,7 @@ class TrainerWindow:
                 frozen = identifier in self.engine.frozen
                 freeze = self._button(row, "Unfreeze" if frozen else "Freeze", lambda i=identifier, f=frozen: self.action(lambda: self.engine.set_freeze(i, not f)), width=7)
                 freeze.pack(side="left", padx=(4, 0))
-                if not self.engine.connected:
+                if staged_pending or not self.engine.connected:
                     button.configure(state="disabled")
                     freeze.configure(state="disabled")
                 draft_row = tk.Frame(card, bg=BG_CARD)
@@ -391,7 +418,10 @@ class TrainerWindow:
                 for label, callback in (("▲", lambda e=entry: self.step(e, 1)), ("▼", lambda e=entry: self.step(e, -1)),
                                         ("Reset", lambda i=identifier, e=entry: self.drafts[i].set(str(e.get("value_default") or e.get("default_value") or "")))):
                     if label in {'▲','▼'} and entry.get('value_profile',{}).get('kind')=='string':continue
-                    self._button(draft_row, label, callback).pack(side="left", fill="x", expand=True)
+                    draft_button = self._button(draft_row, label, callback)
+                    if staged_pending:
+                        draft_button.configure(state="disabled")
+                    draft_button.pack(side="left", fill="x", expand=True)
 
     def poll(self):
         if self.engine.closed:
@@ -407,7 +437,11 @@ class TrainerWindow:
                 value = self.engine.read_value(identifier)
                 label.configure(text=f"Current: {value}   {'FROZEN' if identifier in self.engine.frozen else ''}")
             except Exception:
-                label.configure(text="Current: unavailable — enable required symbols first")
+                entry = self.engine.entries.get(identifier) or {}
+                if entry.get("staged") and staged_card_state(entry, self.engine.applied) == STAGED_PENDING:
+                    label.configure(text="Current: unavailable — provider inactive")
+                else:
+                    label.configure(text="Current: unavailable — enable required symbols first")
         self.root.after(250, self.poll)
 
     def close(self):

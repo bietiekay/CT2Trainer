@@ -124,16 +124,30 @@ class NativeCompilerTests(unittest.TestCase):
         self.assertEqual(entry["lua_program"]["source_sha256"], sha256(source.encode()).hexdigest())
         self.assertIsNotNone(entry["lua_program"]["static_program"])
 
-    def test_lua_only_record_cannot_claim_dynamic_symbol_dependencies_statically(self):
+    def test_lua_registered_symbol_is_a_static_provider(self):
+        # WP-14: a Lua record that proves via static literals that it
+        # registers a symbol on enable and unregisters it on disable
+        # claims that symbol (the PRAGMATA registration pattern).
         source = "[ENABLE]\n{$lua}\nregisterSymbol('DynamicOnly',0x1000)\n{$asm}\n[DISABLE]\n{$lua}\nunregisterSymbol('DynamicOnly')\n{$asm}"
         plan = self.compile(script_record(0, source) + value_record(1, "DynamicOnly"))
         entry, consumer = plan["entries"]
         self.assertTrue(entry["supported"], entry["reason"])
         self.assertIsNone(entry["lua_program"]["static_program"])
-        self.assertEqual(entry["provides"], [])
+        self.assertEqual(entry["provides"], ["DynamicOnly"])
         self.assertEqual(entry["requires"], [])
+        self.assertTrue(consumer["supported"], consumer["reason"])
+        self.assertEqual(consumer["dependency_ids"], [0])
+        self.assertEqual(consumer["staged"],
+                         {"provider_ids": [0], "provider_labels": [entry["label"]]})
+
+    def test_lua_registration_without_unregister_is_not_a_static_provider(self):
+        source = "[ENABLE]\n{$lua}\nregisterSymbol('NoRelease',0x1000)\n{$asm}\n[DISABLE]\n{$lua}\n{$asm}"
+        plan = self.compile(script_record(0, source) + value_record(1, "NoRelease"))
+        entry, consumer = plan["entries"]
+        self.assertTrue(entry["supported"], entry["reason"])
+        self.assertEqual(entry["provides"], [])
         self.assertFalse(consumer["supported"])
-        self.assertIn("DynamicOnly", consumer["reason"])
+        self.assertIn("NoRelease", consumer["reason"])
 
     def test_lua_static_dependencies_preserve_selected_provider_closure(self):
         locator = "[ENABLE]\naobscanmodule(Anchor,Target.exe,54 46)\nregistersymbol(Anchor)\n[DISABLE]\nunregistersymbol(Anchor)"
@@ -259,6 +273,27 @@ class NativeCompilerTests(unittest.TestCase):
     def test_pointer_offsets_are_hex_and_preserve_xml_order(self):
         plan = self.compile(value_record(1, extra='<Offsets><Offset>10</Offset><Offset>-8</Offset></Offsets>'))
         self.assertEqual(plan["entries"][0]["pointer_offsets"], [16, -8])
+
+    def test_signed_pointer_offset_literals_are_accepted(self):
+        plan = self.compile(value_record(1, extra='<Offsets><Offset>+28</Offset><Offset>-0x10</Offset><Offset>+0x28</Offset></Offsets>'))
+        self.assertEqual(plan["entries"][0]["pointer_offsets"], [0x28, -16, 0x28])
+
+    def test_malformed_pointer_offset_literals_stay_rejected(self):
+        for text in ("++10", "+", "0x", "", "10-", "x1", "1 0"):
+            with self.subTest(offset=text):
+                plan = self.compile(value_record(1, extra=f'<Offsets><Offset>{text}</Offset></Offsets>'))
+                entry = plan["entries"][0]
+                self.assertFalse(entry["supported"], entry["reason"])
+                self.assertIn("Pointer offset must be a hexadecimal integer literal.", entry["reason"])
+
+    def test_staged_marker_derives_from_supported_symbol_providers(self):
+        plan = compile_table(FIXTURE, "FixtureTarget.exe")
+        anchor, pause, value, ticks = plan["entries"]
+        self.assertNotIn("staged", anchor)
+        for entry in (pause, value, ticks):
+            self.assertEqual(entry.get("staged"),
+                             {"provider_ids": [0],
+                              "provider_labels": ["Locate fixture data (enable first)"]})
 
     def test_advanced_types_malformed_pointer_and_hex_float_blocked(self):
         body = value_record(0, value_type="Custom") + value_record(1, extra='<Offsets><Offset>print(1)</Offset></Offsets>') + value_record(2, value_type="Float", extra='<ShowAsHex>1</ShowAsHex>')

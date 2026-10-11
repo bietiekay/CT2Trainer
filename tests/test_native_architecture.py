@@ -239,6 +239,9 @@ class ArchitectureTests(unittest.TestCase):
         plan = compile_table(FIXTURE, 'FixtureTarget.exe', architecture='x64')
         engine = self.engine(plan, memory)
         engine.poll()
+        # WP-14 (C1): value 2 is staged on the anchor provider; enable it
+        # first so the freeze below is admitted.
+        engine.toggle(0, True)
         engine.set_freeze(2)
         memory.pointer_size = 4
         with patch.object(engine, '_check_patches', side_effect=AssertionError('receipt read after mismatch')):

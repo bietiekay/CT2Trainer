@@ -69,10 +69,13 @@ def _offsets(offsets: tuple[str, ...]) -> list[int]:
         raise AAError("Pointer chains are limited to 32 offsets.")
     result = []
     for text in offsets:
-        if len(text) > 18 or re.fullmatch(r"-?(?:0x)?[0-9a-fA-F]+", text) is None:
+        # WP-14 (C4): an explicit sign is optional; the literal stays
+        # hexadecimal, so "+28" is 0x28 and "-0x10" is -16.  Malformed
+        # forms ("++10", "+", bare "0x") remain rejected fail-closed.
+        if len(text) > 19 or re.fullmatch(r"[+-]?(?:0x)?[0-9a-fA-F]+", text) is None:
             raise AAError("Pointer offset must be a hexadecimal integer literal.")
         negative = text.startswith("-")
-        number = int(text.removeprefix("-").removeprefix("0x"), 16)
+        number = int(text.lstrip("+-").removeprefix("0x"), 16)
         if number > 0x7FFFFFFFFFFFFFFF:
             raise AAError("Pointer offset exceeds signed 64 bits.")
         result.append(-number if negative else number)
@@ -441,7 +444,34 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                 continue
             if source.has_children and any(option in source.options for option in
                                            ("moActivateChildrenAsWell", "moDeactivateChildrenAsWell", "moBindActivation")):
-                raise AAError("Parent/child activation propagation is unsupported.")
+                # WP-14 (C2): multi-step tables attach child-activation
+                # propagation to AA/Lua script records whose children
+                # reference symbols the script registers at activation.
+                # Script parents get the tested flag classes;
+                # moBindActivation has no derived contract and stays a
+                # visible named block.  Value parents (pointer-chain
+                # "base" records) carry the same CT flags, but a value
+                # has no activation of its own, so the flags are inert
+                # there and the record compiles as an ordinary value;
+                # other non-script, non-heading parents remain fail-closed
+                # with a named reason.
+                if source.kind == "value":
+                    pass
+                elif source.kind != "script":
+                    raise AAError("Parent/child activation propagation is unsupported "
+                                  "(script parents and group headings only).")
+                else:
+                    if "moBindActivation" in source.options:
+                        raise AAError("moBindActivation on a script parent has no derived contract; "
+                                      "activation stays blocked (named block).")
+                    if ("moActivateChildrenAsWell" in source.options
+                            and "moDeactivateChildrenAsWell" in source.options):
+                        flag = "required_dependency"
+                    elif "moActivateChildrenAsWell" in source.options:
+                        flag = "direct_activation"
+                    else:
+                        flag = "collective_off"
+                    entry["parent_activation"] = flag
             if source.kind == "script":
                 # Async records (CT Async="1") keep their regular profile; the
                 # lifecycle marker is attached after dependency analysis (see
@@ -451,6 +481,14 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                     entry.update(lua_program=program, requires=program['requires'], provides=program['provides'],
                                  enable=[], disable=[], one_shot=bool(program.get('one_shot', False)),
                                  reason="Native Lua/AA; Lua runs during this record's owned activation.")
+                    # WP-14 (C3): statically extract a record-ID activation
+                    # set (master-toggle pattern) from the embedded Lua.  The
+                    # extraction is pure text; any ambiguity leaves the record
+                    # on its ordinary Lua profile with no activation_sets.
+                    from .lua_activation_sets import extract_activation_sets
+                    sets = extract_activation_sets(program["source"], set(sources), own_id=source.id)
+                    if sets is not None:
+                        entry["activation_sets"] = sets
                     # Static luaCall plan: pure-AA records whose luaCall
                     # expressions fit the pinned single-call grammar carry a
                     # deterministic plan report, which the engine gates behind
@@ -601,10 +639,25 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
             entry["recursive_value"] = {"write_ids": recursive_write_closure(by_id, entry["id"])}
         except RecursiveSetValueError as exc:
             _block(entry, str(exc))
-    # Parent/child activation (AP-07 stage 3): a flagged heading routes its
-    # whole selected/supported subtree through the tested activation policy;
-    # the flagged parent's class inherits down the entire subtree, while
-    # unsupported or unselected descendants stay outside the topology.
+    # Staged capability (WP-14, C1): every supported non-heading record
+    # whose required symbols are all uniquely provided by other supported
+    # records carries explicit staged metadata.  The engine gates value
+    # reads, writes and freeze on provider liveness; scripts keep their
+    # ordinary dependency-ordered activation.  Provider labels use the
+    # entry path so the UI can name the unlock source.
+    for entry in entries:
+        if (entry["supported"] and entry["kind"] in ("script", "value")
+                and entry.get("dependency_ids")):
+            provider_ids = sorted(set(entry["dependency_ids"]))
+            entry["staged"] = {
+                "provider_ids": provider_ids,
+                "provider_labels": [by_id[pid]["path"] for pid in provider_ids],
+            }
+    # Parent/child activation (AP-07 stage 3, extended by WP-14 C2): a
+    # flagged heading or script parent routes its whole selected/supported
+    # subtree through the tested activation policy; the flagged parent's
+    # class inherits down the entire subtree, while unsupported or
+    # unselected descendants stay outside the topology.
     # Markers that end up without any cascade target are dropped, so the
     # plan only promises activation where the engine has targets.
     children_by_parent = {}
@@ -614,7 +667,7 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     parent_relations = {}
     for entry in entries:
         flag = entry.get("parent_activation")
-        if (flag is None or entry["kind"] != "heading"
+        if (flag is None or entry["kind"] not in ("heading", "script")
                 or not entry["supported"] or not entry["selected"]):
             continue
         children = {}
@@ -630,12 +683,24 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
             parent_relations[entry["id"]] = children
     for entry in entries:
         # A flagged parent without any supported+selected cascade target
-        # promises nothing, so it stays a plain navigation heading.  A
-        # moBindActivation marker is never dropped: the tested contract is a
-        # visible named refusal, whether or not the group sits in a cascade.
+        # promises nothing, so the marker is dropped.  Headings revert to
+        # the plain navigation reason; script parents keep their own
+        # reason.  A moBindActivation marker is never dropped: the tested
+        # contract is a visible named refusal, whether or not the group
+        # sits in a cascade.
         if entry.get("parent_activation") is not None and entry["id"] not in parent_relations:
             entry.pop("parent_activation")
-            entry["reason"] = "Navigation heading; CE group activation is not executed."
+            if entry["kind"] == "heading":
+                entry["reason"] = "Navigation heading; CE group activation is not executed."
+        elif (entry["kind"] == "script"
+                and entry.get("parent_activation") is not None):
+            # Script-parent flag-class note: the compile branches overwrite
+            # entry["reason"] below/above, so it is appended here, after
+            # the final supported/selected state is known.
+            note = ("Native script parent activation: " + entry["parent_activation"]
+                    + " flag class applies to the whole subtree.")
+            if note not in entry["reason"]:
+                entry["reason"] = (entry["reason"] + " " if entry["reason"] else "") + note
     warnings = []
     omitted = []
     if table.has_table_lua:
@@ -929,9 +994,11 @@ def validate_plan(plan: dict) -> None:
                 flag = entry.get("parent_activation")
                 if flag is not None:
                     if (flag not in ("required_dependency", "direct_activation", "collective_off")
-                            or entry["kind"] != "heading" or not entry["supported"]
+                            or entry["kind"] not in ("heading", "script")
+                            or not entry["supported"]
                             or entry["id"] not in selected):
-                        raise NativeCompileError("Parent flag class requires a supported selected heading.")
+                        raise NativeCompileError(
+                            "Parent flag class requires a supported selected heading or script parent.")
                     children = {}
                     stack = [entry["id"]]
                     while stack:
@@ -948,6 +1015,40 @@ def validate_plan(plan: dict) -> None:
                 if entry.get("parent_mo_bind") is True and (entry["kind"] != "heading"
                         or not entry["supported"] or entry["id"] not in selected):
                     raise NativeCompileError("moBindActivation marker requires a supported selected heading.")
+            # WP-14 (C1): staged metadata must re-derive byte-exactly from
+            # each supported non-heading entry's own dependency IDs, and is
+            # forbidden everywhere else (blocked/heading records and entries
+            # without dependencies).
+            for entry in entries:
+                stored_staged = entry.get("staged")
+                if (entry["supported"] and entry["kind"] in ("script", "value")
+                        and entry.get("dependency_ids")):
+                    provider_ids = sorted(set(entry["dependency_ids"]))
+                    expected = {"provider_ids": provider_ids,
+                                "provider_labels": [by_id[pid]["path"]
+                                                    for pid in provider_ids]}
+                    if stored_staged != expected:
+                        raise NativeCompileError(
+                            "Staged metadata does not re-derive from the record dependencies.")
+                elif stored_staged is not None:
+                    raise NativeCompileError(
+                        "Staged metadata requires supported non-heading dependency IDs.")
+            # WP-14 (C3): activation-set metadata must re-derive
+            # byte-exactly from each supported Lua script record's own
+            # embedded source; it is forbidden on all other records.
+            from .lua_activation_sets import extract_activation_sets
+            for entry in entries:
+                stored_sets = entry.get("activation_sets")
+                if (entry["supported"] and entry["kind"] == "script"
+                        and "lua_program" in entry):
+                    expected = extract_activation_sets(
+                        entry["lua_program"]["source"], ids, own_id=entry["id"])
+                    if stored_sets != expected:
+                        raise NativeCompileError(
+                            "Activation-set metadata does not re-derive from the embedded Lua.")
+                elif stored_sets is not None:
+                    raise NativeCompileError(
+                        "Activation-set metadata requires a supported Lua script record.")
             stored = plan.get("parent_relations")
             if stored is None:
                 stored = {}

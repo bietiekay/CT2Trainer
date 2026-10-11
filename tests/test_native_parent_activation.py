@@ -14,8 +14,11 @@ persistence disabled (save boundary: ON stores only the requested heading's
 wish; OFF clears every deactivated child's wish), mirrors engine-side effect
 and wish state so the controller also sees children driven through their own
 toggles, and keeps ``moBindActivation`` refused before any write, whether it
-sits on the target or anywhere inside the cascade.  Non-group records with
-children and activation options stay fail-closed.
+sits on the target or anywhere inside the cascade.  WP-14 extends the
+contract to script parents: the parent's own effect (symbol provider) runs
+first on ON, staged value children unlock through provider liveness, and
+the OFF releases staged freezes before the provider teardown.  Value
+(other non-heading) parents stay fail-closed with a named reason.
 """
 from pathlib import Path
 import json
@@ -177,26 +180,84 @@ class ParentActivationCompilerTests(unittest.TestCase):
                          "required_dependency")
         validate_compiler_plan(plan)
 
-    def test_non_group_parent_flags_stay_refused(self):
-        # A script record with children and activation options stays
-        # fail-closed: only group headings carry the tested contract.
-        xml = ('<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
-               '<CheatEntry><ID>0</ID><Description>"Parent script"</Description>'
-               '<VariableType>Auto Assembler Script</VariableType>'
-               '<Options moActivateChildrenAsWell="1"/>'
-               f'<AssemblerScript>{PLAIN_SCRIPT}</AssemblerScript>'
-               '<CheatEntries>'
-               '<CheatEntry><ID>1</ID><Description>"Value"</Description>'
-               '<VariableType>4 Bytes</VariableType>'
-               '<Address>1000</Address></CheatEntry>'
-               '</CheatEntries></CheatEntry>'
-               '</CheatEntries></CheatTable>')
-        plan = self.compile("non-group.ct", xml)
+    def script_parent_xml(self, options):
+        # WP-14 (C2): a script record with children; the value child sits at
+        # a literal address (no symbol dependency, so no staged metadata).
+        return ('<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+                '<CheatEntry><ID>0</ID><Description>"Parent script"'
+                '</Description><VariableType>Auto Assembler Script'
+                '</VariableType>'
+                f'<Options {options}/>'
+                f'<AssemblerScript>{PLAIN_SCRIPT}</AssemblerScript>'
+                '<CheatEntries>'
+                '<CheatEntry><ID>1</ID><Description>"Value"'
+                '</Description><VariableType>4 Bytes</VariableType>'
+                '<Address>1000</Address></CheatEntry>'
+                '</CheatEntries></CheatEntry>'
+                '</CheatEntries></CheatTable>')
+
+    def test_script_parent_flags_supported(self):
+        # WP-14 (C2): script parents get the tested flag classes, mirroring
+        # the heading contract (marker, subtree relations, re-derivation).
+        plan = self.compile("script-both.ct", self.script_parent_xml(
+            'moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"'))
+        by_id = self.entries(plan)
+        self.assertTrue(by_id[0]["supported"])
+        self.assertEqual(by_id[0]["kind"], "script")
+        self.assertEqual(by_id[0]["parent_activation"], "required_dependency")
+        self.assertIn("required_dependency", by_id[0]["reason"])
+        self.assertNotIn("parent_mo_bind", by_id[0])
+        self.assertEqual(plan["parent_relations"],
+                         {"0": {"1": "required_dependency"}})
+        validate_compiler_plan(plan)
+        validate_engine_plan(plan)
+        plan = self.compile("script-direct.ct",
+                            self.script_parent_xml('moActivateChildrenAsWell="1"'))
+        self.assertEqual(self.entries(plan)[0]["parent_activation"],
+                         "direct_activation")
+        validate_compiler_plan(plan)
+        plan = self.compile("script-collective.ct",
+                            self.script_parent_xml('moDeactivateChildrenAsWell="1"'))
+        self.assertEqual(self.entries(plan)[0]["parent_activation"],
+                         "collective_off")
+        validate_compiler_plan(plan)
+
+    def test_script_parent_mo_bind_stays_a_visible_named_block(self):
+        plan = self.compile("script-mobind.ct",
+                            self.script_parent_xml('moBindActivation="1"'))
         by_id = self.entries(plan)
         self.assertFalse(by_id[0]["supported"])
-        self.assertIn("Parent/child activation propagation is unsupported.",
-                      by_id[0]["reason"])
+        self.assertIn("moBindActivation on a script parent", by_id[0]["reason"])
+        self.assertNotIn("parent_activation", by_id[0])
         self.assertNotIn("parent_relations", plan)
+        validate_compiler_plan(plan)
+
+    def test_value_parent_flags_are_inert(self):
+        # WP-14 (C2): pointer-chain "base" value records carry the same CT
+        # propagation flags, but values have no activation of their own,
+        # so the flags are inert: the record compiles as an ordinary
+        # value, no parent marker, no cascade relation.
+        xml = ('<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+               '<CheatEntry><ID>0</ID><Description>"Parent value"'
+               '</Description><VariableType>4 Bytes</VariableType>'
+               '<Address>1000</Address>'
+               '<Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>'
+               '<CheatEntries>'
+               '<CheatEntry><ID>1</ID><Description>"Value"'
+               '</Description><VariableType>4 Bytes</VariableType>'
+               '<Address>1004</Address></CheatEntry>'
+               '</CheatEntries></CheatEntry>'
+               '</CheatEntries></CheatTable>')
+        plan = self.compile("value-parent.ct", xml)
+        by_id = self.entries(plan)
+        self.assertTrue(by_id[0]["supported"])
+        self.assertEqual(by_id[0]["kind"], "value")
+        self.assertNotIn("parent_activation", by_id[0])
+        self.assertNotIn("parent_mo_bind", by_id[0])
+        self.assertNotIn("parent_relations", plan)
+        self.assertTrue(by_id[1]["supported"])
+        validate_compiler_plan(plan)
+        validate_engine_plan(plan)
 
     def test_plain_group_keeps_navigation_semantics(self):
         plan = self.compile("plain.ct", parent_table_xml(""))
@@ -488,6 +549,88 @@ class ParentActivationEngineTests(unittest.TestCase):
         engine = self.start_engine("plain.ct", "")
         with self.assertRaisesRegex(NativeRuntimeError, "Navigation heading"):
             engine.toggle(1, True)
+
+    def start_script_parent_engine(self, name, options):
+        # WP-14 (C2): the anchor provider is itself the flagged parent; its
+        # value child is staged on the symbol it registers at activation.
+        xml = ('<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+               '<CheatEntry><ID>0</ID><Description>"Provider parent"'
+               '</Description><VariableType>Auto Assembler Script'
+               '</VariableType>'
+               f'<Options {options}/>'
+               f'<AssemblerScript>{ANCHOR}</AssemblerScript>'
+               '<CheatEntries>'
+               '<CheatEntry><ID>1</ID><Description>"Staged value"'
+               '</Description><VariableType>4 Bytes</VariableType>'
+               '<Address>FixtureAnchor+72</Address></CheatEntry>'
+               '</CheatEntries></CheatEntry>'
+               '</CheatEntries></CheatTable>')
+        table = self.root / name
+        table.write_text(xml, encoding="utf-8")
+        self.plan = compile_table(table, PROCESS)
+        self.engine = TrainerEngine(
+            self.plan, state_dir=self.root / (name + "-state"),
+            process_lock_dir=self.root / (name + "-shared"),
+            memory_factory=lambda _name: self.memory)
+        self.engine.poll()
+        self.assertTrue(self.engine.connected, self.engine.status)
+        return self.engine
+
+    def test_script_parent_on_unlocks_staged_child_and_saves_only_parent_wish(self):
+        engine = self.start_script_parent_engine("sp-on.ct", self.BOTH)
+        # The staged child is pending while the provider is inactive.
+        with self.assertRaisesRegex(NativeRuntimeError,
+                                    "requires active provider"):
+            engine.read_value(1)
+        with self.assertRaisesRegex(NativeRuntimeError,
+                                    "requires active provider"):
+            engine.set_value(1, "7")
+        with self.assertRaisesRegex(NativeRuntimeError,
+                                    "requires active provider"):
+            engine.set_freeze(1, True)
+        # The parent's own effect lands first, then the staged child is
+        # usable through provider liveness.
+        self.assertTrue(engine.toggle(0, True))
+        self.assertIn(0, engine.applied)
+        self.assertEqual(engine.read_value(1), "0")
+        self.assertEqual(engine.set_value(1, "7"), "7")
+        self.assertEqual(self.memory.read(0x1072, 4), b"\x07\x00\x00\x00")
+        engine.set_freeze(1, True)
+        self.assertIn(1, engine.frozen)
+        # Save boundary: only the requested parent's wish persists.
+        self.assertEqual(engine.desired, {0})
+
+    def test_script_parent_off_releases_staged_freeze_before_teardown(self):
+        engine = self.start_script_parent_engine("sp-off.ct", self.BOTH)
+        engine.toggle(0, True)
+        engine.set_freeze(1, True)
+        self.assertIn(1, engine.frozen)
+        self.assertFalse(engine.toggle(0, False))
+        # The staged freeze was released with the provider teardown, the
+        # provider effect is gone, and no wish remains.
+        self.assertNotIn(1, engine.frozen)
+        self.assertNotIn(0, engine.applied)
+        self.assertEqual(engine.desired, set())
+        with self.assertRaisesRegex(NativeRuntimeError,
+                                    "requires active provider"):
+            engine.read_value(1)
+        self.assertFalse(engine.blocked)
+
+    def test_script_parent_wish_replays_provider_before_children_on_attach(self):
+        engine = self.start_script_parent_engine("sp-replay.ct", self.BOTH)
+        engine.toggle(0, True)
+        self.assertEqual(engine.read_value(1), "0")
+        self.assertTrue(engine.close())
+        self.memory = ParentEngineMemory()
+        self.engine = TrainerEngine(
+            self.plan, state_dir=self.root / "sp-replay.ct-state",
+            process_lock_dir=self.root / "sp-replay.ct-shared",
+            memory_factory=lambda _name: self.memory)
+        self.engine.poll()
+        self.assertTrue(self.engine.connected, self.engine.status)
+        self.assertEqual(self.engine.desired, {0})
+        self.assertIn(0, self.engine.applied)
+        self.assertEqual(self.engine.read_value(1), "0")
 
 
 if __name__ == "__main__":

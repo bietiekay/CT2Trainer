@@ -321,10 +321,16 @@ class NativeEngineTests(unittest.TestCase):
 
     def test_numeric_write_is_confirmed_but_value_is_not_persisted(self):
         engine = self.start()
-        with self.assertRaises(NativeRuntimeError):
-            engine.set_value(2, "1 + 2")
+        # WP-14 (C1): a staged value refuses value access while its
+        # provider is inactive; the enable path activates the provider.
+        with self.assertRaisesRegex(NativeRuntimeError,
+                                    "requires active provider"):
+            engine.set_value(2, "4321")
         self.assertEqual(engine.desired, set())
         self.assertEqual(self.memory.writes, [])
+        engine.toggle(0, True)
+        with self.assertRaises(NativeRuntimeError):
+            engine.set_value(2, "1 + 2")
         self.assertEqual(engine.set_value(2, "4321"), "4321")
         self.assertEqual(engine.read_value(2), "4321")
         self.assertEqual(engine.desired, {0})

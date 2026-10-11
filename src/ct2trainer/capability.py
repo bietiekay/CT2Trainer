@@ -96,6 +96,10 @@ def assess(table: Table) -> dict:
             if entry.script_external_action:
                 risks.append("script-dialog-or-external-action")
                 unavailable.append("script-toggle-until-reviewed")
+            if entry.registers_symbols:
+                risks.append("script-registers-symbols")
+            if entry.activation_set_lua:
+                risks.append("embedded-record-activation-set")
         if entry.kind == "group" and entry.options:
             risks.append("group-option-semantics-unverified")
         if entry.kind == "value":
@@ -140,6 +144,8 @@ def assess(table: Table) -> dict:
                 risks.append("signed-input-semantics-require-ce-test")
             if entry.pointer_offsets:
                 risks.append("pointer-chain-runtime-unverified")
+                if any(offset.strip().startswith(("+", "-")) for offset in entry.pointer_offsets):
+                    risks.append("signed-pointer-offset")
         if entry.dropdown_link:
             candidates = by_label[entry.dropdown_link.casefold()]
             with_choices = [candidate for candidate in candidates if candidate.dropdown_choices]

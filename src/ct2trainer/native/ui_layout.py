@@ -209,6 +209,78 @@ def page_count(count: int, view: str, window_height: int) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Staged card state (WP-14, C5)
+#
+# A supported value record whose symbols are uniquely provided by other
+# supported entries carries ``staged`` plan metadata.  While any provider is
+# not live the record is *pending*: reads/writes/freeze are refused by the
+# engine (a state, not a fault) and the card shows the provider names and
+# waits.  Once every provider id is applied the card unlocks automatically
+# (the poll loop re-renders on applied-set changes).  Master-toggle records
+# (``activation_sets``) are script cards with a set-shaped button.
+# ---------------------------------------------------------------------------
+
+STAGED_NONE = "none"
+STAGED_PENDING = "pending"
+STAGED_LIVE = "live"
+
+
+def staged_card_state(entry, applied) -> str:
+    """'none' | 'pending' | 'live' for one plan entry against applied ids.
+
+    ``applied`` is any key/membership container of live entry ids.  An entry
+    without staged metadata is always ``none``; a staged entry is pending
+    until every provider id is applied (an empty provider list is vacuously
+    live).
+    """
+    staged = entry.get("staged")
+    if not staged:
+        return STAGED_NONE
+    for provider_id in staged.get("provider_ids", ()):
+        if provider_id not in applied:
+            return STAGED_PENDING
+    return STAGED_LIVE
+
+
+def staged_provider_labels(entry) -> list:
+    """Provider labels carried by the entry's staged metadata, in order."""
+    staged = entry.get("staged") or {}
+    return list(staged.get("provider_labels", ()))
+
+
+def activation_set_record_ids(entry) -> tuple:
+    """(enable_ids, disable_ids) of a master-toggle activation set, or ([], [])."""
+    sets = entry.get("activation_sets") or {}
+    return (list(sets.get("enable", ())), list(sets.get("disable", ())))
+
+
+def activation_set_summary(entry, entries, limit: int = 8) -> str:
+    """Compact one-line summary of the records a master toggle covers.
+
+    Returns '' when the entry carries no activation set.  Record ids are
+    rendered with their plan labels (unknown ids fall back to the bare id)
+    and the list is truncated to ``limit`` names per direction.
+    """
+    enable, disable = activation_set_record_ids(entry)
+    if not enable and not disable:
+        return ""
+    by_id = {entry_["id"]: entry_ for entry_ in entries.values()}
+
+    def _names(ids):
+        names = [(by_id.get(i) or {}).get("label") or str(i) for i in ids]
+        if len(names) > limit:
+            return ", ".join(names[:limit]) + " (+%d more)" % (len(names) - limit)
+        return ", ".join(names)
+
+    parts = []
+    if enable:
+        parts.append("apply: " + _names(enable))
+    if disable:
+        parts.append("clear: " + _names(disable))
+    return "Master toggle - " + "; ".join(parts)
+
+
+# ---------------------------------------------------------------------------
 # Hierarchical group navigation (pure, Tk-free)
 #
 # A real CE group is a plan entry with kind "heading" that has at least one

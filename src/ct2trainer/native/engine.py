@@ -1978,12 +1978,15 @@ class TrainerEngine:
 
     def _enable(self, entry: dict, persist: bool = True) -> None:
         identifier = entry["id"]
-        if entry.get("async") is True:
-            self._enable_async(entry, persist)
-            return
+        # WP-14 (C2): a flagged parent always cascades through the parent
+        # policy, even when its own effect is async; the cascade controller
+        # carries the attach gate, safety holds and the save boundary.
         if (entry.get("parent_activation") is not None
                 or entry.get("parent_mo_bind") is True):
             self._enable_parent(entry, persist)
+            return
+        if entry.get("async") is True:
+            self._enable_async(entry, persist)
             return
         if entry.get("one_shot"):
             self._enable_one_shot(entry, persist)
@@ -1995,8 +1998,86 @@ class TrainerEngine:
         self._enable_dispatch(entry, persist)
         self._mirror_parent_state(identifier)
 
+    def _apply_activation_set(self, entry: dict, enabled: bool, persist: bool) -> None:
+        """WP-14 (C3): master-toggle effect through the static record-ID set.
+
+        Instead of executing the CE-coupled embedded Lua (contract C3), the
+        record's statically extracted enable/disable set is applied through
+        the ordinary per-record activation path:
+
+        - targets are processed in plan order and symbol providers are
+          auto-enabled through dependency resolution;
+        - value targets are availability-only (no effect to run) and are
+          skipped;
+        - already-live targets are left alone (idempotent re-toggle);
+        - on disable, dependents are torn down before their symbol
+          providers so every disable phase can still resolve its symbols;
+        - the first failure stops the application and is re-raised so the
+          caller's hold/failure classification applies; already applied
+          targets stay applied (visible partial state, no silent success).
+
+        Save boundary: only the master record's own wish is persisted.
+        """
+        identifier = entry["id"]
+        if enabled:
+            for target_id in entry["activation_sets"]["enable"]:
+                target_entry = self.entries.get(target_id)
+                if (target_entry is None or not target_entry["selected"]
+                        or not target_entry["supported"]):
+                    raise NativeRuntimeError(
+                        "Activation set target %d is not a supported selected record"
+                        % target_id)
+                if target_entry["kind"] == "value":
+                    # Availability derives from provider liveness; no effect to run.
+                    continue
+                if (target_id in self.applied
+                        or self._parent_effect_live(target_id)):
+                    continue
+                self._dependencies(target_entry, persist=False)
+                self._enable(target_entry, persist=False)
+        else:
+            # Dependents before providers: a target's disable phase may still
+            # resolve symbols another live target registers, and the
+            # dependent guard refuses to tear down a provider with live
+            # dependents.  A target is ready once no other remaining target
+            # requires a symbol it provides.
+            remaining = [target for target in entry["activation_sets"]["disable"]
+                         if self._parent_effect_live(target)]
+            while remaining:
+                required_by = set()
+                for other in remaining:
+                    required_by.update(self.entries[other].get("dependency_ids", ()))
+                ready = [target for target in remaining
+                         if target not in required_by]
+                if not ready:
+                    # Defensive fallback; symbol cycles are compile-time
+                    # errors, so this never happens for valid plans.
+                    ready = [min(remaining)]
+                target_id = min(ready)
+                target_entry = self.entries.get(target_id)
+                if (target_entry is None or not target_entry["selected"]
+                        or not target_entry["supported"]):
+                    raise NativeRuntimeError(
+                        "Activation set target %d is not a supported selected record"
+                        % target_id)
+                self._disable(target_entry, persist=False)
+                remaining.remove(target_id)
+        if enabled:
+            self.applied[identifier] = []
+        else:
+            self.applied.pop(identifier, None)
+        if persist:
+            if enabled:
+                self._save(self.desired | {identifier})
+            else:
+                self._save(self.desired - {identifier})
+        self._mirror_parent_state(identifier)
+
     def _enable_dispatch(self, entry: dict, persist: bool) -> None:
         """Activation dispatch shared by the sync and async enable paths."""
+        if entry.get("activation_sets") is not None:
+            self._apply_activation_set(entry, True, persist)
+            return
         if 'lua_program' in entry:
             self._enable_lua_program(entry, persist)
             return
@@ -2250,6 +2331,10 @@ class TrainerEngine:
         _check_patches; Lua and assembly activations get their own check.
         """
         identifier = entry["id"]
+        if entry.get("activation_sets") is not None:
+            # A set effect owns no memory footprint of its own; the applied
+            # mark plus the targets' own effects are the verifiable state.
+            return
         if 'lua_program' in entry:
             scope = self.lua_activations.get(identifier)
             if scope is None:
@@ -2270,6 +2355,10 @@ class TrainerEngine:
         changed bytes. Unresolvable addresses fail closed to a hold.
         """
         identifier = entry["id"]
+        if entry.get("activation_sets") is not None:
+            # The set "lands" as soon as any enabled target is live.
+            return any(target in self.applied
+                       for target in entry["activation_sets"]["enable"])
         if identifier in self.hooks or identifier in self.lua_activations \
                 or identifier in self.global_leases:
             return True
@@ -2406,6 +2495,14 @@ class TrainerEngine:
         try:
             self._guard()
             self._check_patches()
+            # WP-14 (C2): a script parent's own effect (symbol provider,
+            # AOB patch, ...) must land before the cascade, because the
+            # children resolve their addresses through the parent's symbols.
+            # The controller already lists the parent in its effects and the
+            # failure classification below covers it via _parent_effect_live.
+            if entry["kind"] == "script" and not self._parent_effect_live(identifier):
+                self._dependencies(entry, persist=False)
+                self._enable_dispatch(entry, persist=False)
             for child in effect_ids:
                 if child == identifier:
                     continue
@@ -2429,7 +2526,7 @@ class TrainerEngine:
             self._save(self.desired | {identifier})
         self._mirror_parent_state(identifier)
 
-    def _disable_parent(self, entry: dict, persist: bool = True) -> None:
+    def _disable_parent(self, entry: dict, persist: bool = True, *, run_lua_disable: bool = True) -> None:
         """Parent-heading OFF through the parent-policy ActivationController.
 
         The controller expands the active cascade bottom-up (explicitly
@@ -2440,6 +2537,11 @@ class TrainerEngine:
         deactivated child plus the requested heading (save boundary).
         Effect-less children (headings, values) and one-shot children (their
         wish lifecycle stays with the one-shot contract) are skipped.
+
+        WP-14 (C1/C2) extends this to script parents: freeze is released on
+        every staged value descendant whose provider sits in the cascade
+        before any provider effect is torn down, and the script parent's
+        own effect (the symbol provider) is disabled last, bottom-up.
         """
         identifier = entry["id"]
         record_id = identifier + 1
@@ -2457,6 +2559,15 @@ class TrainerEngine:
         try:
             self._guard()
             self._check_patches()
+            # WP-14 (C1/C2): staged value descendants lose their provider's
+            # symbols once this cascade deactivates the provider.  Release
+            # every such freeze visibly before any provider effect is torn
+            # down, so the bottom-up disables see no frozen dependents.
+            cascade = {effect - 1 for effect in effects} | {identifier}
+            for frozen_id in list(self.frozen):
+                staged = (self.entries.get(frozen_id) or {}).get("staged")
+                if staged is not None and set(staged["provider_ids"]) & cascade:
+                    self.frozen.pop(frozen_id, None)
             for effect in effects:
                 child = effect - 1
                 if child == identifier:
@@ -2468,6 +2579,12 @@ class TrainerEngine:
                     continue
                 self._disable(child_entry, persist=False)
                 deactivated.append(child)
+            # WP-14 (C2): a script parent's own effect (the symbol provider)
+            # is torn down last, bottom-up, after every cascade child was
+            # restored through the ordinary per-record path.
+            if entry["kind"] == "script" and self._parent_effect_live(identifier):
+                self._disable_non_one_shot(entry, persist=False,
+                                           run_lua_disable=run_lua_disable)
         except Exception:
             self.parent_policy.fail_after_effect(request_id)
             raise
@@ -2941,12 +3058,15 @@ class TrainerEngine:
 
     def _disable_body(self, entry: dict, persist: bool = True, *, run_lua_disable: bool = True) -> None:
         identifier = entry["id"]
-        if entry.get("async") is True and run_lua_disable:
-            self._disable_async(entry, persist)
-            return
+        # WP-14 (C2): parent routing first, so a flagged script parent tears
+        # down its cascade (children bottom-up, then its own provider effect)
+        # instead of only its own async effect.
         if (entry.get("parent_activation") is not None
                 or entry.get("parent_mo_bind") is True):
-            self._disable_parent(entry, persist)
+            self._disable_parent(entry, persist, run_lua_disable=run_lua_disable)
+            return
+        if entry.get("async") is True and run_lua_disable:
+            self._disable_async(entry, persist)
             return
         if entry.get("one_shot") and run_lua_disable:
             # Contract: OFF performs no backend operations; it only clears the
@@ -2959,6 +3079,9 @@ class TrainerEngine:
 
     def _disable_non_one_shot(self, entry: dict, persist: bool, *, run_lua_disable: bool = True) -> None:
         identifier = entry["id"]
+        if entry.get("activation_sets") is not None:
+            self._apply_activation_set(entry, False, persist)
+            return
         if identifier not in self.applied:
             if persist and identifier in self.desired:
                 self._save(self.desired - {identifier})
@@ -3049,12 +3172,15 @@ class TrainerEngine:
         """Plan action kind for a toggle target.
 
         Flagged group headings (parent_activation/moBindActivation) route
-        through the parent-activation lifecycle; everything else uses the
-        ordinary script path.
+        through the parent-activation lifecycle; WP-14 extends the lifecycle
+        to script parents, which keep their script kind so entry validation
+        passes.  Everything else uses the ordinary script path.
         """
         entry = self.entries.get(identifier)
         if isinstance(entry, dict) and (entry.get("parent_activation") is not None
                                         or entry.get("parent_mo_bind") is True):
+            if entry.get("parent_activation") is not None and entry["kind"] == "script":
+                return "script"
             return "heading"
         return "script"
 
@@ -3254,9 +3380,31 @@ class TrainerEngine:
             if scope.overlaps(address, size):
                 raise NativeRuntimeError('This value overlaps a Lua-owned mutation')
 
+    def _require_staged_live(self, entry: dict) -> None:
+        """WP-14 (C1): refuse value access on a staged record while pending.
+
+        A staged record's address needs symbols its provider registers at
+        activation; while any provider is not live the record is pending,
+        so value reads, writes and freezes are refused with a named error.
+        This is a state, not a fault: the poll/UI layer renders it as a
+        pending card, and the provider stays owned by its ordinary
+        activation path (the value path never auto-enables it).
+        """
+        staged = entry.get("staged")
+        if not staged:
+            return
+        for provider_id in staged["provider_ids"]:
+            if not self._parent_effect_live(provider_id):
+                provider = self.entries[provider_id]
+                raise NativeRuntimeError(
+                    "Staged record '%s' requires active provider '%s'"
+                    % (entry.get("label") or str(entry["id"]),
+                       provider.get("label") or str(provider_id)))
+
     def read_value(self, identifier: int) -> str:
         entry = self._entry(identifier, "value")
         self._guard()
+        self._require_staged_live(entry)
         # Reading does not activate providers or persist a new wish.
         address = self._value_address(entry)
         return format_value(entry, self.memory.read(address, self._value_size(entry)))
@@ -3281,7 +3429,10 @@ class TrainerEngine:
         try:
             self._guard()
             self._check_patches()
-            self._dependencies(entry)
+            if entry.get("staged"):
+                self._require_staged_live(entry)
+            else:
+                self._dependencies(entry)
             records = {}
             for item in self.plan["entries"]:
                 signed = item.get("show_as_signed")
@@ -3316,7 +3467,10 @@ class TrainerEngine:
                         "Recursive value closure cannot write a "
                         + profile["kind"] + " record (masked bit-field and "
                         "string propagation are unsupported)")
-                self._dependencies(write_entry)
+                if write_entry.get("staged"):
+                    self._require_staged_live(write_entry)
+                else:
+                    self._dependencies(write_entry)
                 address = self._value_address(write_entry)
                 raw = bytes.fromhex(element["bytes_hex"])
                 self._check_value_ownership(element["record_id"], address, len(raw))
@@ -3354,7 +3508,12 @@ class TrainerEngine:
         try:
             self._guard()
             self._check_patches()
-            self._dependencies(entry)
+            # WP-14 (C1): staged values gate on provider liveness; records
+            # without staged metadata keep the legacy auto-enable behaviour.
+            if entry.get("staged"):
+                self._require_staged_live(entry)
+            else:
+                self._dependencies(entry)
             address = self._value_address(entry)
             if bitfield:
                 raw = self._write_bitfields([(identifier, address, text)], text_values=True)[identifier]
@@ -3390,10 +3549,15 @@ class TrainerEngine:
         try:
             self._check_patches()
             if enabled:
+                # WP-14 (C1): staged values gate on provider liveness; records
+                # without staged metadata keep the legacy auto-enable behaviour.
+                if entry.get("staged"):
+                    self._require_staged_live(entry)
+                else:
+                    self._dependencies(entry)
                 if entry.get('value_profile',{}).get('kind')=='string':
                     from .string_runtime import admit_freeze
                     admit_freeze(self,identifier)
-                self._dependencies(entry)
                 address = self._value_address(entry)
                 if (entry.get('value_profile', {}).get('kind') == 'bitfield'
                         and self._is_executable(address, self._value_size(entry))):

@@ -9,6 +9,9 @@ from ct2trainer.native.ui_layout import (
     LayoutError,
     MAX_PAGE_ROWS,
     MIN_WINDOW_WIDTH,
+    STAGED_PENDING,
+    activation_set_record_ids,
+    activation_set_summary,
     card_height,
     cards_area_height,
     filter_change,
@@ -18,6 +21,8 @@ from ct2trainer.native.ui_layout import (
     next_page,
     page_count,
     page_size_for_cards,
+    staged_card_state,
+    staged_provider_labels,
     window_columns,
     window_rows,
 )
@@ -166,6 +171,59 @@ class NavigationAndDraftTests(unittest.TestCase):
         self.assertEqual(page, 0)
         self.assertIs(kept, drafts)
         self.assertEqual(kept, {2: "12.5", 3: "ff"})
+
+
+class StagedCardStateTests(unittest.TestCase):
+    """WP-14 (C5): staged card state and master-toggle summary helpers."""
+
+    def test_entry_without_staged_metadata_is_none(self):
+        self.assertEqual(staged_card_state({"id": 1, "kind": "value"}, {2}), "none")
+        self.assertEqual(staged_provider_labels({"id": 1, "kind": "value"}), [])
+
+    def test_staged_entry_is_pending_until_every_provider_is_applied(self):
+        entry = {"id": 3, "kind": "value",
+                 "staged": {"provider_ids": [1, 2],
+                            "provider_labels": ["Locate A", "Locate B"]}}
+        self.assertEqual(staged_card_state(entry, set()), "pending")
+        self.assertEqual(staged_card_state(entry, {1}), "pending")
+        self.assertEqual(staged_card_state(entry, {1, 2}), "live")
+        self.assertEqual(staged_card_state(entry, {1, 2, 7}), "live")
+
+    def test_staged_provider_labels_follow_metadata_order(self):
+        entry = {"id": 3, "staged": {"provider_ids": [1, 2],
+                                     "provider_labels": ["Locate A", "Locate B"]}}
+        self.assertEqual(staged_provider_labels(entry), ["Locate A", "Locate B"])
+
+    def test_activation_set_record_ids_and_summary(self):
+        entries = {
+            0: {"id": 0, "label": "Master",
+                "activation_sets": {"enable": [1, 2, 3], "disable": [2, 1],
+                                     "source": "lua-static-extract"}},
+            1: {"id": 1, "label": "Alpha"},
+            2: {"id": 2, "label": "Beta"},
+            3: {"id": 3, "label": "Gamma"},
+        }
+        entry = entries[0]
+        self.assertEqual(activation_set_record_ids(entry), ([1, 2, 3], [2, 1]))
+        self.assertEqual(activation_set_summary(entry, entries),
+                         "Master toggle - apply: Alpha, Beta, Gamma; clear: Beta, Alpha")
+        # Unknown ids fall back to the bare id.
+        self.assertEqual(activation_set_summary(
+            {"activation_sets": {"enable": [99]}}, entries),
+            "Master toggle - apply: 99")
+
+    def test_activation_set_summary_truncates_long_lists(self):
+        entries = {i: {"id": i, "label": "R%d" % i} for i in range(12)}
+        entry = {"id": 0, "activation_sets": {"enable": list(range(1, 13)),
+                                               "disable": []}}
+        summary = activation_set_summary(entry, entries)
+        self.assertIn("R1, R2, R3", summary)
+        self.assertIn("(+4 more)", summary)
+        self.assertNotIn("R12", summary)
+
+    def test_activation_set_summary_empty_for_plain_entries(self):
+        self.assertEqual(activation_set_summary({"id": 1, "label": "x"}, {1: {"id": 1}}), "")
+        self.assertEqual(activation_set_record_ids({"id": 1}), ([], []))
 
 
 if __name__ == "__main__":

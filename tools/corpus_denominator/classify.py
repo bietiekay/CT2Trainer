@@ -55,6 +55,15 @@ def _all_zero_offsets(offsets):
     return all(o.lower() in ("0", "00", "0x0") for o in offsets)
 
 
+# WP-14 (C4): an explicit +/- sign on a pointer offset literal.
+SIGNED_OFFSET_RE = re.compile(r"^[+-][0-9a-fA-Fx]")
+
+
+def signed_offsets(offsets):
+    """Offset literals carrying an explicit sign, in document order."""
+    return [o for o in offsets if SIGNED_OFFSET_RE.match(o.strip())]
+
+
 def _options(entry):
     node = entry.find("Options")
     return tuple(k for k, v in node.attrib.items() if v == "1") \
@@ -177,7 +186,25 @@ def classify_record(entry, user_defined_symbols):
             gaps.append("managed_method_resolution")
         if scan["unknown"]:
             gaps.append("aa_directive_unverified")
-        if not scan["has_enable"] or not scan["has_disable"]:
+        if scan["has_enable"] and not scan["has_disable"]:
+            # Product contract (aa.compile_one_shot): an ENABLE-only script is a
+            # one-shot when the guarded-write rules hold -- a preceding assert,
+            # at least one data write, and no symbol registration/unregistration.
+            directives = scan["directives"]
+            guarded_one_shot = (
+                directives.get("assert", 0) > 0
+                and any(directives.get(d, 0) > 0 for d in ("db", "dw", "dd", "dq"))
+                and "registersymbol" not in directives
+                and "unregistersymbol" not in directives)
+            if guarded_one_shot:
+                category = "one_shot"
+                gaps.append("one_shot_save_contract")
+                record["semantics"] = ("One-shot action: missing DISABLE section, "
+                                       "guarded write, no OFF contract")
+            else:
+                gaps.append("aa_sections_incomplete")
+                record["semantics"] = "AA script without complete ENABLE/DISABLE sections"
+        elif not scan["has_enable"] or not scan["has_disable"]:
             gaps.append("aa_sections_incomplete")
             record["semantics"] = "AA script without complete ENABLE/DISABLE sections"
         elif scan["empty_disable"]:
@@ -338,6 +365,23 @@ def classify_record(entry, user_defined_symbols):
         status = "unknown"
         record["lifetime"] = "unknown"
         gaps.append("record_unclassifiable")
+
+    # --- WP-14 staged-capability signals (static, no execution) -------------
+    if signed_offsets(offsets):
+        gaps.append("signed_pointer_offset")
+    if kind == "aa_script" and entry.findall("./CheatEntries/CheatEntry") and any(
+            option in ("moActivateChildrenAsWell", "moDeactivateChildrenAsWell",
+                       "moBindActivation")
+            for option in options):
+        gaps.append("script_parent_activation")
+    embedded_lua = [lua] if lua else []
+    if kind == "aa_script" and script:
+        embedded_lua.extend(re.findall(r"\{\$lua\}(.*?)\{\$asm\}",
+                                       script, re.S | re.I))
+    if any("getmemoryrecordbyid(" in text.casefold()
+           and re.search(r"\.Active\s*=\s*(?:true|false)\b", text, re.I)
+           for text in embedded_lua):
+        gaps.append("record_activation_set")
 
     # --- lua body on any record ---------------------------------------------
     if lua and kind != "script_lua" and kind != "aa_script":

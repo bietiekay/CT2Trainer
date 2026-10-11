@@ -1,0 +1,663 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"Toggle scripts"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript Async="1">[ENABLE]
+{$lua}
+synchronize(function()
+  getLuaEngine().menuItem5.doClick()
+  getLuaEngine().Close()
+end)
+getMemoryRecordByID(2).Active = true
+getMemoryRecordByID(6).Active = true
+getMemoryRecordByID(8).Active = true
+getMemoryRecordByID(11).Active = true
+getMemoryRecordByID(14).Active = true
+getMemoryRecordByID(25).Active = true
+addressList.refresh()
+{$asm}
+[DISABLE]
+{$lua}
+getMemoryRecordByID(2).Active = false
+getMemoryRecordByID(6).Active = false
+getMemoryRecordByID(8).Active = false
+getMemoryRecordByID(11).Active = false
+getMemoryRecordByID(14).Active = false
+getMemoryRecordByID(25).Active = false
+addressList.refresh()
+{$asm}</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Get synth.Manager"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synthMgrCave,64)
+aobscanmodule(SynthAnchor,ct2synth14.exe,48 8B 05 01 02 03 04 48 8B 0D 05 06 07 08 89 01)
+registersymbol(SynthAnchor)
+  nop
+[DISABLE]
+dealloc(synthMgrCave)
+unregistersymbol(SynthAnchor)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"Set min bullet num"</Description>
+      <Options moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthMinAnchor,ct2synth14.exe,48 8B 0D 11 22 33 44 48 8B 05 55 66 77 88)
+alloc(synth_min_addr,64,synthMinAnchor)
+synth_min_addr:
+registersymbol(synth_min_addr)
+  mov eax,eax
+[DISABLE]
+unregistersymbol(synth_min_addr)
+dealloc(synth_min_addr)</AssemblerScript>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>3</ID>
+        <Description>"min"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synth_min_addr</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>4</ID>
+        <Description>"min #2"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synth_min_addr+4</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>5</ID>
+        <Description>"min #3"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synth_min_addr+8</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"Get gravity (readonly)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthGravityAnchor,ct2synth14.exe,48 8B 05 09 08 07 06 48 8B 0D 05 04 03 02)
+alloc(synth_gravity_base,64,synthGravityAnchor)
+synth_gravity_base:
+registersymbol(synth_gravity_base)
+  nop
+[DISABLE]
+unregistersymbol(synth_gravity_base)
+dealloc(synth_gravity_base)</AssemblerScript>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>7</ID>
+        <Description>"CurrentGravityRate"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synth_gravity_base</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>+0x130</Offset>
+        </Offsets>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>8</ID>
+      <Description>"Set gravity"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthGravitySetAnchor,ct2synth14.exe,48 8B 05 0A 0B 0C 0D 48 8B 0D 0E 0F 10 11)
+alloc(synthGravityCave,64,synthGravitySetAnchor)
+synthGravityCave:
+synth_gravity_flag:
+registersymbol(synth_gravity_flag)
+  dd 0
+synth_gravity_set:
+registersymbol(synth_gravity_set)
+  dd 0
+[DISABLE]
+unregistersymbol(synth_gravity_flag)
+unregistersymbol(synth_gravity_set)
+dealloc(synthGravityCave)</AssemblerScript>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>9</ID>
+        <Description>"Set?"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synth_gravity_flag</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>10</ID>
+        <Description>"Target value"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synth_gravity_set</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>11</ID>
+      <Description>"Training: target time"</Description>
+      <Options moActivateChildrenAsWell="1"/>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthTrainingAnchor,ct2synth14.exe,48 8B 05 12 13 14 15 48 8B 0D 16 17 18 19)
+alloc(synthTrainingCave,64,synthTrainingAnchor)
+synthTrainingCave:
+synth_training_mode:
+registersymbol(synth_training_mode)
+  dd 0
+synth_training_base:
+registersymbol(synth_training_base)
+  dd 0
+[DISABLE]
+unregistersymbol(synth_training_mode)
+unregistersymbol(synth_training_base)
+dealloc(synthTrainingCave)</AssemblerScript>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>12</ID>
+        <Description>"mode"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>synth_training_mode</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>13</ID>
+        <Description>"target"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Float</VariableType>
+        <Address>synth_training_base</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14</ID>
+      <Description>"Get synth.EnhanceManager settings"</Description>
+      <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(EnhanceAnchor,ct2synth14.exe,48 8B 05 21 22 23 24 48 8B 0D 25 26 27 28)
+alloc(EnhanceCave,64,EnhanceAnchor)
+EnhanceCave:
+EnhanceManager_addr:
+registersymbol(EnhanceManager_addr)
+  dq 0
+[DISABLE]
+unregistersymbol(EnhanceManager_addr)
+dealloc(EnhanceCave)</AssemblerScript>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>15</ID>
+        <Description>"base"</Description>
+        <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+        <ShowAsHex>1</ShowAsHex>
+        <ShowAsSigned>0</ShowAsSigned>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>EnhanceManager_addr</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>0</Offset>
+        </Offsets>
+        <CheatEntries>
+        <CheatEntry>
+          <ID>16</ID>
+          <Description>"_EquipmentPerkMainGame -&gt; _BootingPerks"</Description>
+          <Options moHideChildren="1" moDeactivateChildrenAsWell="1"/>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <GroupHeader>1</GroupHeader>
+          <Address>+18</Address>
+          <Offsets>
+            <Offset>0</Offset>
+            <Offset>+28</Offset>
+          </Offsets>
+          <CheatEntries>
+          <CheatEntry>
+            <ID>17</ID>
+            <Description>"&lt;RepairKitCapacity&gt;k__BackingField"</Description>
+            <ShowAsSigned>1</ShowAsSigned>
+            <Color>FF8080</Color>
+            <VariableType>4 Bytes</VariableType>
+            <Address>+60</Address>
+            <Value>0</Value>
+          </CheatEntry>
+          <CheatEntry>
+            <ID>18</ID>
+            <Description>"&lt;MainGadgetCapacity&gt;k__BackingField"</Description>
+            <ShowAsSigned>1</ShowAsSigned>
+            <Color>FF8080</Color>
+            <VariableType>4 Bytes</VariableType>
+            <Address>+64</Address>
+            <Value>0</Value>
+          </CheatEntry>
+          <CheatEntry>
+            <ID>19</ID>
+            <Description>"&lt;AssaultGadgetCapacity&gt;k__BackingField"</Description>
+            <ShowAsSigned>1</ShowAsSigned>
+            <Color>FF8080</Color>
+            <VariableType>4 Bytes</VariableType>
+            <Address>+68</Address>
+            <Value>0</Value>
+          </CheatEntry>
+          <CheatEntry>
+            <ID>20</ID>
+            <Description>"&lt;ActiveSkillCapacity&gt;k__BackingField"</Description>
+            <ShowAsSigned>1</ShowAsSigned>
+            <Color>FF8080</Color>
+            <VariableType>4 Bytes</VariableType>
+            <Address>+74</Address>
+            <Value>0</Value>
+            <CheatEntries>
+            <CheatEntry>
+              <ID>21</ID>
+              <Description>"Skip slot capacity writeback"</Description>
+              <Color>0075EA</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+alloc(skip_overwrite,64)
+skip_overwrite:
+registersymbol(skip_overwrite)
+  nop
+[DISABLE]
+unregistersymbol(skip_overwrite)
+dealloc(skip_overwrite)</AssemblerScript>
+            </CheatEntry>
+            </CheatEntries>
+          </CheatEntry>
+          <CheatEntry>
+            <ID>22</ID>
+            <Description>"&lt;PassiveSkillCapacity&gt;k__BackingField"</Description>
+            <ShowAsSigned>1</ShowAsSigned>
+            <Color>FF8080</Color>
+            <VariableType>4 Bytes</VariableType>
+            <Address>+78</Address>
+            <Value>0</Value>
+            <CheatEntries>
+            <CheatEntry>
+              <ID>23</ID>
+              <Description>"Skip slot capacity writeback"</Description>
+              <Color>0075EA</Color>
+              <VariableType>Auto Assembler Script</VariableType>
+              <AssemblerScript>[ENABLE]
+skip_overwrite:
+  mov eax,eax
+[DISABLE]
+skip_overwrite:
+  db 90</AssemblerScript>
+            </CheatEntry>
+            </CheatEntries>
+          </CheatEntry>
+          <CheatEntry>
+            <ID>24</ID>
+            <Description>"_RequestedRefreshManagedPerkUnit"</Description>
+            <Color>0075EA</Color>
+            <VariableType>Byte</VariableType>
+            <Address>+7C</Address>
+            <Value>0</Value>
+          </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        </CheatEntries>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>25</ID>
+      <Description>"Get synth.InventoryManager"</Description>
+      <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(InventoryAnchor,ct2synth14.exe,48 8B 05 31 32 33 34 48 8B 0D 35 36 37 38)
+alloc(InventoryCave,64,InventoryAnchor)
+InventoryCave:
+InventoryManager_addr:
+registersymbol(InventoryManager_addr)
+  dq 0
+[DISABLE]
+unregistersymbol(InventoryManager_addr)
+dealloc(InventoryCave)</AssemblerScript>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>26</ID>
+        <Description>"base"</Description>
+        <ShowAsHex>1</ShowAsHex>
+        <ShowAsSigned>0</ShowAsSigned>
+        <Color>0075EA</Color>
+        <VariableType>8 Bytes</VariableType>
+        <Address>InventoryManager_addr</Address>
+        <Value>0</Value>
+        <Offsets>
+          <Offset>0</Offset>
+        </Offsets>
+        <CheatEntries>
+        <CheatEntry>
+          <ID>27</ID>
+          <Description>"ItemSlotTable"</Description>
+          <ShowAsHex>1</ShowAsHex>
+          <ShowAsSigned>0</ShowAsSigned>
+          <GroupHeader>1</GroupHeader>
+          <Address>+30</Address>
+          <Offsets>
+            <Offset>0</Offset>
+          </Offsets>
+          <CheatEntries>
+          <CheatEntry>
+            <ID>28</ID>
+            <Description>"List&lt;SynthItem&gt;"</Description>
+            <ShowAsHex>1</ShowAsHex>
+            <ShowAsSigned>0</ShowAsSigned>
+            <GroupHeader>1</GroupHeader>
+            <Address>+10</Address>
+            <Offsets>
+              <Offset>0</Offset>
+            </Offsets>
+            <CheatEntries>
+            <CheatEntry>
+              <ID>29</ID>
+              <Description>"_items"</Description>
+              <ShowAsHex>1</ShowAsHex>
+              <ShowAsSigned>0</ShowAsSigned>
+              <GroupHeader>1</GroupHeader>
+              <Address>+10</Address>
+              <Offsets>
+                <Offset>0</Offset>
+              </Offsets>
+              <CheatEntries>
+              <CheatEntry>
+                <ID>30</ID>
+                <Description>"[0] [SynthItem]"</Description>
+                <ShowAsHex>1</ShowAsHex>
+                <ShowAsSigned>0</ShowAsSigned>
+                <GroupHeader>1</GroupHeader>
+                <Address>+10</Address>
+                <Offsets>
+                  <Offset>0</Offset>
+                </Offsets>
+                <CheatEntries>
+                <CheatEntry>
+                  <ID>38</ID>
+                  <Description>"_ID"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+10</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>39</ID>
+                  <Description>"_Quantity"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+14</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                </CheatEntries>
+              </CheatEntry>
+              <CheatEntry>
+                <ID>31</ID>
+                <Description>"[1] [SynthItem]"</Description>
+                <ShowAsHex>1</ShowAsHex>
+                <ShowAsSigned>0</ShowAsSigned>
+                <GroupHeader>1</GroupHeader>
+                <Address>+24</Address>
+                <Offsets>
+                  <Offset>0</Offset>
+                </Offsets>
+                <CheatEntries>
+                <CheatEntry>
+                  <ID>40</ID>
+                  <Description>"_ID"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+10</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>41</ID>
+                  <Description>"_Quantity"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+14</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                </CheatEntries>
+              </CheatEntry>
+              <CheatEntry>
+                <ID>32</ID>
+                <Description>"[2] [SynthItem]"</Description>
+                <ShowAsHex>1</ShowAsHex>
+                <ShowAsSigned>0</ShowAsSigned>
+                <GroupHeader>1</GroupHeader>
+                <Address>+38</Address>
+                <Offsets>
+                  <Offset>0</Offset>
+                </Offsets>
+                <CheatEntries>
+                <CheatEntry>
+                  <ID>42</ID>
+                  <Description>"_ID"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+10</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>43</ID>
+                  <Description>"_Quantity"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+14</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                </CheatEntries>
+              </CheatEntry>
+              <CheatEntry>
+                <ID>33</ID>
+                <Description>"[3] [SynthItem]"</Description>
+                <ShowAsHex>1</ShowAsHex>
+                <ShowAsSigned>0</ShowAsSigned>
+                <GroupHeader>1</GroupHeader>
+                <Address>+4C</Address>
+                <Offsets>
+                  <Offset>0</Offset>
+                </Offsets>
+                <CheatEntries>
+                <CheatEntry>
+                  <ID>44</ID>
+                  <Description>"_ID"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+10</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>45</ID>
+                  <Description>"_Quantity"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+14</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                </CheatEntries>
+              </CheatEntry>
+              <CheatEntry>
+                <ID>34</ID>
+                <Description>"[4] [SynthItem]"</Description>
+                <ShowAsHex>1</ShowAsHex>
+                <ShowAsSigned>0</ShowAsSigned>
+                <GroupHeader>1</GroupHeader>
+                <Address>+60</Address>
+                <Offsets>
+                  <Offset>0</Offset>
+                </Offsets>
+                <CheatEntries>
+                <CheatEntry>
+                  <ID>46</ID>
+                  <Description>"_ID"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+10</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>47</ID>
+                  <Description>"_Quantity"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+14</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                </CheatEntries>
+              </CheatEntry>
+              <CheatEntry>
+                <ID>35</ID>
+                <Description>"[5] [SynthItem]"</Description>
+                <ShowAsHex>1</ShowAsHex>
+                <ShowAsSigned>0</ShowAsSigned>
+                <GroupHeader>1</GroupHeader>
+                <Address>+74</Address>
+                <Offsets>
+                  <Offset>0</Offset>
+                </Offsets>
+                <CheatEntries>
+                <CheatEntry>
+                  <ID>48</ID>
+                  <Description>"_ID"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+10</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>49</ID>
+                  <Description>"_Quantity"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+14</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                </CheatEntries>
+              </CheatEntry>
+              <CheatEntry>
+                <ID>36</ID>
+                <Description>"[6] [SynthItem]"</Description>
+                <ShowAsHex>1</ShowAsHex>
+                <ShowAsSigned>0</ShowAsSigned>
+                <GroupHeader>1</GroupHeader>
+                <Address>+88</Address>
+                <Offsets>
+                  <Offset>0</Offset>
+                </Offsets>
+                <CheatEntries>
+                <CheatEntry>
+                  <ID>50</ID>
+                  <Description>"_ID"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+10</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>51</ID>
+                  <Description>"_Quantity"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+14</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                </CheatEntries>
+              </CheatEntry>
+              <CheatEntry>
+                <ID>37</ID>
+                <Description>"[7] [SynthItem]"</Description>
+                <ShowAsHex>1</ShowAsHex>
+                <ShowAsSigned>0</ShowAsSigned>
+                <GroupHeader>1</GroupHeader>
+                <Address>+9C</Address>
+                <Offsets>
+                  <Offset>0</Offset>
+                </Offsets>
+                <CheatEntries>
+                <CheatEntry>
+                  <ID>52</ID>
+                  <Description>"_ID"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+10</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                <CheatEntry>
+                  <ID>53</ID>
+                  <Description>"_Quantity"</Description>
+                  <Color>0075EA</Color>
+                  <VariableType>4 Bytes</VariableType>
+                  <Address>+14</Address>
+                  <Value>0</Value>
+                </CheatEntry>
+                </CheatEntries>
+              </CheatEntry>
+              </CheatEntries>
+            </CheatEntry>
+            </CheatEntries>
+          </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+        </CheatEntries>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>54</ID>
+      <Description>"synth table / CE 7.6+"</Description>
+      <Options moHideChildren="1"/>
+      <Color>80000008</Color>
+      <GroupHeader>1</GroupHeader>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>55</ID>
+        <Description>"YesNo"</Description>
+        <Color>0075EA</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>ct2synth14.exe+50</Address>
+        <Value>0</Value>
+        <DropDownList DisplayValueAsItem="1">0:No
+1:Yes</DropDownList>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>56</ID>
+        <Description>"FAST_BOOST_PLUS_30"</Description>
+        <Color>0075EA</Color>
+        <VariableType>Auto Assembler Script</VariableType>
+        <AssemblerScript>[ENABLE]
+assert(ct2synth14.exe+40, 41)
+ct2synth14.exe+40:
+  db 48</AssemblerScript>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

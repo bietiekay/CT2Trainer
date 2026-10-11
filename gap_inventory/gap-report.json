@@ -23,19 +23,19 @@
  "denominator": {
   "category_counts": {
    "custom_value": 3,
-   "one_shot": 1722,
-   "persistent_script": 413,
+   "one_shot": 1723,
+   "persistent_script": 423,
    "string_write": 731,
-   "value_freeze": 3098
+   "value_freeze": 3131
   },
   "confirmed_game_effect_actions": 0,
   "confirmed_percent": 0.0,
-  "expected_actions": 5967,
+  "expected_actions": 6011,
   "goal_90_percent": "NOT REACHED",
   "group_toggle_actions": 0,
-  "groups_total": 1269,
+  "groups_total": 1282,
   "missing_gates": [
-   "Real game installs/builds for the 13 pinned tables (user question unanswered)",
+   "Real game installs/builds for the 14 pinned tables (user question unanswered)",
    "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
    "VM/Clean-PC gate without CE/Python",
    "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -45,13 +45,13 @@
   ],
   "navigation_excluded": 0,
   "record_types": {
-   "aa_script": 2135,
+   "aa_script": 2146,
    "custom": 3,
    "string": 731,
-   "value": 3098
+   "value": 3131
   },
-  "records_total": 5967,
-  "scope": "13 pinned start-corpus tables (hash-deduplicated, static)",
+  "records_total": 6011,
+  "scope": "14 pinned start-corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
    "real_game_effect": "0 actions with observed real game effect",
@@ -60,11 +60,11 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5455,
-   "statically_assumed": 479,
+   "locked": 5475,
+   "statically_assumed": 503,
    "unknown": 33
   },
-  "unique_tables": 13
+  "unique_tables": 14
  },
  "gap_labels": {
   "aa_conditional_block": {
@@ -191,6 +191,10 @@
    "label": "Group/parent activation option",
    "requirement": "N-07"
   },
+  "record_activation_set": {
+   "label": "Embedded-Lua master toggle (record-ID activation sets)",
+   "requirement": "WP-14"
+  },
   "record_unclassifiable": {
    "label": "Unclassifiable record",
    "requirement": "N-05 / N-24"
@@ -198,6 +202,14 @@
   "recursive_parent_value": {
    "label": "Recursive parent value (moRecursiveSetValue)",
    "requirement": "N-07"
+  },
+  "script_parent_activation": {
+   "label": "Script parent with child-activation propagation (staged unlock)",
+   "requirement": "WP-14 (extends AP-07)"
+  },
+  "signed_pointer_offset": {
+   "label": "Signed pointer-offset literal (`+`/`-` in `<Offsets>`)",
+   "requirement": "WP-14 (format contract)"
   },
   "string_codepage": {
    "label": "String codepage encoding",
@@ -212,7 +224,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run repo-reproducible",
+ "generated": "run wp14-staged-20261011T093320Z",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -151290,44 +151302,1306 @@
      "requirement": "N-07 / N-19"
     }
    ]
+  },
+  {
+   "architecture": {
+    "signals": [
+     "instr32:2 lines (not an architecture signal)"
+    ],
+    "value": "unknown"
+   },
+   "counts": {
+    "categories": {
+     "one_shot": 1,
+     "persistent_script": 10,
+     "value_freeze": 33
+    },
+    "entries_total": 57,
+    "expected_actions": 44,
+    "gap_counts": {
+     "async_lifecycle": 1,
+     "cross_record_symbol": 10,
+     "lua_ce_engine_api": 1,
+     "lua_host_profile": 1,
+     "lua_symbol_api": 8,
+     "one_shot_save_contract": 1,
+     "parent_activation": 1,
+     "record_activation_set": 1,
+     "script_parent_activation": 4,
+     "signed_pointer_offset": 1
+    },
+    "group_toggle_actions": 0,
+    "groups": 13,
+    "navigation_excluded": 0,
+    "record_types": {
+     "aa_script": 11,
+     "value": 33
+    },
+    "records": 44,
+    "status_counts": {
+     "locked": 20,
+     "statically_assumed": 24
+    }
+   },
+   "duplicate_ids": {},
+   "format_version": "46",
+   "groups": [
+    {
+     "depth": 2,
+     "descendant_records": 6,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "_EquipmentPerkMainGame -> _BootingPerks",
+     "on_effect": false,
+     "path": "Get synth.EnhanceManager settings / base / _EquipmentPerkMainGame -> _BootingPerks"
+    },
+    {
+     "depth": 2,
+     "descendant_records": 16,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "ItemSlotTable",
+     "on_effect": false,
+     "path": "Get synth.InventoryManager / base / ItemSlotTable"
+    },
+    {
+     "depth": 3,
+     "descendant_records": 16,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "List<SynthItem>",
+     "on_effect": false,
+     "path": "Get synth.InventoryManager / base / ItemSlotTable / List<SynthItem>"
+    },
+    {
+     "depth": 4,
+     "descendant_records": 16,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "_items",
+     "on_effect": false,
+     "path": "Get synth.InventoryManager / base / ItemSlotTable / List<SynthItem> / _items"
+    },
+    {
+     "depth": 5,
+     "descendant_records": 2,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "[0] [SynthItem]",
+     "on_effect": false,
+     "path": "Get synth.InventoryManager / base / ItemSlotTable / List<SynthItem> / _items / [0] [SynthItem]"
+    },
+    {
+     "depth": 5,
+     "descendant_records": 2,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "[1] [SynthItem]",
+     "on_effect": false,
+     "path": "Get synth.InventoryManager / base / ItemSlotTable / List<SynthItem> / _items / [1] [SynthItem]"
+    },
+    {
+     "depth": 5,
+     "descendant_records": 2,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "[2] [SynthItem]",
+     "on_effect": false,
+     "path": "Get synth.InventoryManager / base / ItemSlotTable / List<SynthItem> / _items / [2] [SynthItem]"
+    },
+    {
+     "depth": 5,
+     "descendant_records": 2,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "[3] [SynthItem]",
+     "on_effect": false,
+     "path": "Get synth.InventoryManager / base / ItemSlotTable / List<SynthItem> / _items / [3] [SynthItem]"
+    },
+    {
+     "depth": 5,
+     "descendant_records": 2,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "[4] [SynthItem]",
+     "on_effect": false,
+     "path": "Get synth.InventoryManager / base / ItemSlotTable / List<SynthItem> / _items / [4] [SynthItem]"
+    },
+    {
+     "depth": 5,
+     "descendant_records": 2,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "[5] [SynthItem]",
+     "on_effect": false,
+     "path": "Get synth.InventoryManager / base / ItemSlotTable / List<SynthItem> / _items / [5] [SynthItem]"
+    },
+    {
+     "depth": 5,
+     "descendant_records": 2,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "[6] [SynthItem]",
+     "on_effect": false,
+     "path": "Get synth.InventoryManager / base / ItemSlotTable / List<SynthItem> / _items / [6] [SynthItem]"
+    },
+    {
+     "depth": 5,
+     "descendant_records": 2,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "[7] [SynthItem]",
+     "on_effect": false,
+     "path": "Get synth.InventoryManager / base / ItemSlotTable / List<SynthItem> / _items / [7] [SynthItem]"
+    },
+    {
+     "depth": 0,
+     "descendant_records": 2,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "synth table / CE 7.6+",
+     "on_effect": false,
+     "path": "synth table / CE 7.6+"
+    }
+   ],
+   "main_initialization": {
+    "gaps": [
+     "async_lifecycle",
+     "lua_ce_engine_api",
+     "lua_host_profile",
+     "record_activation_set"
+    ],
+    "id": 0,
+    "name": "Toggle scripts",
+    "note": "first depth-0 script record",
+    "source": "record",
+    "status": "locked",
+    "type": "aa_script"
+   },
+   "path": "case-14.ct",
+   "paths": [
+    "case-14.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": true,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "async_lifecycle",
+        "lua_ce_engine_api",
+        "lua_host_profile",
+        "record_activation_set"
+       ],
+       "id": 0,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Toggle scripts",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label); with embedded Lua; async (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 1,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Get synth.Manager",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth14.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth14.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x86",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api",
+        "script_parent_activation"
+       ],
+       "id": 2,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Set min bullet num",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth14.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth14.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 6,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Get gravity (readonly)",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth14.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth14.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 8,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Set gravity",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth14.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth14.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api",
+        "script_parent_activation"
+       ],
+       "id": 11,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Training: target time",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth14.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth14.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api",
+        "script_parent_activation"
+       ],
+       "id": 14,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Get synth.EnhanceManager settings",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth14.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth14.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api",
+        "script_parent_activation"
+       ],
+       "id": 25,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Get synth.InventoryManager",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth14.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth14.exe",
+       "type": "aa_script"
+      }
+     ]
+    },
+    {
+     "group": "(direct: Set min bullet num)",
+     "records": [
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 3,
+       "lifetime": "read_write_freezable_value",
+       "name": "min",
+       "parent": "Set min bullet num",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 4,
+       "lifetime": "read_write_freezable_value",
+       "name": "min #2",
+       "parent": "Set min bullet num",
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols synth_min_addr",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 5,
+       "lifetime": "read_write_freezable_value",
+       "name": "min #3",
+       "parent": "Set min bullet num",
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols synth_min_addr",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "(direct: Get gravity (readonly))",
+     "records": [
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol",
+        "signed_pointer_offset"
+       ],
+       "id": 7,
+       "lifetime": "read_write_freezable_value",
+       "name": "CurrentGravityRate",
+       "parent": "Get gravity (readonly)",
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_chain"
+       ],
+       "semantics": "Float value with 1 pointer offsets (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "(direct: Set gravity)",
+     "records": [
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 9,
+       "lifetime": "read_write_freezable_value",
+       "name": "Set?",
+       "parent": "Set gravity",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      },
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 10,
+       "lifetime": "read_write_freezable_value",
+       "name": "Target value",
+       "parent": "Set gravity",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "Float value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "(direct: Training: target time)",
+     "records": [
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 12,
+       "lifetime": "read_write_freezable_value",
+       "name": "mode",
+       "parent": "Training: target time",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      },
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 13,
+       "lifetime": "read_write_freezable_value",
+       "name": "target",
+       "parent": "Training: target time",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "Float value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "(direct: Get synth.EnhanceManager settings)",
+     "records": [
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol",
+        "parent_activation"
+       ],
+       "id": 15,
+       "lifetime": "read_write_freezable_value",
+       "name": "base",
+       "parent": "Get synth.EnhanceManager settings",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "8 Bytes value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "_EquipmentPerkMainGame -> _BootingPerks",
+     "records": [
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 3,
+       "gaps": [],
+       "id": 17,
+       "lifetime": "read_write_freezable_value",
+       "name": "<RepairKitCapacity>k__BackingField",
+       "parent": "_EquipmentPerkMainGame -> _BootingPerks",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 3,
+       "gaps": [],
+       "id": 18,
+       "lifetime": "read_write_freezable_value",
+       "name": "<MainGadgetCapacity>k__BackingField",
+       "parent": "_EquipmentPerkMainGame -> _BootingPerks",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 3,
+       "gaps": [],
+       "id": 19,
+       "lifetime": "read_write_freezable_value",
+       "name": "<AssaultGadgetCapacity>k__BackingField",
+       "parent": "_EquipmentPerkMainGame -> _BootingPerks",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 3,
+       "gaps": [],
+       "id": 20,
+       "lifetime": "read_write_freezable_value",
+       "name": "<ActiveSkillCapacity>k__BackingField",
+       "parent": "_EquipmentPerkMainGame -> _BootingPerks",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 4,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 21,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Skip slot capacity writeback",
+       "parent": "<ActiveSkillCapacity>k__BackingField",
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 3,
+       "gaps": [],
+       "id": 22,
+       "lifetime": "read_write_freezable_value",
+       "name": "<PassiveSkillCapacity>k__BackingField",
+       "parent": "_EquipmentPerkMainGame -> _BootingPerks",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x86",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 4,
+       "gaps": [],
+       "id": 23,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Skip slot capacity writeback",
+       "parent": "<PassiveSkillCapacity>k__BackingField",
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "statically_assumed",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 3,
+       "gaps": [],
+       "id": 24,
+       "lifetime": "read_write_freezable_value",
+       "name": "_RequestedRefreshManagedPerkUnit",
+       "parent": "_EquipmentPerkMainGame -> _BootingPerks",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "Byte value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "(direct: Get synth.InventoryManager)",
+     "records": [
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 26,
+       "lifetime": "read_write_freezable_value",
+       "name": "base",
+       "parent": "Get synth.InventoryManager",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "8 Bytes value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "ItemSlotTable / List<SynthItem> / _items / [0] [SynthItem]",
+     "records": [
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 38,
+       "lifetime": "read_write_freezable_value",
+       "name": "_ID",
+       "parent": "[0] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 39,
+       "lifetime": "read_write_freezable_value",
+       "name": "_Quantity",
+       "parent": "[0] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "ItemSlotTable / List<SynthItem> / _items / [1] [SynthItem]",
+     "records": [
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 40,
+       "lifetime": "read_write_freezable_value",
+       "name": "_ID",
+       "parent": "[1] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 41,
+       "lifetime": "read_write_freezable_value",
+       "name": "_Quantity",
+       "parent": "[1] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "ItemSlotTable / List<SynthItem> / _items / [2] [SynthItem]",
+     "records": [
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 42,
+       "lifetime": "read_write_freezable_value",
+       "name": "_ID",
+       "parent": "[2] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 43,
+       "lifetime": "read_write_freezable_value",
+       "name": "_Quantity",
+       "parent": "[2] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "ItemSlotTable / List<SynthItem> / _items / [3] [SynthItem]",
+     "records": [
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 44,
+       "lifetime": "read_write_freezable_value",
+       "name": "_ID",
+       "parent": "[3] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 45,
+       "lifetime": "read_write_freezable_value",
+       "name": "_Quantity",
+       "parent": "[3] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "ItemSlotTable / List<SynthItem> / _items / [4] [SynthItem]",
+     "records": [
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 46,
+       "lifetime": "read_write_freezable_value",
+       "name": "_ID",
+       "parent": "[4] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 47,
+       "lifetime": "read_write_freezable_value",
+       "name": "_Quantity",
+       "parent": "[4] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "ItemSlotTable / List<SynthItem> / _items / [5] [SynthItem]",
+     "records": [
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 48,
+       "lifetime": "read_write_freezable_value",
+       "name": "_ID",
+       "parent": "[5] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 49,
+       "lifetime": "read_write_freezable_value",
+       "name": "_Quantity",
+       "parent": "[5] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "ItemSlotTable / List<SynthItem> / _items / [6] [SynthItem]",
+     "records": [
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 50,
+       "lifetime": "read_write_freezable_value",
+       "name": "_ID",
+       "parent": "[6] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 51,
+       "lifetime": "read_write_freezable_value",
+       "name": "_Quantity",
+       "parent": "[6] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "ItemSlotTable / List<SynthItem> / _items / [7] [SynthItem]",
+     "records": [
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 52,
+       "lifetime": "read_write_freezable_value",
+       "name": "_ID",
+       "parent": "[7] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 6,
+       "gaps": [],
+       "id": 53,
+       "lifetime": "read_write_freezable_value",
+       "name": "_Quantity",
+       "parent": "[7] [SynthItem]",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "synth table / CE 7.6+",
+     "records": [
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [],
+       "id": 55,
+       "lifetime": "read_write_freezable_value",
+       "name": "YesNo",
+       "parent": "synth table / CE 7.6+",
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "4 Bytes value in ct2synth14.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth14.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "one_shot",
+       "depth": 1,
+       "gaps": [
+        "one_shot_save_contract"
+       ],
+       "id": 56,
+       "lifetime": "one_shot_without_off_contract",
+       "name": "FAST_BOOST_PLUS_30",
+       "parent": "synth table / CE 7.6+",
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "One-shot action: missing DISABLE section, guarded write, no OFF contract",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth14.exe",
+       "type": "aa_script"
+      }
+     ]
+    }
+   ],
+   "reference": {
+    "cheat_entries_computed": 57,
+    "cheat_entries_pinned": 57,
+    "entry_match": true,
+    "hash_match": true,
+    "pinned": true,
+    "reference_file": "tests/fixtures/reference-inventory.json"
+   },
+   "sha256": "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
+   "size_bytes": 22744,
+   "table": "case-14.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 10,
+     "gap": "cross_record_symbol",
+     "label": "Cross-record symbol resolution",
+     "requirement": "N-07"
+    },
+    {
+     "affected_records": 8,
+     "gap": "lua_symbol_api",
+     "label": "Lua symbol API",
+     "requirement": "N-07 / N-19"
+    },
+    {
+     "affected_records": 4,
+     "gap": "script_parent_activation",
+     "label": "Script parent with child-activation propagation (staged unlock)",
+     "requirement": "WP-14 (extends AP-07)"
+    },
+    {
+     "affected_records": 1,
+     "gap": "async_lifecycle",
+     "label": "Async record lifecycle",
+     "requirement": "N-08"
+    },
+    {
+     "affected_records": 1,
+     "gap": "lua_ce_engine_api",
+     "label": "CE Lua engine API",
+     "requirement": "N-19"
+    },
+    {
+     "affected_records": 1,
+     "gap": "lua_host_profile",
+     "label": "Lua host profile (bounded Lua host profile)",
+     "requirement": "N-01 / N-19"
+    },
+    {
+     "affected_records": 1,
+     "gap": "record_activation_set",
+     "label": "Embedded-Lua master toggle (record-ID activation sets)",
+     "requirement": "WP-14"
+    },
+    {
+     "affected_records": 1,
+     "gap": "signed_pointer_offset",
+     "label": "Signed pointer-offset literal (`+`/`-` in `<Offsets>`)",
+     "requirement": "WP-14 (format contract)"
+    },
+    {
+     "affected_records": 1,
+     "gap": "parent_activation",
+     "label": "Group/parent activation option",
+     "requirement": "N-07"
+    },
+    {
+     "affected_records": 1,
+     "gap": "one_shot_save_contract",
+     "label": "One-shot without ON/OFF save contract",
+     "requirement": "state contract (AP-04)"
+    }
+   ]
   }
  ],
- "run_id": "repo-reproducible",
+ "run_id": "wp14-staged-20261011T093320Z",
  "top_gaps_pinned": [
   {
-   "affected_records": 3365,
+   "affected_records": 3375,
    "gap": "cross_record_symbol",
    "label": "Cross-record symbol resolution",
    "requirement": "N-07",
-   "share_of_expected_actions_percent": 56.39
+   "share_of_expected_actions_percent": 56.15
   },
   {
-   "affected_records": 1907,
+   "affected_records": 1908,
    "gap": "lua_host_profile",
    "label": "Lua host profile (bounded Lua host profile)",
    "requirement": "N-01 / N-19",
-   "share_of_expected_actions_percent": 31.96
+   "share_of_expected_actions_percent": 31.74
   },
   {
-   "affected_records": 1722,
+   "affected_records": 1723,
    "gap": "one_shot_save_contract",
    "label": "One-shot without ON/OFF save contract",
    "requirement": "state contract (AP-04)",
-   "share_of_expected_actions_percent": 28.86
+   "share_of_expected_actions_percent": 28.66
   },
   {
-   "affected_records": 190,
+   "affected_records": 198,
    "gap": "lua_symbol_api",
    "label": "Lua symbol API",
    "requirement": "N-07 / N-19",
-   "share_of_expected_actions_percent": 3.18
+   "share_of_expected_actions_percent": 3.29
   },
   {
-   "affected_records": 35,
+   "affected_records": 36,
    "gap": "lua_ce_engine_api",
    "label": "CE Lua engine API",
    "requirement": "N-19",
-   "share_of_expected_actions_percent": 0.59
+   "share_of_expected_actions_percent": 0.6
   },
   {
    "affected_records": 31,
@@ -151337,11 +152611,11 @@
    "share_of_expected_actions_percent": 0.52
   },
   {
-   "affected_records": 23,
+   "affected_records": 24,
    "gap": "async_lifecycle",
    "label": "Async record lifecycle",
    "requirement": "N-08",
-   "share_of_expected_actions_percent": 0.39
+   "share_of_expected_actions_percent": 0.4
   },
   {
    "affected_records": 10,

@@ -785,6 +785,18 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
                 for token in tokens:
                     if token.casefold() == "@f" and not any(position > index for position in anonymous_positions) or token.casefold() == "@b" and not any(position < index for position in anonymous_positions):
                         raise ProgramError("Anonymous forward/backward label has no target.")
+    # A plain label ("endp:") inside a program-owned allocation defines a
+    # local jump/data target owned by this program; outside such a region a
+    # plain label keeps the classic semantics of positioning the cursor at
+    # an externally provided symbol.  Allocation context follows the data
+    # cursor: an alloc symbol or a label defined inside an allocation keeps
+    # it, any other cursor target leaves it.
+    alloc_keys = {node["symbol"].casefold() for node in sections["preamble"] + sections["enable"]
+                  if node["op"] == "alloc"}
+    declared_labels = {symbol.casefold() for node in sections["preamble"] + sections["enable"]
+                       if node["op"] == "label" for symbol in node["symbols"]}
+    local_labels = set()
+    in_alloc = False
     locals_ = {}
     provides = {}
     allocations = []
@@ -797,6 +809,9 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
             locals_[key] = symbol
             if node["op"] == "alloc":
                 allocations.append(symbol)
+                # An allocation moves the assembly position into the owned
+                # region, so subsequent plain labels are local definitions.
+                in_alloc = True
         if node["op"] == "label":
             for symbol in node["symbols"]:
                 key = symbol.casefold()
@@ -811,6 +826,26 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
             if not _SYMBOL_TOKEN.fullmatch(symbol):
                 raise ProgramError("Named @ labels may only contain letters, digits and underscores.")
             locals_[symbol.casefold()] = symbol
+        elif node["op"] == "cursor" and node["expression"] != "@@":
+            expression = node["expression"]
+            key = expression.casefold()
+            if _SYMBOL_TOKEN.fullmatch(expression):
+                if key in declared_labels:
+                    # A declared label keeps the current region.
+                    pass
+                elif key in alloc_keys or key in local_labels:
+                    in_alloc = True
+                elif in_alloc and key not in locals_:
+                    # A plain label inside a program-owned allocation defines
+                    # a local jump/data target owned by this program.
+                    locals_[key] = expression
+                    local_labels.add(key)
+                else:
+                    # A plain label outside an owned allocation references an
+                    # externally provided symbol (classic semantics).
+                    in_alloc = False
+            else:
+                in_alloc = False
     for key, symbol in provides.items():
         if key not in locals_:
             # Registering a dependency does not confer ownership over it.
@@ -1498,6 +1533,10 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                     name = f"tf_atom_{len(atom_addresses)}"
                     atom_addresses[name] = _resolve(token, memory, resolved, program)
                     names[token.casefold()] = name
+    alloc_keys = {name.casefold() for name in program["allocations"]}
+    local_labels = set()
+    in_alloc = False
+    current_alloc_key = None
     sections = []
     current = None
     anonymous = []
@@ -1517,12 +1556,42 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                     raise ProgramError("Local label is duplicated or has no address cursor.")
                 located.add(key)
                 current["nodes"].append((index, {"op": "location", "name": names[key]}))
+            elif in_alloc and _SYMBOL_TOKEN.fullmatch(expression) and key not in resolved:
+                # A plain label inside a program-owned allocation defines a
+                # local position within that allocation, exactly like a
+                # declared label.  The allocation itself moves the assembly
+                # position into the region, so the first plain label may open
+                # the section without an explicit cursor.  Outside such a
+                # region a plain label keeps the classic semantics of an
+                # externally provided symbol.
+                if key in located:
+                    raise ProgramError("Local label is duplicated or has no address cursor.")
+                if current is None or current["root_symbol"] != current_alloc_key:
+                    address = _resolve(current_alloc_key, memory, resolved, program)
+                    current = {"address": address, "nodes": [],
+                               "root_symbol": current_alloc_key}
+                    sections.append(current)
+                    if len(sections) > 1024:
+                        raise ProgramError("Program contains too many patch sections.")
+                located.add(key)
+                local_labels.add(key)
+                names.setdefault(key, f"tf_sym_{len(names)}")
+                current["nodes"].append((index, {"op": "location", "name": names[key]}))
             else:
                 address = _resolve(expression, memory, resolved, program)
                 current = {"address": address, "nodes": [], "root_symbol": key if key in resolved else None}
+                in_alloc = (current["root_symbol"] is not None
+                            and current["root_symbol"] in alloc_keys)
+                current_alloc_key = current["root_symbol"] if in_alloc else None
                 sections.append(current)
                 if len(sections) > 1024:
                     raise ProgramError("Program contains too many patch sections.")
+        elif op == "alloc":
+            in_alloc = True
+            current_alloc_key = node["symbol"].casefold()
+        elif op == "dealloc":
+            in_alloc = False
+            current_alloc_key = None
         elif op in {"instruction", "nops", "data", "readmem", "reassemble", "align"}:
             if current is None:
                 raise ProgramError("Machine code/data appears before any address cursor.")

@@ -17,7 +17,7 @@ SUPPORTED_AA_DIRECTIVES = frozenset({
     "aobscan", "aobscanmodule", "aobscanchunk", "aobscanregion", "alloc",
     "dealloc", "align",
     "db", "dw", "dd", "dq", "define", "label", "registersymbol",
-    "unregistersymbol", "readmem", "reassemble", "globalalloc",
+    "unregistersymbol", "readmem", "reassemble", "globalalloc", "assert",
 })
 LOCKED_AA_DIRECTIVES = {
     "createthread": "aa_createthread_threadwait",

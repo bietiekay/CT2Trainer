@@ -955,7 +955,9 @@ class NativeLuaEngineTests(unittest.TestCase):
                                  process_lock_dir=Path(directory)/'shared')
             engine.poll()
             host=engine.open_lua_session()
-            with self.assertRaisesRegex(LuaHostError,'Unknown symbol'):
+            # WP-14 (C1): the staged gate refuses value access before the
+            # provider is live, so the host surfaces the staged error.
+            with self.assertRaisesRegex(LuaHostError,'requires active provider'):
                 host.execute('return getAddressList().getMemoryRecordByID(2).Value')
             self.assertFalse(engine.applied)
             engine.toggle(0,True)

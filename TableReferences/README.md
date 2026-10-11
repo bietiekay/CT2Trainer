@@ -1,9 +1,9 @@
 # Synthetic clean-room corpus (TableReferences)
 
-This directory contains the 13 pinned case tables used by the corpus
+This directory contains the 14 pinned case tables used by the corpus
 denominator tool (`tools/corpus_denominator/`). All files are
 independently authored, synthetic `.CT` tables; no third-party game table
-content is part of this repository. They exercise the same 36 gap classes
+content is part of this repository. They exercise the same 39 gap classes
 that the pinned real corpus did, with neutral case file names.
 
 ## Case mapping
@@ -28,6 +28,7 @@ case number.
 | `case-11.ct` | Red Dead Redemption 2 | `ct2synth11.exe` | `80ecb65161b341a68f1f228504577ea9b70b381023187201f791c6ffac99249d` |
 | `case-12.ct` | Silent Hill Townfall (community "rml" build) | `ct2synth12.exe` | `69cd8349fa89fefd40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47` |
 | `case-13.ct` | Resident Evil 4 | `ct2synth13.exe` | `b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526` |
+| `case-14.ct` | PRAGMATA (synthetic behaviour derivative, WP-14) | `ct2synth14.exe` | `e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f` |
 
 Game names appear only as documentation-level provenance of the synthetic
 shapes; the tables themselves contain no game code, assets or strings.

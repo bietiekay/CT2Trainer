@@ -64,7 +64,9 @@ def main() -> int:
             model["selected"] = {e["id"] for e in plan["entries"] if e["supported"]}
             render()
             supported = len(model["selected"])
-            status.set(f"Target {architecture.get()}: {supported}/{len(plan['entries'])} records supported. Blocked records retain their reasons; Lua is never executed.")
+            staged = sum(1 for e in plan["entries"] if e["supported"] and e.get("staged") is not None)
+            blocked = sum(1 for e in plan["entries"] if not e["supported"])
+            status.set(f"Target {architecture.get()}: {supported} supported ({staged} staged, {blocked} blocked) records. Blocked records retain their reasons; Lua is never executed.")
         except (ValueError, OSError, RuntimeError) as exc:
             model["plan"] = None
             messagebox.showerror("CT inspection", str(exc), parent=root)
@@ -88,12 +90,31 @@ def main() -> int:
             elif not candidates:
                 status.set("No EXE name found in the CT; enter the exact target EXE manually.")
 
+    def entry_capability(e):
+        if not e["supported"]:
+            return "Blocked"
+        if e.get("staged") is not None:
+            return "Staged"
+        return "Supported"
+
+    def entry_details(e):
+        if not e["supported"]:
+            return e.get("reason", "")
+        details = [e.get("reason", "")]
+        staged = e.get("staged")
+        if staged is not None:
+            details.append("Unlocks after: " + ", ".join(staged.get("provider_labels", ())))
+        sets = e.get("activation_sets")
+        if sets is not None:
+            details.append("Master toggle: %d records" % len(sets.get("enable", ())))
+        return "; ".join(part for part in details if part)
+
     def render():
         tree.delete(*tree.get_children())
         for e in model["plan"]["entries"]:
             tree.insert("", "end", iid=str(e["id"]), text=e["path"], values=(
                 "Yes" if e["id"] in model["selected"] else "", e["id"], e["kind"],
-                "Supported" if e["supported"] else "Blocked", e.get("reason", "")))
+                entry_capability(e), entry_details(e)))
 
     def select_record(event=None):
         if model["plan"] is None:

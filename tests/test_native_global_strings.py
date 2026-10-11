@@ -48,7 +48,8 @@ class GlobalStringInterop(unittest.TestCase):
         self.assertEqual(self.memory.read(self.base,8),b'ab\0FRESH')
         self.assertTrue(self.engine._frozen_matches(2,self.base,self.engine.frozen[2][1]))
         self.engine.set_freeze(2,False);self.engine.toggle(1,False)
-        with self.assertRaisesRegex(AddressExpressionError,'Unresolved symbol: shared'):self.engine.read_value(2)
+        # WP-14 (C1): the staged gate refuses before symbol resolution.
+        with self.assertRaisesRegex(NativeRuntimeError,'requires active provider'):self.engine.read_value(2)
         self.assertEqual(self.memory.read(self.base,8),b'ab\0FRESH')
         self.assertEqual(self.memory.releases,[])
         with self.assertRaisesRegex(NativeRuntimeError,'Changed global reinitialization'):self.engine.toggle(1,True)

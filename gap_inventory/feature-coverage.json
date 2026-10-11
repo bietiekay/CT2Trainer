@@ -1,7 +1,7 @@
 {
  "ap11_exclusions": [
   {
-   "gate": "Real game installs/builds for the 13 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 14 pinned tables (user question unanswered)",
    "reason": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists."
   },
   {
@@ -21,21 +21,21 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 13,
+    "actual": 14,
     "check": "pinned_table_count",
-    "expected": 13,
+    "expected": 14,
     "ok": true
    },
    {
-    "actual": 5967,
+    "actual": 6011,
     "check": "expected_actions",
-    "expected": 5967,
+    "expected": 6011,
     "ok": true
    },
    {
-    "actual": 5967,
+    "actual": 6011,
     "check": "category_counts_sum",
-    "expected": 5967,
+    "expected": 6011,
     "ok": true
    },
    {
@@ -46,26 +46,26 @@
    },
    {
     "actual": [
-     3365,
-     1907,
-     1722,
-     190,
-     35,
+     3375,
+     1908,
+     1723,
+     198,
+     36,
      31,
-     23,
+     24,
      10,
      9,
      8
     ],
     "check": "top_gaps_pinned_match",
     "expected": [
-     3365,
-     1907,
-     1722,
-     190,
-     35,
+     3375,
+     1908,
+     1723,
+     198,
+     36,
      31,
-     23,
+     24,
      10,
      9,
      8
@@ -93,7 +93,11 @@
      "lua_worker_thread",
      "managed_method_resolution",
      "one_shot_save_contract",
-     "recursive_parent_value"
+     "parent_activation",
+     "record_activation_set",
+     "recursive_parent_value",
+     "script_parent_activation",
+     "signed_pointer_offset"
     ],
     "check": "pinned_gaps_subset_of_labels",
     "expected": [
@@ -116,7 +120,11 @@
      "lua_worker_thread",
      "managed_method_resolution",
      "one_shot_save_contract",
-     "recursive_parent_value"
+     "parent_activation",
+     "record_activation_set",
+     "recursive_parent_value",
+     "script_parent_activation",
+     "signed_pointer_offset"
     ],
     "ok": true
    },
@@ -153,8 +161,11 @@
      "managed_method_resolution",
      "one_shot_save_contract",
      "parent_activation",
+     "record_activation_set",
      "record_unclassifiable",
      "recursive_parent_value",
+     "script_parent_activation",
+     "signed_pointer_offset",
      "string_codepage",
      "table_lua_lifecycle",
      "value_address_empty"
@@ -192,8 +203,11 @@
      "managed_method_resolution",
      "one_shot_save_contract",
      "parent_activation",
+     "record_activation_set",
      "record_unclassifiable",
      "recursive_parent_value",
+     "script_parent_activation",
+     "signed_pointer_offset",
      "string_codepage",
      "table_lua_lifecycle",
      "value_address_empty"
@@ -242,6 +256,7 @@
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
+     "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
      "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8"
@@ -258,6 +273,7 @@
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
+     "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
      "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8"
@@ -279,16 +295,16 @@
  "coverage": {
   "action_weighted_coverage_percent": 100.0,
   "actions_weight_ap11_excluded": 0,
-  "actions_weight_covered": 7332,
-  "actions_weight_in_scope": 7332,
-  "actions_weight_total": 7332,
+  "actions_weight_covered": 7361,
+  "actions_weight_in_scope": 7361,
+  "actions_weight_total": 7361,
   "feature_weighted_coverage_percent": 100.0,
-  "features_covered": 39,
+  "features_covered": 42,
   "features_excluded_ap11": 4,
-  "features_in_scope": 39,
+  "features_in_scope": 42,
   "features_missing": 0,
   "features_partial": 0,
-  "features_total": 43,
+  "features_total": 46,
   "goal_percent": 90.0,
   "goal_reached": true
  },
@@ -511,9 +527,9 @@
    "affected_records": null,
    "ap11_excluded": true,
    "evidence": [],
-   "gate": "Real game installs/builds for the 13 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 14 pinned tables (user question unanswered)",
    "kind": "missing_gate",
-   "label": "Real game installs/builds for the 13 pinned tables (user question unanswered)",
+   "label": "Real game installs/builds for the 14 pinned tables (user question unanswered)",
    "modules": [],
    "note": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists.",
    "requirement": "AP-11 game gate",
@@ -556,7 +572,7 @@
    "status": "missing"
   },
   "async_lifecycle": {
-   "affected_records": 23,
+   "affected_records": 24,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_activation_policy.py",
@@ -576,21 +592,23 @@
    "status": "covered"
   },
   "cross_record_symbol": {
-   "affected_records": 3365,
+   "affected_records": 3375,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_compiler.py",
     "tests/test_native_global_strings.py",
-    "tests/test_native_addresses.py"
+    "tests/test_native_addresses.py",
+    "tests/test_native_staged_capability.py"
    ],
    "kind": "gap_class",
    "label": "Cross-record symbol resolution",
    "modules": [
     "src/ct2trainer/native/compiler.py",
     "src/ct2trainer/native/engine.py",
-    "src/ct2trainer/native/aa.py"
+    "src/ct2trainer/native/aa.py",
+    "src/ct2trainer/native/lua_symbol_providers.py"
    ],
-   "note": "Static provider dependency closure in the compiler plus runtime symbol resolution in the engine (the owned-global fixtures bind a value record to a symbol of another record).",
+   "note": "Static provider dependency closure in the compiler plus runtime symbol resolution in the engine (the owned-global fixtures bind a value record to a symbol of another record). WP-14 adds staged runtime gating on top: a supported record whose required symbols are all uniquely provided by supported providers carries staged plan metadata (provider IDs and labels), and the engine gates value read/write/freeze on provider liveness (named fail-closed error while the provider is off; freeze released when the provider deactivates).",
    "requirement": "N-07",
    "status": "covered"
   },
@@ -644,7 +662,7 @@
     "src/ct2trainer/native/compiler.py",
     "src/ct2trainer/table.py"
    ],
-   "note": "Demonstrated for all 13 pinned tables: every source record is preserved (no silent drops), and each table-level construct — Forms, the table-Lua lifecycle, Custom types and embedded Assets — is handled or surfaced fail-closed (ignored_sections / lua_bootstrap / blocked-with-reason). A synthetic embedded-Files case proves the Assets path.",
+   "note": "Demonstrated for all 14 pinned tables: every source record is preserved (no silent drops), and each table-level construct — Forms, the table-Lua lifecycle, Custom types and embedded Assets — is handled or surfaced fail-closed (ignored_sections / lua_bootstrap / blocked-with-reason). A synthetic embedded-Files case proves the Assets path.",
    "requirement": "AP-10 missing gate (in-scope)",
    "status": "covered"
   },
@@ -688,7 +706,7 @@
    "status": "covered"
   },
   "lua_ce_engine_api": {
-   "affected_records": 35,
+   "affected_records": 36,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_lua_engine_api.py"
@@ -776,7 +794,7 @@
    "status": "covered"
   },
   "lua_host_profile": {
-   "affected_records": 1907,
+   "affected_records": 1908,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_lua.py",
@@ -870,7 +888,7 @@
    "status": "covered"
   },
   "lua_symbol_api": {
-   "affected_records": 190,
+   "affected_records": 198,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_lua.py",
@@ -946,7 +964,7 @@
    "status": "covered"
   },
   "one_shot_save_contract": {
-   "affected_records": 1722,
+   "affected_records": 1723,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_compiler.py",
@@ -971,7 +989,7 @@
    "status": "covered"
   },
   "parent_activation": {
-   "affected_records": 0,
+   "affected_records": 1,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_activation_policy.py",
@@ -989,6 +1007,24 @@
    ],
    "note": "Flagged group headings route through the tested ActivationController (ON top-down, OFF bottom-up, moBindActivation named refusal, safety holds, save boundary, attach replay, mirror of engine state); 22 dedicated tests in test_native_parent_activation.py.",
    "requirement": "N-07",
+   "status": "covered"
+  },
+  "record_activation_set": {
+   "affected_records": 1,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_activation_sets.py",
+    "tests/test_native_compiler.py"
+   ],
+   "kind": "gap_class",
+   "label": "Embedded-Lua master toggle (record-ID activation sets)",
+   "modules": [
+    "src/ct2trainer/native/lua_activation_sets.py",
+    "src/ct2trainer/native/compiler.py",
+    "src/ct2trainer/native/engine.py"
+   ],
+   "note": "The converter statically extracts record-ID enable/disable sets from embedded {$lua} blocks (narrow grammar: one getMemoryRecordByID(<id>).Active = true|false line per record ID, uniform direction per section, every ID must exist; any ambiguity fails closed without metadata). Toggling such a record applies the set through the engine's dependency-ordered per-record activation path instead of executing the CE-coupled Lua; both plan validators re-derive and refuse tampered sets. Corpus case-14 pins the master-toggle shape (async record 0, set {2,6,8,11,14,25}).",
+   "requirement": "WP-14",
    "status": "covered"
   },
   "record_unclassifiable": {
@@ -1023,6 +1059,40 @@
    ],
    "note": "moRecursiveSetValue value parents compile a deterministic write closure (deepest-first, ties ascending id, target last) into recursive_value.write_ids plan metadata via the shared value_links.recursive_write_closure; both plan validators re-derive and byte-verify the closure and refuse forged metadata. At set-value time the engine re-plans through the tested RecursiveSetValueModel, cross-checks the runtime plan against the compiled closure, and rewrites every descendant in one all-or-nothing transaction, updating frozen closure records so the freeze loop keeps the new bytes; bitfield/string closure members are refused fail-closed. Real in-game effect for the pinned corpus records remains an open AP-11 gate.",
    "requirement": "N-07",
+   "status": "covered"
+  },
+  "script_parent_activation": {
+   "affected_records": 4,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_parent_activation.py",
+    "tests/test_native_staged_capability.py",
+    "tests/test_native_compiler.py"
+   ],
+   "kind": "gap_class",
+   "label": "Script parent with child-activation propagation (staged unlock)",
+   "modules": [
+    "src/ct2trainer/native/compiler.py",
+    "src/ct2trainer/native/engine.py",
+    "src/ct2trainer/native/parent_flags.py"
+   ],
+   "note": "Script records with child-activation propagation options inherit the tested flag classes (both flags = required_dependency, moActivateChildrenAsWell only = direct_activation, moDeactivateChildrenAsWell only = collective_off; moBindActivation on a non-heading parent stays a visible named block). The engine activates the provider script first on ON and releases staged-child freezes before provider deactivation on OFF; parent_relations plan metadata is re-derived and tamper-refused by both plan validators. Value parents carrying the same flags stay inert (they compile as ordinary values).",
+   "requirement": "WP-14 (extends AP-07)",
+   "status": "covered"
+  },
+  "signed_pointer_offset": {
+   "affected_records": 1,
+   "ap11_excluded": false,
+   "evidence": [
+    "tests/test_native_compiler.py"
+   ],
+   "kind": "gap_class",
+   "label": "Signed pointer-offset literal (`+`/`-` in `<Offsets>`)",
+   "modules": [
+    "src/ct2trainer/native/compiler.py"
+   ],
+   "note": "Pointer offset literals accept an explicit +/- sign with hex semantics preserved (+28 = 0x28, -0x10 = -16, +0x28 = 0x28); malformed forms ('++10', a bare sign, '0x', '10-', 'x1', whitespace) are rejected fail-closed. Signed offsets flow through value address chains and group-heading chains; corpus case-14 pins a heading-level signed chain (Offsets [0, +28]). Real in-game effect for the pinned corpus records remains an open AP-11 gate.",
+   "requirement": "WP-14 (format contract)",
    "status": "covered"
   },
   "string_codepage": {
@@ -1082,15 +1152,15 @@
    "status": "covered"
   }
  },
- "generated": "run repo-reproducible",
+ "generated": "run wp14-staged-20261011T093320Z",
  "lane": "AP-10 feature matrix and coverage metric (read-only, static)",
- "run_id": "repo-reproducible",
+ "run_id": "wp14-staged-20261011T093320Z",
  "schema": "corpus-feature-matrix/v1",
  "source": {
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "21e0c98c0b6ca48e058e5b0565604896d6412f1a871571567066de8f0799567e",
+  "gap_report_sha256": "061f4abe7e408a3e284837b4f7ff52e577aeb4f687aa3919323fa149a098856c",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "6363ba5db4065bd99e55f4ef54fab24ece1d2b01fa2fa1610a6350ddfc65746e"
+  "inventory_sha256": "30419c1de021fe832de2974a5934a4807d9417994cccdc4fb38de88296b937bd"
  },
  "top10_priority": []
 }

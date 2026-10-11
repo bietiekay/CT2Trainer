@@ -64,5 +64,16 @@
     "hotkeys": 0,
     "async_scripts": 0,
     "dropdown_links": 0
+  },
+  "case-14.ct": {
+    "sha256": "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
+    "table_version": 46,
+    "cheat_entries": 57,
+    "assembler_scripts": 11,
+    "table_lua_blocks": 0,
+    "pointer_offsets": 15,
+    "hotkeys": 0,
+    "async_scripts": 1,
+    "dropdown_links": 0
   }
 }

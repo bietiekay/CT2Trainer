@@ -60,6 +60,10 @@ class Entry:
     script_external_action: bool
     custom_type_known: bool = False
     dropdown_link_empty: bool = False
+    # WP-14 static review signals (derived from the record's own script text;
+    # the native compiler performs the strict cross-record contract checks).
+    registers_symbols: bool = False
+    activation_set_lua: bool = False
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -215,6 +219,28 @@ def _deactivates_children(element: ET.Element) -> bool:
 
 def _script_has_external_action(script: str) -> bool:
     return bool(re.search(r"\b(?:shellExecute|messageDialog)\s*\(", script, re.IGNORECASE))
+
+
+def _script_registers_symbols(script: str) -> bool:
+    """WP-14 signal: the record registers Auto Assembler symbols.
+
+    Records that register (and release) symbols are staged providers for the
+    native compiler; the static review report surfaces them so the reviewer
+    can cross-check against the plan's ``provides`` field.
+    """
+    return bool(re.search(r"\bregistersymbol\s*\(", script, re.IGNORECASE))
+
+
+def _script_activation_set_lua(script: str) -> bool:
+    """WP-14 signal: embedded Lua toggles sibling records by record id.
+
+    The native compiler statically extracts such loops into an activation
+    set when every referenced id exists in the table; the static review
+    report surfaces the pattern per record.
+    """
+    if not re.search(r"getMemoryRecordByID\s*\(", script):
+        return False
+    return bool(re.search(r"\.Active\s*=\s*(?:true|false)\b", script, re.IGNORECASE))
 
 
 def _node_activation_safe(element: ET.Element, depth: int = 0) -> bool:
@@ -409,6 +435,8 @@ def read_table(path: str | Path) -> Table:
             custom_type_name=element.findtext("CustomType"),
             custom_type_known=(element.findtext("CustomType") in known_custom_types),
             script_external_action=_script_has_external_action(script),
+            registers_symbols=_script_registers_symbols(script),
+            activation_set_lua=_script_activation_set_lua(script),
         ))
         for child in child_nodes:
             visit(child, depth + 1, entry_id, (*labels, label))

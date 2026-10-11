@@ -71,6 +71,9 @@ class AutomaticLuaRecordTests(unittest.TestCase):
         row.update(lua_program=profile, enable=[], disable=[], requires=profile['requires'],
                    provides=profile['provides'], dependency_ids=[],
                    one_shot=bool(profile.get('one_shot', False)))
+        # WP-14: the rewritten record drops its symbol dependencies, so the
+        # compiler-derived staged marker (if any) must go with them.
+        row.pop('staged', None)
         validate_plan(plan)
         self.engine = TrainerEngine(plan, state_dir=self.root / 'state', process_lock_dir=self.root / 'shared',
                                     memory_factory=lambda name: self.memory, hook_coordinator=Coordinator())

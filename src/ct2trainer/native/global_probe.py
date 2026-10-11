@@ -32,9 +32,12 @@ TARGET_SHA256 = {
     'x64': 'f42dfd03dfe2e703fcd87320fc30f00d825f47ef50dc58d957a38f166e620853',
     'x86': 'e66ae2b8bdc3d44d427b31fa9278dd017694ef707d352e52461c1979ec98f98c',
 }
+# Re-pinned 2026-10-11 for WP-14 (staged capabilities): the canonical plan
+# of the unchanged pinned CTs now carries the derived 'staged' marker on
+# the value record (provider liveness gating); CT bytes are unchanged.
 PLAN_SHA256 = {
-    'x64': '4f446dbb5a8dccf950bae658dc6344085dbbb7f765d382608cb9d189dec283c6',
-    'x86': '519110d16402a54f50df842eaa153d47837074ae7e0973936fad54ba7646c933',
+    'x64': 'cf8fdfbc77a91ae811ac12cc4c6e4ea797cc168948ae6298f4e473936c661c00',
+    'x86': '312a753e3df1e71ec8fdb652b98c2880cc5b895febd9aff28e3a8897903b9982',
 }
 MARKER_BYTES = bytes.fromhex('435432542d474c422d323032362d3031')
 PROBE_PROLOGUE = {
