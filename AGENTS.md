@@ -85,7 +85,7 @@ suite 2617 OK / 25 regular skips, `ce_inputs: []`, `runtime_unverified`
 deliberately kept per gate). The portable ZIP was user-tested on a
 machine without CE or Python (converter run plus generated trainer).
 WP-14 work (14-table corpus, staged capabilities) is not yet in a
-verified build; the 0.9.0-rc3 build will be cut from `main` after the
+verified build; the 0.10 build will be cut from `main` after the
 WP-14 merge including the gate-test rework
 (`54b172e`; full local dev suite at the canonical path: 2671 OK / 25
 skips, 0 failures).

@@ -13,7 +13,7 @@ committed.
 
 | Item | Value |
 | --- | --- |
-| Release version | `0.9.0-rc2` (root `VERSION` file); `0.9.0-rc3` in cycle after the WP-14 merge |
+| Release version | `0.9.0-rc2` released; `0.10` staged in the root `VERSION` file, release build pending at the end of the cycle |
 | Build entry point | `scripts/Build-Native.ps1` (fully offline, no network) |
 | Full native suite | **2671 OK / 25 expected skips, 0 failures** (full local dev suite on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`, verified 2026-10-11 at the canonical path); latest in-build suite 2617/25 (rc2 build) |
 | CE inputs in the build | none (`ce_inputs: []` in `build.json`) |

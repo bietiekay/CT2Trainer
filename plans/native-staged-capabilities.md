@@ -455,7 +455,7 @@ Steps:
    package status `WP-14`, §8 log entry), `documentation/native-progress.md`
    (ledger entry with measured numbers: 162/595 → new split), `AGENTS.md`
    (corpus 13 → 14 tables, feature matrix 39 → 42), `CHANGELOG.md`
-   (0.9.0-rc3 section).
+   (0.10 section).
 
 **Acceptance:** artifact consistency checks pass
 (`consistency.all_ok == true` in feature-coverage.json), pinned table count

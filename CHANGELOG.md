@@ -2,7 +2,7 @@
 
 Single maintained changelog for CT2Trainer releases.
 
-## 0.9.0-rc3 (in cycle, 2026-10-11)
+## 0.10 (in cycle, 2026-10-11)
 
 - WP-14 "Staged Capabilities" (PRAGMATA-class tables):
   - Signed pointer offsets: `<Offsets>` literals accept an explicit sign
@@ -57,7 +57,7 @@ Single maintained changelog for CT2Trainer releases.
   9 blocked (2 records with a strict `"$process"` address plus an
   anonymous assembly label; 7 `i_base_*` children without a unique
   supported provider — each individually justified).
-- Release build: pending at the end of the cycle (0.9.0-rc3); the
+- Release build: pending at the end of the cycle (0.10); the
   in-build suite line and ZIP hashes are recorded here when the build
   lands.
 

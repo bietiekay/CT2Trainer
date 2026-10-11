@@ -1,6 +1,6 @@
 # CT2Trainer: Implementation and continuation plan
 
-Status: **October 11, 2026** (0.9.0-rc3 in cycle on working branch
+Status: **October 11, 2026** (0.10 in cycle on working branch
 **`native-0.9-staged`**; `main` tracks the milestone between cycle-end
 merges — see §7).
 
