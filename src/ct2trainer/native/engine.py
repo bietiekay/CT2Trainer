@@ -3292,22 +3292,29 @@ class TrainerEngine:
         """Merge all owned fields under one OS-held event, preserving neighbors.
 
         Overlapping byte spans are coalesced; ownership masks must be disjoint.
-        Every desired bit is merged with the freshly held snapshot. Executable
-        fields require a separate provider-aware masked transaction profile.
+        Every desired bit is merged with the freshly held snapshot. A batch
+        whose spans are all executable is routed to the live provider
+        literal-permit path (``_write_bitfields_owned_literal``); mixed
+        ordinary/executable batches are refused; ordinary data pages keep
+        the data-only coordinator hold.
         """
         from .value_types import merge_profile_value
         from .hooks import QuiescenceProof, HookError, HookUncertain
+        item_spans = []
+        for identifier, address, value in items:
+            size = self._value_size(self.entries[identifier])
+            item_spans.append((identifier, address, size))
+        executable = [self._is_executable(address, size) for _, address, size in item_spans]
+        if any(executable):
+            if not all(executable):
+                raise NativeRuntimeError('Mixed ordinary/executable bit-field transactions are unsupported')
+            return self._write_bitfields_owned_literal(items, text_values=text_values)
         hold = getattr(self.hook_coordinator, 'hold_data', None)
         if hold is None:
             raise NativeRuntimeError('Bit-field writes require a verified data-only thread coordinator')
-        spans = []
-        for identifier, address, value in items:
-            size = self._value_size(self.entries[identifier])
-            if self._is_executable(address, size):
-                raise NativeRuntimeError('Masked bit-field writes to executable provider data require a separate profile')
-            spans.append((address, address + size))
         merged = []
-        for start, end in sorted(spans):
+        for _identifier, address, size in sorted(item_spans, key=lambda item: item[1]):
+            start, end = address, address + size
             if merged and start <= merged[-1][1]:
                 merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
             else:
@@ -3360,6 +3367,92 @@ class TrainerEngine:
             if mutation_attempted:
                 self._block(StateError('Masked data-write proof became uncertain: ' + str(exc)))
                 raise NativeRuntimeError(str(exc)) from exc
+            raise RetryableAction(str(exc)) from exc
+
+    def _write_bitfields_owned_literal(self, items, *, text_values: bool = False):
+        """Masked RMW for bit-field spans fully covered by live literal permits.
+
+        Mirrors ``_write_owned_literal_values`` for the masked path: every
+        merged span must be contained in one live permit from
+        ``_owned_provider_data()``. A fresh snapshot is taken, each field is
+        merged with ``merge_profile_value`` (fresh snapshot as old bytes,
+        never the desired value), the merged spans are staged on a transient
+        literal-data HookManager bound to the permits, published under the
+        safe-point hold and terminated with ``commit_data_only()``.
+        Uncertainty quarantines the controller with the journal retained;
+        no follow-up write is attempted.
+        """
+        from .value_types import merge_profile_value
+        from .hooks import HookManager, HookUncertain
+        if self.hook_coordinator is None:
+            raise NativeRuntimeError(
+                'Masked bit-field writes to executable provider data '
+                'require a verified target thread coordinator')
+        _, permits = self._owned_provider_data()
+        items = [(identifier, address, self._value_size(self.entries[identifier]), value)
+                 for identifier, address, value in items]
+        merged = []
+        for _identifier, address, size, _value in sorted(items, key=lambda item: item[1]):
+            start, end = address, address + size
+            if merged and start <= merged[-1][1]:
+                merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
+            else:
+                merged.append((start, end))
+        for start, end in merged:
+            if not any(p_start <= start and end <= p_start + p_size
+                       for p_start, p_size, _, _ in permits):
+                raise NativeRuntimeError(
+                    'Masked bit-field writes to executable provider data require '
+                    'a fully covered live provider literal permit')
+        original = {position: byte for start, end in merged
+                    for position, byte in enumerate(self.memory.read(start, end - start), start)}
+        current, ownership = dict(original), {}
+        results = {}
+        for identifier, address, size, value in items:
+            entry = self.entries[identifier]
+            if self._value_address(entry) != address:
+                raise PatchConflict('Bit-field pointer changed before the staged literal write')
+            self._check_value_ownership(identifier, address, size)
+            mask = self._value_mask(entry)
+            for index, owned in enumerate(mask):
+                position = address + index
+                if ownership.get(position, 0) & owned:
+                    raise NativeRuntimeError('Masked value transaction contains overlapping bit ownership')
+                ownership[position] = ownership.get(position, 0) | owned
+            before = bytes(current[position] for position in range(address, address + size))
+            desired = (parse_value(entry, value, before) if text_values
+                       else merge_profile_value(entry['value_profile'], value, before))
+            results[identifier] = desired
+            for index, byte in enumerate(desired):
+                current[address + index] = byte
+        patches = []
+        for start, end in merged:
+            before = bytes(original[position] for position in range(start, end))
+            after = bytes(current[position] for position in range(start, end))
+            if before != after:
+                patches.append(_Patch(start, before, after))
+        if not patches:
+            return results
+        manager = HookManager(self.memory,
+                              self.store.directory / 'hooks' / (uuid.uuid4().hex + '.json'),
+                              self.hook_coordinator,
+                              owner_id=self.plan['trainer_id'] + ':bitfield-value',
+                              owned_executable_data_ranges=permits)
+        try:
+            manager.stage([{'address': p.address, 'bytes': p.changed.hex(),
+                            'original': p.original.hex(), 'is_allocation': False,
+                            'executable': True, 'requires_coordinator': True,
+                            'literal_data': True, 'data_semantics': True}
+                           for p in patches])
+            manager.publish()
+            manager.commit_data_only()
+            self.retired_hooks.append(manager)
+            return results
+        except Exception as exc:
+            if manager.uncertain or isinstance(exc, HookUncertain) or manager.state == 'enabled':
+                self._block(StateError('Bit-field literal mutation is uncertain: ' + str(exc)))
+                raise NativeRuntimeError(str(exc)) from exc
+            self._abandon_after_failure(manager, exc)
             raise RetryableAction(str(exc)) from exc
 
     def _check_value_ownership(self, identifier: int, address: int, size: int) -> None:
@@ -3561,7 +3654,15 @@ class TrainerEngine:
                 address = self._value_address(entry)
                 if (entry.get('value_profile', {}).get('kind') == 'bitfield'
                         and self._is_executable(address, self._value_size(entry))):
-                    raise NativeRuntimeError('Masked bit-field freezes on executable provider data require a separate profile')
+                    # Refuse before recording so a failed enable never
+                    # becomes a saved wish; the tick re-checks live permits
+                    # per write.
+                    _, permits = self._owned_provider_data()
+                    if not any(start <= address and address + self._value_size(entry) <= start + length
+                               for start, length, _, _ in permits):
+                        raise NativeRuntimeError(
+                            'Masked bit-field freezes on executable provider data require '
+                            'a fully covered live provider literal permit')
                 if entry.get('value_profile',{}).get('kind')=='string':
                     from .string_runtime import snapshot_freeze
                     raw=snapshot_freeze(self,identifier,address)
