@@ -38,6 +38,7 @@ class ValueProfileRuntimeTests(unittest.TestCase):
 <CheatEntry><ID>3</ID><Description>Conflicting whole byte</Description><VariableType>Byte</VariableType><Address>1040</Address></CheatEntry>
 <CheatEntry><ID>4</ID><Description>Exact array</Description><VariableType>Array of byte</VariableType><Address>1050</Address><ByteLength>4</ByteLength></CheatEntry>
 <CheatEntry><ID>5</ID><Description>Placeholder</Description><VariableType>Array of byte</VariableType><Address>1060</Address><ByteLength>0</ByteLength><CheatEntries><CheatEntry><ID>6</ID><Description>Inherited bit</Description><VariableType>Binary</VariableType><Address>+1</Address><BitStart>7</BitStart><BitLength>1</BitLength><ShowAsBinary>1</ShowAsBinary></CheatEntry></CheatEntries></CheatEntry>
+<CheatEntry><ID>7</ID><Description>Wide masked field</Description><VariableType>Binary</VariableType><Address>1040</Address><BitStart>4</BitStart><BitLength>8</BitLength></CheatEntry>
 </CheatEntries></CheatTable>''',encoding='utf-8')
         self.memory=Memory()
         self.coordinator=DataCoordinator()
@@ -96,11 +97,11 @@ class ValueProfileRuntimeTests(unittest.TestCase):
         self.assertFalse(self.memory.writes)
         self.assertFalse(self.coordinator.data_holds)
 
-    def test_exec_bitfield_freeze_refused_before_recording_even_with_literal_permit(self):
+    def test_exec_bitfield_freeze_refused_before_recording_with_incomplete_permit(self):
         self.memory.is_executable=lambda address,size:True
-        self.engine._owned_provider_data=lambda:([],[(0x1040,4,0x1000,256)])
+        self.engine._owned_provider_data=lambda:([],[(0x1040,1,0x1000,256)])
         with self.assertRaisesRegex(NativeRuntimeError,'bit-field freezes'):
-            self.engine.set_freeze(1,True)
+            self.engine.set_freeze(7,True)
         self.assertFalse(self.engine.frozen)
         self.assertFalse(self.engine.blocked)
         self.assertFalse(self.memory.writes)
