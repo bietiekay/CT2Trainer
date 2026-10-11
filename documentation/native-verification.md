@@ -1,6 +1,7 @@
 # CT2Trainer Native verification
 
-Status: October 10, 2026 (0.9.0-rc2 baseline).
+Status: October 11, 2026 (0.9.0-rc2 baseline + WP-14 staged
+capabilities, in cycle on `native-0.9-staged`).
 
 This document records the **current** verification state of the
 independent CT2Trainer Native edition: what is proven, how it is
@@ -12,17 +13,17 @@ committed.
 
 | Item | Value |
 | --- | --- |
-| Release version | `0.9.0-rc2` (root `VERSION` file) |
+| Release version | `0.9.0-rc2` (root `VERSION` file); `0.9.0-rc3` in cycle after the WP-14 merge |
 | Build entry point | `scripts/Build-Native.ps1` (fully offline, no network) |
-| Full native suite | **2617 OK / 25 expected skips** |
+| Full native suite | **2671 OK / 25 expected skips, 0 failures** (full local dev suite on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`, verified 2026-10-11 at the canonical path); latest in-build suite 2617/25 (rc2 build) |
 | CE inputs in the build | none (`ce_inputs: []` in `build.json`) |
 | Runtime acceptance | `runtime_unverified: true`, deliberately kept |
-| Corpus denominator | 5,967 expected actions, 1,269 groups (13 pinned case tables) |
-| Feature matrix | 39/39 in-scope features; 100% feature-weighted; 7332/7332 action-weighted |
+| Corpus denominator | 6,011 expected actions, 1,282 groups (14 pinned case tables, run `wp14-staged-20261011T093320Z`) |
+| Feature matrix | 42/42 in-scope features; 100% feature-weighted; 7361/7361 action-weighted |
 
 The committed baselines under `gap_inventory/` carry the run stamp
-`repo-reproducible` and are reproduced byte-for-byte by the chain in
-section 4.
+`wp14-staged-20261011T093320Z` and are reproduced byte-for-byte by the
+chain in section 4.
 
 ## 2. Offline build
 
@@ -56,12 +57,12 @@ reproducibility; it deliberately does **not** clear
 
 | Gate | Evidence |
 | --- | --- |
-| Per-table completeness for all 13 pinned case tables (Forms, table-Lua lifecycle, Custom Types, Assets) | `tests/test_native_table_completeness.py` |
+| Per-table completeness for all 14 pinned case tables (Forms, table-Lua lifecycle, Custom Types, Assets; the WP-14 staged case-14 adds signed-offset parents, script-parent cascades, staged leaf values and a record-ID activation set) | `tests/test_native_table_completeness.py` |
 | Source-to-Frozen parity of the 0.9 feature set, plus the binary CLI/GUI adapter for the static IL2CPP parser | `tests/test_native_source_frozen_parity.py`, `tests/test_native_il2cpp_static_probe.py` |
 | End-to-end reproducibility chain (denominator -> feature matrix -> AP-11 manifest, byte-identical per fixed run-id) | `tests/test_native_repro_chain.py` |
 
 Gate action weights remain 0: they are completeness/proof features, not
-record actions. The AP-11 campaign (5,967 expected actions, 0 confirmed
+record actions. The AP-11 campaign (6,011 expected actions, 0 confirmed
 real-game effect so far) is a separate end goal and is excluded from the
 100% feature metric.
 
@@ -84,12 +85,17 @@ $env:CT2TRAINER_NASM=(Resolve-Path .tools/native-tools/nasm.exe).Path
 ```
 
 Deterministic measurement chain (byte-identical for the fixed run-id
-`repo-reproducible`):
+`repo-reproducible`). Stages 2 and 3 refuse to write into the directory
+containing their inputs, so each uses a scratch output directory; stage 3
+consumes the committed `gap_inventory/feature-coverage.json` so its
+provenance stays byte-stable:
 
 ```powershell
 python tools/corpus_denominator/__main__.py --corpus TableReferences --output gap_inventory --run-id repo-reproducible
-python tools/corpus_denominator/feature_matrix.py --output gap_inventory --run-id repo-reproducible
-python tools/corpus_denominator/ap11_campaign.py manifest --output gap_inventory --run-id repo-reproducible
+python tools/corpus_denominator/feature_matrix.py --gap-report gap_inventory/gap-report.json --inventory gap_inventory/inventory.json --output <scratch2> --run-id repo-reproducible
+copy <scratch2>/feature-coverage.json gap_inventory/feature-coverage.json
+python tools/corpus_denominator/ap11_campaign.py manifest --gap-report gap_inventory/gap-report.json --inventory gap_inventory/inventory.json --feature-coverage gap_inventory/feature-coverage.json --corpus-root TableReferences --output <scratch3> --run-id repo-reproducible
+copy <scratch3>/ap11-campaign.json gap_inventory/ap11-campaign.json
 python -m unittest tests.test_native_repro_chain
 ```
 
@@ -114,7 +120,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\windows\fixture_ta
     [fixture manual](../tests/windows/fixture_target/README.md)), and
   - the Steam Deck / Proton protocol (see the
     [compatibility matrix](../tests/deck/compatibility-matrix.md)).
-- **AP-11**: 0 of 5,967 expected actions confirmed with observed
+- **AP-11**: 0 of 6,011 expected actions confirmed with observed
   real-game effect.
 - Broad automatic table forms, remote speed control and managed
   invocation remain in development (see

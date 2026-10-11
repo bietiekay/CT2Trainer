@@ -1,8 +1,10 @@
 # Native semantic denominator (AP-10)
 
-**Run:** `repo-reproducible` · **Status:** 0.9.0-rc2 baseline (2026-10-10)
-**Artifacts:** `gap_inventory/inventory.json` (13 pinned tables) and
-`gap_inventory/gap-report.json` (13 pinned tables, record-exact).
+**Run:** `wp14-staged-20261011T093320Z` · **Status:** 0.9.0-rc2 baseline
+extended by WP-14 (2026-10-11; the 2026-10-10 `wpB-cleanroom4-20261010T104008Z`
+run was 13 tables / 5 967 actions and is superseded)
+**Artifacts:** `gap_inventory/inventory.json` (14 pinned tables) and
+`gap_inventory/gap-report.json` (14 pinned tables, record-exact).
 **Method:** pure static XML analysis (stdlib, Python 3.12) of the CT
 structure under `TableReferences/` (repo root) —
 strictly read-only, no execution of CT-Lua/AA, no target-process
@@ -41,7 +43,7 @@ expected_actions = records − navigation
   exclusively in the Windows/Deck tests (AP-11) and is by definition **0**
   in this lane.
 
-## 2. Start corpus: 13 pinned tables
+## 2. Start corpus: 14 pinned tables
 
 SHA-256 (full values in `gap-report.json → pinned_tables[]`):
 
@@ -60,40 +62,45 @@ SHA-256 (full values in `gap-report.json → pinned_tables[]`):
 | Red Dead Redemption 2 | `case-11.ct` | `615baf32…` |
 | Silent Hill Townfall (rml) | `case-12.ct` | `19b34a49…` |
 | Resident Evil 4 | `case-13.ct` | `2621c99a…` |
+| PRAGMATA (synthetic behaviour derivative, WP-14) | `case-14.ct` | `e7df5b8a…` |
 
 The case file names are neutral; the mapping to the original table
-identities above is recorded in `TableReferences/README.md`. The 6
+identities above is recorded in `TableReferences/README.md`. The 7
 byte-pinned reference hashes from
 `tests/fixtures/reference-inventory.json` (case-10, case-11, case-09,
-case-06, case-13, case-12) were verified against the corpus: **all 6 hash
-and entry-count checks passed** (`reference_verification_all_ok: true`).
+case-06, case-13, case-12, case-14) were verified against the corpus:
+**all 7 hash and entry-count checks passed**
+(`reference_verification_all_ok: true`).
 
 ## 3. Count results
 
-Pinned start corpus (13 tables, 5 967 records, 0 navigation):
+Pinned start corpus (14 tables, 6 011 records, 0 navigation):
 
-- **Expected actions: 5 967** · groups: 1 269 · group-toggle actions: **0**
-- Status: 5 455 locked (91.4%) / 479 statically_assumed (8.0%) / 33
+- **Expected actions: 6 011** · groups: 1 282 · group-toggle actions: **0**
+- Status: 5 475 locked (91.1%) / 503 statically_assumed (8.4%) / 33
   unknown (0.6%)
-- Categories: value_freeze 3 098 · one_shot 1 722 · string_write 731 ·
-  persistent_script 413 · custom_value 3
+- Categories: value_freeze 3 131 · one_shot 1 723 · string_write 731 ·
+  persistent_script 423 · custom_value 3
+- WP-14 labels on the pinned corpus: `signed_pointer_offset` 1,
+  `script_parent_activation` 4, `record_activation_set` 1 (all in
+  case-14)
 
-Top-10 gaps on the pinned denominator (share of 5 967):
+Top-10 gaps on the pinned denominator (share of 6 011):
 
 | # | Gap ID | Label | Records | Share | Requirement |
 | --- | --- | --- | --- | --- | --- |
-| 1 | `cross_record_symbol` | Cross-record symbol resolution | 3 365 | 56.39% | N-07 |
-| 2 | `lua_host_profile` | Lua host profile (bounded host profile) | 1 907 | 31.96% | N-01 / N-19 |
-| 3 | `one_shot_save_contract` | One-shot without ON/OFF save contract | 1 722 | 28.86% | State contract (AP-04) |
-| 4 | `lua_symbol_api` | Lua symbol API | 190 | 3.18% | N-07 / N-19 |
-| 5 | `lua_ce_engine_api` | CE-Lua engine API | 35 | 0.59% | N-19 |
+| 1 | `cross_record_symbol` | Cross-record symbol resolution | 3 375 | 56.15% | N-07 |
+| 2 | `lua_host_profile` | Lua host profile (bounded host profile) | 1 908 | 31.74% | N-01 / N-19 |
+| 3 | `one_shot_save_contract` | One-shot without ON/OFF save contract | 1 723 | 28.66% | State contract (AP-04) |
+| 4 | `lua_symbol_api` | Lua symbol API | 198 | 3.29% | N-07 / N-19 |
+| 5 | `lua_ce_engine_api` | CE-Lua engine API | 36 | 0.60% | N-19 |
 | 6 | `aa_directive_unverified` | Unverified AA directives | 31 | 0.52% | AP-02 |
-| 7 | `async_lifecycle` | Async record lifecycle | 23 | 0.39% | N-08 |
+| 7 | `async_lifecycle` | Async record lifecycle | 24 | 0.40% | N-08 |
 | 8 | `lua_worker_thread` | Lua worker threads | 10 | 0.17% | N-15 |
 | 9 | `dropdown_link` | DropDown link | 9 | 0.15% | N-18 |
 | 10 | `managed_method_resolution` | Managed method resolution (IL2CPP) | 8 | 0.13% | N-12 / N-13 / N-14 |
 
-The rest corpus is empty in the current pinned 13-table corpus
+The rest corpus is empty in the current pinned 14-table corpus
 (`corpus_rest` in the gap report reports zero tables); the table above
 covers the full pinned denominator.
 
@@ -167,7 +174,7 @@ covers the full pinned denominator.
    `GroupHeader == "1"` comparison exact).
 2. **Group-toggle rule** mirrors `_group_has_builtin_on_effect`: only
    `moActivateChildrenAsWell`/`moBindActivation` counts as activation
-   (not `moDeactivateChildrenAsWell`); result in the 13 tables: **0**
+   (not `moDeactivateChildrenAsWell`); result in the 14 tables: **0**
    (RDR2 has exactly one activation group whose children only
    deactivate).
 3. **String addresses** with a foreign symbol or a managed binding are
@@ -189,13 +196,13 @@ covers the full pinned denominator.
 ## 6. The 90% goal is NOT reached
 
 Explicitly: the required 90% fulfillment is **not** reached. Confirmed
-actions (with real game-effect evidence): **0 of 5 967**. Even the most
-generous `statically_assumed` reading (479 records, 8.0% of the pinned
+actions (with real game-effect evidence): **0 of 6 011**. Even the most
+generous `statically_assumed` reading (503 records, 8.4% of the pinned
 denominator) is not fulfillment — it has no runtime evidence.
 
 **Missing gates (each hard, not substitutable):**
 
-1. Real game installs/builds of the 13 pinned tables (no installation
+1. Real game installs/builds of the 14 pinned tables (no installation
    exists in this repository).
 2. Actual game effect: ON/OFF, values, freeze, target/controller
    restart, saved wishes, errors/pending, cleanup — per concretely
@@ -229,5 +236,7 @@ denominator) is not fulfillment — it has no runtime evidence.
   `generated`/`run_id` (schema: `run <id>`). The committed
   `gap_inventory/` artifacts are reproduced byte-for-byte by
   `tests/test_native_repro_chain.py` (denominator → feature matrix →
-  AP-11 manifest, same run ID `repo-reproducible`).
+  AP-11 manifest; the run ID is derived from the committed
+  `gap-report.json` and is currently
+  `wp14-staged-20261011T093320Z`).
 - Python 3.12, stdlib only.

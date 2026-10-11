@@ -1,6 +1,7 @@
 # CT2Trainer: independent runtime and redistribution
 
-Status: 10 October 2026 (0.9.0-rc2 baseline).
+Status: 11 October 2026 (0.9.0-rc2 baseline + WP-14 staged capabilities
+on `native-0.9-staged`).
 
 CT2Trainer independently implements the CT converter and Windows trainer.
 Its build and exported source use no CE implementation, patched Lua DLL, resources,
@@ -71,6 +72,10 @@ A checksum records the chosen bytes; it is not a signature or a legal audit.
 | Special values | Exact bounded byte arrays, inherited zero-length array headings, and bitfields with fresh masked read/modify/write under an OS-held data event; disjoint freezes coalesce |
 | String values | Bounded ASCII/UTF-16LE, exact fixed spans or prefix plus terminator, preserved remote tail, coordinated writes/Freeze and no saved value replay; codepage inputs remain blocked |
 | Addresses | Nested brackets, arithmetic, `$process`, module/export atoms and inherited parent addresses; flattened XML pointer offsets |
+| Signed pointer offsets | `<Offsets>` literals accept an explicit sign (`+28` = `0x28`, `+0x130`, `-0x10`); malformed sign forms (`++10`, `+`, `0x`, empty, trailing junk) are rejected fail-closed (WP-14) |
+| Staged capability | Supported records whose address needs a symbol uniquely provided by another supported record carry `staged` provider metadata; the engine gates read/write/freeze on provider liveness (named fail-closed error while inactive, UI pending state with auto-unlock); provider OFF releases frozen staged children before deactivating (WP-14) |
+| Script-parent cascades | The tested flag-class contract extends from group headings to script records with children (`required_dependency` / `direct_activation` / `collective_off`); ON activates the provider script before its children, OFF releases staged-child freezes first; `moBindActivation` on non-heading parents and value parents with flags stay visible named blocks (WP-14) |
+| Record-ID activation sets | The converter statically extracts `getMemoryRecordByID(<int>)` + `Active = true|false` sets from embedded `{$lua}` (uniform direction per section, all IDs must exist); plan entries carry `activation_sets`; enable/disable applies the set through the engine's dependency-ordered activation instead of executing the CE-coupled Lua; both plan validators re-derive and refuse tampered metadata (WP-14) |
 | Assembler grammar | ENABLE/DISABLE, distinct bounded process/module/range AOB scans, compact byte/nibble wildcard patterns, definitions, labels/anonymous labels, alloc, align, typed data, readmem, reassemble and symbol lists/scoped cleanup |
 | Encoding/linking | NASM at actual target addresses, x86/x64 including SSE/AVX; iced displacement validation and relocation |
 | Instruction literals | One printable ASCII character encodes as its integer immediate; source identity remains unchanged, with no implicit target API resolution |
@@ -105,8 +110,8 @@ scan profile currently supports exact byte arrays, not every CE scan mode.
 
 ## Coverage and evidence
 
-The pinned 13-table synthetic corpus measures **5,967 expected actions**
-(records minus navigation; 1,269 groups counted separately) per
+The pinned 14-table synthetic corpus measures **6,011 expected actions**
+(records minus navigation; 1,282 groups counted separately) per
 `gap_inventory/gap-report.json`; per-record and per-gap detail is in
 [native-semantic-denominator.md](native-semantic-denominator.md). Static
 admission and synthetic linking do not demonstrate game behavior.

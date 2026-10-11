@@ -1,6 +1,7 @@
 # CT2Trainer: Native progress ledger
 
-Status: **October 10, 2026** (0.9.0-rc2). This is the binding result list:
+Status: **October 11, 2026** (0.9.0-rc3 in cycle on working branch
+`native-0.9-staged`; latest release 0.9.0-rc2). This is the binding result list:
 confirmed state, measured numbers, and the prioritized open work. The
 plan (work packages, protocol) lives in
 [`plans/native-implementation-continuation.md`](../plans/native-implementation-continuation.md);
@@ -11,11 +12,14 @@ code/build boundaries in
 ## 1. Goal and acceptance contract
 
 - **Feature-matrix goal: 100% coverage of the in-scope 0.9 feature set
-  (AP-11 excluded) — REACHED 2026-10-10 and closed.** 39/39 in-scope
-  features covered; 100% feature-weighted; 7332/7332 action-weighted over
-  the pinned 5967-action corpus. The earlier 90% hurdle is subsumed.
+  (AP-11 excluded) — REACHED 2026-10-10 and closed, extended by WP-14 on
+  2026-10-11.** 42/42 in-scope features covered (39 gap classes + 3
+  gates); 100% feature-weighted; 7361/7361 action-weighted over the
+  pinned 6011-action corpus (14 tables, run
+  `wp14-staged-20261011T093320Z`). The 2026-10-10 39/39 over the 5967
+  action corpus is superseded; the earlier 90% hurdle is subsumed.
 - **Gates 1–3 are closed with real, tested evidence:**
-  1. `gate:1` per-table completeness for all 13 pinned tables (Forms, Lua
+  1. `gate:1` per-table completeness for all 14 pinned tables (Forms, Lua
      lifecycle, Custom Types, Assets) —
      `tests/test_native_table_completeness.py`.
   2. `gate:2` Source-to-Frozen parity of the 0.9 feature set —
@@ -29,23 +33,23 @@ code/build boundaries in
      exact commands and pinned inputs —
      `tests/test_native_repro_chain.py` (denominator → feature matrix →
      AP-11 manifest, byte-identical per fixed run-id).
-- **AP-11 (observed real-game effect for all 5967 pinned actions)
+- **AP-11 (observed real-game effect for all 6011 pinned actions)
   remains a separate end goal** — 0 confirmed so far — and is excluded
   from the 100% feature metric.
 - **Final product acceptance** is separate on Windows (clean PC/VM, no
   CE/Python) and on a real Steam Deck under Proton with touch operation.
   `runtime_unverified` stays set until both pass.
 
-## 2. Confirmed state (0.9.0-rc2)
+## 2. Confirmed state (0.9.0-rc2 + WP-14 staged capabilities, 2026-10-11)
 
 | Item | Value |
 | --- | --- |
 | Repository baseline | `main` @ `b6c48cc` "initial 0.9 version" (self-contained clean-room tree) |
 | Version | `0.9.0-rc2` (root `VERSION` file) |
-| Test suite | **2617 OK / 25 expected skips** (in-build suite of the offline build) |
-| Feature matrix | **39/39 covered** (100% feature-weighted, 7332/7332 action-weighted) — `gap_inventory/feature-coverage.json` |
-| AP-11 manifest | 13 tables, 5967 expected actions, 0 confirmed, all consistency gates `all_ok` — `gap_inventory/ap11-campaign.json` |
-| Latest verified build | `native-20261010T172336Z-ffe35eb0` via `scripts/Build-Native.ps1`: both ZIPs, in-build suite 2617/25, `ce_inputs: []`, `api-prototypes.json` present in both EXE payload inventories, `runtime_unverified` deliberately set |
+| Test suite | **2671 OK / 25 expected skips, 0 failures** (full local dev suite on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`, verified 2026-10-11 at the canonical path); latest in-build suite still 2617/25 (rc2 build) |
+| Feature matrix | **42/42 covered** (100% feature-weighted, 7361/7361 action-weighted; run `wp14-staged-20261011T093320Z`) — `gap_inventory/feature-coverage.json` |
+| AP-11 manifest | 14 tables, 6011 expected actions, 0 confirmed, all consistency gates `all_ok` (run `wp14-staged-20261011T093320Z`) — `gap_inventory/ap11-campaign.json` |
+| Latest verified build | `native-20261010T172336Z-ffe35eb0` via `scripts/Build-Native.ps1`: both ZIPs, in-build suite 2617/25, `ce_inputs: []`, `api-prototypes.json` present in both EXE payload inventories, `runtime_unverified` deliberately set. WP-14 work is not yet in a verified build; the 0.9.0-rc3 build is cut from `main` after the WP-14 merge |
 | User-tested portable | run `native-20261010T165731Z-3d1da645`: converter run + generated trainer verified by the user on a machine without CE/Python |
 
 ### Portable frozen-build fix (2026-10-10)
@@ -64,20 +68,27 @@ portable converter now generates a trainer EXE inside the ZIP.
 ## 3. Deterministic measurement chain
 
 All committed `gap_inventory/` artifacts are reproducible byte-identically
-from the committed corpus with a fixed run id:
+from the committed corpus with a fixed run id. Stage 2 and stage 3 refuse
+to write into the directory that contains their input artifacts, so each
+writes to a scratch directory and the result is copied into
+`gap_inventory/`; stage 3 consumes the committed
+`gap_inventory/feature-coverage.json` so its provenance matches the
+committed manifest:
 
 ```
 python tools/corpus_denominator/__main__.py --corpus TableReferences --output gap_inventory --run-id repo-reproducible
-python tools/corpus_denominator/feature_matrix.py --output gap_inventory --run-id repo-reproducible
-python tools/corpus_denominator/ap11_campaign.py manifest --output gap_inventory --run-id repo-reproducible
+python tools/corpus_denominator/feature_matrix.py --gap-report gap_inventory/gap-report.json --inventory gap_inventory/inventory.json --output <scratch2> --run-id repo-reproducible
+copy <scratch2>/feature-coverage.json gap_inventory/feature-coverage.json
+python tools/corpus_denominator/ap11_campaign.py manifest --gap-report gap_inventory/gap-report.json --inventory gap_inventory/inventory.json --feature-coverage gap_inventory/feature-coverage.json --corpus-root TableReferences --output <scratch3> --run-id repo-reproducible
+copy <scratch3>/ap11-campaign.json gap_inventory/ap11-campaign.json
 ```
 
 The committed artifacts are the reference; gate:3
 (`tests/test_native_repro_chain.py`) re-runs the full chain and compares.
-Corpus: 13 synthetic case tables (`TableReferences/case-01.ct` …
-`case-13.ct`, see `TableReferences/README.md` for the case-to-origin
-mapping), 147 distinct SHA-256 hashes collapsed to 13 pinned cases,
-5967 expected actions.
+Corpus: 14 synthetic case tables (`TableReferences/case-01.ct` …
+`case-14.ct`, see `TableReferences/README.md` for the case-to-origin
+mapping), 148 distinct SHA-256 hashes collapsed to 14 pinned cases,
+6011 expected actions.
 
 ## 4. Prioritized open work
 

@@ -5,7 +5,9 @@
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-10, 0.9.0-rc2):** the repository is a
+**CT2Trainer (status 2026-10-11, 0.9.0-rc2 released, WP-14 "Staged
+Capabilities" in cycle on working branch `native-0.9-staged`):** the
+repository is a
 self-contained, clean-room development base for an independently designed,
 source/binary-redistributable converter and trainer with **no CE
 implementation inputs or binaries at all**. It was formerly named
@@ -26,14 +28,15 @@ notices, local changes and build evidence. Never inspect or copy CE
 implementation code for the implementation; public API/format contracts
 may be derived.
 
-**Feature-matrix goal:** 100% coverage without AP-11. 39/39 in-scope
-features covered (100% feature-weighted; 7332/7332 action-weighted;
+**Feature-matrix goal:** 100% coverage without AP-11. 42/42 in-scope
+features covered (100% feature-weighted; 7361/7361 action-weighted;
 `gap_inventory/feature-coverage.json`, run
-`wpB-cleanroom4-20261010T104008Z`). The 90% hurdle and the 100% goal are
-reached and closed. All three gate features are closed with **real,
+`wp14-staged-20261011T093320Z`; the 2026-10-10 39/39 over
+`wpB-cleanroom4-20261010T104008Z` is superseded). The 90% hurdle and the
+100% goal are reached and closed. All three gate features are closed with **real,
 tested** evidence (2026-10-10):
 
-1. `gate:1` – per-table completeness for all 13 pinned tables
+1. `gate:1` – per-table completeness for all 14 pinned tables
    (Forms, Lua lifecycle, Custom Types, Assets):
    `tests/test_native_table_completeness.py` (every source record
    preserved; each table-level construct handled or surfaced fail-closed;
@@ -52,13 +55,15 @@ tested** evidence (2026-10-10):
 
 Gate flips happen only with **real, tested** evidence; gate action weights
 remain 0 (completeness/proof features, not record actions). The AP-11
-campaign (5967 expected actions, 0 confirmed so far) remains a
+campaign (6011 expected actions, 0 confirmed so far) remains a
 **separate end goal** and is excluded from the 100% feature metric.
 
 **Corpus:** `TableReferences/` is the synthetic clean-room corpus
-(`case-01.ct` … `case-13.ct`; case-to-origin mapping in
-`TableReferences/README.md`). It is strictly read-only input; distributed
-releases never contain original game tables.
+(`case-01.ct` … `case-14.ct`; case-to-origin mapping in
+`TableReferences/README.md`). `case-14.ct` is the WP-14 PRAGMATA
+behaviour derivative (staged capabilities, signed offsets, activation
+sets). It is strictly read-only input; distributed releases never contain
+original game tables.
 
 **Distributed-release naming:** fresh builds produce
 `CT2Trainer-<version>-source.zip` and
@@ -79,6 +84,11 @@ is local-only by design and excluded from distributed ZIPs.
 suite 2617 OK / 25 regular skips, `ce_inputs: []`, `runtime_unverified`
 deliberately kept per gate). The portable ZIP was user-tested on a
 machine without CE or Python (converter run plus generated trainer).
+WP-14 work (14-table corpus, staged capabilities) is not yet in a
+verified build; the 0.9.0-rc3 build will be cut from `main` after the
+WP-14 merge including the gate-test rework
+(`54b172e`; full local dev suite at the canonical path: 2671 OK / 25
+skips, 0 failures).
 
 Workflow policy: each implementation cycle (milestone 0.9 and beyond)
 runs on its own working branch (e.g. `native-0.9`); within a cycle, after

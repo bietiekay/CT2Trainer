@@ -36,12 +36,17 @@ shapes; the tables themselves contain no game code, assets or strings.
 ## Usage
 
 The pinned case files are the inputs for the deterministic measurement
-chain (see `documentation/native-verification.md`):
+chain (see `documentation/native-verification.md`). Stage 2 and stage 3
+refuse to write into the directory containing their inputs, so each uses a
+scratch output directory; stage 3 consumes the committed
+`gap_inventory/feature-coverage.json` so its provenance stays byte-stable:
 
 ```
 python tools/corpus_denominator/__main__.py --corpus TableReferences --output gap_inventory --run-id repo-reproducible
-python tools/corpus_denominator/feature_matrix.py --output gap_inventory --run-id repo-reproducible
-python tools/corpus_denominator/ap11_campaign.py manifest --output gap_inventory --run-id repo-reproducible
+python tools/corpus_denominator/feature_matrix.py --gap-report gap_inventory/gap-report.json --inventory gap_inventory/inventory.json --output <scratch2> --run-id repo-reproducible
+copy <scratch2>/feature-coverage.json gap_inventory/feature-coverage.json
+python tools/corpus_denominator/ap11_campaign.py manifest --gap-report gap_inventory/gap-report.json --inventory gap_inventory/inventory.json --feature-coverage gap_inventory/feature-coverage.json --corpus-root TableReferences --output <scratch3> --run-id repo-reproducible
+copy <scratch3>/ap11-campaign.json gap_inventory/ap11-campaign.json
 ```
 
 Byte-identical output requires the identical corpus bytes and run id; the
