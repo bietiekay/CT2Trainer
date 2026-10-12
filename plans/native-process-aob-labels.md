@@ -198,3 +198,4 @@ full suite at the canonical path at integration.
 | Date | Change / next checkpoint | Evidence / open work |
 | --- | --- | --- |
 | 11.10.2026 | WP-18 plan | base `main` @ `55f1dcd` (0.10, after WP-17 integration); probe evidence in `side/evidence/` |
+| 12.10.2026 | WP-18 integrated | lane commit `76ab9e2` (4 files: `aa.py`, `aa_program.py`, `engine.py`, `tests/test_native_process_aob_label.py` — 12 tests); merged to `main` at `9a76eb8`; canonical suite 2710 OK / 25 skips / 0 failures; PRAGMATA reference re-measured: 595 supported / 0 blocked (was 586 / 9); cascade entries 12–17 staged on provider 11, entry 26 staged on provider 25; worktree + branch removed |
