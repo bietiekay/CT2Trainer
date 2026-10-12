@@ -199,8 +199,11 @@ def _section(lines: list[str], inherited: set[str]) -> tuple[list[dict], set[str
                     if not (module.startswith('"') and module.endswith('"') and module.count('"') == 2):
                         raise AAError("Scan module quotes must be balanced.")
                     module = module[1:-1]
-                # Reuse the address grammar to reject paths and executable text.
-                validate_expression('"' + module + '"')
+                # Reuse the address grammar to reject paths and executable
+                # text.  The $process token names the main module of the
+                # attached process and bypasses the module-basename grammar.
+                if module != "$process":
+                    validate_expression('"' + module + '"')
                 introduce(symbol)
                 operations.append({"op": "scan", "symbol": symbol, "module": module,
                                    "pattern": normalize_pattern(pattern)})

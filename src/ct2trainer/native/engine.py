@@ -1820,7 +1820,8 @@ class TrainerEngine:
         for op in entry[section]:
             operation = op["op"]
             if operation == "scan":
-                symbols[op["symbol"].casefold()] = self.memory.scan_module(op["module"], op["pattern"])
+                module = self.plan["process_name"] if op["module"] == "$process" else op["module"]
+                symbols[op["symbol"].casefold()] = self.memory.scan_module(module, op["pattern"])
             elif operation == "define":
                 symbols[op["symbol"].casefold()] = self.memory.resolve(op["expression"], symbols)
             elif operation == "register":
@@ -2384,7 +2385,8 @@ class TrainerEngine:
         for op in entry["enable"]:
             operation = op["op"]
             if operation == "scan":
-                symbols[op["symbol"].casefold()] = self.memory.scan_module(op["module"], op["pattern"])
+                module = self.plan["process_name"] if op["module"] == "$process" else op["module"]
+                symbols[op["symbol"].casefold()] = self.memory.scan_module(module, op["pattern"])
             elif operation == "define":
                 symbols[op["symbol"].casefold()] = self.memory.resolve(op["expression"], symbols)
             elif operation == "write":
