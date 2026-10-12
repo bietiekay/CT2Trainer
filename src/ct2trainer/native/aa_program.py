@@ -777,14 +777,6 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         raise ProgramError("Only define is permitted before ENABLE.")
     if not any(node["op"] in {"data", "instruction", "nops", "readmem", "reassemble"} for node in sections["enable"]):
         raise ProgramError("Enable section has no executable patch or data.")
-    for phase in ("enable", "disable"):
-        anonymous_positions = [index for index, node in enumerate(sections[phase]) if node["op"] == "cursor" and node["expression"] == "@@"]
-        for index, node in enumerate(sections[phase]):
-            if node["op"] == "instruction":
-                tokens = _operand_tokens(node["text"].split(None, 1)[1] if len(node["text"].split(None, 1)) == 2 else "")
-                for token in tokens:
-                    if token.casefold() == "@f" and not any(position > index for position in anonymous_positions) or token.casefold() == "@b" and not any(position < index for position in anonymous_positions):
-                        raise ProgramError("Anonymous forward/backward label has no target.")
     # A plain label ("endp:") inside a program-owned allocation defines a
     # local jump/data target owned by this program; outside such a region a
     # plain label keeps the classic semantics of positioning the cursor at
@@ -846,6 +838,48 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
                     in_alloc = False
             else:
                 in_alloc = False
+    # Anonymous-label validation with trailing-@f fallback: an explicit @@
+    # cursor always wins for forward references; a forward reference without
+    # a following @@ in the same phase falls back to the next positioned
+    # named label (declared label, named @ label, or plain label inside a
+    # program-owned allocation) — the same located criterion the generation
+    # pass applies.  @b still requires a preceding explicit @@ cursor;
+    # without any resolvable target the fail-closed refusal is kept.
+    program_symbol_keys = {node["symbol"].casefold()
+                           for node in sections["preamble"] + sections["enable"]
+                           if node["op"] in {"scan", "scan_region", "scan_process", "alloc", "define"}}
+    for phase in ("enable", "disable"):
+        phase_nodes = sections[phase]
+        anonymous_positions = [index for index, node in enumerate(phase_nodes)
+                               if node["op"] == "cursor" and node["expression"] == "@@"]
+        declared_for_phase = {symbol.casefold()
+                              for node in sections["preamble"] + sections["enable"] + (sections[phase] if phase == "disable" else [])
+                              if node["op"] == "label" for symbol in node["symbols"]}
+        named_positions = []
+        in_alloc = False
+        for index, node in enumerate(phase_nodes):
+            if node["op"] == "alloc":
+                in_alloc = True
+                continue
+            elif node["op"] == "dealloc":
+                in_alloc = False
+                continue
+            elif node["op"] != "cursor" or node["expression"] == "@@":
+                continue
+            expression = node["expression"]
+            key = expression.casefold()
+            if key in declared_for_phase or expression.startswith("@"):
+                named_positions.append(index)
+            elif in_alloc and _SYMBOL_TOKEN.fullmatch(expression) and key not in program_symbol_keys:
+                named_positions.append(index)
+            else:
+                in_alloc = key in alloc_keys
+        for index, node in enumerate(phase_nodes):
+            if node["op"] == "instruction":
+                tokens = _operand_tokens(node["text"].split(None, 1)[1] if len(node["text"].split(None, 1)) == 2 else "")
+                for token in tokens:
+                    if token.casefold() == "@f" and not any(position > index for position in anonymous_positions + named_positions) or token.casefold() == "@b" and not any(position < index for position in anonymous_positions):
+                        raise ProgramError("Anonymous forward/backward label has no target.")
     for key, symbol in provides.items():
         if key not in locals_:
             # Registering a dependency does not confer ownership over it.
@@ -1146,7 +1180,7 @@ def _memory_operands(node, names):
     return targets
 
 
-def _located_value(text, index, anonymous, locations, memory, symbols, program, registers=()):
+def _located_value(text, index, anonymous, locations, memory, symbols, program, registers=(), named=()):
     output = []
     for token in _operand_tokens(text):
         if token in registers:
@@ -1155,7 +1189,13 @@ def _located_value(text, index, anonymous, locations, memory, symbols, program, 
             label = next(name for position, name in reversed(anonymous) if position < index)
             output.append("0x" + format(locations[label], "X"))
         elif token.casefold() == "@f":
-            label = next(name for position, name in anonymous if position > index)
+            label = next((name for position, name in anonymous if position > index), None)
+            if label is None:
+                # Trailing-@f fallback: no explicit @@ after this reference,
+                # so target the next positioned named label of the phase.
+                label = next((name for position, name in named if position > index), None)
+            if label is None:
+                raise ProgramError("Anonymous forward label has no target.")
             output.append("0x" + format(locations[label], "X"))
         elif token.casefold() in symbols and _SYMBOL_TOKEN.fullmatch(token):
             # Compare the exact bound symbol value used by the assembler.
@@ -1596,6 +1636,14 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
             if current is None:
                 raise ProgramError("Machine code/data appears before any address cursor.")
             current["nodes"].append((index, node))
+    # Fallback targets for a forward anonymous reference without a following
+    # @@: the positioned named labels of this phase (declared/named-@ labels
+    # and plain labels inside program-owned allocations) in program order.
+    named_labels = [(number, label_node["name"])
+                    for section in sections
+                    for number, label_node in section["nodes"]
+                    if label_node["op"] == "location"
+                    and not label_node["name"].startswith("tf_anon_")]
     if not sections:
         if phase == "enable":
             raise ProgramError("Program has no patch sections.")
@@ -1652,6 +1700,8 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                 op = node["op"]
                 backward = next((label for number, label in reversed(anonymous) if number < index), None)
                 forward = next((label for number, label in anonymous if number > index), None)
+                if forward is None:
+                    forward = next((label for number, label in named_labels if number > index), None)
                 if op == "location":
                     lines.append(node["name"] + ":")
                 elif op == "instruction":
@@ -1794,10 +1844,10 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                 data = binary[offset + start - address:offset + end - address]
                 check = instruction_checks[index]
                 if check["branch"] is not None:
-                    target = _located_value(check["branch"], index, anonymous, locations, memory, linked_symbols, program)
+                    target = _located_value(check["branch"], index, anonymous, locations, memory, linked_symbols, program, named=named_labels)
                     _check_direct_branch(data, start, target, program["bitness"])
                 for operand in check["memory"]:
-                    target = _located_value(operand["expression"], index, anonymous, locations, memory, linked_symbols, program, operand["registers"])
+                    target = _located_value(operand["expression"], index, anonymous, locations, memory, linked_symbols, program, operand["registers"], named=named_labels)
                     _check_memory_displacement(data, start, target, program["bitness"], bool(operand["registers"]))
             if not _literal_data(node):
                 continue
