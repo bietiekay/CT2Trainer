@@ -5,8 +5,8 @@
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-11, 0.11 released with WP-15 + WP-17;
-0.9.0-rc2 was the last user-tested release; WP-18 in flight; working
+**CT2Trainer (status 2026-10-11, 0.11 released with WP-15 + WP-17 + WP-18;
+0.9.0-rc2 was the last user-tested release; working
 branch `native-0.9-staged` tracks the milestone):** the
 repository is a
 self-contained, clean-room development base for an independently designed,
@@ -81,20 +81,24 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261011T182033Z-f3317337` (0.11,
-cut from `main` @ `2a16026`; in-build suite 2698 OK / 25 regular skips,
+**Latest verified build:** `native-20261012T092729Z-2d8aaf12` (0.11,
+cut from `main` @ `9a76eb8`; in-build suite 2710 OK / 25 regular skips,
 `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; source
 ZIP `CT2Trainer-0.11-source.zip` sha256
-`6a379e2f4337f4f4b83e86abed292d8ac853e370a75c7c8e78bba4158f5c3fd7`,
+`168c14a452595588a6483140f1d43bec818d0f0d0e9eb72167453a80624469db`,
 portable ZIP `CT2Trainer-0.11-windows-portable.zip` sha256
-`8553947281ae12b080e7b6ae8d03d38c047552eb31b749faffa91d255971aa93`).
+`8a2d6ac6f8b802714fe7578de54cea432506a41f8bf91d597a03fa086b04f196`).
 The 0.11 build contains WP-15 (L2-37 executable bitfield writes, merge
-`d3316aa`) and WP-17 (version display + repository link, merge
-`557b2ac`). Previous builds: `native-20261011T121914Z-bfc5fc11`
-(0.10, full WP-14 work, in-build suite 2671 OK / 25 regular skips);
-`native-20261010T172336Z-ffe35eb0` (0.9.0-rc2, in-build suite
-2617 OK / 25 regular skips) was user-tested on a machine without CE or
-Python (converter run plus generated trainer).
+`d3316aa`), WP-17 (version display + repository link, merge `557b2ac`)
+and WP-18 (`$process` AOB token + trailing `@F` fallback, merge
+`9a76eb8`; PRAGMATA reference table 595/595 supported, 0 blocked).
+Superseded 0.11 run: `native-20261011T182033Z-f3317337` (pre WP-18,
+in-build suite 2698 OK / 25 regular skips). Previous:
+`native-20261011T121914Z-bfc5fc11` (0.10, full WP-14 work, in-build
+suite 2671 OK / 25 regular skips); `native-20261010T172336Z-ffe35eb0`
+(0.9.0-rc2, in-build suite 2617 OK / 25 regular skips) was user-tested
+on a machine without CE or Python (converter run plus generated
+trainer).
 
 Workflow policy: each implementation cycle (milestone 0.9 and beyond)
 runs on its own working branch (e.g. `native-0.9`); within a cycle, after

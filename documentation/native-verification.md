@@ -13,7 +13,7 @@ committed.
 
 | Item | Value |
 | --- | --- |
-| Release version | `0.9.0-rc2` released; `0.11` in the root `VERSION` file, build `native-20261011T182033Z-f3317337` cut from `main` @ `2a16026` (2026-10-11) |
+| Release version | `0.9.0-rc2` released; `0.11` in the root `VERSION` file, build `native-20261012T092729Z-2d8aaf12` cut from `main` @ `9a76eb8` (2026-10-12) |
 | Build entry point | `scripts/Build-Native.ps1` (fully offline, no network) |
 | Full native suite | **2698 OK / 25 expected skips, 0 failures** (full local dev suite on `main` after the WP-17 merge `557b2ac`, verified 2026-10-11 at the canonical path; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2698/25 passed (build `native-20261011T182033Z-f3317337`); previously 2671/25 (build `native-20261011T121914Z-bfc5fc11`) |
 | CE inputs in the build | none (`ce_inputs: []` in `build.json`) |
