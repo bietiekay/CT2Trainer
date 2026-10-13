@@ -306,7 +306,9 @@ class ConditionalRefusalTests(unittest.TestCase):
             prepare_program(source, PROCESS)
 
     def test_unrelated_directives_stay_refused(self):
-        for line in ("{$lua}", "{$asm}", "{$STRICT}", "{$alloc(x,10)}",
+        # WP-26: {$asm} and {$STRICT} are accepted no-ops now; every other
+        # non-conditional {$...} form keeps its named fail-closed refusal.
+        for line in ("{$lua}", "{$alloc(x,10)}",
                      "{$undefine A}"):
             with self.subTest(line=line):
                 source = ("[ENABLE]\n"
@@ -317,8 +319,38 @@ class ConditionalRefusalTests(unittest.TestCase):
                           "FixtureTarget.exe+40:\n"
                           "db 00\n")
                 with self.assertRaisesRegex(
-                        ProgramError, "preprocessor directives are unsupported"):
+                        ProgramError, r"Non-profile \{\$...\} directive"):
                     prepare_program(source, PROCESS)
+
+    def test_noop_directives_are_stripped(self):
+        # WP-26: CE-recognized no-op directives are stripped, not refused;
+        # the parsed program is identical to the directive-free source
+        # (the stored original source and its hash differ by definition).
+        for line in ("{$asm}", "{$STRICT}", "{$ccode}", "{$luacode}",
+                     "{$try}", "{$except}"):
+            with self.subTest(line=line):
+                source = ("[ENABLE]\n"
+                          + line + "\n"
+                          "FixtureTarget.exe+40:\n"
+                          "db 01\n"
+                          "[DISABLE]\n"
+                          "FixtureTarget.exe+40:\n"
+                          "db 00\n")
+                plain = source.replace(line + "\n", "")
+                decorated = prepare_program(source, PROCESS)
+                bare = prepare_program(plain, PROCESS)
+                for key in ("source", "source_sha256"):
+                    decorated.pop(key)
+                    bare.pop(key)
+                self.assertEqual(decorated, bare)
+                for directive in ("{$", "$strict", "$ccode", "$luacode",
+                                  "$asm", "$try", "$except"):
+                    self.assertNotIn(directive,
+                                     "".join(
+                                         repr(node)
+                                         for key in ("preamble", "enable", "disable")
+                                         for node in decorated[key])
+                                     .casefold())
 
 
 class ConditionalCompilerTests(unittest.TestCase):

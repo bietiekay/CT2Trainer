@@ -76,6 +76,11 @@ _CONDITIONAL_DIRECTIVES = {
     "endif": re.compile(r"\{\$endif\}\Z", re.IGNORECASE),
     "define": re.compile(r"\{\$define\s.+\}\Z", re.IGNORECASE),
 }
+# CE 7.5 recognizes these {$...} directives in this profile as no-ops; they
+# are stripped rather than refused (WP-26). The bare mode marker ``{$asm}``
+# outside an explicit Lua section is a redundant no-op in the same sense.
+_NOOP_DIRECTIVES = frozenset(
+    ("{$asm}", "{$ccode}", "{$luacode}", "{$strict}", "{$try}", "{$except}"))
 _DEFINE_DIRECTIVE = re.compile(
     r"\{\$define\s+([A-Za-z_][A-Za-z0-9_]*)\s+"
     r"([+-]?(?:0x[0-9A-Fa-f]+|\$[0-9A-Fa-f]+|[0-9]+))\s*\}\Z", re.IGNORECASE)
@@ -260,9 +265,12 @@ def _clean_source(source: str) -> str:
         elif not quote and pair == "{$":
             end = source.find("}", index)
             token = source[index:end + 1].strip() if end > index and "\n" not in source[index:end] else None
-            if token is None or not any(pattern.fullmatch(token) for pattern in _CONDITIONAL_DIRECTIVES.values()):
+            if token is None:
                 raise ProgramError("Lua, C and compiler/preprocessor directives are unsupported.")
-            output.append(token)
+            if any(pattern.fullmatch(token) for pattern in _CONDITIONAL_DIRECTIVES.values()):
+                output.append(token)
+            elif token.casefold() not in _NOOP_DIRECTIVES:
+                raise ProgramError("Non-profile {$...} directive: " + token[2:-1].strip())
             index = end + 1
             continue
         elif not quote and source[index] == "{":
