@@ -1,8 +1,14 @@
 # CT2Trainer: Native progress ledger
 
-Status: **October 11, 2026** (0.11 in cycle on working branch
-`native-0.9-staged`; latest release 0.11; WP-18 in flight). This is
-the binding result list:
+**Central tracking:** all open gaps, goals, work packages, corpus cases and
+the measurement snapshot are tracked in one place:
+[`plans/TRACKING.md`](../plans/TRACKING.md). This ledger keeps the
+confirmed-state detail (builds, suites, acceptance records); when in doubt
+about current status, check the tracker first.
+
+Status: **October 13, 2026** (0.11 released; reference-corpus closure
+cycle opened on working branch `native-0.12`, plan
+`plans/reference-closure-continuation.md`). This is the binding result list:
 confirmed state, measured numbers, and the prioritized open work. The
 plan (work packages, protocol) lives in
 [`plans/native-implementation-continuation.md`](../plans/native-implementation-continuation.md);
@@ -52,6 +58,7 @@ code/build boundaries in
 | AP-11 manifest | 14 tables, 6011 expected actions, 0 confirmed, all consistency gates `all_ok` (run `wp14-staged-20261011T093320Z`) — `gap_inventory/ap11-campaign.json` |
 | Latest verified build | `native-20261011T182033Z-f3317337` (0.11) via `scripts/Build-Native.ps1` from `main` @ `2a16026` (2026-10-11): both ZIPs (`CT2Trainer-0.11-source.zip`, `CT2Trainer-0.11-windows-portable.zip`), in-build suite 2698 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately set, source inputs unchanged. Previous: `native-20261011T121914Z-bfc5fc11` (0.10, in-build suite 2671/25); `native-20261010T172336Z-ffe35eb0` (rc2, in-build suite 2617/25, `api-prototypes.json` present in both EXE payload inventories, user-tested portable) |
 | User-tested portable | run `native-20261010T165731Z-3d1da645`: converter run + generated trainer verified by the user on a machine without CE/Python |
+| Reference-corpus assessment (2026-10-13) | 151 local-only reference tables, 117,019 plan entries: 95,167 supported (incl. 46,987 staged), **21,852 blocked**, 4 whole-table compile errors (run `ref-assessment`); consolidated assessment `documentation/reference-gap-assessment.md`, closure plan `plans/reference-closure-continuation.md` (WP-19…WP-42) |
 
 ### Portable frozen-build fix (2026-10-10)
 
@@ -93,26 +100,35 @@ mapping), 148 distinct SHA-256 hashes collapsed to 14 pinned cases,
 
 ## 4. Prioritized open work
 
-1. **AP-11 real-game campaign (the end goal).** Runbook:
+1. **Reference-corpus closure campaign (active since 2026-10-13, cycle
+   branch `native-0.12`).** The 151-table local-only reference corpus
+   leaves **21,852 of 117,019 entries blocked** (95,167 supported incl.
+   46,987 staged; 4 whole-table compile errors) — consolidated
+   assessment: `documentation/reference-gap-assessment.md`; work
+   packages WP-19…WP-42 (waves, dependencies, derivative corpus cases
+   case-15…case-25, catalog-re-run acceptance protocol):
+   `plans/reference-closure-continuation.md`. Best-case closure ≈ 85 %
+   of the blocked entries; residue is documented fail-closed.
+2. **AP-11 real-game campaign (the end goal).** Runbook:
    [`native-ap11-campaign.md`](native-ap11-campaign.md). Manifest + report
    ingestion tooling are ready (`ap11_campaign.py`). Suggested start:
    the small tables — case-05 (9, clock), case-03 (32, mono), case-04
    (25, IL2CPP), case-08 (16, typed calls) — before case-07 (5152
    actions). Each confirmed observation moves the campaign counter; the
    denominator document and campaign state stay under `gap_inventory/`.
-2. **Final acceptance Windows (clean PC/VM, no CE/Python):** portable
+3. **Final acceptance Windows (clean PC/VM, no CE/Python):** portable
    converter start, new trainer, Unicode paths, settings/state,
    notices/rights/UAC, debugger conflicts; full toggle/freeze/one-shot/
    value roundtrips including controller restart and saved-wish replay.
-3. **Final acceptance Steam Deck:** real Proton prefix, touch operation,
+4. **Final acceptance Steam Deck:** real Proton prefix, touch operation,
    x86/x64 targets, screen keyboard, hotkeys, state/freeze/clock, exit
    behavior (protocol: `tests/deck/compatibility-matrix.md`).
-4. **0.10 release closure** after (1)–(3): the 0.10 build
-   `native-20261011T121914Z-bfc5fc11` is already cut from `main`; record
+5. **Release closure (0.11 current)** after (2)–(4): the 0.11 build
+   `native-20261012T092729Z-2d8aaf12` is cut from `main`; record
    the observed build (versions, hashes, setup, result) from the
    acceptance runs in this ledger and `native-verification.md`, then flip
    `runtime_unverified`.
-5. **Maintenance:** keep `runtime_unverified` honest; record every
+6. **Maintenance:** keep `runtime_unverified` honest; record every
    Windows/Deck observation with build id, hashes, setup and result
    before raising the status.
 

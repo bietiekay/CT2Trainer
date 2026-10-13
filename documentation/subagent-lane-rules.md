@@ -18,7 +18,12 @@ and pushes.
 
 ## 2. Absolute prohibitions (NEVER)
 
-- No CE implementation code inspection or copying. No CE binaries.
+- No copying or deriving CE implementation code. The Cheat Engine 7.5
+  source tree at `C:\Users\xboxl\code\cheat-engine-7.5` is a
+  **behavior reference only** (2026-10-13 user decision): you may READ it
+  to understand how CE handles a behavior, but every implementation stays
+  clean-room — no copied, derived or ported code, no CE binaries. All
+  other CE implementation sources remain off-limits.
 - No writes to `TableReferences/` (strictly read-only corpus input).
   The synthetic corpus is fully committed; a file missing from your
   worktree means a stale checkout — sync from the main checkout first,
