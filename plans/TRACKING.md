@@ -1,7 +1,8 @@
 # CT2Trainer — Central Gap & Goal Tracking
 
 **Status: 2026-10-13** (baseline `main` @ `9a76eb8`, 0.11, build
-`native-20261012T092729Z-2d8aaf12`, suite 2710 OK / 25 expected skips).
+`native-20261012T092729Z-2d8aaf12`; Wave 1 in progress on `native-0.12`:
+W1-D + W1-C merged, suite 2758 OK / 25 expected skips).
 
 This is the **single central tracking document** for every gap and every goal
 of the project. It is maintained by the root agent on every integration and is
@@ -38,14 +39,14 @@ linked documents and are NOT duplicated here:
 | ID | Goal | Status | Definition of done / current state |
 | --- | --- | --- | --- |
 | GOAL-1 | Feature matrix 100% in-scope coverage without AP-11 | **done** (2026-10-11) | 42/42 features covered, 7361/7361 action-weighted (run `wp14-staged-20261011T093320Z`). Gates 1–3 closed with tested evidence. |
-| GOAL-2 | Reference-corpus closure: 151 local-only tables | **active** (since 2026-10-13, cycle `native-0.12`) | Baseline 21,852 / 117,019 entries blocked (4 whole-table compile errors). Target ≈ 85 % closure via WP-19…WP-42; residue must be `blocked-keep` with named reasons. Every closure measured by blocked-catalog re-run (§4). |
-| GOAL-3 | AP-11 real-game confirmation (6011 pinned actions) | **open** (separate end goal) | 0 confirmed. Manifest `gap_inventory/ap11-campaign.json`; runbook `documentation/native-ap11-campaign.md`. Excluded from the feature metric by definition. |
+| GOAL-2 | Reference-corpus closure: 151 local-only tables | **active** (since 2026-10-13, cycle `native-0.12`) | Baseline 21,852 / 117,019 entries blocked (4 whole-table compile errors); after W1-D + W1-C: 21,851 / 117,255 (3 whole-table errors). Target ≈ 85 % closure via WP-19…WP-42; residue must be `blocked-keep` with named reasons. Every closure measured by blocked-catalog re-run (§4). |
+| GOAL-3 | AP-11 real-game confirmation (6019 pinned actions) | **open** (separate end goal) | 0 confirmed. Manifest `gap_inventory/ap11-campaign.json`; runbook `documentation/native-ap11-campaign.md`. Excluded from the feature metric by definition. |
 | GOAL-4 | Final acceptance Windows (clean PC/VM, no CE/Python) | **open** | Portable start, trainer run, Unicode paths, UAC/rights, debugger conflict, saved-wish replay, target restart. Last user-tested release: 0.9.0-rc2 (`native-20261010T172336Z-ffe35eb0`). |
 | GOAL-5 | Final acceptance Steam Deck (real Proton, touch) | **open** | Protocol `tests/deck/compatibility-matrix.md`. |
 | GOAL-6 | `runtime_unverified` flipped | **open** | Requires GOAL-4 + GOAL-5 evidence recorded in `documentation/native-verification.md`. |
 | GOAL-7 | Release 0.12 (end of closure cycle) | **open** | After Wave 1+2 integrations are stable: full suite green, matrix artifacts regenerated, both ZIPs via `scripts/Build-Native.ps1`, `ce_inputs: []`. |
 
-## 2. Gap inventory — reference corpus (21,852 blocked entries)
+## 2. Gap inventory — reference corpus (baseline 21,852 blocked; 21,851 after W1-D/W1-C)
 
 Baseline measured 2026-10-13 (run `ref-assessment`): 151 tables, 117,019 plan
 entries, 95,167 supported (incl. 46,987 staged), 21,852 blocked, 725 distinct
@@ -57,8 +58,8 @@ reasons. IDs are stable; do not renumber.
 | --- | --- | --- | ---: | --- | --- |
 | GC-T1 | AtomicHeart-Win64-Shipping.CT | `$process` scan module rejected by `validate_plan` (compile path already accepts it: `aa.py:205`, `aa_program.py:326-328`) | 20 | WP-19 | ready |
 | GC-T2 | Cyberpunk2077.CT | NASM `@@` cursor in globalalloc escapes per-entry catch (`AddressExpressionError` not in `compiler.py:619` list) + `global_alloc.py:149` misclassifies `@@:` | 349 | WP-20 | ready |
-| GC-T3 | Octopath_Traveler-Win64-Shipping.CT | 24 duplicated CheatEntry IDs → table-level `TableError` | 260 | WP-25 | ready (design note: keep-first plan-entry model, see §3 WP-25) |
-| GC-T4 | SuperMeatBoy.CT | legacy binary CE 5.x table, not XML | n/a | WP-25 | ready (named-error polish; keeps fail-closed) |
+| GC-T3 | Octopath_Traveler-Win64-Shipping.CT | 24 duplicated CheatEntry IDs → table-level `TableError` | 260 | WP-25 | done (merged 2026-10-13: keep-first + warning, table now compiles 227 supported / 9 blocked) |
+| GC-T4 | SuperMeatBoy.CT | legacy binary CE 5.x table, not XML | n/a | WP-25 | done (named `Legacy binary CT table` TableError; stays fail-closed by design) |
 
 ### 2.2 Address-expression family (Lane B)
 
@@ -70,8 +71,8 @@ reasons. IDs are stable; do not renumber.
 | GC-B3b | annotated hex offsets (`20 (Offset of the name pointer)`) | 15 (in the 239) | same | WP-21 | ready |
 | GC-B3c | dotted-ident offsets (`GameEngine.GameInstance`) | 18 (in the 239) | malformed authoring input (not usable in CE either) | — | blocked-keep (named reason) |
 | GC-B3d | cast/deref offsets (`(dword)[pInventoryItemResource+B8]*4`) + symbol-expression offsets | 5 (in the 239) | needs per-step runtime pointer-chase semantics; no corpus evidence of broader use | — (future) | open (deferred) |
-| GC-B4 | digit-leading module basenames (`20XX.exe+47B88B8`) | 10 (whole table) | `_TOKEN` has no digit-leading `name.(exe|dll)` alternative | WP-22 | ready |
-| GC-B5 | `Class::Method` double-colon managed labels | ~15 (Kena 10, BatmanAK 5) | `_MANAGED_LABEL` allows single colon only | WP-23 | ready |
+| GC-B4 | digit-leading module basenames (`20XX.exe+47B88B8`) | 10 (whole table) | `_TOKEN` has no digit-leading `name.(exe|dll)` alternative | WP-22 | done (merged 2026-10-13; 20XX table fully supported 10/10) |
+| GC-B5 | `Class::Method` double-colon managed labels | ~15 (Kena 10, BatmanAK 5) | `_MANAGED_LABEL` allows single colon only | WP-23 | done (merged 2026-10-13; two-segment `A:B`/`A::B` alias — module-prefixed forms remain WP-30/WP-36 scope) |
 | GC-B6 | relative addresses under addressless script-parent providers (`Recorder.writeAddress` pattern, Octopath2) | 327 of 331 | no runtime dynamic address provider concept; static compilation cannot see it | WP-38 | design (schema + engine contract first) |
 | GC-B7 | SOTTR addressless-header trees | 10 (+3 via GC-B3d) | degenerate input; current reasons correct | — | blocked-keep |
 
@@ -153,11 +154,11 @@ upstream WPs land. Largest chains (verified 2026-10-13):
 | WP-19 | `$process` in `validate_plan` (one-line mirror of `aa.py:205`) | 1 | `compiler.py` | 20 + all future `$process` plans | case-15 | ready |
 | WP-20 | `@@` cursor in globalalloc + per-entry containment of `AddressExpressionError`/`GlobalError` | 1 | `global_alloc.py`, `compiler.py` (catch list) | 349 (whole table) | case-15 | ready |
 | WP-21 | pointer-offset constant folding + annotated-hex normalization (pure-integer AST gate; keep 32-offset cap) | 1 | `compiler.py` `_offsets` | 216 | case-15 | ready |
-| WP-22 | digit-leading module basenames in `_TOKEN` (ordered before bare-integer alternative) | 1 | `address_expression.py` | 10 (whole table) | case-15 | active (lane W1-C, branch `w1-c`, worktree `side/w1-c`) |
-| WP-23 | `::` managed-label alias (resolution unchanged) | 1 | `address_expression.py` | ~15 | case-15 | active (lane W1-C, branch `w1-c`, worktree `side/w1-c`) |
+| WP-22 | digit-leading module basenames in `_TOKEN` (ordered before bare-integer alternative) | 1 | `address_expression.py` | 10 (whole table) | case-15 | done (merged 2026-10-13, `w1-c`; 20XX table fully supported 10/10) |
+| WP-23 | `::` managed-label alias (resolution unchanged) | 1 | `address_expression.py` | ~15 | case-15 | done (merged 2026-10-13, `w1-c`; two-segment alias only — module-prefixed `Module.Class::Method` forms stay WP-30/WP-36 scope) |
 | WP-24 | empty-value dropdown rows = non-writable separator metadata (own + linked lists); keep all other non-literals fail-closed | 1 | `compiler.py` `_dropdown` + plan/engine validation | 10,894 | case-16 | ready |
-| WP-25 | duplicate-ID keep-first + blocked duplicate + table warning; binary-CT `CHEATENGINE\t` magic → named `TableError` (malformed XML keeps its reason) | 1 | `table.py` | 260 (whole table) + diagnostics | case-19 | active (lane W1-D, branch `w1-d`, worktree `side/w1-d`; keep-first model decided, plan §10) |
-| WP-26 | Lua directives (`{$STRICT}`/`{$ccode}`/`{$luacode}` no-op pass-through; accurate unknown-directive error) + phase markers structural inside explicit `{$lua}` blocks (close chunk at marker, route text per phase, pre-`[ENABLE]` runs in both phases) + redundant `{$asm}` no-op | 1 | `lua_program.py`, `aa_program.py` | 167 direct + ~522 cascade | case-20 | active (lane W1-E, branch `w1-e`, worktree `side/w1-e`) |
+| WP-25 | duplicate-ID keep-first + blocked duplicate + table warning; binary-CT `CHEATENGINE\t` magic → named `TableError` (malformed XML keeps its reason) | 1 | `table.py` | 260 (whole table) + diagnostics | case-19 | done (merged 2026-10-13, `w1-d`; case-19 pinned; open follow-ups owned by W1-A: plan-warning forwarding + first-wins `nodes`/`scripts` map) |
+| WP-26 | Lua directives (`{$STRICT}`/`{$ccode}`/`{$luacode}` no-op pass-through; accurate unknown-directive error) + phase markers structural inside explicit `{$lua}` blocks (close chunk at marker, route text per phase, pre-`[ENABLE]` runs in both phases) + redundant `{$asm}` no-op | 1 | `lua_program.py`, `aa_program.py` | 167 direct + ~522 cascade | case-20 | active (lane W1-E relaunched 2026-10-13 with in-context design; two prior sessions exited without commits — root watching) |
 | WP-27 | profile-aware linked dropdowns (remove `value_profile` guard; per-choice `parse_profile_value`; mixed-length byte-array choice → per-record block naming the choice) | 2 | `compiler.py`, `value_types.py`, `engine.py` validation | up to 1,215 (−≥204 dangling) | case-16 | ready (after WP-24 merge) |
 | WP-28 | per-program label scoping; positional `return:` label resolves to own patch end; table-wide registry becomes explicit symbol channel only | 2 | `aa_program.py`, `compiler.py` label registry | ~2,530 | case-18 | ready |
 | WP-29 | `alloc` in data dialect + allocation-only init profile (no game write; `dealloc`/`unregistersymbol` on disable; no dead-allocation publication) | 2 | `aa.py`, `aa_program.py`, compiler provider handling | ~540 | case-18 | ready |
@@ -186,7 +187,7 @@ touch `compiler.py` label-registry hunks concurrently with WP-28.
 | Ownership-handover contract | WP-37 | exact `external_owned_providers` schema; ambiguity resolution (deterministic pick vs. named block); teardown-order proof plan |
 | Dynamic-provider contract | WP-38 | plan schema field + versioning; invalidation of cached bases; re-attach semantics for saved ON-switches; UI marker contract |
 | Table-Lua phase-1 scope | WP-41 | read-only API subset list; block-reason taxonomy; banner metadata location in plan |
-| Duplicate-ID plan model | WP-25 | **decided 2026-10-13** (plan §10): keep-first is the plan entry, later duplicates dropped + one table warning; plan total = unique-ID count so gate:1 assertion holds; gate:1 count updated by root when case-19 is pinned |
+| Duplicate-ID plan model | WP-25 | **decided 2026-10-13** (plan §10), **consumed 2026-10-13** (W1-D merged; case-19 pinned, gate:1 updated 14→15) |
 
 ## 4. Corpus cases (synthetic clean-room, `TableReferences/`)
 
@@ -207,7 +208,7 @@ assertion updated accordingly):
 | case-16 | linked dropdowns + separator rows (shared list w/ empty-value rows, linked bit-field + byte-array records incl. one wrong-length choice, one dangling link target) | WP-24, 27, 34 | planned |
 | case-17 | template demotion & edge types (addressless simple + profile value rows, `ShowAsHex` string + float, custom type w/o definition) | WP-32, 33, A6/A8 | planned |
 | case-18 | AA label & directive pack (positional `return:` in two scripts, alloc-only init + consumers, 2-arg `dealloc`, multi-token `registersymbol`, `registerlabel`, `fullaccess`, `/* */`, operand-less `dq`/`resb`, process-wide `aobscan`, 3-arg `globalalloc`) | WP-28, 29, 31, 35, 36 | planned |
-| case-19 | table robustness (duplicate-ID pair, one a group with children; binary `CHEATENGINE\t` header file as a separate fixture) | WP-25, 39 | planned |
+| case-19 | table robustness (duplicate-ID pairs incl. a dropped duplicate group carrying a unique child, re-parented keep-first; binary `CHEATENGINE\t` header covered by the dedicated inline test fixture in `test_native_table_robustness.py`, not a corpus file) | WP-25, 39 | **pinned 2026-10-13** (SHA-256 `80690e82…`, `ct2synth19.exe`) |
 | case-20 | Lua directives & phase markers (`{$STRICT}` before `[ENABLE]`; unknown `{$bogus}`; `{$lua}` + preamble + in-block `[ENABLE]` + `{$asm}` + `[DISABLE]`; redundant `{$asm}`) | WP-26 | planned |
 | case-21 | dynamic address provider (addressless header + Lua provider writing parent address, 2–3 relative children) | WP-38 | planned |
 | case-22 | table-Lua bootstrap (table Lua global used by record Lua; top-level-write variant) | WP-41 | planned |
@@ -219,11 +220,11 @@ assertion updated accordingly):
 
 | Metric | Value | Run |
 | --- | --- | --- |
-| Pinned-corpus feature matrix | 42/42 covered, 7361/7361 action-weighted | `wp14-staged-20261011T093320Z` |
-| Reference-corpus blocked entries | 21,852 / 117,019 (4 whole-table errors) | `ref-assessment` (2026-10-13 baseline) |
-| AP-11 confirmed actions | 0 / 6011 | `wp14-staged-20261011T093320Z` |
+| Pinned-corpus feature matrix | 42/42 covered, 7365/7365 action-weighted | `w1d-case19-20261013192913Z` |
+| Reference-corpus blocked entries | 21,851 / 117,255 (3 whole-table errors) | catalog re-run 2026-10-13 post W1-D + W1-C (baseline: `ref-assessment`) |
+| AP-11 confirmed actions | 0 / 6019 | `w1d-case19-20261013192913Z` |
 | Latest build | `native-20261012T092729Z-2d8aaf12` (0.11) | in-build suite 2710/25 |
-| Local dev suite | 2710 OK / 25 expected skips | `main` @ `ef668c1` |
+| Local dev suite | 2758 OK / 25 expected skips | post W1-D + W1-C merge (canonical path) |
 
 Update protocol: after each merged WP — re-run the blocked catalog on the
 scratch corpus, record the per-family delta in §2 status columns and here;
@@ -235,5 +236,6 @@ matrix/AP-11; reference corpus = closure progress).
 
 | Date | Event | Evidence |
 | --- | --- | --- |
+| 2026-10-13 | W1-D (WP-25) + W1-C (WP-22/23) integrated into `native-0.12`. W1-D: duplicate-ID keep-first + child re-parenting + table warning, legacy binary-CT `CHEATENGINE\t` header → named `TableError` (real Octopath table: 236==236 unique IDs, 24 warnings; SuperMeatBoy named refusal). W1-C: digit-leading module basenames (`20XX.exe`) + `Class::Method`/`Class:Method` managed-label alias (20XX table 10/10 supported; fail-closed refusals pinned). case-19 pinned as 15th table (SHA-256 `80690e82…`, gate:1 → 15); denominator tool aligned to keep-first (record walk dedupes by ID); chain re-run `w1d-case19-20261013192913Z`: 6019 expected actions, top gap cross_record_symbol 3375→3377, action weights 7361→7365; suite 2758 OK / 25 skips green; reference catalog: whole-table errors 4→3, blocked 21,852→21,851, +236 entries (Octopath 227 sup / 9 blocked), 20XX trailing-token refusals −10. W1-A (WP-19/21/24 + WP-25 follow-ups) and W1-B (WP-20) still running; W1-E (WP-26) relaunched after two empty sessions | `native-0.12` merges of `w1-d` + `w1-c`; `gap_inventory/` artifacts (run `w1d-case19-20261013192913Z`); `TableReferences/case-19.ct`; `tests/test_native_feature_matrix.py`, `tests/test_native_ap11_campaign.py`, `tests/test_native_corpus_traceability.py`, `tests/test_native_table_completeness.py`, `tests/test_native_compiler.py` pins updated; catalog delta `Temp\opencode\refassess\` (baseline-catalog.json vs blocked-catalog.json) |
 | 2026-10-13 | Cycle kickoff committed (`native-0.12`): tracker + assessment + plan; CE 7.5 boundary wired into AGENTS.md / lane rules / plan index; case registry reconciled (case-15…case-25); WP-25 duplicate-ID plan model decided (keep-first, dropped duplicates + table warning, plan §10). Wave 1 lanes W1-C (WP-22/23), W1-D (WP-25), W1-E (WP-26) launched in disjoint worktrees `side/w1-c|w1-d|w1-e`; W1-A (WP-19/21/24) + W1-B (WP-20) queued (compiler.py overlap → sequential merges) | main @ `9c6a698`; lane branches `w1-c`/`w1-d`/`w1-e` cut from main |
 | 2026-10-13 | Reference-corpus assessment closed: 4 lanes + root recompilation; consolidated assessment + closure plan + this tracker created; CE 7.5 behavior reference adopted (user decision) | `ref-assessment` catalog (21,852 / 117,019); lane reports in `reference-assessment/raw/` (local-only) |

@@ -138,10 +138,10 @@ Derivative cases for Wave 1 (land with their WPs):
 
 | Case | WPs | Key assertions |
 | --- | --- | --- |
-| `case-15` "module & token shapes + offset arithmetic" | WP-19, 20, 21, 22, 23 | digit-leading module parses as module atom (bare `20` stays integer); `$process` scan plan passes `validate_plan` in all plan-ingest paths; globalalloc with `@@:` cursor compiles (no table-level exception; the cursor line never reaches `global_references`); `A::B` and `A:B` both `kind: managed`; `C00+58` → 0xC58, `A0+4*4` → 0xA0+16 folded, `1594+8+118` → 0x164C, `-10` signed, `20 (note)` → 0x20; negative controls (symbol offset, dotted text, empty slot) stay blocked with the exact existing reasons; 32-offset chain limit unchanged (WP-30 cast/indirection records land later as part 5) |
+| `case-15` "module & token shapes + offset arithmetic" | WP-19, 20, 21, 22, 23 | digit-leading module parses as module atom (bare `20` stays integer); `$process` scan plan passes `validate_plan` in all plan-ingest paths; globalalloc with `@@:` cursor compiles (no table-level exception; the cursor line never reaches `global_references`); `A::B` and `A:B` both `kind: managed`; `C00+58` → 0xC58, `A0+4*4` → 0xA0+16 folded, `1594+8+118` → 0x16B4 (5812; the earlier 0x164C literal was an arithmetic typo), `-10` signed, `20 (note)` → 0x20; negative controls (symbol offset, dotted text, empty slot) stay blocked with the exact existing reasons; 32-offset chain limit unchanged (WP-30 cast/indirection records land later as part 5) |
 | `case-16` "linked dropdowns + separator rows" (part 1) | WP-24 | shared list with empty-value separator rows: linked records supported, `link_target_id` emitted, separators present as non-writable display rows, writable choice count = total − separators; comma-decimal / `??` / out-of-range choices stay blocked per choice |
 | `case-20` "Lua directives & phase markers" | WP-26 | `{$STRICT}` ignored (compiles); `{$bogus}` → `Non-profile {$…} directive` named error; explicit `{$lua}` block with `[ENABLE]` inside → both phases recognized, Lua routed per phase, pre-`[ENABLE]` Lua in both phases; duplicate `[ENABLE]` stays fail-closed; redundant `{$asm}` no-op |
-| `case-19` "table robustness" | WP-25 | duplicate-ID table loads (first kept, duplicate blocked with `Duplicate CheatEntry ID: <id> (kept first occurrence)`, table warning lists all IDs, group/children of the kept entry intact); binary-header file → named legacy-binary `TableError`, distinct from `Invalid CT XML` (malformed XML still yields that) |
+| `case-19` "table robustness" | WP-25 | duplicate-ID table loads (first occurrence kept, later duplicates dropped and re-reported via one table warning `Duplicate CheatEntry ID: <id> (kept first occurrence; dropped N duplicate record(s): <names>)`; children of a dropped duplicate are re-parented to the duplicate's own parent, so no unique-ID record is lost; plan total == unique source-ID count, gate:1 invariant preserved); binary-header file → named legacy-binary `TableError` (`LEGACY_BINARY_CT_HEADER`), distinct from `Invalid CT XML` (malformed XML still yields that) |
 
 Catalog acceptance (Wave 1): reason families
 `Unsupported address expression: '"$process"'.` → 0;
@@ -150,8 +150,8 @@ staged entries may appear); `Unexpected trailing address expression
 tokens` (20XX) → 0; `Invalid address expression near '::…'` → 0;
 `Pointer offset must be a hexadecimal integer literal` → ≤ 23 residual
 (18 dotted + 2 cast/deref + 3 symbol-expression);
-`Duplicate CheatEntry ID` table-level → 0 (24 duplicate entries blocked
-at record level); `Invalid CT XML: syntax error: line 1, column 0` → 0
+`Duplicate CheatEntry ID` table-level → 0 (duplicates dropped keep-first
+with one table warning per ID; plan total = unique-ID count); `Invalid CT XML: syntax error: line 1, column 0` → 0
 (named binary error instead); `Dropdown contains an unsupported value
 expression` → ≤ 41 residual (25 comma + 12 `??` + 1 hex-styled + 3
 out-of-range); `Lua/ASM delimiters must occupy standalone lines` → 0;
@@ -330,4 +330,5 @@ stay inactive"). Case: `case-22`.
 
 | Date | Change | Evidence / open work |
 | --- | --- | --- |
+| 13.10.2026 | W1-D (WP-25) + W1-C (WP-22/23) integrated: duplicate-ID keep-first + legacy binary-CT detection, digit-leading module basenames + `Class::Method` managed-label alias; case-19 pinned (15th table, gate:1 → 15, denominator record walk deduped by ID); chain re-run `w1d-case19-20261013192913Z` (6019 expected actions, top gap cross_record_symbol 3377, weights 7365); reference catalog 21,852 → 21,851 blocked, whole-table errors 4 → 3 | suite 2758/25; `TableReferences/case-19.ct` (SHA-256 `80690e82…`); `gap_inventory/` artifacts; open: W1-A (WP-19/21/24 + plan-warning forwarding + first-wins node map), W1-B (WP-20), W1-E (WP-26 relaunched) |
 | 13.10.2026 | Cycle opened: consolidated 4-lane reference-corpus assessment (`documentation/reference-gap-assessment.md`); this plan created (WP-19…WP-42, waves, cases, protocol); CE 7.5 behavior-reference boundary recorded (AGENTS.md, lane rules) | Catalog baseline 21,852 blocked / 117,019 entries / 151 tables (run `ref-assessment`); working branch `native-0.12` to be cut; Wave 1 lanes to launch after load check |

@@ -18,11 +18,11 @@ committed.
 | Full native suite | **2698 OK / 25 expected skips, 0 failures** (full local dev suite on `main` after the WP-17 merge `557b2ac`, verified 2026-10-11 at the canonical path; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2698/25 passed (build `native-20261011T182033Z-f3317337`); previously 2671/25 (build `native-20261011T121914Z-bfc5fc11`) |
 | CE inputs in the build | none (`ce_inputs: []` in `build.json`) |
 | Runtime acceptance | `runtime_unverified: true`, deliberately kept |
-| Corpus denominator | 6,011 expected actions, 1,282 groups (14 pinned case tables, run `wp14-staged-20261011T093320Z`) |
-| Feature matrix | 42/42 in-scope features; 100% feature-weighted; 7361/7361 action-weighted |
+| Corpus denominator | 6,019 expected actions, 1,285 groups (15 pinned case tables, run `w1d-case19-20261013192913Z`) |
+| Feature matrix | 42/42 in-scope features; 100% feature-weighted; 7365/7365 action-weighted (run `w1d-case19-20261013192913Z`) |
 
 The committed baselines under `gap_inventory/` carry the run stamp
-`wp14-staged-20261011T093320Z` and are reproduced byte-for-byte by the
+`w1d-case19-20261013192913Z` and are reproduced byte-for-byte by the
 chain in section 4.
 
 ## 2. Offline build

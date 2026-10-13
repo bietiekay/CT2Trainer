@@ -40,14 +40,15 @@ feature is re-implemented clean-room, and public API/format contracts may
 be derived. All other CE implementation sources remain off-limits.
 
 **Feature-matrix goal:** 100% coverage without AP-11. 42/42 in-scope
-features covered (100% feature-weighted; 7361/7361 action-weighted;
+features covered (100% feature-weighted; 7365/7365 action-weighted;
 `gap_inventory/feature-coverage.json`, run
-`wp14-staged-20261011T093320Z`; the 2026-10-10 39/39 over
-`wpB-cleanroom4-20261010T104008Z` is superseded). The 90% hurdle and the
+`w1d-case19-20261013192913Z`; the 2026-10-11 7361/7361 over
+`wp14-staged-20261011T093320Z` and the 2026-10-10 39/39 over
+`wpB-cleanroom4-20261010T104008Z` are superseded). The 90% hurdle and the
 100% goal are reached and closed. All three gate features are closed with **real,
 tested** evidence (2026-10-10):
 
-1. `gate:1` – per-table completeness for all 14 pinned tables
+1. `gate:1` – per-table completeness for all 15 pinned tables
    (Forms, Lua lifecycle, Custom Types, Assets):
    `tests/test_native_table_completeness.py` (every source record
    preserved; each table-level construct handled or surfaced fail-closed;
@@ -66,11 +67,11 @@ tested** evidence (2026-10-10):
 
 Gate flips happen only with **real, tested** evidence; gate action weights
 remain 0 (completeness/proof features, not record actions). The AP-11
-campaign (6011 expected actions, 0 confirmed so far) remains a
+campaign (6019 expected actions, 0 confirmed so far) remains a
 **separate end goal** and is excluded from the 100% feature metric.
 
 **Corpus:** `TableReferences/` is the synthetic clean-room corpus
-(`case-01.ct` … `case-14.ct`; case-to-origin mapping in
+(`case-01.ct` … `case-14.ct`, `case-19.ct`; case-to-origin mapping in
 `TableReferences/README.md`). `case-14.ct` is the WP-14 PRAGMATA
 behaviour derivative (staged capabilities, signed offsets, activation
 sets). It is strictly read-only input; distributed releases never contain
