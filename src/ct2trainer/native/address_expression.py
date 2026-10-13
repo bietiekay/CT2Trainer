@@ -11,10 +11,22 @@ class AddressExpressionError(ValueError):
 
 
 # Managed method label: Class:Method (IL2CPP injection label). Exactly two
-# identifier segments separated by one colon; offsets attach like any other
-# base atom.
-_MANAGED_LABEL = re.compile(r"[A-Za-z_$][A-Za-z0-9_]*:[A-Za-z_$][A-Za-z0-9_]*\Z")
-_TOKEN = re.compile(r'\s*("[^"\r\n]+"|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|[A-Za-z_$][A-Za-z0-9_]*:[A-Za-z_$][A-Za-z0-9_]*|@?[A-Za-z_$][A-Za-z0-9_.$]*|[0-9][0-9a-fA-F]*|[+\-*/()\[\]])')
+# identifier segments separated by one colon, or the double-colon alias
+# Class::Method (WP-23); offsets attach like any other base atom.  Both
+# spellings classify as kind "managed" and resolve through the same symbol
+# map path with the label kept verbatim.
+_MANAGED_LABEL = re.compile(r"[A-Za-z_$][A-Za-z0-9_]*:?:[A-Za-z_$][A-Za-z0-9_]*\Z")
+# Module basenames that start with a digit (WP-22): 20XX.exe, 1234.dll, ...
+# The .exe/.dll suffix is what disambiguates them from a bare integer, and
+# the alternative is ordered BEFORE the bare-integer alternative in _TOKEN
+# so the full basename tokenizes as one atom; a bare digit run without the
+# suffix still tokenizes and parses as an integer, exactly as before.
+# Interior identifier segments are allowed (e.g. 1234.Game.dll) to mirror
+# the letter-leading dotted basename handling; a non-module dot run after
+# the suffix (20XX.exe.foo) still fails closed because the tokenizer stops
+# at the .exe/.dll suffix.
+_DIGIT_MODULE = re.compile(r"[0-9][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*\.(?:[Ee][Xx][Ee]|[Dd][Ll][Ll])")
+_TOKEN = re.compile(r'\s*("[^"\r\n]+"|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|[A-Za-z_$][A-Za-z0-9_]*:?:[A-Za-z_$][A-Za-z0-9_]*|@?[A-Za-z_$][A-Za-z0-9_.$]*|' + _DIGIT_MODULE.pattern + r'|[0-9][0-9a-fA-F]*|[+\-*/()\[\]])')
 MAX_ADDRESS = 0xFFFFFFFFFFFFFFFF
 
 
@@ -76,9 +88,14 @@ def parse_expression(text: str) -> dict:
                 raise AddressExpressionError("Quoted atoms must be module basenames.")
             value = {"kind": "module", "name": atom}
         elif _MANAGED_LABEL.fullmatch(token):
-            # IL2CPP injection label (Class:Method); resolved through the
-            # injected symbol map, never through module exports.
+            # IL2CPP injection label (Class:Method or the Class::Method
+            # alias); resolved through the injected symbol map, never
+            # through module exports.
             value = {"kind": "managed", "name": token}
+        elif _DIGIT_MODULE.fullmatch(token):
+            # Module basename starting with a digit (WP-22); same module
+            # resolution path as letter-leading basenames.
+            value = {"kind": "module", "name": token}
         elif re.fullmatch(r"@?[A-Za-z_$][A-Za-z0-9_.$]*", token):
             if token.casefold().endswith((".exe", ".dll")) or token == "$process":
                 kind = "module"
