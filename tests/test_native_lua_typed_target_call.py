@@ -361,7 +361,10 @@ class TypedCallLuaChainTests(TypedCallEngineLifecycleTests):
         by_id = {entry["id"]: entry for entry in plan["entries"]}
         self.assertEqual(by_id[3000]["kind"], "script")
         self.assertTrue(by_id[3000]["supported"])
-        self.assertFalse(by_id[3000].get("one_shot"))
+        # WP-26: the corpus-shaped record carries a contentless [DISABLE]
+        # Lua chunk, which per the prepare_lua_program contract makes the
+        # program one-shot.
+        self.assertTrue(by_id[3000].get("one_shot"))
         self.assertIn("executeCodeEx", by_id[3000]["lua_program"]["source"])
         # The typed call is a runtime API: it never appears in plan metadata.
         self.assertEqual(by_id[3000]["lua_program"]["requires"], [])
@@ -401,7 +404,11 @@ class TypedCallLuaChainTests(TypedCallEngineLifecycleTests):
         self.assertIn("processevent", self.engine.symbols)
         self.assertIn("aobstaticfind", self.engine.symbols)
 
-    def test_disable_roundtrip_is_call_free_and_reversible(self):
+    def test_disable_is_call_free_and_the_effect_persists(self):
+        # WP-26: record 3000 is one-shot (contentless [DISABLE] Lua chunk).
+        # OFF clears the saved wish only: zero backend operations, the
+        # effect stays applied and trainer ownership is kept; re-enable is
+        # verification-only and publishes nothing new.
         self.engine = self.make_engine(call_broker_factory=self.factory)
         self.engine.poll()
         self.assertTrue(self.engine.toggle(3010, True), self.engine.error)
@@ -410,12 +417,13 @@ class TypedCallLuaChainTests(TypedCallEngineLifecycleTests):
         transport = self.brokers[0][2]
         self.assertEqual(transport.calls, 2)
         self.assertFalse(self.engine.toggle(3000, False))
-        self.assertNotIn(3000, self.engine.applied)
-        self.assertNotIn(3000, self.engine.lua_activations)
+        self.assertIn(3000, self.engine.applied)
+        self.assertIn(3000, self.engine.lua_activations)
         self.assertEqual(transport.calls, 2,
-                         "the empty [DISABLE] phase issues no calls")
+                         "one-shot OFF performs zero backend operations")
         self.assertTrue(self.engine.toggle(3000, True), self.engine.error)
-        self.assertEqual(transport.calls, 4)
+        self.assertEqual(transport.calls, 2,
+                         "one-shot re-enable re-verifies instead of republishing")
 
     def test_failed_typed_call_fails_enable_and_saves_nothing(self):
         def refusing_factory(engine, memory):

@@ -13,7 +13,7 @@ import json
 import re
 from typing import Any
 
-from .aa_program import ProgramError, prepare_program, _CONDITIONAL_DIRECTIVES
+from .aa_program import ProgramError, prepare_program, _CONDITIONAL_DIRECTIVES, _NOOP_DIRECTIVES
 
 
 SCHEMA = 'ct2trainer-lua-program/v1'
@@ -144,10 +144,13 @@ class _AALex:
             elif not self.quote and pair == '{$':
                 end = text.find('}', index)
                 token = text[index:end + 1].strip() if end > index else None
-                if token is None or not any(pattern.fullmatch(token) for pattern in _CONDITIONAL_DIRECTIVES.values()):
+                if token is None:
                     raise LuaProgramError('Lua/ASM delimiters must occupy standalone lines')
-                output.append(token)
-                visible_started = True
+                if any(pattern.fullmatch(token) for pattern in _CONDITIONAL_DIRECTIVES.values()):
+                    output.append(token)
+                    visible_started = True
+                elif token.casefold() not in _NOOP_DIRECTIVES:
+                    raise LuaProgramError('Non-profile {$...} directive: ' + token[2:-1].strip())
                 index = end + 1
                 continue
             elif not self.quote and char == '{':
@@ -258,9 +261,9 @@ class _Part:
 def _explicit_lua_end(lines: list[str], start: int) -> bool:
     """Preserve existing explicitly closed chunks; never execute their text.
 
-    Phase-looking Lua continuation/index lines inside an explicitly closed
-    chunk keep their prior Lua meaning. A new neutral Lua opener terminates
-    this look-ahead: it can belong to the next open-ended phase, not this one.
+    In-block [ENABLE]/[DISABLE] phase markers are structural boundaries, not
+    part of this look-ahead (WP-26). A new neutral Lua opener terminates this
+    look-ahead: it can belong to the next open-ended phase, not this one.
     At most 64 bounded chunks each inspect a <=1 MiB source.
     """
     lex = _LuaLex()
@@ -286,12 +289,22 @@ def _parse(source: str) -> tuple[list[_Part], str, bool]:
     for line_index, line in enumerate(lines):
         marker = _MODE.fullmatch(line)
         if lua is not None:
-            header = _PHASE.fullmatch(line.strip()) if lua.neutral and implicit_lua else None
+            header = _PHASE.fullmatch(line.strip()) if lua.neutral else None
             if header is not None:
                 next_phase = header.group(1).casefold()
+                fresh = (next_phase not in seen
+                         and (next_phase == 'enable' or seen == ['enable']))
+                if not fresh and not implicit_lua:
+                    # WP-26: an explicitly closed chunk keeps its legacy
+                    # contract - a phase-appearing line that is not a fresh
+                    # transition (duplicate or out of order) stays Lua body
+                    # text; open-ended chunks keep the structural
+                    # recognition so such markers stay fail-closed there.
+                    header = None
+            if header is not None:
                 if next_phase in seen or next_phase == 'disable' and seen != ['enable']:
                     raise LuaProgramError('Lua program phases are duplicated or out of order')
-                parts.append(_Part('lua', phase, '\n'.join(body), shared=shared_lua or phase == 'preamble' and implicit_lua))
+                parts.append(_Part('lua', phase, '\n'.join(body), shared=shared_lua or phase == 'preamble'))
                 if phase == 'preamble':
                     common_lua = True
                 phase = next_phase
@@ -302,7 +315,11 @@ def _parse(source: str) -> tuple[list[_Part], str, bool]:
                     chunks += 1
                     if chunks > MAX_LUA_CHUNKS:
                         raise LuaProgramError('Lua program contains too many Lua sections')
-                    lua, implicit_lua, inherited_lua, shared_lua = _LuaLex(), True, True, True
+                    # WP-26: an in-block phase marker is structural in both
+                    # open-ended and explicitly closed chunks.  The chunk keeps
+                    # its own end rule (implicit_lua stays as found); its Lua
+                    # stays shared so the preamble folds into every phase.
+                    lua, implicit_lua, inherited_lua, shared_lua = _LuaLex(), implicit_lua, True, True
                 else:
                     lua, implicit_lua, inherited_lua, shared_lua = None, False, False, False
                 continue
@@ -323,7 +340,9 @@ def _parse(source: str) -> tuple[list[_Part], str, bool]:
             continue
         if aa.neutral and marker is not None:
             if marker.group(1).casefold() != 'lua':
-                raise LuaProgramError('ASM delimiter without a Lua section')
+                # WP-26: a redundant {$asm} outside any Lua section is a CE
+                # no-op; the section openers that matter are {$lua} only.
+                continue
             chunks += 1
             if chunks > MAX_LUA_CHUNKS:
                 raise LuaProgramError('Lua program contains too many Lua sections')
@@ -415,7 +434,9 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *, nt
         static_program = prepare_program(static_source, process_name, bitness=bitness) if static_body else None
     except ProgramError as exc:
         raise LuaProgramError('Static AA envelope: ' + str(exc)) from exc
-    one_shot = (all(part.phase != 'disable' or part.kind == 'phase' for part in parts)
+    one_shot = (all(part.phase != 'disable' or part.kind == 'phase'
+                    or (part.kind == 'lua' and not part.text.strip())
+                    for part in parts)
                 and any(part.phase == 'enable' and part.kind != 'phase' for part in parts))
     if static_program is not None:
         one_shot = one_shot and bool(static_program.get('one_shot', False))

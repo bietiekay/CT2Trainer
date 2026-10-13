@@ -200,9 +200,12 @@ class NativeLuaProgramTests(unittest.TestCase):
         with self.assertRaises(LuaProgramError):validate_lua_program(changed)
 
     def test_invalid_phase_and_language_envelopes_fail_statically(self):
+        # WP-26 note: '[ENABLE]\n{$asm}\n[DISABLE]' is no longer invalid -
+        # the redundant {$asm} is a CE no-op, making the envelope identical
+        # to the already-accepted empty '[ENABLE]\n[DISABLE]' program.
         bad_sources=(
             '[DISABLE]\n[ENABLE]', '[ENABLE]', '[ENABLE]\n[DISABLE]\n[ENABLE]',
-            '[ENABLE]\n[enable]\n[DISABLE]', '[ENABLE]\n{$asm}\n[DISABLE]',
+            '[ENABLE]\n[enable]\n[DISABLE]',
             '[ENABLE]\n{$lua}\n{$lua}\n{$asm}\n[DISABLE]',
             '[ENABLE]\n{$lua} // inline\n{$asm}\n[DISABLE]',
             '[ENABLE]\n{$c}\n[DISABLE]', '[ENABLE]\n/*\n[DISABLE]',
