@@ -13,3 +13,4 @@ tests/windows/fixture_target/*.o
 tests/windows/fixture_target/*.pdb
 tools/agent_load.py
 side/
+reference-assessment/

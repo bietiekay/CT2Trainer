@@ -15,8 +15,11 @@ implementation inputs or binaries at all**. It was formerly named
 "TrainerForge (Native)"; use CT2Trainer in all current code,
 configuration, documentation and tooling.
 
-Read first: the maintained [continuation plan](plans/native-implementation-continuation.md)
-and the [progress ledger](documentation/native-progress.md). They contain
+Read first: the [central gap & goal tracking document](plans/TRACKING.md)
+(single source of truth for all open gaps, goals, work packages, corpus
+cases and the latest measurement snapshot), then the maintained
+[continuation plan](plans/native-implementation-continuation.md) and the
+[progress ledger](documentation/native-progress.md). They contain
 the work packages, parallel ownership, resume commands and acceptance
 criteria. Code/build boundaries: `documentation/native-runtime.md` and
 `documentation/native-verification.md`. Build guide:
@@ -25,9 +28,16 @@ criteria. Code/build boundaries: `documentation/native-runtime.md` and
 Native builds run exclusively with **`scripts/Build-Native.ps1`** (fully
 offline, hash-verified inputs from `dependencies/`). Local MIT/BSD forks,
 adaptations and upstream API breaks are authorized; retain source pins,
-notices, local changes and build evidence. Never inspect or copy CE
-implementation code for the implementation; public API/format contracts
-may be derived.
+notices, local changes and build evidence.
+
+**CE behavior reference (2026-10-13, user decision):** the Cheat Engine 7.5
+source tree at `C:\Users\xboxl\code\cheat-engine-7.5` (local-only, never
+added to git) may be **read** to understand how CE handles a behavior
+(offset parsing, `{$…}` directives, `return:` label scoping, phase
+splitting, duplicate-ID tolerance, …). It is a **lookup/reference source
+only**: no CE code is copied, derived, or ported into CT2Trainer — every
+feature is re-implemented clean-room, and public API/format contracts may
+be derived. All other CE implementation sources remain off-limits.
 
 **Feature-matrix goal:** 100% coverage without AP-11. 42/42 in-scope
 features covered (100% feature-weighted; 7361/7361 action-weighted;
