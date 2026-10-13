@@ -311,13 +311,20 @@ stay inactive"). Case: `case-22`.
 - **WP-41 bootstrap scope:** which host APIs count as read-only for
   the phase-1 subset; the exact named block reasons per refused API
   class; where the banner metadata lives in the plan.
-- **WP-25 plan-entry model for duplicate IDs:** `gate:1`
-  (`tests/test_native_table_completeness.py`) asserts plan total ==
-  source-ID-set size; a duplicate-ID table (case-19) needs a decided
-  plan model (blocked duplicate kept as its own plan entry vs. dropped
-  with the warning) plus the gate:1 count assertion updated to match.
-  The `by_id` map and selection persistence key by ID, so whichever
-  model is chosen must keep exactly one addressable record per ID.
+- **WP-25 plan-entry model for duplicate IDs (decided 2026-10-13):**
+  the FIRST occurrence is the plan entry; later duplicates are dropped
+  from the plan (not emitted as addressable entries) and reported as one
+  table warning `Duplicate CheatEntry ID: <id> (kept first occurrence;
+  dropped N duplicate record(s): <names>)`. Rationale: the plan, the
+  `by_id` map and selection persistence are ID-keyed, so exactly one
+  addressable record per ID is mandatory; `gate:1`
+  (`tests/test_native_table_completeness.py`) keeps its assertion
+  (plan total == source-ID-set size), which the drop model satisfies
+  (plan total = unique-ID count). CE keeps both entries visible in its
+  UI (behavior reference only); the native equivalent of that visibility
+  is the table warning + the WP-39 inspection result, not a second plan
+  entry. When `case-19` is added to the pinned corpus, the gate:1 count
+  assertion is updated by the root (unique-ID count for case-19).
 
 ## 11. Change log
 

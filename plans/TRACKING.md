@@ -186,7 +186,7 @@ touch `compiler.py` label-registry hunks concurrently with WP-28.
 | Ownership-handover contract | WP-37 | exact `external_owned_providers` schema; ambiguity resolution (deterministic pick vs. named block); teardown-order proof plan |
 | Dynamic-provider contract | WP-38 | plan schema field + versioning; invalidation of cached bases; re-attach semantics for saved ON-switches; UI marker contract |
 | Table-Lua phase-1 scope | WP-41 | read-only API subset list; block-reason taxonomy; banner metadata location in plan |
-| Duplicate-ID plan model | WP-25 | plan-entry representation of the blocked duplicate (own entry vs. dropped-with-warning) + gate:1 count-assertion update (`tests/test_native_table_completeness.py`); `by_id` map and selection persistence must keep exactly one addressable record per ID |
+| Duplicate-ID plan model | WP-25 | **decided 2026-10-13** (plan §10): keep-first is the plan entry, later duplicates dropped + one table warning; plan total = unique-ID count so gate:1 assertion holds; gate:1 count updated by root when case-19 is pinned |
 
 ## 4. Corpus cases (synthetic clean-room, `TableReferences/`)
 
