@@ -2,7 +2,7 @@
 
 **Status: 2026-10-13** (baseline `main` @ `9a76eb8`, 0.11, build
 `native-20261012T092729Z-2d8aaf12`; Wave 1 in progress on `native-0.12`:
-W1-D + W1-C merged, suite 2758 OK / 25 expected skips).
+W1-D + W1-C + W1-B merged, suite 2769 OK / 25 expected skips).
 
 This is the **single central tracking document** for every gap and every goal
 of the project. It is maintained by the root agent on every integration and is
@@ -39,25 +39,25 @@ linked documents and are NOT duplicated here:
 | ID | Goal | Status | Definition of done / current state |
 | --- | --- | --- | --- |
 | GOAL-1 | Feature matrix 100% in-scope coverage without AP-11 | **done** (2026-10-11) | 42/42 features covered, 7361/7361 action-weighted (run `wp14-staged-20261011T093320Z`). Gates 1–3 closed with tested evidence. |
-| GOAL-2 | Reference-corpus closure: 151 local-only tables | **active** (since 2026-10-13, cycle `native-0.12`) | Baseline 21,852 / 117,019 entries blocked (4 whole-table compile errors); after W1-D + W1-C: 21,851 / 117,255 (3 whole-table errors). Target ≈ 85 % closure via WP-19…WP-42; residue must be `blocked-keep` with named reasons. Every closure measured by blocked-catalog re-run (§4). |
+| GOAL-2 | Reference-corpus closure: 151 local-only tables | **active** (since 2026-10-13, cycle `native-0.12`) | Baseline 21,852 / 117,019 entries blocked (4 whole-table compile errors); after W1-D + W1-C + W1-B: 21,959 / 117,604 (2 whole-table errors: AtomicHeart `$process`, SuperMeatBoy legacy binary). Target ≈ 85 % closure via WP-19…WP-42; residue must be `blocked-keep` with named reasons. Every closure measured by blocked-catalog re-run (§4). |
 | GOAL-3 | AP-11 real-game confirmation (6019 pinned actions) | **open** (separate end goal) | 0 confirmed. Manifest `gap_inventory/ap11-campaign.json`; runbook `documentation/native-ap11-campaign.md`. Excluded from the feature metric by definition. |
 | GOAL-4 | Final acceptance Windows (clean PC/VM, no CE/Python) | **open** | Portable start, trainer run, Unicode paths, UAC/rights, debugger conflict, saved-wish replay, target restart. Last user-tested release: 0.9.0-rc2 (`native-20261010T172336Z-ffe35eb0`). |
 | GOAL-5 | Final acceptance Steam Deck (real Proton, touch) | **open** | Protocol `tests/deck/compatibility-matrix.md`. |
 | GOAL-6 | `runtime_unverified` flipped | **open** | Requires GOAL-4 + GOAL-5 evidence recorded in `documentation/native-verification.md`. |
 | GOAL-7 | Release 0.12 (end of closure cycle) | **open** | After Wave 1+2 integrations are stable: full suite green, matrix artifacts regenerated, both ZIPs via `scripts/Build-Native.ps1`, `ce_inputs: []`. |
 
-## 2. Gap inventory — reference corpus (baseline 21,852 blocked; 21,851 after W1-D/W1-C)
+## 2. Gap inventory — reference corpus (baseline 21,852 blocked; 21,959 after W1-D/W1-C/W1-B)
 
 Baseline measured 2026-10-13 (run `ref-assessment`): 151 tables, 117,019 plan
 entries, 95,167 supported (incl. 46,987 staged), 21,852 blocked, 725 distinct
 reasons. IDs are stable; do not renumber.
 
-### 2.1 Whole-table compile failures (4 tables, 629+ entries)
+### 2.1 Whole-table compile failures (2 remaining: AtomicHeart, SuperMeatBoy)
 
 | ID | Table | Gap | Entries | Owning WP | Status |
 | --- | --- | --- | ---: | --- | --- |
 | GC-T1 | AtomicHeart-Win64-Shipping.CT | `$process` scan module rejected by `validate_plan` (compile path already accepts it: `aa.py:205`, `aa_program.py:326-328`) | 20 | WP-19 | ready |
-| GC-T2 | Cyberpunk2077.CT | NASM `@@` cursor in globalalloc escapes per-entry catch (`AddressExpressionError` not in `compiler.py:619` list) + `global_alloc.py:149` misclassifies `@@:` | 349 | WP-20 | ready |
+| GC-T2 | Cyberpunk2077.CT | NASM `@@` cursor in globalalloc escapes per-entry catch (`AddressExpressionError` not in `compiler.py:619` list) + `global_alloc.py:149` misclassifies `@@:` | 349 | WP-20 | done (merged 2026-10-13: `@@:` positional cursor in `prepare_global_program` + named per-entry containment; table compiles 241 supported / 108 blocked, 0 `@@` reasons) |
 | GC-T3 | Octopath_Traveler-Win64-Shipping.CT | 24 duplicated CheatEntry IDs → table-level `TableError` | 260 | WP-25 | done (merged 2026-10-13: keep-first + warning, table now compiles 227 supported / 9 blocked) |
 | GC-T4 | SuperMeatBoy.CT | legacy binary CE 5.x table, not XML | n/a | WP-25 | done (named `Legacy binary CT table` TableError; stays fail-closed by design) |
 
@@ -66,7 +66,7 @@ reasons. IDs are stable; do not renumber.
 | ID | Gap | Entries | Root cause | Owning WP | Status |
 | --- | --- | ---: | --- | --- | --- |
 | GC-B1 | `$process` token in `validate_plan` | 20 | consistency bug (see GC-T1) | WP-19 | ready |
-| GC-B2 | `@@` cursor handling + error containment | 349 | parser gap + exception-type escape | WP-20 | ready |
+| GC-B2 | `@@` cursor handling + error containment | 349 | parser gap + exception-type escape | WP-20 | done (merged 2026-10-13; Cyberpunk2077 compiles 241 supported / 108 blocked, 0 `@@` reasons) |
 | GC-B3 | pointer offsets with constant arithmetic (`C00+58`, `13A8+118`, `A0+4*4`, `433c+10c*4`) | 201 of 239 | `_offsets` (`compiler.py:67-82`) requires bare hex; the address grammar already evaluates these — fold via `parse_expression` with pure-integer AST gate | WP-21 | ready |
 | GC-B3b | annotated hex offsets (`20 (Offset of the name pointer)`) | 15 (in the 239) | same | WP-21 | ready |
 | GC-B3c | dotted-ident offsets (`GameEngine.GameInstance`) | 18 (in the 239) | malformed authoring input (not usable in CE either) | — | blocked-keep (named reason) |
@@ -152,7 +152,7 @@ upstream WPs land. Largest chains (verified 2026-10-13):
 | WP | Title | Wave | Touches | Unblocks (est.) | Corpus case(s) | Status |
 | --- | --- | --- | --- | ---: | --- | --- |
 | WP-19 | `$process` in `validate_plan` (one-line mirror of `aa.py:205`) | 1 | `compiler.py` | 20 + all future `$process` plans | case-15 | ready |
-| WP-20 | `@@` cursor in globalalloc + per-entry containment of `AddressExpressionError`/`GlobalError` | 1 | `global_alloc.py`, `compiler.py` (catch list) | 349 (whole table) | case-15 | ready |
+| WP-20 | `@@` cursor in globalalloc + per-entry containment of `AddressExpressionError`/`GlobalError` | 1 | `global_alloc.py`, `compiler.py` (catch list) | 349 (whole table) | case-15 | done (merged 2026-10-13, `w1-b`; Cyberpunk2077 compiles 241 supported / 108 blocked with other-WP residual reasons, 0 `@@` reasons; suite 2769/25) |
 | WP-21 | pointer-offset constant folding + annotated-hex normalization (pure-integer AST gate; keep 32-offset cap) | 1 | `compiler.py` `_offsets` | 216 | case-15 | ready |
 | WP-22 | digit-leading module basenames in `_TOKEN` (ordered before bare-integer alternative) | 1 | `address_expression.py` | 10 (whole table) | case-15 | done (merged 2026-10-13, `w1-c`; 20XX table fully supported 10/10) |
 | WP-23 | `::` managed-label alias (resolution unchanged) | 1 | `address_expression.py` | ~15 | case-15 | done (merged 2026-10-13, `w1-c`; two-segment alias only — module-prefixed `Module.Class::Method` forms stay WP-30/WP-36 scope) |
@@ -221,10 +221,10 @@ assertion updated accordingly):
 | Metric | Value | Run |
 | --- | --- | --- |
 | Pinned-corpus feature matrix | 42/42 covered, 7365/7365 action-weighted | `w1d-case19-20261013192913Z` |
-| Reference-corpus blocked entries | 21,851 / 117,255 (3 whole-table errors) | catalog re-run 2026-10-13 post W1-D + W1-C (baseline: `ref-assessment`) |
+| Reference-corpus blocked entries | 21,959 / 117,604 (2 whole-table errors) | catalog re-run 2026-10-13 post W1-D + W1-C + W1-B (baseline: `ref-assessment`) |
 | AP-11 confirmed actions | 0 / 6019 | `w1d-case19-20261013192913Z` |
 | Latest build | `native-20261012T092729Z-2d8aaf12` (0.11) | in-build suite 2710/25 |
-| Local dev suite | 2758 OK / 25 expected skips | post W1-D + W1-C merge (canonical path) |
+| Local dev suite | 2769 OK / 25 expected skips | post W1-D + W1-C + W1-B merge (canonical path) |
 
 Update protocol: after each merged WP — re-run the blocked catalog on the
 scratch corpus, record the per-family delta in §2 status columns and here;
@@ -236,6 +236,7 @@ matrix/AP-11; reference corpus = closure progress).
 
 | Date | Event | Evidence |
 | --- | --- | --- |
+| 2026-10-13 | W1-B (WP-20) integrated into `native-0.12`: NASM `@@` current-address cursor — `@@:` label line handled positionally in `prepare_global_program` (consumed inside a global initializer region, forwarded verbatim to the consumer source outside it, no plan operation); named per-entry refusals for every other `@@` position; per-entry catch list in `compiler.py` gains `AddressExpressionError` explicitly (plain ValueError, not an AAError). Cyberpunk2077.CT now compiles (349 entries: 241 supported / 108 blocked, all other-WP residual reasons, 0 `@@` reasons); suite 2769 OK / 25 skips green. Case-15 still waits on W1-A (WP-19/21/24) | `native-0.12` merge of `w1-b` @ ccb698a; `src/ct2trainer/native/global_alloc.py`, `src/ct2trainer/native/compiler.py` (5-line catch hunk), `tests/test_native_global_alloc.py` (+202), `tests/test_native_global_probe.py` (+137); catalog re-run post merge (2 whole-table errors left: AtomicHeart `$process`, SuperMeatBoy legacy binary) |
 | 2026-10-13 | W1-D (WP-25) + W1-C (WP-22/23) integrated into `native-0.12`. W1-D: duplicate-ID keep-first + child re-parenting + table warning, legacy binary-CT `CHEATENGINE\t` header → named `TableError` (real Octopath table: 236==236 unique IDs, 24 warnings; SuperMeatBoy named refusal). W1-C: digit-leading module basenames (`20XX.exe`) + `Class::Method`/`Class:Method` managed-label alias (20XX table 10/10 supported; fail-closed refusals pinned). case-19 pinned as 15th table (SHA-256 `80690e82…`, gate:1 → 15); denominator tool aligned to keep-first (record walk dedupes by ID); chain re-run `w1d-case19-20261013192913Z`: 6019 expected actions, top gap cross_record_symbol 3375→3377, action weights 7361→7365; suite 2758 OK / 25 skips green; reference catalog: whole-table errors 4→3, blocked 21,852→21,851, +236 entries (Octopath 227 sup / 9 blocked), 20XX trailing-token refusals −10. W1-A (WP-19/21/24 + WP-25 follow-ups) and W1-B (WP-20) still running; W1-E (WP-26) relaunched after two empty sessions | `native-0.12` merges of `w1-d` + `w1-c`; `gap_inventory/` artifacts (run `w1d-case19-20261013192913Z`); `TableReferences/case-19.ct`; `tests/test_native_feature_matrix.py`, `tests/test_native_ap11_campaign.py`, `tests/test_native_corpus_traceability.py`, `tests/test_native_table_completeness.py`, `tests/test_native_compiler.py` pins updated; catalog delta `Temp\opencode\refassess\` (baseline-catalog.json vs blocked-catalog.json) |
 | 2026-10-13 | Cycle kickoff committed (`native-0.12`): tracker + assessment + plan; CE 7.5 boundary wired into AGENTS.md / lane rules / plan index; case registry reconciled (case-15…case-25); WP-25 duplicate-ID plan model decided (keep-first, dropped duplicates + table warning, plan §10). Wave 1 lanes W1-C (WP-22/23), W1-D (WP-25), W1-E (WP-26) launched in disjoint worktrees `side/w1-c|w1-d|w1-e`; W1-A (WP-19/21/24) + W1-B (WP-20) queued (compiler.py overlap → sequential merges) | main @ `9c6a698`; lane branches `w1-c`/`w1-d`/`w1-e` cut from main |
 | 2026-10-13 | Reference-corpus assessment closed: 4 lanes + root recompilation; consolidated assessment + closure plan + this tracker created; CE 7.5 behavior reference adopted (user decision) | `ref-assessment` catalog (21,852 / 117,019); lane reports in `reference-assessment/raw/` (local-only) |

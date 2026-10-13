@@ -24,9 +24,11 @@ _TESTS_DIR = str(Path(__file__).resolve().parent)
 if _TESTS_DIR not in sys.path:
     sys.path.insert(0, _TESTS_DIR)
 
+import xml.etree.ElementTree as ET
+
 from ct2trainer.native import global_probe as gp
-from ct2trainer.native.compiler import compile_table
-from ct2trainer.native.engine import NativeRuntimeError
+from ct2trainer.native.compiler import NativeCompileError, compile_table, validate_plan
+from ct2trainer.native.engine import NativeRuntimeError, validate_plan as validate_plan_engine
 
 FIXTURE_DIR = Path(__file__).resolve().parent / 'fixtures' / 'global_alloc'
 X64_CT = FIXTURE_DIR / 'global_alloc_x64.ct'
@@ -478,6 +480,137 @@ class ReceiveAndCleanupTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError,
                                     'retained ownership markers in process lock directory'):
             gp._assert_no_files(leftover, 'process lock directory')
+
+
+# WP-20: per-record containment of '@@' (NASM current-address cursor) and
+# AddressExpressionError-style failures in globalalloc sources.  A malformed
+# record must be blocked with a named reason; it must never abort the table.
+CURSOR_OK_SOURCE = (
+    "[ENABLE]\n"
+    "label(done)\n"
+    "globalalloc(cursorval,8)\n"
+    "cursorval:\n"
+    "dd #7\n"
+    "@@:\n"
+    "dd #8\n"
+    "alloc(cave,1000)\n"
+    "cave:\n"
+    "mov rcx,cursorval\n"
+    "mov eax,[rcx]\n"
+    "jmp done\n"
+    "0x1000:\n"
+    "jmp cave\n"
+    "done:\n"
+    "[DISABLE]\n"
+    "0x1000:\n"
+    "db B8 01 00 00 00\n"
+    "dealloc(cave)\n"
+    "dealloc(cursorval)\n"
+)
+CURSOR_BAD_SIZE_SOURCE = (
+    "[ENABLE]\n"
+    "globalalloc(badsize,@@)\n"
+    "alloc(cave,1000)\n"
+    "cave:\n"
+    "mov rcx,100\n"
+    "[DISABLE]\n"
+    "dealloc(cave)\n"
+    "dealloc(badsize)\n"
+)
+CURSOR_BAD_CURSOR_SOURCE = (
+    "[ENABLE]\n"
+    "globalalloc(badcursor,8)\n"
+    "badcursor:\n"
+    "dd #1\n"
+    "@@+1:\n"
+    "dd #2\n"
+    "alloc(cave,1000)\n"
+    "cave:\n"
+    "mov rcx,badcursor\n"
+    "[DISABLE]\n"
+    "dealloc(cave)\n"
+    "dealloc(badcursor)\n"
+)
+
+
+def _cursor_ct(path, scripts):
+    """Write a minimal two-entry CT and compile it against the probe process."""
+    root = ET.Element('CheatTable', CheatEngineTableVersion='45')
+    entries_el = ET.SubElement(root, 'CheatEntries')
+    for index, text in enumerate(scripts, 1):
+        entry = ET.SubElement(entries_el, 'CheatEntry')
+        for key, value in {'ID': str(index), 'Description': f'W1B {index}',
+                           'VariableType': 'Auto Assembler Script',
+                           'AssemblerScript': text}.items():
+            ET.SubElement(entry, key).text = value
+    path.write_bytes(ET.tostring(root, encoding='utf-8', xml_declaration=True))
+    return compile_table(path, gp.PROCESS_NAME)
+
+
+class CursorContainmentTests(unittest.TestCase):
+    """WP-20: '@@' failures stay per-record; the table still compiles."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix='native-global-wp20-')
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+
+    def test_mixed_table_blocks_only_the_malformed_record(self):
+        for bad_source, needle in (
+                (CURSOR_BAD_SIZE_SOURCE,
+                 'Global declaration size is not a bounded integer'),
+                (CURSOR_BAD_CURSOR_SOURCE,
+                 'current-address cursor')):
+            with self.subTest(reason=needle):
+                plan = _cursor_ct(self.root / 'mixed.ct',
+                                  (CURSOR_OK_SOURCE, bad_source))
+                good = plan['entries'][0]
+                bad = plan['entries'][1]
+                self.assertTrue(good['supported'])
+                self.assertEqual(good['kind'], 'script')
+                self.assertIn('global_program', good)
+                self.assertFalse(bad['supported'])
+                self.assertEqual(bad['kind'], 'blocked')
+                self.assertIn(needle, bad['reason'])
+                self.assertNotIn('enable', bad)
+                self.assertNotIn('disable', bad)
+                self.assertEqual(bad['provides'], [])
+                self.assertEqual(plan['counts']['blocked'], 1)
+                self.assertEqual(plan['counts']['supported'], 1)
+                # Both plan validators admit the mixed plan unchanged.
+                validate_plan(plan)
+                validate_plan_engine(plan)
+
+    def test_cursor_record_plan_metadata_round_trips_through_validators(self):
+        plan = _cursor_ct(self.root / 'cursor.ct', (CURSOR_OK_SOURCE,))
+        entry = plan['entries'][0]
+        self.assertTrue(entry['supported'])
+        profile = entry['global_program']
+        # The '@@:' line is part of the verified source and contributes the
+        # second word to the initializer; no plan operation is emitted for it.
+        self.assertIn('@@:', profile['source'])
+        self.assertEqual(profile['globals'][0]['initializer'], '0700000008000000')
+        self.assertNotIn('@@:', profile['consumer_source'])
+        self.assertEqual(entry['provides'], ['cursorval'])
+        validate_plan(plan)
+        validate_plan_engine(plan)
+        # Forged metadata in the '@@' plan is rejected by both validators.
+        for tamper in (
+                lambda p: p['entries'][0]['global_program']['globals'][0].__setitem__(
+                    'size', 12),
+                lambda p: p['entries'][0]['global_program']['globals'][0].__setitem__(
+                    'initializer', '00' * 8),
+                lambda p: p['entries'][0]['global_program'].__setitem__(
+                    'consumer_source',
+                    p['entries'][0]['global_program']['consumer_source'].replace(
+                        'mov rcx,cursorval', 'mov rcx,foreign'))):
+            with self.subTest():
+                forged = copy.deepcopy(plan)
+                tamper(forged)
+                with self.assertRaises(NativeCompileError):
+                    validate_plan(forged)
+                with self.assertRaises(NativeRuntimeError):
+                    validate_plan_engine(forged)
 
 
 if __name__ == '__main__':

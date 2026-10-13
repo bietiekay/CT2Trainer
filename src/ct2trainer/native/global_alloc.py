@@ -25,7 +25,8 @@ import threading
 
 from ct2trainer.native import aa_program as aa
 from ct2trainer.native.aa import validate_symbol
-from ct2trainer.native.address_expression import integer, resolve_expression
+from ct2trainer.native.address_expression import (AddressExpressionError, integer,
+                                                  resolve_expression)
 from ct2trainer.native.hooks import (HookManager, HookError, HookUncertain,
     MAX_HOOK_ALLOCATIONS, MAX_HOOK_BYTES)
 
@@ -85,7 +86,11 @@ def prepare_global_program(source, process_name=None, *, bitness=64):
             args = aa._args(match.group(1))
             if len(args) not in (2, 3):
                 raise GlobalError('globalalloc requires name, size and optional near expression.')
-            name, size = validate_symbol(args[0]), integer(args[1])
+            name = validate_symbol(args[0])
+            try:
+                size = integer(args[1])
+            except AddressExpressionError as exc:
+                raise GlobalError('Global declaration size is not a bounded integer: ' + str(exc)) from exc
             if name.casefold() in globals_ or len(globals_) == MAX_GLOBALS:
                 raise GlobalError('Duplicate or excessive global declarations.')
             if not 1 <= size <= MAX_GLOBAL_BYTES:
@@ -116,7 +121,12 @@ def prepare_global_program(source, process_name=None, *, bitness=64):
             raise GlobalError('Global cursor alias closure exceeds its aggregate work bound.')
         if len(stack) >= 64:
             raise GlobalError('Global cursor alias closure exceeds its depth bound.')
-        names = [x.casefold() for x in aa.expression_symbols(expression)]
+        try:
+            names = [x.casefold() for x in aa.expression_symbols(expression)]
+        except AddressExpressionError as exc:
+            if expression.strip().startswith('@@'):
+                raise GlobalError("The NASM current-address cursor '@@' is only supported as the '@@:' label line and cannot be used as an address expression.") from exc
+            raise GlobalError('Global cursor expression is not a valid address expression: ' + str(exc)) from exc
         for name in names:
             if name in globals_:
                 return True
@@ -149,6 +159,20 @@ def prepare_global_program(source, process_name=None, *, bitness=64):
         match = re.fullmatch(r'(.+):', line)
         if match:
             expression = match.group(1).strip()
+            if expression == '@@':
+                # NASM current-address cursor: a positional marker, not a
+                # named cursor. It changes no global-cursor context (data
+                # lines after it still belong to the enclosing cursor) and
+                # emits no plan operation. Inside a global initializer
+                # region the marker is consumed with the data lines: its
+                # position names a byte offset within the global buffer,
+                # which lives in the pool allocation, not in the consumer
+                # program. Outside that region the line passes through to
+                # the consumer source, where the AA dialect owns the
+                # anonymous-label (@f/@b) semantics.
+                if cursor is None:
+                    transformed.append(raw)
+                continue
             cursor_expr = expression
             cursor = expression.casefold() if expression.casefold() in globals_ else None
             # Indirect global cursors cannot disguise executable/global writes.
