@@ -17,6 +17,9 @@ import xml.etree.ElementTree as ET
 MAX_TABLE_BYTES = 32 * 1024 * 1024
 MAX_ENTRIES = 20_000
 MAX_ENTRY_DEPTH = 64
+# Legacy pre-XML binary tables (CE 5.x era) start with this magic header;
+# they are refused with a named, distinct error (WP-25).
+LEGACY_BINARY_CT_HEADER = b"CHEATENGINE\t"
 LOCAL_CE_TABLE_VERSION = 45
 ADVANCED_VALUE_TYPES = frozenset({"Array of byte", "Binary", "Custom"})
 SIMPLE_VALUE_TYPES = frozenset({"Byte", "2 Bytes", "4 Bytes", "8 Bytes", "Float", "Double"})
@@ -324,8 +327,13 @@ def _entry_kind(element: ET.Element, variable_type: str | None,
 def read_table(path: str | Path) -> Table:
     """Parse a .CT without evaluating any embedded Lua or Auto Assembler.
 
-    DTDs and entity declarations are refused. IDs must be unique because the
-    generated CE UI locates records by ID, not by their mutable descriptions.
+    DTDs and entity declarations are refused.  Legacy pre-XML binary tables
+    (``CHEATENGINE\\t`` magic header) are refused with a named error that is
+    distinct from the malformed-XML reason.  Duplicate CheatEntry IDs are
+    tolerated (CE loads them without any check): the first occurrence owns
+    the ID and later duplicates are dropped from the table with a per-ID
+    warning, because the plan, the by_id map and selection persistence are
+    ID-keyed and require exactly one addressable record per ID.
     """
     source = Path(path).expanduser().resolve()
     if source.suffix.lower() != ".ct":
@@ -337,6 +345,10 @@ def read_table(path: str | Path) -> Table:
     if size > MAX_TABLE_BYTES:
         raise TableError(f"Table exceeds {MAX_TABLE_BYTES} Bytes.")
     data = source.read_bytes()
+    if data.startswith(LEGACY_BINARY_CT_HEADER):
+        raise TableError(
+            "Legacy binary CT table (CHEATENGINE header): not supported — "
+            "XML .CT expected.")
     if re.search(rb"<!\s*(DOCTYPE|ENTITY)\b", data, re.IGNORECASE):
         raise TableError("DTD/ENTITY is not allowed in .CT input.")
     try:
@@ -352,6 +364,7 @@ def read_table(path: str | Path) -> Table:
 
     seen_ids: set[int] = set()
     entries: list[Entry] = []
+    duplicate_names: dict[int, list[str]] = {}
 
     from .native.custom_types import CustomTypeError, custom_types_from_ct_root
     custom_types: tuple = ()
@@ -385,7 +398,22 @@ def read_table(path: str | Path) -> Table:
         if entry_id < 0:
             raise TableError(f"Negative CheatEntry-ID: {entry_id}.")
         if entry_id in seen_ids:
-            raise TableError(f"Duplicate CheatEntry ID: {entry_id}.")
+            # WP-25 keep-first: the plan, the by_id map and selection
+            # persistence are ID-keyed, so exactly one addressable record
+            # per ID is mandatory.  The first occurrence owns the ID; this
+            # later duplicate is dropped from the table.  It is NOT
+            # re-parented to the kept entry (that would merge two distinct
+            # records and change the kept entry's semantics).  Any children
+            # of the dropped duplicate stay addressable at the duplicate's
+            # own tree position (re-parented to the duplicate's parent), so
+            # no unique-ID record is lost and the plan total stays equal to
+            # the unique source-ID count.  The dropped record is named in
+            # the per-ID table warning emitted after the walk.
+            duplicate_names.setdefault(entry_id, []).append(
+                _label(element.findtext("Description"), entry_id))
+            for child in element.findall("./CheatEntries/CheatEntry"):
+                visit(child, depth + 1, parent_id, labels)
+            return
         seen_ids.add(entry_id)
         label = _label(element.findtext("Description"), entry_id)
         child_nodes = element.findall("./CheatEntries/CheatEntry")
@@ -481,6 +509,10 @@ def read_table(path: str | Path) -> Table:
             warnings.append("Custom Type records need a CE runtime test; definitions may come from table Lua.")
     if any(entry.script_external_action for entry in entries):
         warnings.append("At least one script invokes a dialog or external action and needs review.")
+    for entry_id, names in duplicate_names.items():
+        warnings.append(
+            f"Duplicate CheatEntry ID: {entry_id} (kept first occurrence; "
+            f"dropped {len(names)} duplicate record(s): {', '.join(names)})")
     sections = tuple(
         SectionSummary(
             name=element.tag,

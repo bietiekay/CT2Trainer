@@ -24,18 +24,18 @@
   "category_counts": {
    "custom_value": 3,
    "one_shot": 1723,
-   "persistent_script": 423,
+   "persistent_script": 424,
    "string_write": 731,
-   "value_freeze": 3131
+   "value_freeze": 3138
   },
   "confirmed_game_effect_actions": 0,
   "confirmed_percent": 0.0,
-  "expected_actions": 6011,
+  "expected_actions": 6019,
   "goal_90_percent": "NOT REACHED",
-  "group_toggle_actions": 0,
-  "groups_total": 1282,
+  "group_toggle_actions": 1,
+  "groups_total": 1285,
   "missing_gates": [
-   "Real game installs/builds for the 14 pinned tables (user question unanswered)",
+   "Real game installs/builds for the 15 pinned tables (user question unanswered)",
    "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
    "VM/Clean-PC gate without CE/Python",
    "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -45,13 +45,13 @@
   ],
   "navigation_excluded": 0,
   "record_types": {
-   "aa_script": 2146,
+   "aa_script": 2147,
    "custom": 3,
    "string": 731,
-   "value": 3131
+   "value": 3138
   },
-  "records_total": 6011,
-  "scope": "14 pinned start-corpus tables (hash-deduplicated, static)",
+  "records_total": 6019,
+  "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
    "real_game_effect": "0 actions with observed real game effect",
@@ -60,11 +60,11 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5475,
-   "statically_assumed": 503,
+   "locked": 5478,
+   "statically_assumed": 508,
    "unknown": 33
   },
-  "unique_tables": 14
+  "unique_tables": 15
  },
  "gap_labels": {
   "aa_conditional_block": {
@@ -224,7 +224,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run wp14-staged-20261011T093320Z",
+ "generated": "run w1d-case19-20261013192913Z",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -152564,37 +152564,342 @@
      "requirement": "state contract (AP-04)"
     }
    ]
+  },
+  {
+   "architecture": {
+    "signals": [],
+    "value": "unknown"
+   },
+   "counts": {
+    "categories": {
+     "persistent_script": 1,
+     "value_freeze": 7
+    },
+    "entries_total": 12,
+    "expected_actions": 8,
+    "gap_counts": {
+     "cross_record_symbol": 2,
+     "lua_symbol_api": 1,
+     "script_parent_activation": 1
+    },
+    "group_toggle_actions": 1,
+    "groups": 3,
+    "navigation_excluded": 0,
+    "record_types": {
+     "aa_script": 1,
+     "value": 7
+    },
+    "records": 8,
+    "status_counts": {
+     "locked": 3,
+     "statically_assumed": 5
+    }
+   },
+   "duplicate_ids": {
+    "0": 2,
+    "2": 2,
+    "5": 2
+   },
+   "format_version": "46",
+   "groups": [
+    {
+     "depth": 0,
+     "descendant_records": 1,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "duplicate group of id 0 (dropped: keep-first)",
+     "on_effect": false,
+     "path": "duplicate group of id 0 (dropped: keep-first)"
+    },
+    {
+     "depth": 0,
+     "descendant_records": 2,
+     "group_action": true,
+     "has_checkbox": true,
+     "name": "synth settings (group, kept first occurrence of id 2)",
+     "on_effect": true,
+     "path": "synth settings (group, kept first occurrence of id 2)"
+    },
+    {
+     "depth": 0,
+     "descendant_records": 0,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "duplicate settings group of id 2 (dropped: keep-first)",
+     "on_effect": false,
+     "path": "duplicate settings group of id 2 (dropped: keep-first)"
+    }
+   ],
+   "main_initialization": {
+    "gaps": [
+     "lua_symbol_api",
+     "script_parent_activation"
+    ],
+    "id": 8,
+    "name": "Get synth.base",
+    "note": "first depth-0 script record",
+    "source": "record",
+    "status": "locked",
+    "type": "aa_script"
+   },
+   "path": "case-19.ct",
+   "paths": [
+    "case-19.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 0,
+       "lifetime": "read_write_freezable_value",
+       "name": "value A (kept first occurrence of id 0)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "4 Bytes value in ct2synth19.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth19.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 5,
+       "lifetime": "read_write_freezable_value",
+       "name": "kept base record (first occurrence of id 5)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "4 Bytes value in ct2synth19.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth19.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api",
+        "script_parent_activation"
+       ],
+       "id": 8,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Get synth.base",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth19.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth19.exe",
+       "type": "aa_script"
+      }
+     ]
+    },
+    {
+     "group": "duplicate group of id 0 (dropped: keep-first)",
+     "records": [
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [],
+       "id": 1,
+       "lifetime": "read_write_freezable_value",
+       "name": "value B (unique child of dropped duplicate id 0)",
+       "parent": "duplicate group of id 0 (dropped: keep-first)",
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "Float value in ct2synth19.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth19.exe",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "synth settings (group, kept first occurrence of id 2)",
+     "records": [
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [],
+       "id": 3,
+       "lifetime": "read_write_freezable_value",
+       "name": "value C",
+       "parent": "synth settings (group, kept first occurrence of id 2)",
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "Byte value in ct2synth19.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth19.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [],
+       "id": 4,
+       "lifetime": "read_write_freezable_value",
+       "name": "value D",
+       "parent": "synth settings (group, kept first occurrence of id 2)",
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "8 Bytes value in ct2synth19.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth19.exe",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "(direct: Get synth.base)",
+     "records": [
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 9,
+       "lifetime": "read_write_freezable_value",
+       "name": "base",
+       "parent": "Get synth.base",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 10,
+       "lifetime": "read_write_freezable_value",
+       "name": "base #2",
+       "parent": "Get synth.base",
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "Float value (pointer expression); requires symbols synth19_base",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    }
+   ],
+   "sha256": "80690e8265e51cfe031ea02dbdd7bf2aeae898da034931f037044cbc930a3f7a",
+   "size_bytes": 3655,
+   "table": "case-19.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 2,
+     "gap": "cross_record_symbol",
+     "label": "Cross-record symbol resolution",
+     "requirement": "N-07"
+    },
+    {
+     "affected_records": 1,
+     "gap": "lua_symbol_api",
+     "label": "Lua symbol API",
+     "requirement": "N-07 / N-19"
+    },
+    {
+     "affected_records": 1,
+     "gap": "script_parent_activation",
+     "label": "Script parent with child-activation propagation (staged unlock)",
+     "requirement": "WP-14 (extends AP-07)"
+    }
+   ]
   }
  ],
- "run_id": "wp14-staged-20261011T093320Z",
+ "run_id": "w1d-case19-20261013192913Z",
  "top_gaps_pinned": [
   {
-   "affected_records": 3375,
+   "affected_records": 3377,
    "gap": "cross_record_symbol",
    "label": "Cross-record symbol resolution",
    "requirement": "N-07",
-   "share_of_expected_actions_percent": 56.15
+   "share_of_expected_actions_percent": 56.11
   },
   {
    "affected_records": 1908,
    "gap": "lua_host_profile",
    "label": "Lua host profile (bounded Lua host profile)",
    "requirement": "N-01 / N-19",
-   "share_of_expected_actions_percent": 31.74
+   "share_of_expected_actions_percent": 31.7
   },
   {
    "affected_records": 1723,
    "gap": "one_shot_save_contract",
    "label": "One-shot without ON/OFF save contract",
    "requirement": "state contract (AP-04)",
-   "share_of_expected_actions_percent": 28.66
+   "share_of_expected_actions_percent": 28.63
   },
   {
-   "affected_records": 198,
+   "affected_records": 199,
    "gap": "lua_symbol_api",
    "label": "Lua symbol API",
    "requirement": "N-07 / N-19",
-   "share_of_expected_actions_percent": 3.29
+   "share_of_expected_actions_percent": 3.31
   },
   {
    "affected_records": 36,
