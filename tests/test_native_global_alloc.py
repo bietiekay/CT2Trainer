@@ -11,8 +11,9 @@ import unittest
 from unittest.mock import patch
 
 from ct2trainer.native import global_alloc as ga
-from test_native_hooks import _Memory, _Coordinator
 from ct2trainer.native import aa_program as aa
+from ct2trainer.native.address_expression import AddressExpressionError
+from test_native_hooks import _Memory, _Coordinator
 
 
 def source(*, entry=0x1000, initializer=True, size=4, name='shared', near=None, bitness=64):
@@ -324,6 +325,205 @@ class Tests(unittest.TestCase):
             with self.subTest(profile=name):
                 with self.assertRaises((ga.GlobalError, aa.ProgramError)):
                     ga.prepare_global_program(text)
+
+
+# WP-20: the NASM current-address cursor ('@@:') inside globalalloc sources.
+CURSOR_INITIALIZER_SOURCE = (
+    '[ENABLE]\n'
+    'label(done)\n'
+    'globalalloc(shared,8)\n'
+    'shared:\n'
+    'dd #11\n'
+    '@@:\n'
+    'dd #22\n'
+    'alloc(cave,1000)\n'
+    'cave:\n'
+    'mov rcx,shared\n'
+    'mov eax,[rcx]\n'
+    'jmp done\n'
+    '0x1000:\n'
+    'jmp cave\n'
+    'done:\n'
+    '[DISABLE]\n'
+    '0x1000:\n'
+    'db B8 01 00 00 00\n'
+    'dealloc(cave)\n'
+    'dealloc(shared)\n'
+)
+
+CURSOR_ANONYMOUS_LABEL_SOURCE = (
+    '[ENABLE]\n'
+    'label(done)\n'
+    'globalalloc(stash,16)\n'
+    'stash:\n'
+    'dq #42\n'
+    '@@:\n'
+    'dq #43\n'
+    'alloc(cave,1000)\n'
+    'cave:\n'
+    'jmp @f\n'
+    'nop\n'
+    '@@:\n'
+    'mov rcx,stash\n'
+    'mov eax,[rcx]\n'
+    'jmp done\n'
+    '0x1000:\n'
+    'jmp cave\n'
+    'done:\n'
+    '[DISABLE]\n'
+    '0x1000:\n'
+    'db B8 01 00 00 00\n'
+    'dealloc(cave)\n'
+    'dealloc(stash)\n'
+)
+
+
+class CursorLabelTests(unittest.TestCase):
+    """WP-20: '@@:' is the NASM current-address cursor, never a named global."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.memory = _Memory()
+        self.pool = ga.GlobalPool(self.memory, self.tmp.name, trainer_id='1'*16,
+                                  table_sha256='2'*64, controller_guard=lambda: True)
+        self.counter = 0
+
+    def acquire(self, text):
+        self.counter += 1
+        return self.pool.acquire(ga.prepare_global_program(text), record_id=63,
+                                 activation=f'activation-{self.counter}')
+
+    def publish(self, lease):
+        program = self.pool.binding(lease)
+        manager = self.pool.make_consumer(lease, Path(self.tmp.name)/f'consumer-{self.counter}.json',
+                                          coordinator=_Coordinator())
+        preflight = aa.preflight_program(program, self.memory)
+        for request in preflight['allocation_requests']:
+            manager.allocate(request['name'], request['size'], request['near'],
+                             executable=request['executable'], writable=request['writable'])
+        linked = aa.link_program(program, self.memory, preflight['symbols'], manager.allocation_map())
+        manager.stage(linked['blocks'], linked['exports'])
+        manager.publish()
+        self.pool.confirm_enabled(lease, program)
+        return manager
+
+    def test_cursor_initializer_line_compiles_and_round_trips(self):
+        profile = ga.prepare_global_program(CURSOR_INITIALIZER_SOURCE)
+        # Data on both sides of the cursor line belongs to the enclosing
+        # global cursor ('dd #11'/'dd #22' are decimal literals: 0x0B/0x16);
+        # the cursor line itself emits no plan operation.
+        self.assertEqual(profile['globals'][0]['initializer'], '0b00000016000000')
+        self.assertTrue(profile['globals'][0]['initializer_present'])
+        self.assertEqual(len(profile['globals']), 1)
+        self.assertEqual(profile['globals'][0]['name'], 'shared')
+        self.assertEqual(profile['globals'][0]['size'], 8)
+        self.assertEqual(profile['provides'], ['shared'])
+        # Inside the initializer region the marker is consumed with the data
+        # lines (its offset lives in the pool allocation, not the consumer).
+        self.assertNotIn('@@:', profile['consumer_source'])
+        self.assertNotIn('dd #22', profile['consumer_source'])
+        # Plan metadata is byte-verifiable against the exact original source.
+        rebuilt = ga.validate_global_program(profile)
+        self.assertEqual(json.dumps(rebuilt, sort_keys=True),
+                         json.dumps(profile, sort_keys=True))
+
+    def test_cursor_line_keeps_enclosing_global_cursor_context(self):
+        profile = ga.prepare_global_program(CURSOR_INITIALIZER_SOURCE)
+        self.assertEqual(profile['globals'][0]['initializer'], '0b00000016000000')
+        # The cursor line must not open a second cursor/initializer: exactly
+        # one global exists and the second data line was consumed by it.
+        self.assertEqual([g['name'] for g in profile['globals']], ['shared'])
+        self.assertNotIn('dd #11', profile['consumer_source'])
+        self.assertNotIn('dd #22', profile['consumer_source'])
+
+    def test_anonymous_label_consumption_keeps_code_cursor_in_consumer(self):
+        profile = ga.prepare_global_program(CURSOR_ANONYMOUS_LABEL_SOURCE)
+        self.assertEqual(profile['globals'][0]['initializer'],
+                         '2a000000000000002b00000000000000')
+        # Exactly one '@@:' survives into the consumer source: the code one.
+        # The initializer one was consumed with its data lines.
+        self.assertEqual(profile['consumer_source'].count('@@:'), 1)
+        ga.validate_global_program(profile)
+
+    def test_cursor_engine_activation_is_byte_exact_and_reversible(self):
+        lease = self.acquire(CURSOR_INITIALIZER_SOURCE)
+        manager = self.publish(lease)
+        base = self.pool.diagnostic()['members'][0]['address']
+        self.assertEqual(self.memory.read(base, 8), b'\x0b\x00\x00\x00\x16\x00\x00\x00')
+        self.assertEqual(self.memory.read(0x1000, 1), b'\xE9')
+        manager.disable()
+        self.assertEqual(self.memory.read(0x1000, 5), b'\xB8\x01\x00\x00\x00')
+        self.assertEqual(self.memory.read(base, 8), b'\x0b\x00\x00\x00\x16\x00\x00\x00')
+        self.pool.release(lease)
+        self.assertEqual(self.memory.releases, [])
+
+    def test_cursor_anonymous_label_links_to_the_exact_atat_position(self):
+        lease = self.acquire(CURSOR_ANONYMOUS_LABEL_SOURCE)
+        manager = self.publish(lease)
+        base = self.pool.diagnostic()['members'][0]['address']
+        self.assertEqual(self.memory.read(base, 16),
+                         b'\x2a\x00\x00\x00\x00\x00\x00\x00'
+                         b'\x2b\x00\x00\x00\x00\x00\x00\x00')
+        # 'jmp @f' is assembled as a 2-byte short jump (EB 01) and 'nop' is
+        # one byte, so the '@@:' target sits at cave+3: EB 01 jumps from +2
+        # to +3, i.e. exactly the '@@:' marker.  A fallback to a later named
+        # label (e.g. 'done') would produce a different offset.
+        cave = manager.allocation_map()['cave']['address']
+        self.assertEqual(self.memory.read(cave, 2), b'\xEB\x01')
+        self.assertEqual(self.memory.read(cave + 2, 1), b'\x90')  # nop before '@@:'
+        self.assertEqual(self.memory.read(cave + 3, 1), b'\xB9')  # 'mov' at '@@:'
+        manager.disable()
+        self.pool.release(lease)
+        self.assertEqual(self.memory.releases, [])
+
+    def test_cursor_outside_label_line_stays_fail_closed_with_named_error(self):
+        # Expression-like cursor line is not the exact '@@:' marker: the
+        # named global-profile refusal is raised before the AA parser sees it.
+        text = source(initializer=False).replace(
+            'alloc(cave,1000)', '@@+1:\ndd #19\nalloc(cave,1000)')
+        with self.assertRaisesRegex(ga.GlobalError, 'current-address cursor'):
+            ga.prepare_global_program(text)
+        # Alias closure reaching the cursor through a define: the define
+        # value is parsed by the AA dialect as an address expression, so the
+        # named ProgramError is the visible (still per-record-contained)
+        # refusal; it must never be a raw AddressExpressionError.
+        text = source(initializer=False).replace(
+            'alloc(cave,1000)', 'define(x,@@)\nx:\ndd #19\nalloc(cave,1000)')
+        with self.assertRaises(aa.ProgramError) as context:
+            ga.prepare_global_program(text)
+        self.assertIn('@@', str(context.exception))
+
+    def test_cursor_as_staged_readmem_address_is_named(self):
+        text = source().replace('dd #17', 'readmem(@@,4)')
+        # Parsed as an address expression before the staged shape check, so
+        # the named AA-dialect refusal (ProgramError) is the visible error;
+        # assertRaises(aa.ProgramError) also proves it is not a raw
+        # AddressExpressionError (ProgramError is not its subclass).
+        with self.assertRaises(aa.ProgramError) as context:
+            ga.prepare_global_program(text)
+        self.assertIn('@@', str(context.exception))
+
+    def test_cursor_in_declaration_size_is_named(self):
+        text = source().replace('globalalloc(shared,4)', 'globalalloc(shared,@@)')
+        with self.assertRaisesRegex(ga.GlobalError,
+                                    'Global declaration size is not a bounded integer'):
+            ga.prepare_global_program(text)
+
+    def test_cursor_as_initializer_value_is_named(self):
+        # Unparseable cursor token: the AA dialect refuses it with the
+        # named ProgramError at parse time (still per-record contained,
+        # never a raw AddressExpressionError).
+        text = source().replace('dd #17', 'dd @@')
+        with self.assertRaises(aa.ProgramError) as context:
+            ga.prepare_global_program(text)
+        self.assertIn('@@', str(context.exception))
+        # Parseable but non-scalar expression under the cursor: the global
+        # profile refuses non-literal initializer values with its named error.
+        text = source().replace('dd #17', 'dd [rax]')
+        with self.assertRaisesRegex(ga.GlobalError,
+                                    'Only scalar/string db/dw/dd/dq initializers'):
+            ga.prepare_global_program(text)
 
 
 if __name__ == '__main__':
