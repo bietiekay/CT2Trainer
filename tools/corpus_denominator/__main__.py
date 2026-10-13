@@ -61,6 +61,7 @@ PINNED = [
     "case-12.ct",
     "case-13.ct",
     "case-14.ct",
+    "case-19.ct",
 ]
 
 # gap id -> (label, requirement/package mapping)
@@ -107,7 +108,7 @@ GAP_LABELS = {
 }
 
 MISSING_GATES = [
-    "Real game installs/builds for the 14 pinned tables (user question unanswered)",
+    "Real game installs/builds for the 15 pinned tables (user question unanswered)",
     "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
     "VM/Clean-PC gate without CE/Python",
     "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -209,7 +210,17 @@ def analyze_table(sha, rel, data):
     records = []
     scans = []
     all_modules = set()
+    # WP-25 alignment: the product plan is ID-keyed and keeps the first
+    # occurrence of a duplicated CheatEntry ID.  The dropped duplicates are
+    # not addressable actions, so the record walk skips them (keep-first,
+    # document order) exactly like the product reader does.
+    seen_record_ids = set()
     for entry, depth, labels, group_labels in table.iter_records(root):
+        record_id = _int_or_none(entry.findtext("ID"))
+        if record_id is not None:
+            if record_id in seen_record_ids:
+                continue
+            seen_record_ids.add(record_id)
         rec = classify.classify_record(entry, ud)
         rec["depth"] = depth
         chain = list(labels)
@@ -588,7 +599,7 @@ def run(args):
     pinned_expected = len(pinned_records) - pinned_nav
 
     denominator = {
-        "scope": "14 pinned start-corpus tables (hash-deduplicated, static)",
+        "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
         "unique_tables": len(pinned_info),
         "records_total": len(pinned_records),
         "navigation_excluded": pinned_nav,

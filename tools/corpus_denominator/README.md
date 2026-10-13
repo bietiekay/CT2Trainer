@@ -86,7 +86,7 @@ fallback.
   tables byte-exactly.
 - Static syntax assumptions only: no attach proof, no CE/Windows runtime
   gate, no game-effect evidence. `confirmed_game_effect_actions` stays `0`.
-- The 14 pinned start tables are part of the tool's contract
+- The 15 pinned start tables are part of the tool's contract
   (`PINNED` in `__main__.py`); a missing pinned path fails the run.
 - The `generated` field carries the run-id stamp, not a wall-clock time;
   the committed reference artifacts use `repo-reproducible`.
