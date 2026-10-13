@@ -616,7 +616,10 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                                      else _dropdown(source, table.entries, entry.get("value_profile")))
             else:
                 raise AAError("Record has no implemented native action or address.")
-        except (AAError, LuaProgramError, ValueTypeError) as exc:
+        # AddressExpressionError is a plain ValueError (not an AAError), so it
+        # is caught explicitly to keep a malformed expression per-record
+        # instead of aborting the whole table (WP-20).
+        except (AAError, LuaProgramError, ValueTypeError, AddressExpressionError) as exc:
             _block(entry, str(exc))
     async_ids = {source.id for source in table.entries
                  if source.kind == "script" and source.async_script}
