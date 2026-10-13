@@ -103,3 +103,31 @@ class DropdownLinkRuntimeTests(unittest.TestCase):
                           process_lock_dir=self.root / "shared2",
                           memory_factory=lambda name: self.memory,
                           hook_coordinator=self.coordinator)
+
+    def test_linked_dropdown_borrows_separator_rows_stays_runtime_writable(self):
+        # WP-24: separator rows from a shared list are borrowed by linked
+        # records as display metadata only and are never writable.
+        source = CT_BODY.replace(
+            "0:Off\n1:On\n2:Both\n", "0:Off\n:Mid Tier:\n1:On\n2:Both\n")
+        table = self.root / "separators.ct"
+        table.write_text(source, encoding="utf-8")
+        plan = compile_table(table, "FixtureTarget.exe")
+        by_id = {entry["id"]: entry for entry in plan["entries"]}
+        self.assertEqual(by_id[2010]["dropdown"]["choices"], [
+            {"value": "0", "description": "Off"},
+            {"value": "", "description": "Mid Tier:", "separator": True},
+            {"value": "1", "description": "On"},
+            {"value": "2", "description": "Both"},
+        ])
+        self.assertEqual(by_id[2003]["dropdown"]["choices"],
+                         by_id[2010]["dropdown"]["choices"])
+        self.assertEqual(by_id[2003]["dropdown"]["link_target_id"], 2010)
+        engine = TrainerEngine(plan, state_dir=self.root / "state3",
+                               process_lock_dir=self.root / "shared3",
+                               memory_factory=lambda name: self.memory,
+                               hook_coordinator=self.coordinator)
+        self.addCleanup(engine.close)
+        engine.poll()
+        self.assertEqual(engine.set_value(2003, "2"), "2")
+        self.assertEqual(self.memory.read(0x1044, 4), b"\x02\x00\x00\x00")
+        self.assertEqual(self.memory.read(0x1050, 1), b"\x00")

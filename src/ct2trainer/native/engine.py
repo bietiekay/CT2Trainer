@@ -355,7 +355,11 @@ def validate_plan(plan: dict) -> None:
                         if op == "define":
                             validate_expression(operation["expression"])
                         elif op == "scan":
-                            validate_expression('"' + operation["module"] + '"')
+                            # WP-19: the $process token names the main module of
+                            # the attached process; the runtime maps it to the
+                            # plan's process_name at activation time.
+                            if operation["module"] != "$process":
+                                validate_expression('"' + operation["module"] + '"')
                             normalize_pattern(operation["pattern"])
                     except AAError as exc:
                         raise NativeRuntimeError(str(exc)) from exc
@@ -435,13 +439,23 @@ def validate_plan(plan: dict) -> None:
             dropdown = entry.get("dropdown")
             if not isinstance(dropdown, dict) or not isinstance(dropdown.get("choices"), list) or type(dropdown.get("read_only")) is not bool:
                 raise NativeRuntimeError("Invalid numeric dropdown")
-            if dropdown["read_only"] and not dropdown["choices"]:
-                raise NativeRuntimeError("Read-only dropdown needs concrete choices")
+            writable = 0
             for choice in dropdown["choices"]:
                 if not isinstance(choice, dict) or not isinstance(choice.get("description"), str):
                     raise NativeRuntimeError("Invalid dropdown choice")
+                if choice.get("separator") is True:
+                    # WP-24 separator rows are display-only metadata; they are
+                    # never selectable and never written.
+                    if choice.get("value") != "":
+                        raise NativeRuntimeError("Separator dropdown choices must carry the empty value")
+                    continue
+                if "separator" in choice:
+                    raise NativeRuntimeError("Dropdown separator marker must be true")
                 snapshot = bytes(entry['value_profile']['size']) if 'value_profile' in entry else None
                 parse_value(dict(entry, dropdown=None), choice.get("value"), snapshot)
+                writable += 1
+            if dropdown["read_only"] and writable == 0:
+                raise NativeRuntimeError("Read-only dropdown needs concrete choices")
     by_id = {entry["id"]: entry for entry in entries}
     providers: dict[str, int] = {}
     for entry in entries:
@@ -519,7 +533,8 @@ def parse_value(entry: dict, text: str, current_bytes: bytes | None = None) -> b
         dropdown = entry.get('dropdown') or {}
         if dropdown.get('read_only') and result not in {
                 parse_profile_value(entry['value_profile'], item['value'], current_bytes)
-                for item in dropdown.get('choices', [])}:
+                for item in dropdown.get('choices', [])
+                if item.get('separator') is not True}:  # WP-24: separator rows are display-only
             raise NativeRuntimeError('Choose a value from the supplied list')
         return result
     """Parse complete numeric literals, never expressions or executable input."""
@@ -563,6 +578,8 @@ def parse_value(entry: dict, text: str, current_bytes: bytes | None = None) -> b
     if dropdown.get("read_only"):
         allowed = set()
         for choice in dropdown.get("choices", []):
+            if choice.get("separator") is True:
+                continue  # WP-24 separator rows are display-only; never selectable.
             plain = dict(entry, dropdown=None)
             allowed.add(parse_value(plain, choice["value"]))
         if result not in allowed:
