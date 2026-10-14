@@ -3,32 +3,32 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 15,
+    "actual": 16,
     "check": "pinned_table_count",
-    "expected": 15,
+    "expected": 16,
     "ok": true
    },
    {
-    "actual": 6019,
+    "actual": 6025,
     "check": "expected_actions",
-    "expected": 6019,
+    "expected": 6025,
     "ok": true
    },
    {
     "actual": {
      "custom_value": 3,
      "one_shot": 1723,
-     "persistent_script": 424,
+     "persistent_script": 429,
      "string_write": 731,
-     "value_freeze": 3138
+     "value_freeze": 3139
     },
     "check": "category_counts",
     "expected": {
      "custom_value": 3,
      "one_shot": 1723,
-     "persistent_script": 424,
+     "persistent_script": 429,
      "string_write": 731,
-     "value_freeze": 3138
+     "value_freeze": 3139
     },
     "ok": true
    },
@@ -101,6 +101,10 @@
      {
       "name": "case-19.ct",
       "ok": true
+     },
+     {
+      "name": "case-20.ct",
+      "ok": true
      }
     ]
    },
@@ -113,6 +117,7 @@
    {
     "actual": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
+     "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
@@ -131,6 +136,7 @@
     "check": "inventory_covers_campaign_shas",
     "expected": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
+     "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
@@ -178,27 +184,27 @@
   "category_counts": {
    "custom_value": 3,
    "one_shot": 1723,
-   "persistent_script": 424,
+   "persistent_script": 429,
    "string_write": 731,
-   "value_freeze": 3138
+   "value_freeze": 3139
   },
   "confirmed_game_effect_actions": 0,
-  "expected_actions": 6019,
+  "expected_actions": 6025,
   "goal_90_percent": "NOT REACHED",
-  "unique_tables": 15
+  "unique_tables": 16
  },
- "generated": "run w1d-case19-20261013192913Z",
+ "generated": "run w1e-case20-20261013234642Z",
  "lane": "AP-11 game campaign plan (read-only, static)",
- "run_id": "w1d-case19-20261013192913Z",
+ "run_id": "w1e-case20-20261013234642Z",
  "schema": "ap11-campaign/v1",
  "source": {
   "corpus_root": "C:\\Users\\xboxl\\code\\CT2Trainer\\TableReferences",
   "feature_coverage": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\feature-coverage.json",
-  "feature_coverage_sha256": "16b5d58defcfe546a22dbbe3b372736365822564f44e0f90a8c9e45a1c1a18d4",
+  "feature_coverage_sha256": "656798a520c613567ebf65f26133f7a8cde088d68198d072c300fafac26478eb",
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "3296a1bf9690429db2a2650a21c26c4d5fc2273b28f08bfc14fe52c0205d0a2a",
+  "gap_report_sha256": "23bc928f879e89f4523b94733260755a4015e02caa73757aef3f398b4f8d8b5e",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "ff1e0a75dc2140a2c5753f8b4464c6c33dc23edf11eea15a2cc6cda67904f34f"
+  "inventory_sha256": "44b42c956dc8e0880765dbb3a9f014f11952b02bbaeaaef85b61863c3f29c33e"
  },
  "tables": [
   {
@@ -6529,17 +6535,43 @@
     "8": "persistent_script",
     "9": "value_freeze"
    }
+  },
+  {
+   "architecture": "unknown",
+   "category_counts": {
+    "persistent_script": 5,
+    "value_freeze": 1
+   },
+   "ct_path": "case-20.ct",
+   "ct_sha256": "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
+   "expected_actions": 6,
+   "name": "case-20.ct",
+   "priority_order": [
+    "value_freeze",
+    "persistent_script"
+   ],
+   "process_candidates": [
+    "ct2synth20.exe"
+   ],
+   "records": {
+    "0": "persistent_script",
+    "1": "persistent_script",
+    "2": "persistent_script",
+    "3": "persistent_script",
+    "4": "value_freeze",
+    "5": "persistent_script"
+   }
   }
  ],
  "totals": {
   "category_counts": {
    "custom_value": 3,
    "one_shot": 1723,
-   "persistent_script": 424,
+   "persistent_script": 429,
    "string_write": 731,
-   "value_freeze": 3138
+   "value_freeze": 3139
   },
-  "expected_actions": 6019,
-  "tables": 15
+  "expected_actions": 6025,
+  "tables": 16
  }
 }

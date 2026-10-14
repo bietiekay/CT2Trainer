@@ -64,22 +64,85 @@ def _block(entry: dict, reason: str) -> None:
     entry["provides"] = []
 
 
+_OFFSET_SLOT_GRAMMAR = re.compile(
+    r"^[+-]?(?:0x)?[0-9A-Fa-f]+(?:\s*[-+*]\s*(?:0x)?[0-9A-Fa-f]+)*$")
+_OFFSET_SLOT_TOKEN = re.compile(r"[-+*]|(?:0x)?[0-9A-Fa-f]+")
+_OFFSET_ANNOTATION = re.compile(r"\([^()]*\)")
+
+
+def _parse_offset_slot(text: str) -> int:
+    """Fold one <Offset> slot into a signed int64 value (WP-21).
+
+    The reference corpus uses constant hexadecimal arithmetic in pointer-
+    chase slots ("13A8+118", "A0+4*4", "1594+8+118") and annotated hex
+    ("20 (Offset of the name pointer)").  The bounded grammar is: hex
+    literals (optionally 0x-prefixed) combined with '+', '-' and '*'
+    using the usual precedence, an optional leading sign that binds to
+    the first term, plus optional balanced, non-nested parenthesized
+    annotation text that is stripped before evaluation.  WP-14 (C4)
+    remains intact: "+28" is 0x28, "-0x10" is -16, and malformed forms
+    ("++10", "+", bare "0x"),
+    symbol-based offsets ("base+10"), dotted text, empty slots, nested or
+    unbalanced parentheses and empty annotations stay rejected
+    fail-closed.  A slot that happens to consist only of hex digits is
+    evaluated as hex (the same ambiguity CE has in its hex-first offset
+    parse); symbol names containing other characters are refused.
+    """
+    if not isinstance(text, str):
+        raise AAError("Pointer offset must be a hexadecimal integer literal.")
+    core = text.strip()
+    if not core or len(core) > 64:
+        raise AAError("Pointer offset must be a hexadecimal integer literal.")
+    depth = 0
+    for char in core:
+        if char == "(":
+            depth += 1
+        elif char == ")" and depth > 0:
+            depth -= 1
+    if depth != 0:
+        raise AAError("Pointer offset must be a hexadecimal integer literal.")
+    if _OFFSET_ANNOTATION.search(core) is not None:
+        if any(annotation[1:-1].strip() == ""
+               for annotation in _OFFSET_ANNOTATION.findall(core)):
+            raise AAError("Pointer offset must be a hexadecimal integer literal.")
+        core = _OFFSET_ANNOTATION.sub(" ", core).strip()
+    if _OFFSET_SLOT_GRAMMAR.match(core) is None:
+        raise AAError("Pointer offset must be a hexadecimal integer literal.")
+    body = core
+    first_sign = 1
+    if body[0] in "+-":
+        first_sign = -1 if body[0] == "-" else 1
+        body = body[1:]
+    tokens = _OFFSET_SLOT_TOKEN.findall(body)
+
+    def hex_value(token: str) -> int:
+        number = int(token.removeprefix("0x").removeprefix("0X"), 16)
+        if number > 0x7FFFFFFFFFFFFFFF:
+            raise AAError("Pointer offset exceeds signed 64 bits.")
+        return number
+
+    total = 0
+    current = first_sign * hex_value(tokens[0])
+    for index in range(1, len(tokens), 2):
+        operator, term = tokens[index], tokens[index + 1]
+        if operator == "*":
+            current *= hex_value(term)
+        elif operator == "+":
+            total += current
+            current = hex_value(term)
+        else:  # "-"
+            total += current
+            current = -hex_value(term)
+    total += current
+    if abs(total) > 0x7FFFFFFFFFFFFFFF:
+        raise AAError("Pointer offset exceeds signed 64 bits.")
+    return total
+
+
 def _offsets(offsets: tuple[str, ...]) -> list[int]:
     if len(offsets) > 32:
         raise AAError("Pointer chains are limited to 32 offsets.")
-    result = []
-    for text in offsets:
-        # WP-14 (C4): an explicit sign is optional; the literal stays
-        # hexadecimal, so "+28" is 0x28 and "-0x10" is -16.  Malformed
-        # forms ("++10", "+", bare "0x") remain rejected fail-closed.
-        if len(text) > 19 or re.fullmatch(r"[+-]?(?:0x)?[0-9a-fA-F]+", text) is None:
-            raise AAError("Pointer offset must be a hexadecimal integer literal.")
-        negative = text.startswith("-")
-        number = int(text.lstrip("+-").removeprefix("0x"), 16)
-        if number > 0x7FFFFFFFFFFFFFFF:
-            raise AAError("Pointer offset exceeds signed 64 bits.")
-        result.append(-number if negative else number)
-    return result
+    return [_parse_offset_slot(text) for text in offsets]
 
 
 def _effective_address(source: Entry, sources: dict[int, Entry], stack: tuple[int, ...] = ()) -> str:
@@ -142,11 +205,19 @@ def _dropdown(entry: Entry, entries: tuple[Entry, ...], value_profile: dict | No
     for value, label in source.dropdown_choices:
         if value == "*":
             continue  # Placeholder is metadata, never a selectable memory value.
+        if value == "":
+            # WP-24: an empty value part is separator metadata, not a
+            # writable choice.  It stays in the plan as a non-writable
+            # display row and is skipped by writable-choice validation and
+            # by the engine's choice lists.
+            choices.append({"value": "", "description": label, "separator": True})
+            continue
         if not _value_literal_safe(value, entry.variable_type, entry.show_as_hex,
                                    entry.show_as_signed, value_profile):
             raise AAError("Dropdown contains an unsupported value expression.")
         choices.append({"value": value, "description": label})
-    if source.dropdown_read_only and not choices:
+    if source.dropdown_read_only and not any(
+            choice.get("separator") is not True for choice in choices):
         raise AAError("Read-only dropdown has no concrete literal choices.")
     result = {"choices": choices, "read_only": source.dropdown_read_only}
     if entry.dropdown_link:
@@ -358,6 +429,25 @@ def _table_lua_source(root) -> str:
     return '\n'.join(part for part in parts if part.strip())
 
 
+def _entry_node_maps(root) -> tuple[dict[int, ET.Element], dict[int, str]]:
+    """Map CheatEntry IDs to their XML nodes and AssemblerScript texts.
+
+    WP-25 follow-up: duplicate IDs resolve keep-first (the first occurrence
+    wins), matching the table reader's keep-first model, so the body of the
+    kept record is the one that gets compiled.  A last-wins dict
+    comprehension would silently replace the kept record's body with the
+    body of a dropped duplicate.
+    """
+    nodes: dict[int, ET.Element] = {}
+    scripts: dict[int, str] = {}
+    for node in root.findall(".//CheatEntry"):
+        identifier = int(node.findtext("ID") or "-1")
+        if identifier not in nodes:
+            nodes[identifier] = node
+            scripts[identifier] = node.findtext("AssemblerScript") or ""
+    return nodes, scripts
+
+
 def compile_table(path: str | Path, process_name: str, title: str | None = None,
                   selected_ids: list[int] | set[int] | tuple[int, ...] | None = None,
                   *, architecture: str = "x64") -> dict:
@@ -373,10 +463,7 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     if len(data) > MAX_TABLE_BYTES or sha256(data).hexdigest() != table.source_sha256:
         raise NativeCompileError("CT source changed during compilation.")
     root = ET.fromstring(data)  # Identical to the bounded, DTD-free reader input.
-    nodes = {int(node.findtext("ID") or "-1"): node
-             for node in root.findall(".//CheatEntry")}
-    scripts = {identifier: node.findtext("AssemblerScript") or ""
-               for identifier, node in nodes.items()}
+    nodes, scripts = _entry_node_maps(root)
     # Table-level nested-assembly label registry: `name:` definitions inside
     # AssemblerScript records are shared candidates for autoAssemble()/
     # autoasm() invocations in other records.  A name defined by more than
@@ -724,7 +811,11 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                     + " flag class applies to the whole subtree.")
             if note not in entry["reason"]:
                 entry["reason"] = (entry["reason"] + " " if entry["reason"] else "") + note
-    warnings = []
+    # WP-25 follow-up (a): table-reader warnings (e.g. the per-duplicate-ID
+    # "kept first occurrence" report, once the keep-first reader lands) are
+    # forwarded into the plan so the creator UI can surface them; the
+    # compile-level warnings below follow in document order.
+    warnings = list(table.warnings)
     omitted = []
     if table.has_table_lua:
         warnings.append("Table Lua is not executed on load. Read-only helpers replay in each Lua activation; top-level writes, callbacks and unsupported APIs block activation.")
@@ -886,7 +977,12 @@ def validate_plan(plan: dict) -> None:
                             module = operation.get("module")
                             if not isinstance(module, str):
                                 raise NativeCompileError("Scan module must be a basename.")
-                            validate_expression('"' + module + '"')
+                            # WP-19: the $process token names the main module of
+                            # the attached process; the engine maps it to the
+                            # plan's process_name at activation time, so the
+                            # module-basename grammar does not apply to it.
+                            if module != "$process":
+                                validate_expression('"' + module + '"')
                             normalize_pattern(operation.get("pattern"))
                         elif op == "define":
                             validate_expression(operation.get("expression"))
@@ -947,13 +1043,25 @@ def validate_plan(plan: dict) -> None:
                 if (not isinstance(dropdown, dict) or not isinstance(dropdown.get("choices"), list)
                         or type(dropdown.get("read_only")) is not bool):
                     raise NativeCompileError("Invalid dropdown plan.")
-                if dropdown["read_only"] and not dropdown["choices"]:
-                    raise NativeCompileError("Read-only dropdown has no numeric choices.")
+                writable = 0
                 for choice in dropdown["choices"]:
-                    if (not isinstance(choice, dict) or not isinstance(choice.get("description"), str)
-                            or not _value_literal_safe(choice.get("value"), entry["variable_type"],
-                                                      entry["show_as_hex"], entry["show_as_signed"], value_profile)):
+                    if (not isinstance(choice, dict) or not isinstance(choice.get("description"), str)):
+                        raise NativeCompileError("Invalid dropdown choice.")
+                    if choice.get("separator") is True:
+                        # WP-24: separator rows are display-only metadata
+                        # (empty value part in the CT); they are never
+                        # selectable and must carry no value.
+                        if choice.get("value") != "":
+                            raise NativeCompileError("Separator dropdown choices must carry the empty value.")
+                        continue
+                    if "separator" in choice:
+                        raise NativeCompileError("Dropdown separator marker must be true.")
+                    if not _value_literal_safe(choice.get("value"), entry["variable_type"],
+                                               entry["show_as_hex"], entry["show_as_signed"], value_profile):
                         raise NativeCompileError("Dropdown values must be exact supported literals.")
+                    writable += 1
+                if dropdown["read_only"] and writable == 0:
+                    raise NativeCompileError("Read-only dropdown has no numeric choices.")
             elif entry["kind"] == "heading" and "value_profile" in entry:
                 # The only profile-backed navigation record is a canonical
                 # zero-byte placeholder. Its address still anchors children.

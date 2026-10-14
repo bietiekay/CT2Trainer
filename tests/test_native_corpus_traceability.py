@@ -134,11 +134,11 @@ class TraceabilityTests(unittest.TestCase):
 
     def test_expected_action_denominator_pinned(self):
         document = self._run_in_tmp()
-        self.assertEqual(document["totals"]["expected_actions"], 6019)
-        self.assertEqual(document["totals"]["trace_entries"], 6019)
+        self.assertEqual(document["totals"]["expected_actions"], 6025)
+        self.assertEqual(document["totals"]["trace_entries"], 6025)
         self.assertEqual(document["totals"]["navigation_excluded"], 0)
-        self.assertEqual(self.report["denominator"]["expected_actions"], 6019)
-        self.assertEqual(self.report["denominator"]["records_total"], 6019)
+        self.assertEqual(self.report["denominator"]["expected_actions"], 6025)
+        self.assertEqual(self.report["denominator"]["records_total"], 6025)
 
     def test_status_and_category_counts_match_report(self):
         document = self._run_in_tmp()
@@ -149,11 +149,11 @@ class TraceabilityTests(unittest.TestCase):
         self.assertTrue(by_name["category_counts"]["ok"])
         self.assertTrue(by_name["gap_counts_total"]["ok"])
         self.assertEqual(by_name["status_counts"]["actual"],
-                         {"locked": 5478, "statically_assumed": 508, "unknown": 33})
+                         {"locked": 5479, "statically_assumed": 512, "unknown": 34})
         self.assertEqual(by_name["category_counts"]["actual"],
                          {"custom_value": 3, "one_shot": 1723,
-                          "persistent_script": 424, "string_write": 731,
-                          "value_freeze": 3138})
+                          "persistent_script": 429, "string_write": 731,
+                          "value_freeze": 3139})
 
     def test_gap_index_reverse_trace_matches_report_gap_counts(self):
         document = self._run_in_tmp()
@@ -177,7 +177,7 @@ class TraceabilityTests(unittest.TestCase):
                 self.assertGreater(len(row["records"]), 0)
         self.assertEqual(gap_index["gap_counts"]["cross_record_symbol"], 3377)
         self.assertEqual(gap_index["gap_counts"]["one_shot_save_contract"], 1723)
-        self.assertEqual(gap_index["gap_counts"]["lua_host_profile"], 1908)
+        self.assertEqual(gap_index["gap_counts"]["lua_host_profile"], 1910)
         self.assertEqual(gap_index["gap_counts"]["custom_type"], 3)
         self.assertEqual(gap_index["gap_counts"]["lua_clock_speed"], 3)
 
@@ -203,7 +203,7 @@ class TraceabilityTests(unittest.TestCase):
                     api["requirement"],
                     self.report["gap_labels"][api["gap"]]["requirement"])
             checked += 1
-        self.assertEqual(checked, 6019)
+        self.assertEqual(checked, 6025)
 
     def test_requirement_index_rolls_up_requirements(self):
         document = self._run_in_tmp()
@@ -353,7 +353,7 @@ class RegressionSelectionTests(unittest.TestCase):
         document = self._select(["--capability", "value_freeze",
                                  "--max-per-capability", "2"])
         cap = document["capabilities"]["value_freeze"]
-        self.assertEqual(cap["match_total"], 3138)
+        self.assertEqual(cap["match_total"], 3139)
         self.assertEqual(cap["selected_count"], 2)
         self.assertTrue(cap["capped"])
         self.assertEqual(document["totals"]["records_selected"], 2)

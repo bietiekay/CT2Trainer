@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"strict directive no-op"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$STRICT}
+ct2synth20.exe+40:
+  db 90
+[DISABLE]
+ct2synth20.exe+40:
+  db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"bogus directive (stays blocked)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$bogus}
+ct2synth20.exe+44:
+  db 90
+[DISABLE]
+ct2synth20.exe+44:
+  db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"phase split inside explicit lua block"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{$lua}
+local synth20_preamble = 1
+[ENABLE]
+getMemoryRecordByID(4).Active = true
+{$asm}
+ct2synth20.exe+90:
+  db 90
+[DISABLE]
+getMemoryRecordByID(4).Active = false
+{$asm}
+ct2synth20.exe+90:
+  db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"redundant asm delimiter no-op"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$asm}
+ct2synth20.exe+C0:
+  db 90
+{$asm}
+[DISABLE]
+ct2synth20.exe+C0:
+  db 90</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>4</ID>
+      <Description>"toggled child value"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth20.exe+D0</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>5</ID>
+      <Description>"duplicate enable marker (stays blocked)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>{$lua}
+[ENABLE]
+[ENABLE]
+local synth20_dup = 1
+[DISABLE]
+local synth20_dup = 0</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

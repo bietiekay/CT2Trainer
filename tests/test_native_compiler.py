@@ -5,6 +5,7 @@ from hashlib import sha256
 from pathlib import Path
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
 from unittest.mock import patch
 
 from ct2trainer.native.aa import AAError, compile_script, expression_symbols, validate_expression
@@ -68,7 +69,7 @@ class NativeCompilerTests(unittest.TestCase):
         if not corpus.exists():
             self.skipTest("The synthetic clean-room corpus is intentionally excluded from the Native source distribution.")
         paths = sorted(corpus.glob("*.ct"))
-        self.assertEqual(len(paths), 15, "The repository compatibility corpus must retain all 15 case tables.")
+        self.assertEqual(len(paths), 16, "The repository compatibility corpus must retain all 16 case tables.")
         for path in paths:
             with self.subTest(path=path.name):
                 plan = compile_table(path, "Target.exe")
@@ -285,6 +286,121 @@ class NativeCompilerTests(unittest.TestCase):
                 entry = plan["entries"][0]
                 self.assertFalse(entry["supported"], entry["reason"])
                 self.assertIn("Pointer offset must be a hexadecimal integer literal.", entry["reason"])
+
+    def test_pointer_offset_constant_folding_accepts_corpus_forms(self):
+        # WP-21: constant hexadecimal arithmetic in pointer-chase slots is
+        # folded to one int64 offset.  Precedence is the usual one ('*'
+        # before '+'/'-'); a leading sign binds to the first term; balanced
+        # non-nested parenthesized annotations are stripped before eval.
+        cases = (
+            ("13A8+118", 0x13A8 + 0x118),
+            # The plan case table on this base quotes "1594+8+118 -> 0x164C";
+            # the exact arithmetic is 0x1594 + 8 + 0x118 = 5812 = 0x16B4
+            # (flagged in the lane report; the plan document itself is
+            # intentionally untouched by this lane).
+            ("1594+8+118", 0x1594 + 8 + 0x118),
+            ("A0+4*4", 0xA0 + 4 * 4),
+            ("433c+10c*4", 0x433C + 0x10C * 4),
+            ("30+30+30+30", 0x30 * 4),
+            ("0x10+0x2", 0x12),
+            ("20 (Offset of the name pointer)", 0x20),
+            ("-13A8+118", -0x13A8 + 0x118),
+            ("+10", 0x10),
+        )
+        for text, expected in cases:
+            with self.subTest(offset=text):
+                plan = self.compile(value_record(1, extra=f'<Offsets><Offset>{text}</Offset></Offsets>'))
+                entry = plan["entries"][0]
+                self.assertTrue(entry["supported"], entry["reason"])
+                self.assertEqual(entry["pointer_offsets"], [expected])
+                validate_plan(plan)
+                validate_runtime_plan(plan)
+
+    def test_pointer_offset_malformed_forms_stay_rejected_with_the_literal_reason(self):
+        for text in ("base+10", "GameEngine.GameInstance", "20 ()", "20 (unclosed",
+                     "(dword)[sym+B8]*4", "[sym+3]++14", "(10)(20)"):
+            with self.subTest(offset=text):
+                plan = self.compile(value_record(1, extra=f'<Offsets><Offset>{text}</Offset></Offsets>'))
+                entry = plan["entries"][0]
+                self.assertFalse(entry["supported"], "expected rejection: " + entry["reason"])
+                self.assertEqual(entry["reason"], "Pointer offset must be a hexadecimal integer literal.")
+
+    def test_pointer_offset_overflow_and_chain_limit_stay_rejected(self):
+        overflow = self.compile(value_record(1, extra='<Offsets><Offset>FFFFFFFFFFFFFFFFFFF+1</Offset></Offsets>'))
+        self.assertFalse(overflow["entries"][0]["supported"])
+        self.assertEqual(overflow["entries"][0]["reason"], "Pointer offset exceeds signed 64 bits.")
+        offsets = "".join("<Offset>10</Offset>" for _ in range(33))
+        plan = self.compile(value_record(1, extra=f"<Offsets>{offsets}</Offsets>"))
+        self.assertFalse(plan["entries"][0]["supported"])
+        self.assertEqual(plan["entries"][0]["reason"], "Pointer chains are limited to 32 offsets.")
+
+    def test_process_aob_scan_module_passes_both_plan_validators(self):
+        # WP-19: the $process token names the main module of the attached
+        # process; the runtime maps it to the plan's process_name, so the
+        # module-basename grammar must not apply to it in either validator.
+        script = ("[ENABLE]\naobscanmodule(scan_sym, $process, 89 48 08)\n"
+                  "scan_sym:\nassert(scan_sym, 89 48 08)\ndb 90\n"
+                  "[DISABLE]\nscan_sym:\nassert(scan_sym, 90)\ndb 89\n")
+        plan = self.compile(script_record(0, script))
+        entry = plan["entries"][0]
+        self.assertTrue(entry["supported"], entry["reason"])
+        self.assertEqual(entry["enable"][0],
+                         {"op": "scan", "symbol": "scan_sym",
+                          "module": "$process", "pattern": "89 48 08"})
+        validate_plan(plan)
+        validate_runtime_plan(plan)
+
+    def test_forged_scan_modules_are_rejected_by_both_plan_validators(self):
+        script = ("[ENABLE]\naobscanmodule(scan_sym, $process, 89 48 08)\n"
+                  "scan_sym:\nassert(scan_sym, 89 48 08)\ndb 90\n"
+                  "[DISABLE]\nscan_sym:\nassert(scan_sym, 90)\ndb 89\n")
+        plan = self.compile(script_record(0, script))
+        for module in ('C:\\x\\y.exe', "$PROCESS", "owned.exe+10"):
+            with self.subTest(module=module):
+                forged = deepcopy(plan)
+                for entry in forged["entries"]:
+                    for phase in ("enable", "disable"):
+                        for op in entry.get(phase, ()):
+                            if op.get("op") == "scan":
+                                op["module"] = module
+                with self.assertRaises(NativeCompileError):
+                    validate_plan(deepcopy(forged))
+                with self.assertRaises(NativeRuntimeError):
+                    validate_runtime_plan(deepcopy(forged))
+
+    def test_table_reader_warnings_are_forwarded_into_the_plan(self):
+        # WP-25 follow-up (a): table-reader warnings are forwarded into the
+        # plan, followed by the compile-level warnings in document order.
+        plan = self.compile(value_record(0, "CreatedByLua"),
+                            sections='<LuaScript>local x = 1</LuaScript>')
+        self.assertIn("Table Lua can run when Cheat Engine loads the table.", plan["warnings"])
+        self.assertIn("Table Lua is not executed on load. Read-only helpers replay in each Lua activation; top-level writes, callbacks and unsupported APIs block activation.", plan["warnings"])
+        # The compile helper pins CheatEngineTableVersion 52, which is newer
+        # than the local CE reference (45), so the reader's version warning
+        # must be forwarded as well.
+        self.assertIn("Table version 52 is newer than the local CE reference (45); CE loading is unverified.", plan["warnings"])
+
+    def test_entry_node_maps_resolve_duplicate_ids_keep_first(self):
+        # WP-25 follow-up (b): duplicate IDs resolve keep-first, so the body
+        # of the kept (first) record is the one that gets compiled.
+        root = ET.fromstring(
+            "<CheatEntries>"
+            '<CheatEntry><ID>7</ID><Description>First</Description>'
+            '<VariableType>Auto Assembler Script</VariableType>'
+            '<AssemblerScript>FIRST</AssemblerScript></CheatEntry>'
+            '<CheatEntry><ID>7</ID><Description>Duplicate</Description>'
+            '<VariableType>Auto Assembler Script</VariableType>'
+            '<AssemblerScript>SECOND</AssemblerScript></CheatEntry>'
+            '<CheatEntry><ID>9</ID><Description>Unique</Description>'
+            '<VariableType>Auto Assembler Script</VariableType>'
+            '<AssemblerScript>UNIQUE</AssemblerScript></CheatEntry>'
+            "</CheatEntries>")
+        from ct2trainer.native.compiler import _entry_node_maps
+        nodes, scripts = _entry_node_maps(root)
+        self.assertEqual(set(nodes), {7, 9})
+        self.assertEqual(nodes[7].findtext("Description"), "First")
+        self.assertEqual(scripts[7], "FIRST")
+        self.assertEqual(scripts[9], "UNIQUE")
 
     def test_staged_marker_derives_from_supported_symbol_providers(self):
         plan = compile_table(FIXTURE, "FixtureTarget.exe")

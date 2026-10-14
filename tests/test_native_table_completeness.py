@@ -1,4 +1,4 @@
-"""Gate:1 evidence — per-table completeness for all 15 pinned tables.
+"""Gate:1 evidence — per-table completeness for all 16 pinned tables.
 
 For every pinned table the compiled plan must (a) preserve every source
 record, and (b) account for every table-level construct the parser can see:
@@ -71,7 +71,7 @@ class PerTableCompletenessTests(unittest.TestCase):
 
     def test_all_pinned_tables_are_complete(self):
         tables = _pinned_tables()
-        self.assertEqual(len(tables), 15, "expected the 15 pinned corpus tables")
+        self.assertEqual(len(tables), 16, "expected the 16 pinned corpus tables")
         for rel, arch in tables:
             with self.subTest(table=str(rel)):
                 ct = CORPUS / rel

@@ -21,14 +21,16 @@ code/build boundaries in
 - **Feature-matrix goal: 100% coverage of the in-scope 0.9 feature set
   (AP-11 excluded) — REACHED 2026-10-10 and closed, extended by WP-14 on
   2026-10-11.** 42/42 in-scope features covered (39 gap classes + 3
-  gates); 100% feature-weighted; 7365/7365 action-weighted over the
-  pinned 6019-action corpus (15 tables, run
-  `w1d-case19-20261013192913Z`). The 2026-10-11 state (7361/7361 over the
-  6011-action corpus, 14 tables, run `wp14-staged-20261011T093320Z`) and
-  the 2026-10-10 39/39 over the 5967
-  action corpus is superseded; the earlier 90% hurdle is subsumed.
+  gates); 100% feature-weighted; 7369/7369 action-weighted over the
+  pinned 6025-action corpus (16 tables, run
+  `w1e-case20-20261013234642Z`). The 2026-10-13 state (7365/7365 over
+  the 6019-action corpus, 15 tables, run
+  `w1d-case19-20261013192913Z`), the 2026-10-11 state (7361/7361 over
+  the 6011-action corpus, 14 tables, run
+  `wp14-staged-20261011T093320Z`) and the 2026-10-10 39/39 over the 5967
+  action corpus are superseded; the earlier 90% hurdle is subsumed.
 - **Gates 1–3 are closed with real, tested evidence:**
-  1. `gate:1` per-table completeness for all 15 pinned tables (Forms, Lua
+  1. `gate:1` per-table completeness for all 16 pinned tables (Forms, Lua
      lifecycle, Custom Types, Assets) —
      `tests/test_native_table_completeness.py`.
   2. `gate:2` Source-to-Frozen parity of the 0.9 feature set —
@@ -42,7 +44,7 @@ code/build boundaries in
      exact commands and pinned inputs —
      `tests/test_native_repro_chain.py` (denominator → feature matrix →
      AP-11 manifest, byte-identical per fixed run-id).
-- **AP-11 (observed real-game effect for all 6019 pinned actions)
+- **AP-11 (observed real-game effect for all 6025 pinned actions)
   remains a separate end goal** — 0 confirmed so far — and is excluded
   from the 100% feature metric.
 - **Final product acceptance** is separate on Windows (clean PC/VM, no
@@ -55,9 +57,9 @@ code/build boundaries in
 | --- | --- |
 | Repository baseline | `main` @ `b6c48cc` "initial 0.9 version" (self-contained clean-room tree) |
 | Version | `0.11` (root `VERSION` file; 0.9.0-rc2 was the last user-tested release) |
-| Test suite | **2758 OK / 25 expected skips, 0 failures** (full local dev suite on `main` after the W1-D + W1-C integration, verified 2026-10-13 at the canonical path; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2710/25 passed (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
-| Feature matrix | **42/42 covered** (100% feature-weighted, 7365/7365 action-weighted; run `w1d-case19-20261013192913Z`; previously 7361/7361, run `wp14-staged-20261011T093320Z`) — `gap_inventory/feature-coverage.json` |
-| AP-11 manifest | 15 tables, 6019 expected actions, 0 confirmed, all consistency gates `all_ok` (run `w1d-case19-20261013192913Z`; previously 14 tables / 6011 actions) — `gap_inventory/ap11-campaign.json` |
+| Test suite | **2805 OK / 25 expected skips, 0 failures** (full local dev suite on `native-0.12` after the W1-A + W1-E merges and the case-20 pin, verified 2026-10-13 at the canonical path; previously 2769 after the W1-D + W1-C + W1-B integration; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2710/25 passed (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
+| Feature matrix | **42/42 covered** (100% feature-weighted, 7369/7369 action-weighted; run `w1e-case20-20261013234642Z`; previously 7365/7365, run `w1d-case19-20261013192913Z`) — `gap_inventory/feature-coverage.json` |
+| AP-11 manifest | 16 tables, 6025 expected actions, 0 confirmed, all consistency gates `all_ok` (run `w1e-case20-20261013234642Z`; previously 15 tables / 6019 actions) — `gap_inventory/ap11-campaign.json` |
 | Latest verified build | `native-20261011T182033Z-f3317337` (0.11) via `scripts/Build-Native.ps1` from `main` @ `2a16026` (2026-10-11): both ZIPs (`CT2Trainer-0.11-source.zip`, `CT2Trainer-0.11-windows-portable.zip`), in-build suite 2698 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately set, source inputs unchanged. Previous: `native-20261011T121914Z-bfc5fc11` (0.10, in-build suite 2671/25); `native-20261010T172336Z-ffe35eb0` (rc2, in-build suite 2617/25, `api-prototypes.json` present in both EXE payload inventories, user-tested portable) |
 | User-tested portable | run `native-20261010T165731Z-3d1da645`: converter run + generated trainer verified by the user on a machine without CE/Python |
 | Reference-corpus assessment (2026-10-13) | 151 local-only reference tables: baseline 117,019 plan entries, 95,167 supported (incl. 46,987 staged), **21,852 blocked**, 4 whole-table compile errors (run `ref-assessment`); after W1-D (WP-25) + W1-C (WP-22/23): **21,851 of 117,255 blocked**, 3 whole-table compile errors — Octopath compiles (227 supported / 9 blocked, 24 duplicate-ID warnings), 20XX fully supported (10/10), SuperMeatBoy refused with a named legacy-binary error (catalog re-run 2026-10-13); consolidated assessment `documentation/reference-gap-assessment.md`, closure plan `plans/reference-closure-continuation.md` (WP-19…WP-42) |

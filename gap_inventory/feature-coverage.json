@@ -1,7 +1,7 @@
 {
  "ap11_exclusions": [
   {
-   "gate": "Real game installs/builds for the 15 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 16 pinned tables (user question unanswered)",
    "reason": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists."
   },
   {
@@ -21,21 +21,21 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 15,
+    "actual": 16,
     "check": "pinned_table_count",
-    "expected": 15,
+    "expected": 16,
     "ok": true
    },
    {
-    "actual": 6019,
+    "actual": 6025,
     "check": "expected_actions",
-    "expected": 6019,
+    "expected": 6025,
     "ok": true
    },
    {
-    "actual": 6019,
+    "actual": 6025,
     "check": "category_counts_sum",
-    "expected": 6019,
+    "expected": 6025,
     "ok": true
    },
    {
@@ -47,11 +47,11 @@
    {
     "actual": [
      3377,
-     1908,
+     1910,
      1723,
      199,
      36,
-     31,
+     32,
      24,
      10,
      9,
@@ -60,11 +60,11 @@
     "check": "top_gaps_pinned_match",
     "expected": [
      3377,
-     1908,
+     1910,
      1723,
      199,
      36,
-     31,
+     32,
      24,
      10,
      9,
@@ -247,6 +247,7 @@
    {
     "actual": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
+     "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
@@ -265,6 +266,7 @@
     "check": "pinned_shas_in_inventory",
     "expected": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
+     "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
@@ -297,9 +299,9 @@
  "coverage": {
   "action_weighted_coverage_percent": 100.0,
   "actions_weight_ap11_excluded": 0,
-  "actions_weight_covered": 7365,
-  "actions_weight_in_scope": 7365,
-  "actions_weight_total": 7365,
+  "actions_weight_covered": 7369,
+  "actions_weight_in_scope": 7369,
+  "actions_weight_total": 7369,
   "feature_weighted_coverage_percent": 100.0,
   "features_covered": 42,
   "features_excluded_ap11": 4,
@@ -370,7 +372,7 @@
    "status": "covered"
   },
   "aa_directive_unverified": {
-   "affected_records": 31,
+   "affected_records": 32,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_assembler.py",
@@ -529,9 +531,9 @@
    "affected_records": null,
    "ap11_excluded": true,
    "evidence": [],
-   "gate": "Real game installs/builds for the 15 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 16 pinned tables (user question unanswered)",
    "kind": "missing_gate",
-   "label": "Real game installs/builds for the 15 pinned tables (user question unanswered)",
+   "label": "Real game installs/builds for the 16 pinned tables (user question unanswered)",
    "modules": [],
    "note": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists.",
    "requirement": "AP-11 game gate",
@@ -796,7 +798,7 @@
    "status": "covered"
   },
   "lua_host_profile": {
-   "affected_records": 1908,
+   "affected_records": 1910,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_lua.py",
@@ -1012,7 +1014,7 @@
    "status": "covered"
   },
   "record_activation_set": {
-   "affected_records": 1,
+   "affected_records": 2,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_activation_sets.py",
@@ -1154,15 +1156,15 @@
    "status": "covered"
   }
  },
- "generated": "run w1d-case19-20261013192913Z",
+ "generated": "run w1e-case20-20261013234642Z",
  "lane": "AP-10 feature matrix and coverage metric (read-only, static)",
- "run_id": "w1d-case19-20261013192913Z",
+ "run_id": "w1e-case20-20261013234642Z",
  "schema": "corpus-feature-matrix/v1",
  "source": {
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "3296a1bf9690429db2a2650a21c26c4d5fc2273b28f08bfc14fe52c0205d0a2a",
+  "gap_report_sha256": "23bc928f879e89f4523b94733260755a4015e02caa73757aef3f398b4f8d8b5e",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "ff1e0a75dc2140a2c5753f8b4464c6c33dc23edf11eea15a2cc6cda67904f34f"
+  "inventory_sha256": "44b42c956dc8e0880765dbb3a9f014f11952b02bbaeaaef85b61863c3f29c33e"
  },
  "top10_priority": []
 }
