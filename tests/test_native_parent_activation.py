@@ -271,19 +271,46 @@ class ParentActivationCompilerTests(unittest.TestCase):
 
     def test_flag_without_supported_targets_drops_marker(self):
         # No supported+selected descendant -> the flagged group promises
-        # nothing and stays a plain navigation heading.
+        # nothing and stays a plain navigation heading.  The child here has
+        # no variable type at all, so it is unsupported; an addressless
+        # value child is covered by the demoted-placeholder test below.
         xml = ('<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
                '<CheatEntry><ID>1</ID><Description>"Group"</Description>'
                '<GroupHeader>1</GroupHeader>'
                '<Options moActivateChildrenAsWell="1"/>'
                '<CheatEntries>'
-               '<CheatEntry><ID>2</ID><Description>"Broken"</Description>'
-               '<VariableType>4 Bytes</VariableType></CheatEntry>'
+               '<CheatEntry><ID>2</ID><Description>"Broken"'
+               '</Description></CheatEntry>'
                '</CheatEntries></CheatEntry>'
                '</CheatEntries></CheatTable>')
         plan = self.compile("empty-subtree.ct", xml)
         by_id = self.entries(plan)
         self.assertFalse(by_id[2]["supported"])
+        self.assertNotIn("parent_activation", by_id[1])
+        self.assertNotIn("parent_relations", plan)
+        validate_compiler_plan(plan)
+
+    def test_flag_over_demoted_placeholders_drops_marker(self):
+        # WP-32: an addressless value child is now a supported placeholder,
+        # but it is non-actionable (no address, no effect), so it is never a
+        # cascade target: the flagged group still promises nothing, the
+        # marker is dropped, and the plan carries no activation relations.
+        xml = ('<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+               '<CheatEntry><ID>1</ID><Description>"Group"</Description>'
+               '<GroupHeader>1</GroupHeader>'
+               '<Options moActivateChildrenAsWell="1"/>'
+               '<CheatEntries>'
+               '<CheatEntry><ID>2</ID><Description>"Placeholder"'
+               '</Description><VariableType>4 Bytes</VariableType></CheatEntry>'
+               '</CheatEntries></CheatEntry>'
+               '</CheatEntries></CheatTable>')
+        plan = self.compile("demoted-subtree.ct", xml)
+        by_id = self.entries(plan)
+        self.assertTrue(by_id[2]["supported"])
+        self.assertEqual(by_id[2]["kind"], "heading")
+        self.assertEqual(by_id[2]["reason"],
+                         "Addressless value record is a non-actionable "
+                         "table placeholder.")
         self.assertNotIn("parent_activation", by_id[1])
         self.assertNotIn("parent_relations", plan)
         validate_compiler_plan(plan)

@@ -210,7 +210,22 @@ def _simple_value_bytes(variable_type: str, show_as_hex: bool,
         raise ValueError("value literal must not be empty")
     if variable_type in {"Float", "Double"}:
         if show_as_hex:
-            raise ValueError("hexadecimal floating-point values are unsupported")
+            # WP-33: fixed-size raw IEEE-754 bit pattern (mirrors the engine
+            # literal policy); the bytes must round-trip through the codec.
+            digits = 8 if variable_type == "Float" else 16
+            pattern = re.fullmatch(
+                r"(?:0[xX])?([0-9a-fA-F]{" + str(digits) + r"})", literal)
+            if pattern is None:
+                raise ValueError(
+                    f"enter exactly {digits} hexadecimal digits for the "
+                    f"{variable_type} bit pattern")
+            number = int(pattern.group(1), 16)
+            raw = number.to_bytes(4 if variable_type == "Float" else 8, "little")
+            code = "<f" if variable_type == "Float" else "<d"
+            if struct.pack(code, struct.unpack(code, raw)[0]) != raw:
+                raise ValueError(
+                    "hexadecimal floating-point bit pattern is not representable")
+            return raw
         if _FLOAT_LITERAL.fullmatch(literal) is None:
             raise ValueError(f"enter a finite {variable_type} literal")
         number = float(literal)
@@ -495,10 +510,8 @@ class RecursiveSetValueModel:
             raise RecursiveNoValueProfileError(
                 f"record {record['id']} ('{record['label']}') has no usable value profile "
                 f"(variable_type={variable_type!r})")
-        if record["show_as_hex"] and variable_type in {"Float", "Double"}:
-            raise RecursiveNoValueProfileError(
-                f"record {record['id']} ('{record['label']}') uses unsupported "
-                "hexadecimal floating-point display")
+        # WP-33: ShowAsHex Float/Double records are raw bit-pattern writes;
+        # _simple_value_bytes encodes them directly.
 
     def _element(self, record_id: int, depth: int, value_text: str) -> dict:
         record = self._records[record_id]
@@ -661,10 +674,8 @@ class DropdownLinkModel:
             raise DropdownLinkTypeRefused(
                 f"dropdown link target {target['id']} ('{target['label']}') is not a numeric "
                 f"value record (variable_type={target['variable_type']!r})")
-        if target["show_as_hex"] and target["variable_type"] in {"Float", "Double"}:
-            raise DropdownLinkTypeRefused(
-                f"dropdown link target {target['id']} ('{target['label']}') uses unsupported "
-                "hexadecimal floating-point display")
+        # WP-33: ShowAsHex Float/Double targets are raw bit-pattern records;
+        # their choice literals are validated below by _simple_value_bytes.
         choices = [choice for choice in target["dropdown_choices"] if choice[0] != "*"]
         if not choices:
             raise DropdownLinkEmptyRefused(
@@ -816,7 +827,16 @@ class DropdownLinkModel:
             raise DropdownIndexError(
                 f"index {index} is outside the choice range 0..{len(choices) - 1}",
                 index=index, choice_count=len(choices))
-        literal = format(index, "X") if target["show_as_hex"] else str(index)
+        if target["show_as_hex"] and target["variable_type"] in {"Float", "Double"}:
+            # WP-33: a hex-float target stores the index as the IEEE-754 bit
+            # pattern of the index value (fixed-width pattern literal); the
+            # raw bit-pattern policy refuses short hex forms.
+            code = "<f" if target["variable_type"] == "Float" else "<d"
+            bits = struct.unpack("<I" if code == "<f" else "<Q",
+                                 struct.pack(code, float(index)))[0]
+            literal = format(bits, "08X" if code == "<f" else "016X")
+        else:
+            literal = format(index, "X") if target["show_as_hex"] else str(index)
         raw = _simple_value_bytes(target["variable_type"], target["show_as_hex"],
                                   target["show_as_signed"], literal)
         plan = {

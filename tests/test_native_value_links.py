@@ -348,14 +348,25 @@ class RecursiveModelTests(unittest.TestCase):
             model.plan_writes(100, None)
         self.assertIn("must be text", str(caught.exception))
 
-    def test_hex_float_display_rejected(self):
+    def test_hex_float_recursive_write_is_a_raw_bit_pattern(self):
+        # WP-33: a ShowAsHex Float target is a raw IEEE-754 bit-pattern
+        # record; the exact-width hex literal is encoded little-endian.
         table = {
             3100: value_record("hex float", variable_type="Float",
                                show_as_hex=True, address="hf", recursive=True),
         }
-        with self.assertRaises(RecursiveNoValueProfileError) as caught:
-            RecursiveSetValueModel(table).plan_writes(3100, "3F800000")
-        self.assertIn("hexadecimal floating-point", str(caught.exception))
+        plan = RecursiveSetValueModel(table).plan_writes(3100, "3F800000")
+        self.assertEqual(plan_elements(plan), [(3100, "0000803F")])
+        # The 0x prefix is accepted and encodes identically.
+        again = RecursiveSetValueModel(table).plan_writes(3100, "0x3F800000")
+        self.assertEqual(plan_elements(again), [(3100, "0000803F")])
+        # Wrong-width and decimal literals refuse with the record named.
+        for literal in ("3F8000", "3F8000000", "1.0"):
+            with self.subTest(literal=literal), \
+                    self.assertRaises(RecursiveValueParseError) as caught:
+                RecursiveSetValueModel(table).plan_writes(3100, literal)
+            self.assertIn("3100", str(caught.exception))
+            self.assertIn("hexadecimal digits", str(caught.exception))
 
     def test_bitfield_requires_snapshot(self):
         model = RecursiveSetValueModel(RECURSIVE_BITFIELD_TABLE)
@@ -705,11 +716,44 @@ class DropdownLinkTests(unittest.TestCase):
             model.inspect(2001)
         self.assertIn("xyz", str(caught.exception))
 
-    def test_hex_float_target_rejected(self):
+    def test_hex_float_target_inspect_resolve_apply(self):
+        # WP-33: a ShowAsHex Float target is a raw bit-pattern record; the
+        # link pair is fully usable with fixed-width choice literals.
         model = DropdownLinkModel(DROPDOWN_HEX_FLOAT_TABLE)
-        with self.assertRaises(DropdownLinkTypeRefused) as caught:
-            model.inspect(2801)
-        self.assertIn("hexadecimal floating-point", str(caught.exception))
+        result = model.inspect(2801, "40000000")
+        self.assertEqual(result["target_record_id"], 2800)
+        self.assertEqual(result["target_variable_type"], "Float")
+        self.assertEqual(len(result["choices"]), 3)
+        self.assertEqual(result["choices"][1]["value"], "3F800000")
+        self.assertTrue(result["activatable"])
+        # The stored value is the index, rendered as its float bit pattern.
+        self.assertEqual(result["current_index"], 2)
+        self.assertEqual(result["current_choice"], "two")
+        index, description, raw = model.resolve(2801, "40000000")
+        self.assertEqual((index, description), (2, "two"))
+        self.assertEqual(raw, b"\x00\x00\x00\x40")
+        plan = model.apply(2801, 1)
+        element = plan["writes"][0]
+        self.assertEqual(element["record_id"], 2800)
+        self.assertEqual(element["bytes_hex"], "0000803F")
+        self.assertEqual(element["value_text"], "3F800000")
+        self.assertEqual(plan["choice_description"], "one")
+        # A short hex literal is not a valid bit-pattern choice.
+        with self.assertRaises(DropdownLinkValueParseError):
+            model.resolve(2801, "3F8000")
+
+    def test_hex_float_target_unusable_choice_rejected(self):
+        table = {
+            2900: value_record("Bad Hex Float", address="bh", variable_type="Float",
+                               show_as_hex=True,
+                               dropdown_choices=[("3F8000", "short")]),
+            2901: value_record("Linker", address="bl",
+                               dropdown_link="Bad Hex Float"),
+        }
+        with self.assertRaises(DropdownLinkEmptyRefused) as caught:
+            DropdownLinkModel(table).inspect(2901)
+        self.assertIn("'3F8000'", str(caught.exception))
+        self.assertIn("hexadecimal digits", str(caught.exception))
 
     def test_unknown_link_record_refused(self):
         model = DropdownLinkModel(DROPDOWN_VALID_TABLE)

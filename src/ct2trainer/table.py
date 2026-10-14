@@ -321,6 +321,13 @@ def _entry_kind(element: ET.Element, variable_type: str | None,
         return "script"
     if variable_type and (element.findtext("Address") or has_children):
         return "value"
+    # WP-32: an addressless record that carries a value variable type is still
+    # a value record (template/placeholder row); the compiler's entry policy
+    # demotes it to a non-actionable placeholder heading.  Only records
+    # without a value type (or with an unknown one) stay "unsupported".
+    if variable_type in SIMPLE_VALUE_TYPES or variable_type in ADVANCED_VALUE_TYPES \
+            or variable_type == "String":
+        return "value"
     return "unsupported"
 
 
