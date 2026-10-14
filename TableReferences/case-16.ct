@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>0</ID>
+      <Description>"synth element list"</Description>
+      <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+      <Color>0075EA</Color>
+      <GroupHeader>1</GroupHeader>
+      <DropDownList ReadOnly="1" DescriptionOnly="1" DisplayValueAsItem="1">:Basic:
+0:Off
+1:On
+:Advanced:
+2:Boost
+3:Turbo
+</DropDownList>
+      <Address/>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>1</ID>
+        <Description>"element mode (linked)"</Description>
+        <DropDownListLink>synth element list</DropDownListLink>
+        <ShowAsSigned>0</ShowAsSigned>
+        <Color>FF8080</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>ct2synth16.exe+100</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>2</ID>
+        <Description>"element flag (linked)"</Description>
+        <DropDownListLink>synth element list</DropDownListLink>
+        <ShowAsSigned>0</ShowAsSigned>
+        <Color>FF8080</Color>
+        <VariableType>Byte</VariableType>
+        <Address>ct2synth16.exe+104</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"element power (own list with separator)"</Description>
+      <DropDownList DisplayValueAsItem="1">:Powers:
+10:Low
+20:High
+</DropDownList>
+      <ShowAsSigned>0</ShowAsSigned>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth16.exe+108</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>4</ID>
+      <Description>"bad comma float (stays blocked)"</Description>
+      <DropDownList DisplayValueAsItem="1">3,5:Weird
+</DropDownList>
+      <ShowAsSigned>0</ShowAsSigned>
+      <Color>FF8080</Color>
+      <VariableType>Float</VariableType>
+      <Address>ct2synth16.exe+10C</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>5</ID>
+      <Description>"bad placeholder (stays blocked)"</Description>
+      <DropDownList DisplayValueAsItem="1">???:Placeholder
+</DropDownList>
+      <ShowAsSigned>0</ShowAsSigned>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth16.exe+110</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"bad range (stays blocked)"</Description>
+      <DropDownList DisplayValueAsItem="1">300:TooBig
+</DropDownList>
+      <ShowAsSigned>0</ShowAsSigned>
+      <Color>FF8080</Color>
+      <VariableType>Byte</VariableType>
+      <Address>ct2synth16.exe+114</Address>
+      <Value>0</Value>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

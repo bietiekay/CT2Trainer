@@ -83,7 +83,7 @@ WP-19..23+25; Lane A WPs ≈ WP-24/27/32/33/34; Lane C WPs ≈ WP-28/29/30/
 | WP-31 | small grammar items: 2-arg `dealloc`, multi-token `registersymbol` pre-pass, `registerlabel`, `fullaccess` no-op, `/* */` in data dialect, line-attached error messages | `aa.py`, `aa_program.py` | ~130 | 2 | 28/29/35, 27, 30 |
 | WP-32 | addressless value-record demotion to non-actionable placeholders | `compiler.py` (entry policy), `table.py` (kind) | 74 | 2 | 27/33/34 (disjoint hunks), 28/29/31/35, 30 |
 | WP-33 | hex bit-pattern Float/Double display + write | `compiler.py`, `engine.py` (dual guard) | 5 | 2 | 32/27/34, rest |
-| WP-34 | diagnostics housekeeping: missing vs ambiguous link target; hex-string display reason; AP-08.3/08.7 alignment | `compiler.py` | 0 (diagnostics) | 2 | 32/27/33, rest |
+| WP-34 | diagnostics housekeeping: missing vs ambiguous link target; hex-string display reason; AP-08.3/08.7 alignment; FLAG-2 dropdown follow-ups (comma-decimal Float/Double choice normalization — unblocks 25; per-choice width-precision reason for linked rows whose choices exceed value-type width — renames 31) | `compiler.py` | 0 (diagnostics) + 56 (FLAG-2) | 2 | 32/27/33, rest |
 | WP-35 | `dq`/`resb` uninitialized reservation spans (write-before-publish) | `aa_program.py`, engine coordinator | ~405 (incl. Lust 392) | 2 | 28/29/31, 27, 30, 32/33/34 |
 | WP-36 | `aobscan`/`aobscanregion` staged-scan policy; `createthread` named gate message | `aa_program.py`, `compiler.py` (scan policy) | ~20-30 + gate clarity | 2 | 28/29/31/35 (disjoint hunks), rest |
 | WP-37 | Lua-owned symbol handover contract (unique external provider; no foreign dealloc; ambiguous-provider rule) | `lua_program.py`, `aa_program.py:883-895`, `compiler.py` (provider map), coordinator | ~176 + 231 ambiguous | 3 | 38 (design gate first), 39, 40, 41 (soft) |
@@ -153,8 +153,14 @@ tokens` (20XX) → 0; `Invalid address expression near '::…'` → 0;
 `Duplicate CheatEntry ID` table-level → 0 (duplicates dropped keep-first
 with one table warning per ID; plan total = unique-ID count); `Invalid CT XML: syntax error: line 1, column 0` → 0
 (named binary error instead); `Dropdown contains an unsupported value
-expression` → ≤ 41 residual (25 comma + 12 `??` + 1 hex-styled + 3
-out-of-range); `Lua/ASM delimiters must occupy standalone lines` → 0;
+expression` → measured 68 residual post W1-A (exceeds the ≤ 41
+expectation; FLAG-2 decision 2026-10-14: accept the named residual —
+25 comma-decimal Float choice literals, 12 `??` placeholder rows in
+read-only lists, 31 linked persona-list rows whose choice literals
+exceed the linked record's value-type width; comma-decimal
+normalization + per-choice width-precision reason are scheduled in
+W2-A/WP-34, `??` placeholders stay blocked-keep); `Lua/ASM delimiters
+must occupy standalone lines` → 0;
 `Lua program phases are duplicated or out of order` → 0;
 `ASM delimiter without a Lua section` → 0. Whole tables: AtomicHeart,
 Cyberpunk2077, Octopath1, 20XX all compile.
@@ -330,6 +336,8 @@ stay inactive"). Case: `case-22`.
 
 | Date | Change | Evidence / open work |
 | --- | --- | --- |
+| 14.10.2026 | W1-A (WP-19/21/24 + WP-25 follow-ups) integrated + case-16 (part 1) pinned (17th table, gate:1 → 17, chain `w1a-case16-20261014003107Z`: 6031 expected actions, weights 7371): WP-19 `$process` AOB scan token passes both plan validators (forged scan modules stay rejected); WP-21 pointer-offset hex constant folding (`1594+8+118` → 0x16B4, signed-64 range checks, 32-offset cap kept, literal refusals kept; family 239 → 23, within plan ≤ 23); WP-24 empty-value dropdown rows = non-writable separator metadata (own + linked borrowing, read-only concrete-choice rule, forged-separator refusals in both validators; family 10,935 → 68); WP-25 follow-ups (keep-first `_entry_node_maps`, table-reader warning forwarding). FLAG-2 decision: accept the 68 dropdown residual as a named family (25 comma-decimal Float + 12 `??` placeholder + 31 linked width-exceeding persona-list rows); comma-decimal normalization + per-choice width reason scheduled in W2-A/WP-34, `??` stays blocked-keep. Reference catalog post W1-A + W1-E: 21,959 → 10,892 blocked / 117,624 (1 whole-table error: SuperMeatBoy legacy binary); top families now GlobalWorkPtr 2509 (WP-28), Character_Pointer 1310 (WP-37 cascade), linked-dropdown 1215 (WP-27) | suite 2805/25; `TableReferences/case-16.ct` (SHA-256 `4f1571b2…`); `gap_inventory/` artifacts (run `w1a-case16-20261014003107Z`); W1-A merge `01a24c5` |
+| 13.10.2026 | W1-B (WP-20) integrated: NASM `@@` current-address cursor (`@@:` handled positionally in `prepare_global_program`, named per-entry refusals elsewhere, `AddressExpressionError` added to the compiler per-entry catch list); Cyberpunk2077.CT compiles (241 supported / 108 blocked, 0 `@@` reasons) | suite 2769/25; W1-B merge `ccb698a` (+ tracker commit `916bb82`); `src/ct2trainer/native/global_alloc.py`, `tests/test_native_global_alloc.py`, `tests/test_native_global_probe.py` |
 | 13.10.2026 | W1-E (WP-26) integrated (root-implemented after 3 failed lane sessions) + case-20 pinned (16th table, gate:1 → 16, chain `w1e-case20-20261013234642Z`: 6025 expected actions, weights 7369): no-op `{$...}` directive set on both AA and Lua paths, precise unknown-directive error, structural in-block `[ENABLE]`/`[DISABLE]` phase boundaries in explicit `{$lua}` chunks with shared preamble, redundant `{$asm}` no-op, contentless-`[DISABLE]` one-shot contract; reference catalog on W1-E base: D1 106 → 0, D2 54 → 0, D3 7 → 0, blocked 21,959 → 21,800 | suite 2805/25; `tests/test_native_lua_directives.py` (17 tests); W1-E merge `120da8f`; open: W1-A integration docs + case-16 (part 1) + case-15 pins, FLAG-2 dropdown residual decision, Wave 2 |
 | 13.10.2026 | W1-D (WP-25) + W1-C (WP-22/23) integrated: duplicate-ID keep-first + legacy binary-CT detection, digit-leading module basenames + `Class::Method` managed-label alias; case-19 pinned (15th table, gate:1 → 15, denominator record walk deduped by ID); chain re-run `w1d-case19-20261013192913Z` (6019 expected actions, top gap cross_record_symbol 3377, weights 7365); reference catalog 21,852 → 21,851 blocked, whole-table errors 4 → 3 | suite 2758/25; `TableReferences/case-19.ct` (SHA-256 `80690e82…`); `gap_inventory/` artifacts; open: W1-A (WP-19/21/24 + plan-warning forwarding + first-wins node map), W1-B (WP-20), W1-E (WP-26 relaunched) |
 | 13.10.2026 | Cycle opened: consolidated 4-lane reference-corpus assessment (`documentation/reference-gap-assessment.md`); this plan created (WP-19…WP-42, waves, cases, protocol); CE 7.5 behavior-reference boundary recorded (AGENTS.md, lane rules) | Catalog baseline 21,852 blocked / 117,019 entries / 151 tables (run `ref-assessment`); working branch `native-0.12` to be cut; Wave 1 lanes to launch after load check |

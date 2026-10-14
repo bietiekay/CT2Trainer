@@ -26,16 +26,16 @@
    "one_shot": 1723,
    "persistent_script": 429,
    "string_write": 731,
-   "value_freeze": 3139
+   "value_freeze": 3145
   },
   "confirmed_game_effect_actions": 0,
   "confirmed_percent": 0.0,
-  "expected_actions": 6025,
+  "expected_actions": 6031,
   "goal_90_percent": "NOT REACHED",
-  "group_toggle_actions": 1,
-  "groups_total": 1285,
+  "group_toggle_actions": 2,
+  "groups_total": 1286,
   "missing_gates": [
-   "Real game installs/builds for the 16 pinned tables (user question unanswered)",
+   "Real game installs/builds for the 17 pinned tables (user question unanswered)",
    "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
    "VM/Clean-PC gate without CE/Python",
    "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -48,9 +48,9 @@
    "aa_script": 2152,
    "custom": 3,
    "string": 731,
-   "value": 3139
+   "value": 3145
   },
-  "records_total": 6025,
+  "records_total": 6031,
   "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
@@ -60,11 +60,11 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5479,
-   "statically_assumed": 512,
+   "locked": 5481,
+   "statically_assumed": 516,
    "unknown": 34
   },
-  "unique_tables": 16
+  "unique_tables": 17
  },
  "gap_labels": {
   "aa_conditional_block": {
@@ -224,7 +224,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run w1e-case20-20261013234642Z",
+ "generated": "run w1a-case16-20261014003107Z",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -152572,6 +152572,208 @@
    },
    "counts": {
     "categories": {
+     "value_freeze": 6
+    },
+    "entries_total": 7,
+    "expected_actions": 6,
+    "gap_counts": {
+     "dropdown_link": 2
+    },
+    "group_toggle_actions": 1,
+    "groups": 1,
+    "navigation_excluded": 0,
+    "record_types": {
+     "value": 6
+    },
+    "records": 6,
+    "status_counts": {
+     "locked": 2,
+     "statically_assumed": 4
+    }
+   },
+   "duplicate_ids": {},
+   "format_version": "46",
+   "groups": [
+    {
+     "depth": 0,
+     "descendant_records": 2,
+     "group_action": true,
+     "has_checkbox": true,
+     "name": "synth element list",
+     "on_effect": true,
+     "path": "synth element list"
+    }
+   ],
+   "main_initialization": null,
+   "path": "case-16.ct",
+   "paths": [
+    "case-16.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "synth element list",
+     "records": [
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "dropdown_link"
+       ],
+       "id": 1,
+       "lifetime": "read_write_freezable_value",
+       "name": "element mode (linked)",
+       "parent": "synth element list",
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "4 Bytes value in ct2synth16.exe (module bound)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth16.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "dropdown_link"
+       ],
+       "id": 2,
+       "lifetime": "read_write_freezable_value",
+       "name": "element flag (linked)",
+       "parent": "synth element list",
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "Byte value in ct2synth16.exe (module bound)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth16.exe",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 3,
+       "lifetime": "read_write_freezable_value",
+       "name": "element power (own list with separator)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "4 Bytes value in ct2synth16.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth16.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 4,
+       "lifetime": "read_write_freezable_value",
+       "name": "bad comma float (stays blocked)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "Float value in ct2synth16.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth16.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 5,
+       "lifetime": "read_write_freezable_value",
+       "name": "bad placeholder (stays blocked)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "4 Bytes value in ct2synth16.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth16.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 6,
+       "lifetime": "read_write_freezable_value",
+       "name": "bad range (stays blocked)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "Byte value in ct2synth16.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth16.exe",
+       "type": "value"
+      }
+     ]
+    }
+   ],
+   "sha256": "4f1571b2e3e867f731f51c7b711018eaad584f45962dc9a2fe3ce98a1f510723",
+   "size_bytes": 2792,
+   "table": "case-16.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 2,
+     "gap": "dropdown_link",
+     "label": "Dropdown link to foreign records",
+     "requirement": "N-18"
+    }
+   ]
+  },
+  {
+   "architecture": {
+    "signals": [],
+    "value": "unknown"
+   },
+   "counts": {
+    "categories": {
      "persistent_script": 1,
      "value_freeze": 7
     },
@@ -153080,28 +153282,28 @@
    ]
   }
  ],
- "run_id": "w1e-case20-20261013234642Z",
+ "run_id": "w1a-case16-20261014003107Z",
  "top_gaps_pinned": [
   {
    "affected_records": 3377,
    "gap": "cross_record_symbol",
    "label": "Cross-record symbol resolution",
    "requirement": "N-07",
-   "share_of_expected_actions_percent": 56.05
+   "share_of_expected_actions_percent": 55.99
   },
   {
    "affected_records": 1910,
    "gap": "lua_host_profile",
    "label": "Lua host profile (bounded Lua host profile)",
    "requirement": "N-01 / N-19",
-   "share_of_expected_actions_percent": 31.7
+   "share_of_expected_actions_percent": 31.67
   },
   {
    "affected_records": 1723,
    "gap": "one_shot_save_contract",
    "label": "One-shot without ON/OFF save contract",
    "requirement": "state contract (AP-04)",
-   "share_of_expected_actions_percent": 28.6
+   "share_of_expected_actions_percent": 28.57
   },
   {
    "affected_records": 199,
@@ -153132,18 +153334,18 @@
    "share_of_expected_actions_percent": 0.4
   },
   {
+   "affected_records": 11,
+   "gap": "dropdown_link",
+   "label": "Dropdown link to foreign records",
+   "requirement": "N-18",
+   "share_of_expected_actions_percent": 0.18
+  },
+  {
    "affected_records": 10,
    "gap": "lua_worker_thread",
    "label": "Lua worker threads",
    "requirement": "N-15",
    "share_of_expected_actions_percent": 0.17
-  },
-  {
-   "affected_records": 9,
-   "gap": "dropdown_link",
-   "label": "Dropdown link to foreign records",
-   "requirement": "N-18",
-   "share_of_expected_actions_percent": 0.15
   },
   {
    "affected_records": 8,
