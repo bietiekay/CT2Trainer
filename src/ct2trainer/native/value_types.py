@@ -79,7 +79,11 @@ def prepare_value_profile(variable_type: str, xml_properties: Mapping[str, Any])
             properties = dict(xml_properties)
             display = {key: _flag(properties, key) for key in ('ShowAsHex','ShowAsSigned','ShowAsBinary')}
             if display['ShowAsHex'] or display['ShowAsBinary']:
-                raise ValueTypeError('Strings require literal text display')
+                # WP-34: name the display flag so the catalog reason reads as
+                # a hex-string byte-view boundary, not a generic display rule.
+                flag = 'ShowAsHex' if display['ShowAsHex'] else 'ShowAsBinary'
+                raise ValueTypeError('Strings require literal text display; the '
+                                     + flag + ' byte view is unsupported.')
             result = prepare(properties)
             return {**result, 'schema':SCHEMA, 'variable_type':'String',
                     'properties':{**result['properties'], **display},

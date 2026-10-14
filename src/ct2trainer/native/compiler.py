@@ -38,6 +38,24 @@ from .architecture import (ArchitectureError, plan_architecture, prepare_archite
 
 _PROFILE_VALUE_TYPES = {"Array of byte", "Binary", "String"}
 
+_ADDRESSLESS_PLACEHOLDER_REASON = (
+    "Addressless value record is a non-actionable table placeholder.")
+
+
+def _is_addressless_placeholder(entry: dict) -> bool:
+    """WP-32: canonical shape of a demoted addressless value record.
+
+    Demoted placeholders are supported navigation rows without address or
+    effect; they are never parent-activation cascade targets (the plan only
+    promises activation where the engine has a target) and never carry
+    activation markers.
+    """
+    return (entry["kind"] == "heading"
+            and entry.get("source_kind") in {"value", "unsupported"}
+            and entry.get("variable_type") in SIMPLE_VALUE_TYPES | _PROFILE_VALUE_TYPES
+            and entry.get("source_address") == ""
+            and entry.get("reason") == _ADDRESSLESS_PLACEHOLDER_REASON)
+
 
 class NativeCompileError(ValueError):
     """Invalid compiler inputs or a malformed serialized plan."""
@@ -192,12 +210,17 @@ def _effective_address(source: Entry, sources: dict[int, Entry], stack: tuple[in
 def _dropdown(entry: Entry, entries: tuple[Entry, ...], value_profile: dict | None = None) -> dict:
     source = entry
     if entry.dropdown_link:
-        if value_profile is not None:
-            raise AAError("Linked dropdowns for byte arrays and bit fields are unsupported.")
+        # WP-27: linked dropdowns work for profile value records as well as
+        # simple types; every choice is resolved against the LINKED record's
+        # own value type (simple literal policy or its value profile).
         matches = [candidate for candidate in entries
                    if candidate.label.casefold() == entry.dropdown_link.casefold()]
-        if len(matches) != 1:
-            raise AAError("Dropdown link target is missing or ambiguous.")
+        if not matches:
+            raise AAError("Dropdown link target is missing: '" + entry.dropdown_link
+                          + "' matches no record label.")
+        if len(matches) > 1:
+            raise AAError("Dropdown link target is ambiguous: '" + entry.dropdown_link
+                          + "' matches " + str(len(matches)) + " record labels.")
         source = matches[0]
         if source.dropdown_link:
             raise AAError("Chained dropdown links are unsupported.")
@@ -212,9 +235,17 @@ def _dropdown(entry: Entry, entries: tuple[Entry, ...], value_profile: dict | No
             # by the engine's choice lists.
             choices.append({"value": "", "description": label, "separator": True})
             continue
-        if not _value_literal_safe(value, entry.variable_type, entry.show_as_hex,
-                                   entry.show_as_signed, value_profile):
-            raise AAError("Dropdown contains an unsupported value expression.")
+        # WP-34 (FLAG-2 follow-up 1): comma-decimal Float/Double choice
+        # literals are normalized to the canonical dot form before
+        # validation and stored in the plan.
+        if (value_profile is None and entry.variable_type in {"Float", "Double"}
+                and not entry.show_as_hex and _COMMA_DECIMAL.fullmatch(value)):
+            value = value.replace(",", ".", 1)
+        refusal = _dropdown_choice_refusal(value, entry.variable_type,
+                                           entry.show_as_hex, entry.show_as_signed,
+                                           value_profile)
+        if refusal is not None:
+            raise AAError(refusal)
         choices.append({"value": value, "description": label})
     if source.dropdown_read_only and not any(
             choice.get("separator") is not True for choice in choices):
@@ -252,6 +283,11 @@ def _string_dropdown(entry: Entry, nodes: dict, profile: dict) -> dict:
 def _value_literal_safe(value: str, value_type: str, hexadecimal: bool,
                         signed: bool | None, value_profile: dict | None = None) -> bool:
     if value_profile is None:
+        if value_type in {"Float", "Double"} and hexadecimal:
+            # WP-33: fixed-width raw IEEE-754 bit patterns only.
+            digits = 8 if value_type == "Float" else 16
+            return re.fullmatch(r"(?:0[xX])?[0-9a-fA-F]{" + str(digits) + r"}",
+                                value.strip()) is not None
         return _native_literal_safe(value, value_type, hexadecimal, signed)
     try:
         # A synthetic snapshot is only for literal validation during conversion;
@@ -260,6 +296,71 @@ def _value_literal_safe(value: str, value_type: str, hexadecimal: bool,
     except ValueTypeError:
         return False
     return True
+
+
+_COMMA_DECIMAL = re.compile(r"[+-]?[0-9]+,[0-9]+\Z")
+_INTEGER_WIDTHS = {"Byte": 8, "2 Bytes": 16, "4 Bytes": 32, "8 Bytes": 64}
+
+
+def _dropdown_choice_refusal(value: str, value_type: str, hexadecimal: bool,
+                             signed: bool | None,
+                             value_profile: dict | None = None) -> str | None:
+    """Exact per-choice dropdown refusal, or None when the literal is writable.
+
+    WP-27/WP-34 (FLAG-2): byte-array and bit-field profiles name the
+    offending choice with its length or range problem; simple integer types
+    name a literal that exceeds the record's value-type width.  Every other
+    unusable literal keeps the generic unsupported-expression refusal.
+    """
+    if value_profile is None and value_type in {"Float", "Double"} and hexadecimal:
+        # WP-33: a ShowAsHex float choice must be the fixed-width IEEE-754
+        # bit pattern (8 digits for Float, 16 for Double, optional 0x).
+        digits = 8 if value_type == "Float" else 16
+        if re.fullmatch(r"(?:0[xX])?[0-9a-fA-F]{" + str(digits) + r"}",
+                        value.strip()) is None:
+            return "Dropdown contains an unsupported value expression."
+        return None
+    if value_profile is not None:
+        try:
+            # A synthetic snapshot is only for literal validation during
+            # conversion; the runtime must reread actual adjacent bits
+            # before every write.
+            parse_profile_value(value_profile, value, b"\0" * value_profile["size"])
+        except ValueTypeError as exc:
+            detail = str(exc)
+            if value_profile["kind"] == "byte_array" and detail == (
+                    "Byte array must contain exactly ByteLength hex bytes"):
+                return ("Dropdown choice '%s' must contain exactly %d hex bytes "
+                        "for this byte array record."
+                        % (value, value_profile["size"]))
+            if value_profile["kind"] == "bitfield" and detail.startswith(
+                    "Bit-field value must be between "):
+                return ("Dropdown choice '%s' is outside the bit-field value "
+                        "range (must be between %s)."
+                        % (value, detail.split("must be between ", 1)[1]))
+            return "Dropdown contains an unsupported value expression."
+        return None
+    if value_type in _INTEGER_WIDTHS:
+        bits = _INTEGER_WIDTHS[value_type]
+        literal = value.strip()
+        if hexadecimal:
+            if re.fullmatch(r"(?:0[xX])?[0-9A-Fa-f]+", literal) is None:
+                return "Dropdown contains an unsupported value expression."
+            number = int(literal, 16)
+        else:
+            if re.fullmatch(r"-?[0-9]+", literal) is None:
+                return "Dropdown contains an unsupported value expression."
+            number = int(literal, 10)
+        native_signed = signed is True and not hexadecimal
+        minimum = -(1 << (bits - 1)) if native_signed else 0
+        maximum = (1 << (bits - int(native_signed))) - 1
+        if not minimum <= number <= maximum:
+            return ("Dropdown choice '%s' exceeds the %s value-type width "
+                    "(%d to %d)." % (value, value_type, minimum, maximum))
+        return None
+    if not _native_literal_safe(value, value_type, hexadecimal, signed):
+        return "Dropdown contains an unsupported value expression."
+    return None
 
 
 def _compile_value_address(entry: dict, source: Entry, sources: dict[int, Entry],
@@ -674,13 +775,14 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                         if source.custom_type_known:
                             raise AAError(
                                 f"Custom value type '{name}' is statically defined; the "
-                                "native converter write gate is not implemented yet (AP-08.3).")
+                                "native converter write gate is not implemented yet (AP-08.7).")
                         raise AAError(
                             f"Custom value type '{name}' has no static definition; blocked "
-                            "until a converter/write gate exists (AP-08.3).")
+                            "until a converter/write gate exists (AP-08.7).")
                     raise AAError(f"Unsupported value type: {source.variable_type}.")
-                if source.show_as_hex and source.variable_type in {"Float", "Double"}:
-                    raise AAError("Hexadecimal floating-point bit patterns are unsupported.")
+                # WP-33: ShowAsHex Float/Double records are raw IEEE-754
+                # bit-pattern edits (fixed-size raw write, struct round-trip);
+                # no longer refused here.
                 # moRecursiveSetValue parents compile like ordinary value
                 # records; the deterministic write closure is emitted as
                 # entry["recursive_value"] in the post-pass below, where the
@@ -697,6 +799,21 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                         _compile_value_address(entry, source, sources, allow_empty=True)
                         continue
                     entry["kind"] = "value"
+                # WP-32: a value record without any address cannot anchor a
+                # write; demote it to a non-actionable navigation placeholder
+                # (template row) instead of a blocked record.  The zero-length
+                # profile placeholders above already demoted with their own
+                # reason; this covers every other simple type and every
+                # actionable profile.  Children whose expression needs the
+                # missing base stay blocked (relative-address refusal).
+                if entry["kind"] == "value" and not (source.address or "").strip():
+                    if source.pointer_offsets:
+                        raise AAError("An addressless placeholder cannot carry pointer offsets.")
+                    entry.pop("value_profile", None)
+                    entry["kind"] = "heading"
+                    entry["reason"] = _ADDRESSLESS_PLACEHOLDER_REASON
+                    entry["address"] = ""
+                    continue
                 _compile_value_address(entry, source, sources)
                 entry["dropdown"] = (_string_dropdown(source,nodes,entry['value_profile'])
                                      if source.variable_type=='String'
@@ -766,8 +883,9 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     # Parent/child activation (AP-07 stage 3, extended by WP-14 C2): a
     # flagged heading or script parent routes its whole selected/supported
     # subtree through the tested activation policy; the flagged parent's
-    # class inherits down the entire subtree, while unsupported or
-    # unselected descendants stay outside the topology.
+    # class inherits down the entire subtree, while unsupported, unselected
+    # or non-actionable (WP-32 demoted addressless placeholder) descendants
+    # stay outside the topology.
     # Markers that end up without any cascade target are dropped, so the
     # plan only promises activation where the engine has targets.
     children_by_parent = {}
@@ -786,7 +904,8 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
             node_id = stack.pop()
             for child_id in children_by_parent.get(node_id, ()):
                 child = by_id[child_id]
-                if child["supported"] and child["selected"]:
+                if (child["supported"] and child["selected"]
+                        and not _is_addressless_placeholder(child)):
                     children[child_id] = flag
                 stack.append(child_id)
         if children:
@@ -1037,8 +1156,8 @@ def validate_plan(plan: dict) -> None:
                 if (type(entry.get("show_as_hex")) is not bool
                         or entry.get("show_as_signed") is not None and type(entry["show_as_signed"]) is not bool):
                     raise NativeCompileError("Invalid numeric display flags.")
-                if entry["show_as_hex"] and entry["variable_type"] in {"Float", "Double"}:
-                    raise NativeCompileError("Hexadecimal floating-point values are unsupported.")
+                # WP-33: ShowAsHex Float/Double entries carry fixed-size raw
+                # bit-pattern writes; the validator no longer refuses them.
                 dropdown = entry.get("dropdown")
                 if (not isinstance(dropdown, dict) or not isinstance(dropdown.get("choices"), list)
                         or type(dropdown.get("read_only")) is not bool):
@@ -1072,8 +1191,21 @@ def validate_plan(plan: dict) -> None:
                         or entry["reason"] != value_profile["reason"]):
                     raise NativeCompileError("Invalid non-actionable byte-array placeholder heading.")
                 _validate_value_address(entry, allow_empty=True)
+            elif _is_addressless_placeholder(entry):
+                # WP-32: demoted addressless value record — canonical shape is
+                # a supported navigation heading without address, profile,
+                # offsets, dependencies or dropdown metadata.
+                if (entry.get("value_profile") is not None or entry.get("address") != ""
+                        or entry.get("pointer_offsets") != []
+                        or entry.get("requires") != [] or entry.get("provides") != []
+                        or entry.get("dependency_ids") != []
+                        or entry.get("dropdown") != {"choices": [], "read_only": False}):
+                    raise NativeCompileError("Invalid addressless placeholder heading.")
             elif (entry["kind"] == "heading" and entry.get("source_kind") in {"value", "unsupported"}
-                  and entry.get("variable_type") in _PROFILE_VALUE_TYPES):
+                  and entry.get("variable_type") in SIMPLE_VALUE_TYPES | _PROFILE_VALUE_TYPES):
+                # WP-32: any remaining value-type heading is a tampered
+                # demoted placeholder; the canonical shapes above already
+                # matched, so everything left is forged metadata.
                 raise NativeCompileError("Value-type placeholder headings require canonical value metadata.")
         for entry in entries:
             parent = entry.get("parent_id")
@@ -1127,6 +1259,7 @@ def validate_plan(plan: dict) -> None:
                     if (flag not in ("required_dependency", "direct_activation", "collective_off")
                             or entry["kind"] not in ("heading", "script")
                             or not entry["supported"]
+                            or _is_addressless_placeholder(entry)
                             or entry["id"] not in selected):
                         raise NativeCompileError(
                             "Parent flag class requires a supported selected heading or script parent.")
@@ -1136,7 +1269,8 @@ def validate_plan(plan: dict) -> None:
                         node_id = stack.pop()
                         for child_id in children_by_parent.get(node_id, ()):
                             child = by_id[child_id]
-                            if child["supported"] and child["id"] in selected:
+                            if (child["supported"] and child["id"] in selected
+                                    and not _is_addressless_placeholder(child)):
                                 children[child_id] = flag
                             stack.append(child_id)
                     if not children:
@@ -1144,7 +1278,8 @@ def validate_plan(plan: dict) -> None:
                     expected_relations[entry["id"]] = children
             for entry in entries:
                 if entry.get("parent_mo_bind") is True and (entry["kind"] != "heading"
-                        or not entry["supported"] or entry["id"] not in selected):
+                        or not entry["supported"] or _is_addressless_placeholder(entry)
+                        or entry["id"] not in selected):
                     raise NativeCompileError("moBindActivation marker requires a supported selected heading.")
             # WP-14 (C1): staged metadata must re-derive byte-exactly from
             # each supported non-heading entry's own dependency IDs, and is

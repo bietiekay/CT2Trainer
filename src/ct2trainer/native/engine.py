@@ -434,8 +434,8 @@ def validate_plan(plan: dict) -> None:
             if (type(entry.get("show_as_hex")) is not bool
                     or entry.get("show_as_signed") is not None and type(entry["show_as_signed"]) is not bool):
                 raise NativeRuntimeError("Invalid numeric display flags")
-            if entry["show_as_hex"] and entry["variable_type"] in _FLOAT_TYPES:
-                raise NativeRuntimeError("Hexadecimal floating point editing is unsupported")
+            # WP-33: ShowAsHex Float/Double entries carry fixed-size raw
+            # bit-pattern writes; the plan validator no longer refuses them.
             dropdown = entry.get("dropdown")
             if not isinstance(dropdown, dict) or not isinstance(dropdown.get("choices"), list) or type(dropdown.get("read_only")) is not bool:
                 raise NativeRuntimeError("Invalid numeric dropdown")
@@ -560,18 +560,36 @@ def parse_value(entry: dict, text: str, current_bytes: bytes | None = None) -> b
         result = number.to_bytes(size, "little", signed=signed)
     elif kind in _FLOAT_TYPES:
         if entry.get("show_as_hex", False):
-            raise NativeRuntimeError("Hexadecimal floating point editing is unsupported")
-        if not re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?", literal):
-            raise NativeRuntimeError("Enter a finite decimal number")
-        number = float(literal)
-        if not math.isfinite(number):
-            raise NativeRuntimeError("Value must be finite")
-        try:
-            result = struct.pack("<" + _FLOAT_TYPES[kind], number)
-        except (OverflowError, struct.error) as exc:
-            raise NativeRuntimeError("Value exceeds this floating point type") from exc
-        if not math.isfinite(struct.unpack("<" + _FLOAT_TYPES[kind], result)[0]):
-            raise NativeRuntimeError("Value exceeds this floating point type")
+            # WP-33: fixed-size raw IEEE-754 bit-pattern edit.  The literal
+            # must be exactly the type's pattern width; the bytes are written
+            # raw and proven to round-trip through the IEEE-754 codec.
+            digits = 8 if kind == "Float" else 16
+            pattern = re.fullmatch(
+                r"(?:0[xX])?([0-9a-fA-F]{" + str(digits) + r"})", literal)
+            if pattern is None:
+                raise NativeRuntimeError(
+                    "Enter exactly %d hexadecimal digits for the %s bit pattern"
+                    % (digits, kind))
+            number = int(pattern.group(1), 16)
+            size = 4 if kind == "Float" else 8
+            result = number.to_bytes(size, "little")
+            if (struct.pack("<" + _FLOAT_TYPES[kind],
+                            struct.unpack("<" + _FLOAT_TYPES[kind], result)[0])
+                    != result):
+                raise NativeRuntimeError(
+                    "Hexadecimal floating-point bit pattern is not representable")
+        else:
+            if not re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?", literal):
+                raise NativeRuntimeError("Enter a finite decimal number")
+            number = float(literal)
+            if not math.isfinite(number):
+                raise NativeRuntimeError("Value must be finite")
+            try:
+                result = struct.pack("<" + _FLOAT_TYPES[kind], number)
+            except (OverflowError, struct.error) as exc:
+                raise NativeRuntimeError("Value exceeds this floating point type") from exc
+            if not math.isfinite(struct.unpack("<" + _FLOAT_TYPES[kind], result)[0]):
+                raise NativeRuntimeError("Value exceeds this floating point type")
     else:
         raise NativeRuntimeError("Unsupported numeric type")
     dropdown = entry.get("dropdown") or {}
@@ -597,6 +615,14 @@ def format_value(entry: dict, raw: bytes) -> str:
             raise NativeRuntimeError("Short numeric read")
         number = int.from_bytes(raw, "little", signed=bool(entry.get("show_as_signed")) and not entry.get("show_as_hex", False))
         return format(number, "X") if entry.get("show_as_hex", False) else str(number)
+    if kind in _FLOAT_TYPES:
+        if entry.get("show_as_hex", False):
+            # WP-33: the display is the raw bit pattern, uppercase, exactly
+            # the type's pattern width.
+            width = 4 if kind == "Float" else 8
+            if len(raw) != width:
+                raise NativeRuntimeError("Short numeric read")
+            return format(int.from_bytes(raw, "little"), "08X" if kind == "Float" else "016X")
     number = struct.unpack("<" + _FLOAT_TYPES[kind], raw)[0]
     return format(number, ".9g" if kind == "Float" else ".17g")
 

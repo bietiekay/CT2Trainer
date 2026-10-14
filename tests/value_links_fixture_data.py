@@ -356,11 +356,15 @@ DROPDOWN_FLOAT_TARGET_TABLE = build_table([
     (2701, value_record("Float Linker", address="fl", dropdown_link="Float Target")),
 ])
 
-# Hexadecimal floating-point display is unsupported (mirrors compiler).
+# WP-33: hex-float targets are raw IEEE-754 bit patterns; choice literals are
+# fixed-width (8 hex digits for Float) little-endian raw bytes, so the stored
+# value (the choice index) encodes to the bit pattern of the float index.
 DROPDOWN_HEX_FLOAT_TABLE = build_table([
     (2800, value_record("Hex Float", address="hf", variable_type="Float",
                         show_as_hex=True,
-                        dropdown_choices=[("40 00 00 3F", "one")])),
+                        dropdown_choices=[("00000000", "zero"),
+                                          ("3F800000", "one"),
+                                          ("40000000", "two")])),
     (2801, value_record("Hex Float Linker", address="hfl",
                         dropdown_link="Hex Float")),
 ])
