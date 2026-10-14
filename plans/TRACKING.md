@@ -184,9 +184,9 @@ touch `compiler.py` label-registry hunks concurrently with WP-28.
 
 | Note | For | Open questions |
 | --- | --- | --- |
-| Ownership-handover contract | WP-37 | exact `external_owned_providers` schema; ambiguity resolution (deterministic pick vs. named block); teardown-order proof plan |
-| Dynamic-provider contract | WP-38 | plan schema field + versioning; invalidation of cached bases; re-attach semantics for saved ON-switches; UI marker contract |
-| Table-Lua phase-1 scope | WP-41 | read-only API subset list; block-reason taxonomy; banner metadata location in plan |
+| Ownership-handover contract | WP-37 | **designed 2026-10-14** (plan §10): `external_owned_providers` map, keep-first ambiguous-provider rule, teardown-order invariant, wildcard boundary |
+| Dynamic-provider contract | WP-38 | **designed 2026-10-14** (plan §10): `address_provider` heading field, activation + re-attach re-resolution, invalidation, UI marker contract |
+| Table-Lua phase-1 scope | WP-41 | **designed 2026-10-14** (plan §10): read-only subset, named refusal taxonomy, `plan["table_lua"]` banner metadata |
 | Duplicate-ID plan model | WP-25 | **decided 2026-10-13** (plan §10), **consumed 2026-10-13** (W1-D merged; case-19 pinned, gate:1 updated 14→15) |
 
 ## 4. Corpus cases (synthetic clean-room, `TableReferences/`)

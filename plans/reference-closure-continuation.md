@@ -304,19 +304,159 @@ stay inactive"). Case: `case-22`.
 
 ## 10. Design notes owned by root (fill before WP start)
 
-- **WP-37 ownership contract:** exact shape of
-  `external_owned_providers` (per-table set built from
-  `extract_lua_symbol_providers` + allocation-only program provides);
-  the uniqueness rule; the ambiguous-provider resolution decision;
-  the teardown-order invariant (Lua after AA); the wildcard-expansion
-  boundary.
-- **WP-38 plan schema:** field names, schema version handling in
-  `validate_plan` (both compiler and engine gates), invalidation of
-  cached plan addresses on provider re-run, re-attach re-resolution
-  semantics, UI marker contract.
-- **WP-41 bootstrap scope:** which host APIs count as read-only for
-  the phase-1 subset; the exact named block reasons per refused API
-  class; where the banner metadata lives in the plan.
+- **WP-37 Lua-owned symbol handover (designed 2026-10-14; case-24):**
+  1. *`external_owned_providers` shape.* Per-table dict
+     `{symbol.casefold(): provider_entry_id}` built at compile time from
+     (a) `extract_lua_symbol_providers` over every record's Lua parts
+     and the table-Lua source, plus (b) the `provides` sets of
+     allocation-only programs (WP-29 profile). A symbol is adopted only
+     when exactly one record provides it; two or more providers make the
+     symbol *contested* and it stays out of the map (its references then
+     keep the ordinary provider rules below). The compiler emits the map
+     as `plan["external_owned_providers"]` (sorted casefolded keys, int
+     provider IDs); `validate_plan` (both gates) accept it as optional
+     on schema 2 and reject non-dict shapes, non-str keys, unknown
+     provider IDs, and provider entries that are not supported scripts.
+  2. *Reference rule.* A program may `requires` an externally owned
+     symbol only if it is in `external_owned_providers` AND the program
+     never unregisters or deallocates it (the symbol is not in the
+     program's own `unregister`/`dealloc` op list). No AA script has to
+     `registersymbol` it: the runtime registers it when the owning
+     record's Lua runs. The owning record becomes the activation
+     dependency of every consumer (consumers gain `dependency_ids` to
+     the provider record, so ordering and the existing provider-liveness
+     blocking apply exactly as for AA providers).
+  3. *Ambiguous-provider resolution (the 231 reference rows).* Decision:
+     **deterministic keep-first among supported providers** (document
+     order, tiebreak entry ID) — the same policy as the WP-25 duplicate-ID
+     keep-first. With two or more supported, non-shared-global candidates,
+     the first becomes THE provider; each remaining supported duplicate is
+     blocked with the named reason `Symbol provider duplicate: <sym> (kept
+     provider <id>); a later registration would shadow the kept one at
+     runtime.`; dependents resolve against the kept provider. Zero
+     supported candidates keep the existing cascade reason `Required
+     symbol has no unique supported provider: <sym>.` Rationale:
+     deterministic and auditable, consistent with WP-25; CE keeps both
+     entries visible (behavior reference only) — the native equivalent is
+     the named duplicate block plus the WP-39 inspection result.
+  4. *Teardown-order invariant.* On deactivation/detach, record AA
+     programs are disabled *before* the owning record's Lua DISABLE
+     phase, and any table-level teardown runs after all record teardowns,
+     so an externally owned symbol is released exactly once by its owner.
+     Runtime proof on the Windows fixture target: with a Lua-owned provider
+     record and an AA consumer record active, detach; assert no double
+     unregister, no dealloc of foreign memory, and clean journal receipts.
+  5. *Wildcard boundary.* `unregistersymbol('*')` / `dealloc('*')` expand
+     only to the program's own phase-owned names (symbols it registered
+     and allocations it created in its ENABLE phase); they never touch
+     externally owned symbols. Static guard: a program that both requires
+     an externally owned symbol and contains a wildcard cleanup op is
+     blocked with `Program cannot combine wildcard cleanup with externally
+     owned symbol <sym>.`
+- **WP-38 dynamic address provider (designed 2026-10-14; case-21):**
+  1. *Schema field (additive, schema 2).* An addressless heading entry
+     carries `"address_provider": {"provider_id": <int>, "symbol":
+     "<name>"}` naming the provider record — a supported `script` entry
+     whose `provides` contains the casefolded symbol (e.g. a table/record
+     Lua that registers the computed base) — and the symbol that carries
+     the base. The heading keeps `address == ""`; relative children keep
+     their `+NNN` source expressions and resolve against the runtime
+     base. `validate_plan` (compiler gate *and* `engine.validate_plan`)
+     accept the field only when the entry has `kind == "heading"`,
+     `supported is True`, `address == ""`; `provider_id` is a declared
+     entry ID with `kind == "script"`, `supported is True` and the
+     casefolded symbol in its `provides`; the provider is not a
+     descendant of the heading it serves (no provider-to-base cycle);
+     `symbol` passes `validate_symbol`. The engine keeps the heading's
+     `address` empty; no resolved base is ever persisted in the plan.
+  2. *Activation.* At activation of a subtree rooted at such a heading,
+     the provider record must first activate successfully (its
+     `registerSymbol` has run; the symbol is present in the runtime
+     symbol table). Base = that symbol value, read fresh. Every relative
+     child resolves from that base on this activation. If the provider is
+     inactive (blocked, disabled, or failed), the heading and its whole
+     subtree are activation-blocked with `Address provider <id> is not
+     active.`
+  3. *Re-attach re-resolution.* Saved ON-switches persist record
+     selection only (existing state contract). On every activation —
+     fresh attach, re-attach, or re-enable — the engine re-runs the
+     provider record and re-reads the symbol; nothing caches or persists
+     a resolved base across activations, and a provider whose value
+     changed between activations re-bases the whole subtree on the new
+     value.
+  4. *Invalidation.* Compile-time: with no supported provider record
+     proven by its `provides` set, the heading and its relative
+     descendants keep today's named refusals (`Relative address cannot
+     skip an addressless script/value ancestor.` and friends) — provider
+     wiring is adopted only for proven providers. Activation-time: a
+     provider failure blocks the subtree per (2) without touching sibling
+     records.
+  5. *UI marker contract.* A heading with `address_provider` renders the
+     "address provided at runtime" marker in the trainer UI; the
+     trainer-creator inspection result (WP-39) surfaces `provider_id` +
+     `symbol` per such heading. The plan field is the single source of
+     truth; no parallel marker metadata.
+- **WP-41 table-Lua bootstrap, phase 1 (designed 2026-10-14; case-22):**
+  1. *Scope and lifetime.* The combined table-Lua source (existing
+     `_table_lua_source`: main `<LuaScript>` body + named tabs in document
+     order) executes exactly once per table load in a dedicated read-only
+     host scope built on the existing `LuaHost` with the read-only broker
+     discipline (per-scope `_TransportBudget`, no target-memory mutation,
+     no symbol-table writes, no assembler). The bootstrap scope persists
+     for the table's lifetime so record-Lua activations see table-level
+     globals; it is destroyed on table unload/detach. Phase 1 keeps no
+     other persistent table-Lua state.
+  2. *Read-only subset.* The allowlist is the existing
+     `EngineLuaBroker.call` dispatch minus the mutation families: reads
+     (`read`, `readString`, `readBytes`, `getAddress(Safe)`,
+     `getModuleSize`, `getAddressOfSymbol(Safe)`, `luaEngine.snapshot`,
+     `getProcHandle`, `getOpenProcessID`, `addresslist.Count`,
+     `addresslist.at`, `record.get`, `isKeyPressed`,
+     `getXBox360ControllerState`, `speedhack_getSpeed`, `print`,
+     `AOBScan`, `scan.firstScan`, `mono_enumDomains`) stay; every call
+     that mutates target memory, the symbol table, or the host session
+     state, executes target code, or registers a callback is refused. The
+     lane extracts the exact names from the broker dispatch; the design
+     rule is that classification.
+  3. *Named block reasons per refused API class (activation block, never
+     parse block — the table still parses and plans):*
+     - target-memory writes (`write`, `writeString`, `writeBytes`,
+       `record.set`): `Table Lua uses a write API: <name>.`
+     - symbol-table writes (`registerSymbol`, `unregisterSymbol`):
+       `Table Lua writes the symbol table: <name>.`
+     - assembler/patch execution (`autoAssemble`):
+       `Table Lua executes assembler patches: <name>.`
+     - target-code invocation (`executeCodeEx`, `mono_invoke_method`):
+       `Table Lua invokes target code: <name>.`
+     - session/UI callbacks (`showMessage`, `luaEngine.close`,
+       `luaEngine.menuClick`): `Table Lua registers a UI callback:
+       <name>.`
+     - host-state mutation (`attachProcess`, `detachProcess`,
+       `LaunchMonoDataCollector`, `speedhack_setSpeed`):
+       `Table Lua mutates host session state: <name>.`
+     - anything else unknown: `Table Lua calls an unsupported API:
+       <name>.`
+     - read-only execution that still fails: `Table Lua top-level
+       execution failed: <error>.`
+  4. *Banner metadata in the plan.* When the table carries Lua, the plan
+     gains `plan["table_lua"] = {"executed": <bool>, "reasons": [<exact
+     refusal reasons, ordered>], "record_scripts_inactive": <int>}`;
+     `validate_plan` (both gates) accept the object with strict shape and
+     bounded lists. `record_scripts_inactive` counts record scripts whose
+     embedded Lua statically references at least one table-Lua top-level
+     global (non-`local` top-level `NAME = ...` assignments in the table
+     source intersected with bare identifiers in the record source,
+     case-sensitive); records with no such reference stay unaffected by a
+     blocked bootstrap. The existing plan warning ("Table Lua is not
+     executed on load…") stays as-is; the trainer-UI banner reads the
+     plan object: "Table Lua not executed on load — N record scripts
+     stay inactive".
+  5. *Interaction with records.* When the bootstrap is refused or fails,
+     no table scope exists; dependent record scripts (per 4) stay
+     inactive with the named reason, non-dependent records are
+     unaffected. When the bootstrap executes cleanly (pure read-only
+     table), record scripts run as today with the table globals visible
+     in their scope.
 - **WP-25 plan-entry model for duplicate IDs (decided 2026-10-13):**
   the FIRST occurrence is the plan entry; later duplicates are dropped
   from the plan (not emitted as addressable entries) and reported as one
