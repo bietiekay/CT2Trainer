@@ -169,15 +169,15 @@ upstream WPs land. Largest chains (verified 2026-10-13):
 | WP-34 | diagnostics: missing-vs-ambiguous link target split, hex-string reason, AP-08.3/08.7 citation alignment; FLAG-2 dropdown follow-ups (comma-decimal Float/Double choice normalization unblocking 25, per-choice width-precision reason naming the 31 linked width-exceeding rows) | 2 | `compiler.py` | 0 (quality) + 56 (FLAG-2 follow-ups) | case-16/17 | ready (after WP-24 merge) |
 | WP-35 | `dq`/`resb` operand-less reservation span: program-owned allocation only, must be written before publish, no cross-program access | 2 | `aa_program.py`, engine coordinator | ~405 | case-18 | ready |
 | WP-36 | `aobscan`/`aobscanregion` staged under existing scan budget; `createthread` keeps capability gate with named reason; 3-arg `globalalloc(sym,size,$process)` accepted | 2 | `aa_program.py`, `compiler.py` scan policy | ~25 | case-18 | ready |
-| WP-37 | Lua-owned symbol handover contract (unique external provider; reference allowed, foreign dealloc refused; ambiguity rule) | 3 | `lua_program.py`, `aa_program.py:883-895`, `compiler.py` provider map, coordinator teardown order | ~176 + 231 ambiguous | case-24 | design (root design note required first) |
-| WP-38 | runtime dynamic address provider (plan-schema extension, provider-record contract, base re-resolution on activation + re-attach, UI marker) | 3 | plan schema, `validate_plan` (both), `engine.py`, trainer UI | 327 | case-21 | design |
+| WP-37 | Lua-owned symbol handover contract (unique external provider; reference allowed, foreign dealloc refused; ambiguity rule) | 3 | `lua_program.py`, `aa_program.py:883-895`, `compiler.py` provider map, coordinator teardown order | ~176 + 231 ambiguous | case-24 | ready (design note filled, plan §10) |
+| WP-38 | runtime dynamic address provider (plan-schema extension, provider-record contract, base re-resolution on activation + re-attach, UI marker) | 3 | plan schema, `validate_plan` (both), `engine.py`, trainer UI | 327 | case-21 | ready (design note filled, plan §10) |
 | WP-39 | trainer-creator structured per-table inspection result (supported/blocked/top-reasons/warnings; file-level diagnostics for GC-T1…T4; API-boundary grouping) | 3 | `converter.py` GUI, plan diagnostics | UX | case-19 shapes | ready |
 | WP-40 | record hotkey registration (first-wins + warning) + original-binding display | 3 | `engine.py`, `hotkey_model.py`, `ui.py` | UX (37 tables) | case-23 | ready (two sub-lanes: engine / UI) |
-| WP-41 | table-Lua bootstrap phase 1 (per-table scope, read-only subset, named block reasons, trainer banner) | 3 | `lua_bootstrap.py`, `lua_host.py`, engine lifecycle | 49 tables' dependent records | case-22 | design (root design note required first) |
+| WP-41 | table-Lua bootstrap phase 1 (per-table scope, read-only subset, named block reasons, trainer banner) | 3 | `lua_bootstrap.py`, `lua_host.py`, engine lifecycle | 49 tables' dependent records | case-22 | ready (design note filled, plan §10) |
 | WP-42 | embedded-Forms rendering (Ascii85 `TTrainerForm` decode + control binding) | deferred | trainer UI, table model | 10 tables (low priority) | case-25 | open (separate milestone; needs format investigation) |
 
 Dependency constraints: WP-27 after WP-24 (same `_dropdown` function);
-WP-37/38/41 gated by root-owned design notes (§3.3); Wave 2 lanes must not
+WP-37/38/41 gated by root-owned design notes (§3.3) — filled 2026-10-14 in plan §10; Wave 2 lanes must not
 touch `compiler.py` label-registry hunks concurrently with WP-28.
 
 ### 3.3 Design notes owed by root before implementation starts
