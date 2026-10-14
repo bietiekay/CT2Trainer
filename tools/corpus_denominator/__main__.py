@@ -61,6 +61,7 @@ PINNED = [
     "case-12.ct",
     "case-13.ct",
     "case-14.ct",
+    "case-15.ct",
     "case-16.ct",
     "case-19.ct",
     "case-20.ct",
@@ -110,7 +111,7 @@ GAP_LABELS = {
 }
 
 MISSING_GATES = [
-    "Real game installs/builds for the 17 pinned tables (user question unanswered)",
+    "Real game installs/builds for the 18 pinned tables (user question unanswered)",
     "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
     "VM/Clean-PC gate without CE/Python",
     "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
