@@ -1,7 +1,7 @@
 {
  "ap11_exclusions": [
   {
-   "gate": "Real game installs/builds for the 17 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 18 pinned tables (user question unanswered)",
    "reason": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists."
   },
   {
@@ -21,21 +21,21 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 17,
+    "actual": 18,
     "check": "pinned_table_count",
-    "expected": 17,
+    "expected": 18,
     "ok": true
    },
    {
-    "actual": 6031,
+    "actual": 6047,
     "check": "expected_actions",
-    "expected": 6031,
+    "expected": 6047,
     "ok": true
    },
    {
-    "actual": 6031,
+    "actual": 6047,
     "check": "category_counts_sum",
-    "expected": 6031,
+    "expected": 6047,
     "ok": true
    },
    {
@@ -259,6 +259,7 @@
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
+     "cdc1ad6ceacb559891c0f4a9cf4086187460dd061df5e03ad7cb82340b1cc44e",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
@@ -279,6 +280,7 @@
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
+     "cdc1ad6ceacb559891c0f4a9cf4086187460dd061df5e03ad7cb82340b1cc44e",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
@@ -301,9 +303,9 @@
  "coverage": {
   "action_weighted_coverage_percent": 100.0,
   "actions_weight_ap11_excluded": 0,
-  "actions_weight_covered": 7371,
-  "actions_weight_in_scope": 7371,
-  "actions_weight_total": 7371,
+  "actions_weight_covered": 7376,
+  "actions_weight_in_scope": 7376,
+  "actions_weight_total": 7376,
   "feature_weighted_coverage_percent": 100.0,
   "features_covered": 42,
   "features_excluded_ap11": 4,
@@ -392,7 +394,7 @@
    "status": "covered"
   },
   "aa_globalalloc_general": {
-   "affected_records": 5,
+   "affected_records": 6,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_global_alloc.py",
@@ -514,7 +516,7 @@
    "status": "covered"
   },
   "address_form_unrecognized": {
-   "affected_records": 2,
+   "affected_records": 5,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_addresses.py",
@@ -533,9 +535,9 @@
    "affected_records": null,
    "ap11_excluded": true,
    "evidence": [],
-   "gate": "Real game installs/builds for the 17 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 18 pinned tables (user question unanswered)",
    "kind": "missing_gate",
-   "label": "Real game installs/builds for the 17 pinned tables (user question unanswered)",
+   "label": "Real game installs/builds for the 18 pinned tables (user question unanswered)",
    "modules": [],
    "note": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists.",
    "requirement": "AP-11 game gate",
@@ -1087,7 +1089,7 @@
    "status": "covered"
   },
   "signed_pointer_offset": {
-   "affected_records": 1,
+   "affected_records": 2,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_compiler.py"
@@ -1158,15 +1160,15 @@
    "status": "covered"
   }
  },
- "generated": "run w1a-case16-20261014003107Z",
+ "generated": "run w1a-case15-20261014011543Z",
  "lane": "AP-10 feature matrix and coverage metric (read-only, static)",
- "run_id": "w1a-case16-20261014003107Z",
+ "run_id": "w1a-case15-20261014011543Z",
  "schema": "corpus-feature-matrix/v1",
  "source": {
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "c6628139fc79b42d35f5c32fd6e10d41de11c76c04e3b0c7286b5551a3feb390",
+  "gap_report_sha256": "f7f363912e42c0800948f6391a02d347fec8b3306556941e84d7049f5fea6a7b",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "daa16d7084e5c03b936e54c575f6e3bba99ddc5ff123a322fc2ba48cfec3eb4a"
+  "inventory_sha256": "0105ad59133649656208d504d5110a5fbf77d8ff4e4e0799751847c4a4388e29"
  },
  "top10_priority": []
 }

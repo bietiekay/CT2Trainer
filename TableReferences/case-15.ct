@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"hp (digit-leading module)</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>20XX.exe+47B88B8</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>11</ID>
+      <Description>"mp (digit-leading module, upper-case)</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>20XX.EXE+4699188</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>12</ID>
+      <Description>"bare token stays blocked (stays blocked)</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>20XX</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13</ID>
+      <Description>"$process AOB scan (WP-19)</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synProcScan, $process, 89 48 08)
+synProcScan:
+assert(synProcScan, 89 48 08)
+db 90
+[DISABLE]
+synProcScan:
+assert(synProcScan, 90)
+db 89</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14</ID>
+      <Description>"globalalloc with @@: cursor (WP-20)</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+label(synthDone)
+globalalloc(synthShared,8)
+synthShared:
+dd #11
+@@:
+dd #22
+alloc(synthCave,1000)
+synthCave:
+mov rcx,synthShared
+mov eax,[rcx]
+jmp synthDone
+ct2synth15.exe+200:
+jmp synthCave
+synthDone:
+[DISABLE]
+ct2synth15.exe+200:
+db B8 01 00 00 00
+dealloc(synthCave)
+dealloc(synthShared)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>15</ID>
+      <Description>"managed label single colon (WP-23)</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>Synth:Alpha</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>16</ID>
+      <Description>"managed label double colon (WP-23)</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>Synth::Beta</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>20</ID>
+      <Description>"offset fold C00+58 (WP-21)</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth15.exe+300</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>C00+58</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>21</ID>
+      <Description>"offset fold A0+4*4 (WP-21)</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth15.exe+304</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>A0+4*4</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>22</ID>
+      <Description>"offset fold 1594+8+118 (WP-21)</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth15.exe+308</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>1594+8+118</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>23</ID>
+      <Description>"offset signed -10 (WP-21)</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth15.exe+30C</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>-10</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>24</ID>
+      <Description>"offset annotated 20 (name pointer) (WP-21)</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth15.exe+310</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>20 (name pointer)</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>30</ID>
+      <Description>"offset symbol expression (stays blocked)</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth15.exe+314</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>base+10</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>31</ID>
+      <Description>"offset dotted text (stays blocked)</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth15.exe+318</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>GameEngine.GameInstance</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>32</ID>
+      <Description>"offset empty annotation (stays blocked)</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth15.exe+31C</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>20 ()</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>33</ID>
+      <Description>"offset chain limit (stays blocked)</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth15.exe+320</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+        <Offset>10</Offset>
+      </Offsets>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>
