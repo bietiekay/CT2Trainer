@@ -174,7 +174,7 @@ kind; tests: extend `test_native_dropdown_link.py`, new
 diagnostics tests). Cases: `case-16` (part 2: linked bit field + byte
 array incl. wrong-length choice, dangling link-target diagnostic),
 `case-17` (addressless templates + edge types).
-**Lane W2-B (AA program dialect):** WP-28 → WP-31 → WP-35
+**Lane W2-B (AA program dialect):** WP-28 → WP-29 → WP-31 → WP-35
 (`aa_program.py` + `compiler.py` label registry + `aa.py`; tests: new
 `test_native_label_scoping.py`, extend `test_native_assembler.py`,
 `test_native_aa_literals.py`). Case: `case-18` (AA label & directive
@@ -182,8 +182,8 @@ pack).
 **Lane W2-C (expression profile + scan policy):** WP-30 + WP-36
 (`address_expression.py` + `aa.py` static grammar + `compiler.py`
 routing/scan policy; tests: expression unit cases,
-`test_native_process_aob.py` extension). Case: `case-15` (part 5:
-cast/indirection address records) if not covered by W2-B's case.
+`test_native_process_aob.py` extension). Case: `case-15` (part 2:
+cast/indirection address records).
 
 Catalog acceptance (Wave 2, cumulative over Wave 1):
 `Linked dropdowns for byte arrays and bit fields are unsupported` → 0
