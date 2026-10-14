@@ -3,15 +3,15 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 16,
+    "actual": 17,
     "check": "pinned_table_count",
-    "expected": 16,
+    "expected": 17,
     "ok": true
    },
    {
-    "actual": 6025,
+    "actual": 6031,
     "check": "expected_actions",
-    "expected": 6025,
+    "expected": 6031,
     "ok": true
    },
    {
@@ -20,7 +20,7 @@
      "one_shot": 1723,
      "persistent_script": 429,
      "string_write": 731,
-     "value_freeze": 3139
+     "value_freeze": 3145
     },
     "check": "category_counts",
     "expected": {
@@ -28,7 +28,7 @@
      "one_shot": 1723,
      "persistent_script": 429,
      "string_write": 731,
-     "value_freeze": 3139
+     "value_freeze": 3145
     },
     "ok": true
    },
@@ -99,6 +99,10 @@
       "ok": true
      },
      {
+      "name": "case-16.ct",
+      "ok": true
+     },
+     {
       "name": "case-19.ct",
       "ok": true
      },
@@ -118,6 +122,7 @@
     "actual": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
+     "4f1571b2e3e867f731f51c7b711018eaad584f45962dc9a2fe3ce98a1f510723",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
@@ -137,6 +142,7 @@
     "expected": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
+     "4f1571b2e3e867f731f51c7b711018eaad584f45962dc9a2fe3ce98a1f510723",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
@@ -186,25 +192,25 @@
    "one_shot": 1723,
    "persistent_script": 429,
    "string_write": 731,
-   "value_freeze": 3139
+   "value_freeze": 3145
   },
   "confirmed_game_effect_actions": 0,
-  "expected_actions": 6025,
+  "expected_actions": 6031,
   "goal_90_percent": "NOT REACHED",
-  "unique_tables": 16
+  "unique_tables": 17
  },
- "generated": "run w1e-case20-20261013234642Z",
+ "generated": "run w1a-case16-20261014003107Z",
  "lane": "AP-11 game campaign plan (read-only, static)",
- "run_id": "w1e-case20-20261013234642Z",
+ "run_id": "w1a-case16-20261014003107Z",
  "schema": "ap11-campaign/v1",
  "source": {
   "corpus_root": "C:\\Users\\xboxl\\code\\CT2Trainer\\TableReferences",
   "feature_coverage": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\feature-coverage.json",
-  "feature_coverage_sha256": "656798a520c613567ebf65f26133f7a8cde088d68198d072c300fafac26478eb",
+  "feature_coverage_sha256": "d39a9e389476405461dda812fc0329f6a85679a8648c0e8dd10ec85e92c6b301",
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "23bc928f879e89f4523b94733260755a4015e02caa73757aef3f398b4f8d8b5e",
+  "gap_report_sha256": "c6628139fc79b42d35f5c32fd6e10d41de11c76c04e3b0c7286b5551a3feb390",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "44b42c956dc8e0880765dbb3a9f014f11952b02bbaeaaef85b61863c3f29c33e"
+  "inventory_sha256": "daa16d7084e5c03b936e54c575f6e3bba99ddc5ff123a322fc2ba48cfec3eb4a"
  },
  "tables": [
   {
@@ -6511,6 +6517,30 @@
   {
    "architecture": "unknown",
    "category_counts": {
+    "value_freeze": 6
+   },
+   "ct_path": "case-16.ct",
+   "ct_sha256": "4f1571b2e3e867f731f51c7b711018eaad584f45962dc9a2fe3ce98a1f510723",
+   "expected_actions": 6,
+   "name": "case-16.ct",
+   "priority_order": [
+    "value_freeze"
+   ],
+   "process_candidates": [
+    "ct2synth16.exe"
+   ],
+   "records": {
+    "1": "value_freeze",
+    "2": "value_freeze",
+    "3": "value_freeze",
+    "4": "value_freeze",
+    "5": "value_freeze",
+    "6": "value_freeze"
+   }
+  },
+  {
+   "architecture": "unknown",
+   "category_counts": {
     "persistent_script": 1,
     "value_freeze": 7
    },
@@ -6569,9 +6599,9 @@
    "one_shot": 1723,
    "persistent_script": 429,
    "string_write": 731,
-   "value_freeze": 3139
+   "value_freeze": 3145
   },
-  "expected_actions": 6025,
-  "tables": 16
+  "expected_actions": 6031,
+  "tables": 17
  }
 }
