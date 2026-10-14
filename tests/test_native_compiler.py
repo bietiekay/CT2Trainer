@@ -69,7 +69,7 @@ class NativeCompilerTests(unittest.TestCase):
         if not corpus.exists():
             self.skipTest("The synthetic clean-room corpus is intentionally excluded from the Native source distribution.")
         paths = sorted(corpus.glob("*.ct"))
-        self.assertEqual(len(paths), 15, "The repository compatibility corpus must retain all 15 case tables.")
+        self.assertEqual(len(paths), 16, "The repository compatibility corpus must retain all 16 case tables.")
         for path in paths:
             with self.subTest(path=path.name):
                 plan = compile_table(path, "Target.exe")
