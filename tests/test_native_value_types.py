@@ -187,5 +187,18 @@ class NativeValueTypeTests(unittest.TestCase):
         self.assertTrue(any(a&b for a,b in zip(wide,second)))
 
 
+    def test_string_show_as_hex_and_binary_are_refused_with_named_flag(self):
+        # WP-34: the display flag that triggers the refusal is named so the
+        # catalog reason reads as a hex/binary byte-view boundary.
+        for flag in ('ShowAsHex', 'ShowAsBinary'):
+            with self.subTest(flag=flag), self.assertRaises(ValueError) as caught:
+                prepare_value_profile('String', {'Length': 8, 'ZeroTerminate': 1, flag: 1})
+            self.assertEqual(str(caught.exception),
+                             f'Strings require literal text display; the {flag} byte view is unsupported.')
+        ok = prepare_value_profile('String', {'Length': 8, 'ZeroTerminate': 1,
+                                              'ShowAsHex': 0, 'ShowAsBinary': 0})
+        self.assertTrue(ok['actionable'])
+
+
 if __name__=='__main__':
     unittest.main()

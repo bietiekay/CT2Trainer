@@ -22,20 +22,21 @@
  },
  "denominator": {
   "category_counts": {
-   "custom_value": 3,
+   "custom_value": 4,
+   "navigation": 2,
    "one_shot": 1723,
    "persistent_script": 431,
-   "string_write": 731,
-   "value_freeze": 3159
+   "string_write": 732,
+   "value_freeze": 3167
   },
   "confirmed_game_effect_actions": 0,
   "confirmed_percent": 0.0,
-  "expected_actions": 6047,
+  "expected_actions": 6057,
   "goal_90_percent": "NOT REACHED",
-  "group_toggle_actions": 2,
-  "groups_total": 1286,
+  "group_toggle_actions": 3,
+  "groups_total": 1287,
   "missing_gates": [
-   "Real game installs/builds for the 18 pinned tables (user question unanswered)",
+   "Real game installs/builds for the 19 pinned tables (user question unanswered)",
    "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
    "VM/Clean-PC gate without CE/Python",
    "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -43,14 +44,14 @@
    "Frozen/binary proof (source-only evidence of this lane)",
    "Reproducibility with exact commands and pinned inputs"
   ],
-  "navigation_excluded": 0,
+  "navigation_excluded": 2,
   "record_types": {
    "aa_script": 2154,
-   "custom": 3,
-   "string": 731,
-   "value": 3159
+   "custom": 4,
+   "string": 732,
+   "value": 3169
   },
-  "records_total": 6047,
+  "records_total": 6059,
   "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
@@ -60,11 +61,11 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5482,
-   "statically_assumed": 528,
-   "unknown": 37
+   "locked": 5487,
+   "statically_assumed": 533,
+   "unknown": 39
   },
-  "unique_tables": 18
+  "unique_tables": 19
  },
  "gap_labels": {
   "aa_conditional_block": {
@@ -224,7 +225,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run w1a-case15-20261014011543Z",
+ "generated": "run w2a-case17-20261014112532Z",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -153000,22 +153001,22 @@
    },
    "counts": {
     "categories": {
-     "value_freeze": 6
+     "value_freeze": 10
     },
-    "entries_total": 7,
-    "expected_actions": 6,
+    "entries_total": 12,
+    "expected_actions": 10,
     "gap_counts": {
-     "dropdown_link": 2
+     "dropdown_link": 6
     },
-    "group_toggle_actions": 1,
-    "groups": 1,
+    "group_toggle_actions": 2,
+    "groups": 2,
     "navigation_excluded": 0,
     "record_types": {
-     "value": 6
+     "value": 10
     },
-    "records": 6,
+    "records": 10,
     "status_counts": {
-     "locked": 2,
+     "locked": 6,
      "statically_assumed": 4
     }
    },
@@ -153030,6 +153031,15 @@
      "name": "synth element list",
      "on_effect": true,
      "path": "synth element list"
+    },
+    {
+     "depth": 0,
+     "descendant_records": 4,
+     "group_action": true,
+     "has_checkbox": true,
+     "name": "synth byte list",
+     "on_effect": true,
+     "path": "synth byte list"
     }
    ],
    "main_initialization": null,
@@ -153171,10 +153181,106 @@
        "type": "value"
       }
      ]
+    },
+    {
+     "group": "synth byte list",
+     "records": [
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "dropdown_link"
+       ],
+       "id": 11,
+       "lifetime": "read_write_freezable_value",
+       "name": "byte mode (linked byte array)",
+       "parent": "synth byte list",
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding",
+        "array_value"
+       ],
+       "semantics": "Array of byte value in ct2synth16.exe (module bound)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth16.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "dropdown_link"
+       ],
+       "id": 12,
+       "lifetime": "read_write_freezable_value",
+       "name": "byte mode wrong length (stays blocked)",
+       "parent": "synth byte list",
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding",
+        "array_value"
+       ],
+       "semantics": "Array of byte value in ct2synth16.exe (module bound)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth16.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "dropdown_link"
+       ],
+       "id": 13,
+       "lifetime": "read_write_freezable_value",
+       "name": "bit flag (linked bit field)",
+       "parent": "synth byte list",
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding",
+        "array_value"
+       ],
+       "semantics": "Binary value in ct2synth16.exe (module bound)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth16.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 1,
+       "gaps": [
+        "dropdown_link"
+       ],
+       "id": 14,
+       "lifetime": "read_write_freezable_value",
+       "name": "dangling link (stays blocked)",
+       "parent": "synth byte list",
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "4 Bytes value in ct2synth16.exe (module bound)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth16.exe",
+       "type": "value"
+      }
+     ]
     }
    ],
-   "sha256": "4f1571b2e3e867f731f51c7b711018eaad584f45962dc9a2fe3ce98a1f510723",
-   "size_bytes": 2792,
+   "sha256": "cf7ef73a2c326edee6b6d87853f454996789add71e9cea7d7440347e41fcbb25",
+   "size_bytes": 4914,
    "table": "case-16.ct",
    "table_flags": {
     "cheat_codes": false,
@@ -153188,10 +153294,237 @@
    },
    "top_gaps": [
     {
-     "affected_records": 2,
+     "affected_records": 6,
      "gap": "dropdown_link",
      "label": "Dropdown link to foreign records",
      "requirement": "N-18"
+    }
+   ]
+  },
+  {
+   "architecture": {
+    "signals": [],
+    "value": "unknown"
+   },
+   "counts": {
+    "categories": {
+     "custom_value": 1,
+     "navigation": 2,
+     "string_write": 1,
+     "value_freeze": 4
+    },
+    "entries_total": 8,
+    "expected_actions": 6,
+    "gap_counts": {
+     "custom_type": 1
+    },
+    "group_toggle_actions": 0,
+    "groups": 0,
+    "navigation_excluded": 2,
+    "record_types": {
+     "custom": 1,
+     "string": 1,
+     "value": 6
+    },
+    "records": 8,
+    "status_counts": {
+     "locked": 1,
+     "statically_assumed": 5,
+     "unknown": 2
+    }
+   },
+   "duplicate_ids": {},
+   "format_version": "46",
+   "groups": [],
+   "main_initialization": null,
+   "path": "case-17.ct",
+   "paths": [
+    "case-17.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": "null",
+       "architecture": "unknown",
+       "async": null,
+       "category": "navigation",
+       "depth": 0,
+       "gaps": [],
+       "id": 10,
+       "lifetime": "none_navigation_placeholder",
+       "name": "template placeholder (simple)",
+       "parent": null,
+       "providers": [],
+       "semantics": "Null-array placeholder without its own effect",
+       "status": "unknown",
+       "target_build": "no_own_target",
+       "type": "value"
+      },
+      {
+       "address_kind": "null",
+       "architecture": "unknown",
+       "async": null,
+       "category": "navigation",
+       "depth": 0,
+       "gaps": [],
+       "id": 11,
+       "lifetime": "none_navigation_placeholder",
+       "name": "template placeholder (byte array)",
+       "parent": null,
+       "providers": [
+        "array_value"
+       ],
+       "semantics": "Null-array placeholder without its own effect",
+       "status": "unknown",
+       "target_build": "no_own_target",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 12,
+       "lifetime": "read_write_freezable_value",
+       "name": "bit field (control, addressed)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding",
+        "array_value"
+       ],
+       "semantics": "Binary value in ct2synth17.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth17.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 13,
+       "lifetime": "read_write_freezable_value",
+       "name": "hex float",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "Float value in ct2synth17.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth17.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 14,
+       "lifetime": "read_write_freezable_value",
+       "name": "hex double",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "Double value in ct2synth17.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth17.exe",
+       "type": "value"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "string_write",
+       "depth": 0,
+       "gaps": [],
+       "id": 15,
+       "lifetime": "terminator_bounded_write_freezable",
+       "name": "hex string (stays blocked)",
+       "parent": null,
+       "providers": [
+        "string_codec_bounded"
+       ],
+       "semantics": "String (ASCII, length 8) an ct2synth17.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth17.exe",
+       "type": "string"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": null,
+       "category": "custom_value",
+       "depth": 0,
+       "gaps": [
+        "custom_type"
+       ],
+       "id": 16,
+       "lifetime": "custom_type_readwrite",
+       "name": "custom type without definition (stays blocked)",
+       "parent": null,
+       "providers": [
+        "custom_type_codec"
+       ],
+       "semantics": "Custom type value (synthCustom)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth17.exe",
+       "type": "custom"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 17,
+       "lifetime": "read_write_freezable_value",
+       "name": "zero-length byte array (non-actionable control)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding",
+        "array_value"
+       ],
+       "semantics": "Array of byte value in ct2synth17.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth17.exe",
+       "type": "value"
+      }
+     ]
+    }
+   ],
+   "sha256": "893f961c5b36ad0c923bec3a3e138508086068a6cc970fc5f7fb6ff8487f0f49",
+   "size_bytes": 2631,
+   "table": "case-17.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 1,
+     "gap": "custom_type",
+     "label": "Custom type codec",
+     "requirement": "N-17"
     }
    ]
   },
@@ -153710,28 +154043,28 @@
    ]
   }
  ],
- "run_id": "w1a-case15-20261014011543Z",
+ "run_id": "w2a-case17-20261014112532Z",
  "top_gaps_pinned": [
   {
    "affected_records": 3377,
    "gap": "cross_record_symbol",
    "label": "Cross-record symbol resolution",
    "requirement": "N-07",
-   "share_of_expected_actions_percent": 55.85
+   "share_of_expected_actions_percent": 55.75
   },
   {
    "affected_records": 1910,
    "gap": "lua_host_profile",
    "label": "Lua host profile (bounded Lua host profile)",
    "requirement": "N-01 / N-19",
-   "share_of_expected_actions_percent": 31.59
+   "share_of_expected_actions_percent": 31.53
   },
   {
    "affected_records": 1723,
    "gap": "one_shot_save_contract",
    "label": "One-shot without ON/OFF save contract",
    "requirement": "state contract (AP-04)",
-   "share_of_expected_actions_percent": 28.49
+   "share_of_expected_actions_percent": 28.45
   },
   {
    "affected_records": 199,
@@ -153745,7 +154078,7 @@
    "gap": "lua_ce_engine_api",
    "label": "CE Lua engine API",
    "requirement": "N-19",
-   "share_of_expected_actions_percent": 0.6
+   "share_of_expected_actions_percent": 0.59
   },
   {
    "affected_records": 32,
@@ -153762,11 +154095,11 @@
    "share_of_expected_actions_percent": 0.4
   },
   {
-   "affected_records": 11,
+   "affected_records": 15,
    "gap": "dropdown_link",
    "label": "Dropdown link to foreign records",
    "requirement": "N-18",
-   "share_of_expected_actions_percent": 0.18
+   "share_of_expected_actions_percent": 0.25
   },
   {
    "affected_records": 10,

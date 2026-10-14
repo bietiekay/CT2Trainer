@@ -1054,7 +1054,8 @@ def build_consistency(gap_report, inventory, matrix, coverage, exclusions,
     add("pinned_table_count", denom["unique_tables"], len(tables))
     add("expected_actions", denom["expected_actions"],
         sum(t["counts"]["expected_actions"] for t in tables))
-    add("category_counts_sum", denom["expected_actions"],
+    add("category_counts_sum",
+        denom["expected_actions"] + denom["navigation_excluded"],
         sum(denom["category_counts"].values()))
     add("confirmed_game_effect_zero", 0,
         denom["confirmed_game_effect_actions"])

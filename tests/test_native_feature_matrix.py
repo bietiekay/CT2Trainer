@@ -91,10 +91,11 @@ class FeatureMatrixTests(unittest.TestCase):
     def test_denominator_facts_are_pinned(self):
         document = self._run_in_tmp()
         denom = self.report["denominator"]
-        self.assertEqual(denom["expected_actions"], 6047)
+        self.assertEqual(denom["expected_actions"], 6057)
         self.assertEqual(denom["confirmed_game_effect_actions"], 0)
         self.assertEqual(
-            sum(denom["category_counts"].values()), denom["expected_actions"])
+            sum(denom["category_counts"].values()),
+            denom["expected_actions"] + denom["navigation_excluded"])
         top = document["consistency"]["checks"]
         by_name = {c["check"]: c for c in top}
         self.assertTrue(by_name["expected_actions"]["ok"])
@@ -199,7 +200,7 @@ class FeatureMatrixTests(unittest.TestCase):
             coverage["feature_weighted_coverage_percent"], 90.0)
         self.assertTrue(coverage["goal_reached"])
         # The gap report's AP-11 runtime-confirmation flag is a separate
-        # end goal (0/6047 confirmed real-game actions) and stays
+        # end goal (0/6057 confirmed real-game actions) and stays
         # "NOT REACHED" until real-game evidence exists.
         self.assertEqual(self.report["denominator"]["goal_90_percent"],
                          "NOT REACHED")
@@ -208,15 +209,15 @@ class FeatureMatrixTests(unittest.TestCase):
         self.assertEqual(coverage["features_partial"], 0)
         self.assertEqual(coverage["features_missing"], 0)
         # Action weighting over the 39 non-AP-11 gap classes.
-        self.assertEqual(coverage["actions_weight_in_scope"], 7376)
+        self.assertEqual(coverage["actions_weight_in_scope"], 7381)
         self.assertEqual(coverage["actions_weight_ap11_excluded"], 0)
         self.assertEqual(
-            coverage["actions_weight_covered"], 7376)
+            coverage["actions_weight_covered"], 7381)
         self.assertAlmostEqual(
             coverage["feature_weighted_coverage_percent"], 100.0,
             delta=0.01)
         self.assertAlmostEqual(
-            coverage["action_weighted_coverage_percent"], 7376 / 7376 * 100,
+            coverage["action_weighted_coverage_percent"], 7381 / 7381 * 100,
             delta=0.01)
 
     def test_top10_priority_is_empty_when_all_in_scope_covered(self):

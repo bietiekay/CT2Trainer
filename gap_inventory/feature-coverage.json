@@ -1,7 +1,7 @@
 {
  "ap11_exclusions": [
   {
-   "gate": "Real game installs/builds for the 18 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 19 pinned tables (user question unanswered)",
    "reason": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists."
   },
   {
@@ -21,21 +21,21 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 18,
+    "actual": 19,
     "check": "pinned_table_count",
-    "expected": 18,
+    "expected": 19,
     "ok": true
    },
    {
-    "actual": 6047,
+    "actual": 6057,
     "check": "expected_actions",
-    "expected": 6047,
+    "expected": 6057,
     "ok": true
    },
    {
-    "actual": 6047,
+    "actual": 6059,
     "check": "category_counts_sum",
-    "expected": 6047,
+    "expected": 6059,
     "ok": true
    },
    {
@@ -53,7 +53,7 @@
      36,
      32,
      24,
-     11,
+     15,
      10,
      8
     ],
@@ -66,7 +66,7 @@
      36,
      32,
      24,
-     11,
+     15,
      10,
      8
     ],
@@ -248,18 +248,19 @@
     "actual": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
-     "4f1571b2e3e867f731f51c7b711018eaad584f45962dc9a2fe3ce98a1f510723",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
      "70888991c4e7c082c88285159b0dd2435d6b7343c46fb0d133877ca741f3a763",
      "80690e8265e51cfe031ea02dbdd7bf2aeae898da034931f037044cbc930a3f7a",
      "80ecb65161b341a68f1f228504577ea9b70b381023187201f791c6ffac99249d",
+     "893f961c5b36ad0c923bec3a3e138508086068a6cc970fc5f7fb6ff8487f0f49",
      "a7f9c7aebe65fca7fe549bb5d00cf6a5e76643f528cbef7a04957662fa145ffb",
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
      "cdc1ad6ceacb559891c0f4a9cf4086187460dd061df5e03ad7cb82340b1cc44e",
+     "cf7ef73a2c326edee6b6d87853f454996789add71e9cea7d7440347e41fcbb25",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
@@ -269,18 +270,19 @@
     "expected": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
-     "4f1571b2e3e867f731f51c7b711018eaad584f45962dc9a2fe3ce98a1f510723",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
      "70888991c4e7c082c88285159b0dd2435d6b7343c46fb0d133877ca741f3a763",
      "80690e8265e51cfe031ea02dbdd7bf2aeae898da034931f037044cbc930a3f7a",
      "80ecb65161b341a68f1f228504577ea9b70b381023187201f791c6ffac99249d",
+     "893f961c5b36ad0c923bec3a3e138508086068a6cc970fc5f7fb6ff8487f0f49",
      "a7f9c7aebe65fca7fe549bb5d00cf6a5e76643f528cbef7a04957662fa145ffb",
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
      "cdc1ad6ceacb559891c0f4a9cf4086187460dd061df5e03ad7cb82340b1cc44e",
+     "cf7ef73a2c326edee6b6d87853f454996789add71e9cea7d7440347e41fcbb25",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
@@ -303,9 +305,9 @@
  "coverage": {
   "action_weighted_coverage_percent": 100.0,
   "actions_weight_ap11_excluded": 0,
-  "actions_weight_covered": 7376,
-  "actions_weight_in_scope": 7376,
-  "actions_weight_total": 7376,
+  "actions_weight_covered": 7381,
+  "actions_weight_in_scope": 7381,
+  "actions_weight_total": 7381,
   "feature_weighted_coverage_percent": 100.0,
   "features_covered": 42,
   "features_excluded_ap11": 4,
@@ -535,9 +537,9 @@
    "affected_records": null,
    "ap11_excluded": true,
    "evidence": [],
-   "gate": "Real game installs/builds for the 18 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 19 pinned tables (user question unanswered)",
    "kind": "missing_gate",
-   "label": "Real game installs/builds for the 18 pinned tables (user question unanswered)",
+   "label": "Real game installs/builds for the 19 pinned tables (user question unanswered)",
    "modules": [],
    "note": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists.",
    "requirement": "AP-11 game gate",
@@ -621,7 +623,7 @@
    "status": "covered"
   },
   "custom_type": {
-   "affected_records": 3,
+   "affected_records": 4,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_custom_types.py",
@@ -639,7 +641,7 @@
    "status": "covered"
   },
   "dropdown_link": {
-   "affected_records": 11,
+   "affected_records": 15,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_compiler.py",
@@ -1160,15 +1162,15 @@
    "status": "covered"
   }
  },
- "generated": "run w1a-case15-20261014011543Z",
+ "generated": "run w2a-case17-20261014112532Z",
  "lane": "AP-10 feature matrix and coverage metric (read-only, static)",
- "run_id": "w1a-case15-20261014011543Z",
+ "run_id": "w2a-case17-20261014112532Z",
  "schema": "corpus-feature-matrix/v1",
  "source": {
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "f7f363912e42c0800948f6391a02d347fec8b3306556941e84d7049f5fea6a7b",
+  "gap_report_sha256": "a68685ea8e0818eb553cb1bd8cdfed926f4274d660057f0d03cfb37d8fccef0d",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "0105ad59133649656208d504d5110a5fbf77d8ff4e4e0799751847c4a4388e29"
+  "inventory_sha256": "d7b6cc2e83e9b2d533a17d17a150155175d3318614386067bc802e153a38ee16"
  },
  "top10_priority": []
 }

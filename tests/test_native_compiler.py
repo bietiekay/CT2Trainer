@@ -69,7 +69,7 @@ class NativeCompilerTests(unittest.TestCase):
         if not corpus.exists():
             self.skipTest("The synthetic clean-room corpus is intentionally excluded from the Native source distribution.")
         paths = sorted(corpus.glob("*.ct"))
-        self.assertEqual(len(paths), 18, "The repository compatibility corpus must retain all 18 case tables.")
+        self.assertEqual(len(paths), 19, "The repository compatibility corpus must retain all 19 case tables.")
         for path in paths:
             with self.subTest(path=path.name):
                 plan = compile_table(path, "Target.exe")
@@ -411,9 +411,41 @@ class NativeCompilerTests(unittest.TestCase):
                              {"provider_ids": [0],
                               "provider_labels": ["Locate fixture data (enable first)"]})
 
-    def test_advanced_types_malformed_pointer_and_hex_float_blocked(self):
+    def test_advanced_types_malformed_pointer_blocked_hex_float_supported(self):
+        # WP-33: the ShowAsHex Float record is now a supported raw bit-pattern
+        # value; only the custom type and the malformed pointer offset stay
+        # blocked.
         body = value_record(0, value_type="Custom") + value_record(1, extra='<Offsets><Offset>print(1)</Offset></Offsets>') + value_record(2, value_type="Float", extra='<ShowAsHex>1</ShowAsHex>')
-        self.assertEqual(self.compile(body)["counts"]["blocked"], 3)
+        plan = self.compile(body)
+        self.assertEqual(plan["counts"]["blocked"], 2)
+        hex_float = plan["entries"][2]
+        self.assertTrue(hex_float["supported"], hex_float["reason"])
+        self.assertEqual(hex_float["kind"], "value")
+        self.assertTrue(hex_float["show_as_hex"])
+        validate_plan(plan)
+        validate_runtime_plan(plan)
+
+    def test_custom_type_reasons_cite_the_ap_08_7_write_gate(self):
+        # WP-34 (FLAG-2 follow-up 3): the custom-type block reasons cite the
+        # write gate's current AP id (AP-08.7).
+        custom_types = ('<CustomTypes><CustomType name="KnownType">4</CustomType>'
+                        '</CustomTypes>')
+        known = self.compile(
+            value_record(0, value_type="Custom",
+                         extra='<CustomType>KnownType</CustomType>'),
+            sections=custom_types)["entries"][0]
+        self.assertFalse(known["supported"])
+        self.assertEqual(known["reason"],
+            "Custom value type 'KnownType' is statically defined; the native "
+            "converter write gate is not implemented yet (AP-08.7).")
+        unknown = self.compile(
+            value_record(0, value_type="Custom",
+                         extra='<CustomType>GhostType</CustomType>'),
+            sections=custom_types)["entries"][0]
+        self.assertFalse(unknown["supported"])
+        self.assertEqual(unknown["reason"],
+            "Custom value type 'GhostType' has no static definition; blocked "
+            "until a converter/write gate exists (AP-08.7).")
 
     def test_empty_and_expression_readonly_dropdown_blocked(self):
         body = value_record(0, extra='<DropDownList ReadOnly="1">*:None</DropDownList>') + value_record(1, extra='<DropDownList ReadOnly="1">1+2:Expression</DropDownList>')
@@ -517,6 +549,9 @@ class NativeCompilerTests(unittest.TestCase):
         self.assertEqual(plan["entries"][2]["dropdown"]["choices"][0]["value"], "-1")
 
     def test_profiles_refuse_linked_expression_wildcard_and_numeric_array_dropdowns(self):
+        # WP-27: linked dropdowns work for profile value records; the last
+        # case now refuses only because the borrowed choice (5) is outside
+        # the linked bit field's range (WP-34 per-choice refusal).
         cases = (
             ("Array of byte", '<ByteLength>2</ByteLength><DropDownList>12:Number</DropDownList>'),
             ("Array of byte", '<ByteLength>2</ByteLength><DropDownList>01 ??:Wildcard</DropDownList>'),
@@ -527,7 +562,7 @@ class NativeCompilerTests(unittest.TestCase):
         )
         for variable_type, properties in cases:
             with self.subTest(variable_type=variable_type, properties=properties):
-                entry = self.compile(value_record(0, value_type=variable_type, extra=properties) + value_record(1, extra='<DropDownList>1:One</DropDownList>'))["entries"][0]
+                entry = self.compile(value_record(0, value_type=variable_type, extra=properties) + value_record(1, extra='<DropDownList>5:Big</DropDownList>'))["entries"][0]
                 self.assertFalse(entry["supported"])
                 self.assertNotIn("value_profile", entry)
 
@@ -565,8 +600,11 @@ class NativeCompilerTests(unittest.TestCase):
 
     def test_cross_record_dropdown_link_refuses_missing_ambiguous_and_chained_targets(self):
         missing = self.compile(value_record(0, extra='<DropDownListLink>Missing Target</DropDownListLink>'))["entries"][0]
+        # WP-34 (FLAG-2 follow-up 1a): missing and ambiguous targets are
+        # diagnosed with separate, exact messages.
         self.assertFalse(missing["supported"])
-        self.assertIn("Dropdown link target", missing["reason"])
+        self.assertEqual(missing["reason"],
+                         "Dropdown link target is missing: 'Missing Target' matches no record label.")
         ambiguous = ('<CheatEntry><ID>0</ID><Description>Twin</Description><VariableType>4 Bytes</VariableType>'
                      '<Address>1000</Address><DropDownList>1:One</DropDownList></CheatEntry>'
                      + '<CheatEntry><ID>1</ID><Description>twin</Description><VariableType>4 Bytes</VariableType>'
@@ -575,7 +613,8 @@ class NativeCompilerTests(unittest.TestCase):
         plan = self.compile(ambiguous)
         self.assertTrue(all(entry["supported"] for entry in plan["entries"][:2]))
         self.assertFalse(plan["entries"][2]["supported"])
-        self.assertIn("Dropdown link target", plan["entries"][2]["reason"])
+        self.assertEqual(plan["entries"][2]["reason"],
+                         "Dropdown link target is ambiguous: 'TWIN' matches 2 record labels.")
         chained = (value_record(0, extra='<DropDownList>1:One</DropDownList>')
                    + value_record(1, extra='<DropDownListLink>Value 0</DropDownListLink>')
                    + value_record(2, extra='<DropDownListLink>Value 1</DropDownListLink>'))

@@ -236,7 +236,81 @@ class DropdownSeparatorRuntimeTests(unittest.TestCase):
             '</CheatEntries></CheatTable>', encoding="utf-8")
         entry = compile_table(mixed, "FixtureTarget.exe")["entries"][0]
         self.assertFalse(entry["supported"])
+        # WP-34 (FLAG-2 follow-up 2): the width refusal names the choice and
+        # the record's value-type width.
         self.assertEqual(entry["reason"],
+                         "Dropdown choice '300' exceeds the Byte value-type width (0 to 255).")
+
+    def test_width_refusals_name_the_choice_and_the_type_width(self):
+        # WP-34 (FLAG-2 follow-up 2): exact per-choice width messages for the
+        # remaining simple integer types, unsigned and signed.
+        cases = (
+            ('<DropDownList>70000:Big</DropDownList>', "2 Bytes",
+             "Dropdown choice '70000' exceeds the 2 Bytes value-type width (0 to 65535)."),
+            ('<DropDownList>-1:Neg</DropDownList>', "4 Bytes",
+             "Dropdown choice '-1' exceeds the 4 Bytes value-type width (0 to 4294967295)."),
+            ('<ShowAsSigned>1</ShowAsSigned><DropDownList>-2147483649:Neg</DropDownList>', "4 Bytes",
+             "Dropdown choice '-2147483649' exceeds the 4 Bytes value-type width (-2147483648 to 2147483647)."),
+            ('<ShowAsSigned>1</ShowAsSigned><DropDownList>2147483648:Pos</DropDownList>', "4 Bytes",
+             "Dropdown choice '2147483648' exceeds the 4 Bytes value-type width (-2147483648 to 2147483647)."),
+            ('<ShowAsHex>1</ShowAsHex><DropDownList>100000000:Big</DropDownList>', "4 Bytes",
+             "Dropdown choice '100000000' exceeds the 4 Bytes value-type width (0 to 4294967295)."),
+        )
+        for extra, value_type, expected_reason in cases:
+            with self.subTest(value_type=value_type, extra=extra):
+                standalone = self.root / "width.ct"
+                standalone.write_text(
+                    '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+                    f'<CheatEntry><ID>6100</ID><Description>Width</Description>'
+                    f'<VariableType>{value_type}</VariableType><Address>1090</Address>'
+                    f'{extra}</CheatEntry>'
+                    '</CheatEntries></CheatTable>', encoding="utf-8")
+                entry = compile_table(standalone, "FixtureTarget.exe")["entries"][0]
+                self.assertFalse(entry["supported"], entry["reason"])
+                self.assertEqual(entry["reason"], expected_reason)
+
+    def test_comma_decimal_float_choices_normalize_to_dot_form(self):
+        # WP-34 (FLAG-2 follow-up 3): comma-decimal Float/Double choice
+        # literals normalize to the canonical dot form in the plan; the
+        # record stays supported and runtime-writable.
+        table = self.root / "comma.ct"
+        table.write_text(
+            '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+            '<CheatEntry><ID>6200</ID><Description>Comma Float</Description>'
+            '<VariableType>Float</VariableType><Address>1090</Address>'
+            '<DropDownList>0:None\n3,5:Weird\n-2,25:Neg</DropDownList></CheatEntry>'
+            '</CheatEntries></CheatTable>', encoding="utf-8")
+        plan = compile_table(table, "FixtureTarget.exe")
+        entry = plan["entries"][0]
+        self.assertTrue(entry["supported"], entry["reason"])
+        self.assertEqual(entry["dropdown"]["choices"], [
+            {"value": "0", "description": "None"},
+            {"value": "3.5", "description": "Weird"},
+            {"value": "-2.25", "description": "Neg"},
+        ])
+        validate_plan(plan)
+        validate_runtime_plan(plan)
+        # The normalized literal is what the runtime accepts and stores.
+        engine = TrainerEngine(plan, state_dir=self.root / "state_comma",
+                               process_lock_dir=self.root / "shared_comma",
+                               memory_factory=lambda name: self.memory,
+                               hook_coordinator=self.coordinator)
+        self.addCleanup(engine.close)
+        engine.poll()
+        self.assertEqual(engine.set_value(6200, "3.5"), "3.5")
+        self.assertEqual(self.memory.read(0x1090, 4), b"\x00\x00\x60\x40")
+        # A comma on an integer record stays a generic refusal (the
+        # normalization is Float/Double only).
+        standalone = self.root / "comma_byte.ct"
+        standalone.write_text(
+            '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+            '<CheatEntry><ID>6300</ID><Description>Comma Byte</Description>'
+            '<VariableType>Byte</VariableType><Address>1090</Address>'
+            '<DropDownList>1,5:Comma</DropDownList></CheatEntry>'
+            '</CheatEntries></CheatTable>', encoding="utf-8")
+        byte_entry = compile_table(standalone, "FixtureTarget.exe")["entries"][0]
+        self.assertFalse(byte_entry["supported"])
+        self.assertEqual(byte_entry["reason"],
                          "Dropdown contains an unsupported value expression.")
 
     def test_compiled_separator_plan_passes_both_validators(self):

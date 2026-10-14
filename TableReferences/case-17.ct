@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-17 (WP-32 + WP-33 + A6/A8 edge types). Module ct2synth17.exe.
+     Probe + pin after W2-A merge. -->
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"template placeholder (simple)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>11</ID>
+      <Description>"template placeholder (byte array)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Array of byte</VariableType>
+      <ByteLength>4</ByteLength>
+      <Value>00 00 00 00</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>12</ID>
+      <Description>"bit field (control, addressed)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Binary</VariableType>
+      <BitStart>2</BitStart>
+      <BitLength>4</BitLength>
+      <Address>ct2synth17.exe+140</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13</ID>
+      <Description>"hex float"</Description>
+      <ShowAsHex>1</ShowAsHex>
+      <Color>FF8080</Color>
+      <VariableType>Float</VariableType>
+      <Address>ct2synth17.exe+144</Address>
+      <Value>40490FDB</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14</ID>
+      <Description>"hex double"</Description>
+      <ShowAsHex>1</ShowAsHex>
+      <Color>FF8080</Color>
+      <VariableType>Double</VariableType>
+      <Address>ct2synth17.exe+148</Address>
+      <Value>401E000000000000</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>15</ID>
+      <Description>"hex string (stays blocked)"</Description>
+      <ShowAsHex>1</ShowAsHex>
+      <Color>FF8080</Color>
+      <VariableType>String</VariableType>
+      <Length>8</Length>
+      <Unicode>0</Unicode>
+      <CodePage>0</CodePage>
+      <ZeroTerminate>1</ZeroTerminate>
+      <Address>ct2synth17.exe+150</Address>
+      <Value>hello</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>16</ID>
+      <Description>"custom type without definition (stays blocked)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Custom</VariableType>
+      <CustomType>synthCustom</CustomType>
+      <Address>ct2synth17.exe+158</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17</ID>
+      <Description>"zero-length byte array (non-actionable control)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Array of byte</VariableType>
+      <ByteLength>0</ByteLength>
+      <Address>ct2synth17.exe+15C</Address>
+      <Value>00</Value>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>
