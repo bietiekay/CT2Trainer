@@ -184,6 +184,7 @@ def build_tables(gap_report, corpus_root):
             "architecture": table["architecture"]["value"],
             "process_candidates": process_detect.find_candidates(data),
             "expected_actions": counts["expected_actions"],
+            "navigation_excluded": counts.get("navigation_excluded", 0),
             "category_counts": {c: categories[c] for c in CATEGORY_PRIORITY
                                 if c in categories},
             "priority_order": [c for c in CATEGORY_PRIORITY
@@ -212,6 +213,9 @@ def build_manifest_consistency(gap_report, inventory, feature_coverage,
     total_categories = Counter()
     for table in tables:
         total_categories.update(table["category_counts"])
+    total_nav = sum(t["navigation_excluded"] for t in tables)
+    if total_nav:
+        total_categories["navigation"] = total_categories.get("navigation", 0) + total_nav
     add(_check("category_counts", dict(sorted(denom["category_counts"].items())),
                dict(sorted(total_categories.items()))))
     add(_check("confirmed_game_effect_zero", 0,
@@ -219,10 +223,11 @@ def build_manifest_consistency(gap_report, inventory, feature_coverage,
 
     per_table = []
     for table in tables:
+        navigation = table["navigation_excluded"]
         ok = (sum(table["category_counts"].values()) == table["expected_actions"]
-              and len(table["records"]) == table["expected_actions"]
+              and len(table["records"]) == table["expected_actions"] + navigation
               and set(table["category_counts"]) <= set(CATEGORY_PRIORITY)
-              and set(table["records"].values()) <= set(CATEGORY_PRIORITY))
+              and set(table["records"].values()) <= set(CATEGORY_PRIORITY) | {"navigation"})
         per_table.append({"name": table["name"], "ok": ok})
     checks.append({"check": "per_table_counts",
                    "ok": all(row["ok"] for row in per_table),
@@ -264,6 +269,9 @@ def build_manifest_document(gap_report, inventory, feature_coverage,
     total_categories = Counter()
     for table in tables:
         total_categories.update(table["category_counts"])
+    total_nav = sum(t["navigation_excluded"] for t in tables)
+    if total_nav:
+        total_categories["navigation"] = total_categories.get("navigation", 0) + total_nav
     document = {
         "schema": CAMPAIGN_SCHEMA,
         "generated": "run %s" % run_id,
@@ -319,10 +327,11 @@ def campaign_checks(campaign):
     for table in tables:
         cats = table.get("category_counts", {})
         records = table.get("records", {})
+        navigation = table.get("navigation_excluded", 0)
         ok = (set(cats) <= set(CATEGORY_PRIORITY)
-              and set(records.values()) <= set(CATEGORY_PRIORITY)
+              and set(records.values()) <= set(CATEGORY_PRIORITY) | {"navigation"}
               and sum(cats.values()) == table.get("expected_actions")
-              and len(records) == table.get("expected_actions")
+              and len(records) == table.get("expected_actions") + navigation
               and table.get("priority_order") == [
                   c for c in CATEGORY_PRIORITY if cats.get(c, 0) > 0])
         per_table.append({"name": table.get("name"), "ok": ok})
@@ -526,8 +535,14 @@ def run_report(args):
     if not consistency["all_ok"]:
         for row in [c for c in consistency["checks"] if not c["ok"]]:
             print("CAMPAIGN CONSISTENCY FAIL:", row["check"])
-            print("  expected:", row["expected"])
-            print("  actual:  ", row["actual"])
+            if "expected" in row:
+                print("  expected:", row["expected"])
+            if "actual" in row:
+                print("  actual:  ", row["actual"])
+            if "tables" in row:
+                for t in row["tables"]:
+                    if not t["ok"]:
+                        print("  table:", t["name"])
         return 2
 
     errors, matched, deduped, duplicates_removed = validate_report(
@@ -662,8 +677,14 @@ def run_manifest(args):
     for row in [c for c in document["consistency"]["checks"]
                 if not c["ok"]]:
         print("CONSISTENCY FAIL:", row["check"])
-        print("  expected:", row["expected"])
-        print("  actual:  ", row["actual"])
+        if "expected" in row:
+            print("  expected:", row["expected"])
+        if "actual" in row:
+            print("  actual:  ", row["actual"])
+        if "tables" in row:
+            for t in row["tables"]:
+                if not t["ok"]:
+                    print("  table:", t["name"])
     print("consistency all_ok:", document["consistency"]["all_ok"])
     return 0 if document["consistency"]["all_ok"] else 2
 

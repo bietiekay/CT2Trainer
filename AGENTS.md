@@ -40,9 +40,10 @@ feature is re-implemented clean-room, and public API/format contracts may
 be derived. All other CE implementation sources remain off-limits.
 
 **Feature-matrix goal:** 100% coverage without AP-11. 42/42 in-scope
-features covered (100% feature-weighted; 7376/7376 action-weighted;
+features covered (100% feature-weighted; 7381/7381 action-weighted;
 `gap_inventory/feature-coverage.json`, run
-`w1a-case15-20261014011543Z`; the 2026-10-14 7371/7371 over
+`w2a-case17-20261014112532Z`; the 2026-10-14 7376/7376 over
+`w1a-case15-20261014011543Z`, the 2026-10-14 7371/7371 over
 `w1a-case16-20261014003107Z`, the 2026-10-13 7369/7369 over
 `w1e-case20-20261013234642Z`, the 2026-10-13 7365/7365 over
 `w1d-case19-20261013192913Z`, the 2026-10-11 7361/7361 over
@@ -51,7 +52,7 @@ features covered (100% feature-weighted; 7376/7376 action-weighted;
 100% goal are reached and closed. All three gate features are closed with **real,
 tested** evidence (2026-10-10):
 
-1. `gate:1` – per-table completeness for all 18 pinned tables
+1. `gate:1` – per-table completeness for all 19 pinned tables
    (Forms, Lua lifecycle, Custom Types, Assets):
    `tests/test_native_table_completeness.py` (every source record
    preserved; each table-level construct handled or surfaced fail-closed;
@@ -70,12 +71,12 @@ tested** evidence (2026-10-10):
 
 Gate flips happen only with **real, tested** evidence; gate action weights
 remain 0 (completeness/proof features, not record actions). The AP-11
-campaign (6047 expected actions, 0 confirmed so far) remains a
+campaign (6057 expected actions, 0 confirmed so far) remains a
 **separate end goal** and is excluded from the 100% feature metric.
 
 **Corpus:** `TableReferences/` is the synthetic clean-room corpus
 (`case-01.ct` … `case-14.ct`, `case-15.ct`, `case-16.ct`,
-`case-19.ct`, `case-20.ct`; case-to-origin mapping in
+`case-17.ct`, `case-19.ct`, `case-20.ct`; case-to-origin mapping in
 `TableReferences/README.md`). `case-14.ct` is the WP-14 PRAGMATA
 behaviour derivative (staged capabilities, signed offsets, activation
 sets). It is strictly read-only input; distributed releases never contain

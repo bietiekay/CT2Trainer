@@ -84,5 +84,64 @@
       <Address>ct2synth16.exe+114</Address>
       <Value>0</Value>
     </CheatEntry>
-  </CheatEntries>
+      <CheatEntry>
+      <ID>10</ID>
+      <Description>"synth byte list"</Description>
+      <Options moHideChildren="1" moActivateChildrenAsWell="1" moDeactivateChildrenAsWell="1"/>
+      <Color>0075EA</Color>
+      <GroupHeader>1</GroupHeader>
+      <DropDownList ReadOnly="1" DescriptionOnly="1" DisplayValueAsItem="1">00 00:Off
+    00 01:On
+    00 02:Boost
+    00 03:Turbo
+    </DropDownList>
+      <Address/>
+      <CheatEntries>
+      <CheatEntry>
+        <ID>11</ID>
+        <Description>"byte mode (linked byte array)"</Description>
+        <DropDownListLink>synth byte list</DropDownListLink>
+        <ShowAsSigned>0</ShowAsSigned>
+        <Color>FF8080</Color>
+        <VariableType>Array of byte</VariableType>
+        <ByteLength>2</ByteLength>
+        <Address>ct2synth16.exe+120</Address>
+        <Value>00 00</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>12</ID>
+        <Description>"byte mode wrong length (stays blocked)"</Description>
+        <DropDownListLink>synth byte list</DropDownListLink>
+        <ShowAsSigned>0</ShowAsSigned>
+        <Color>FF8080</Color>
+        <VariableType>Array of byte</VariableType>
+        <ByteLength>3</ByteLength>
+        <Address>ct2synth16.exe+124</Address>
+        <Value>00 00</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>13</ID>
+        <Description>"bit flag (linked bit field)"</Description>
+        <DropDownListLink>synth element list</DropDownListLink>
+        <ShowAsSigned>0</ShowAsSigned>
+        <Color>FF8080</Color>
+        <VariableType>Binary</VariableType>
+        <BitStart>0</BitStart>
+        <BitLength>4</BitLength>
+        <Address>ct2synth16.exe+128</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      <CheatEntry>
+        <ID>14</ID>
+        <Description>"dangling link (stays blocked)"</Description>
+        <DropDownListLink>no such list</DropDownListLink>
+        <ShowAsSigned>0</ShowAsSigned>
+        <Color>FF8080</Color>
+        <VariableType>4 Bytes</VariableType>
+        <Address>ct2synth16.exe+12C</Address>
+        <Value>0</Value>
+      </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+</CheatEntries>
 </CheatTable>

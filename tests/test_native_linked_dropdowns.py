@@ -210,8 +210,8 @@ class CorpusLinkDiagnosticShapeTests(unittest.TestCase):
                 "The synthetic clean-room corpus is intentionally excluded "
                 "from the Native source distribution.")
         paths = sorted(corpus.glob("*.ct"))
-        self.assertEqual(len(paths), 18, "The repository compatibility corpus "
-                                         "must retain all 18 case tables.")
+        self.assertEqual(len(paths), 19, "The repository compatibility corpus "
+                                         "must retain all 19 case tables.")
         missing = ambiguous = 0
         for path in paths:
             with self.subTest(path=path.name):
@@ -228,8 +228,9 @@ class CorpusLinkDiagnosticShapeTests(unittest.TestCase):
                         ambiguous += 1
                     else:
                         self.fail("unexpected link-target refusal shape: " + reason)
-        # The pinned corpus carries no unresolvable link targets.
-        self.assertEqual((missing, ambiguous), (0, 0))
+        # The pinned corpus carries exactly one unresolvable link target:
+        # case-16 part 2's dangling link (record 14, "no such list").
+        self.assertEqual((missing, ambiguous), (1, 0))
 
 
 class LinkedDropdownEngineTests(unittest.TestCase):
