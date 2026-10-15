@@ -209,15 +209,15 @@ class FeatureMatrixTests(unittest.TestCase):
         self.assertEqual(coverage["features_partial"], 0)
         self.assertEqual(coverage["features_missing"], 0)
         # Action weighting over the 39 non-AP-11 gap classes.
-        self.assertEqual(coverage["actions_weight_in_scope"], 7386)
+        self.assertEqual(coverage["actions_weight_in_scope"], 7387)
         self.assertEqual(coverage["actions_weight_ap11_excluded"], 0)
         self.assertEqual(
-            coverage["actions_weight_covered"], 7386)
+            coverage["actions_weight_covered"], 7387)
         self.assertAlmostEqual(
             coverage["feature_weighted_coverage_percent"], 100.0,
             delta=0.01)
         self.assertAlmostEqual(
-            coverage["action_weighted_coverage_percent"], 7386 / 7386 * 100,
+            coverage["action_weighted_coverage_percent"], 7387 / 7387 * 100,
             delta=0.01)
 
     def test_top10_priority_is_empty_when_all_in_scope_covered(self):

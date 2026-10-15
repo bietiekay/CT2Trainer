@@ -49,7 +49,7 @@
      3381,
      1910,
      1723,
-     199,
+     200,
      36,
      32,
      24,
@@ -62,7 +62,7 @@
      3381,
      1910,
      1723,
-     199,
+     200,
      36,
      32,
      24,
@@ -248,6 +248,7 @@
     "actual": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
+     "5bc013eb2a8215fecae039b4d514968a3ac8d75b22e236786e4a7f7a52cf881b",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
@@ -258,7 +259,6 @@
      "a7f9c7aebe65fca7fe549bb5d00cf6a5e76643f528cbef7a04957662fa145ffb",
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
-     "bc1d909ae8a143bddfb7c1b52dd1bc8fca4bf4c27b326197f364055e0f5130df",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
      "cf7ef73a2c326edee6b6d87853f454996789add71e9cea7d7440347e41fcbb25",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
@@ -270,6 +270,7 @@
     "expected": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
+     "5bc013eb2a8215fecae039b4d514968a3ac8d75b22e236786e4a7f7a52cf881b",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
@@ -280,7 +281,6 @@
      "a7f9c7aebe65fca7fe549bb5d00cf6a5e76643f528cbef7a04957662fa145ffb",
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
-     "bc1d909ae8a143bddfb7c1b52dd1bc8fca4bf4c27b326197f364055e0f5130df",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
      "cf7ef73a2c326edee6b6d87853f454996789add71e9cea7d7440347e41fcbb25",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
@@ -305,9 +305,9 @@
  "coverage": {
   "action_weighted_coverage_percent": 100.0,
   "actions_weight_ap11_excluded": 0,
-  "actions_weight_covered": 7386,
-  "actions_weight_in_scope": 7386,
-  "actions_weight_total": 7386,
+  "actions_weight_covered": 7387,
+  "actions_weight_in_scope": 7387,
+  "actions_weight_total": 7387,
   "feature_weighted_coverage_percent": 100.0,
   "features_covered": 42,
   "features_excluded_ap11": 4,
@@ -898,7 +898,7 @@
    "status": "covered"
   },
   "lua_symbol_api": {
-   "affected_records": 199,
+   "affected_records": 200,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_lua.py",
@@ -1162,15 +1162,15 @@
    "status": "covered"
   }
  },
- "generated": "run w2c-case15p2-20261015122058Z",
+ "generated": "run w2c-case15p2b-20261015144326Z",
  "lane": "AP-10 feature matrix and coverage metric (read-only, static)",
- "run_id": "w2c-case15p2-20261015122058Z",
+ "run_id": "w2c-case15p2b-20261015144326Z",
  "schema": "corpus-feature-matrix/v1",
  "source": {
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "73fea7f9d7c5067c9c6d8f077195c642e41c35a5d775a7cdb611bb6a81c9f152",
+  "gap_report_sha256": "f2082b62fc170f4bfb8324cd9f8b9f5448d826812a1eba2085f786dc72961292",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "186a9c76488aa4004bcde899e639fc8903ce4eb051c5c00aa106ff16014a1c85"
+  "inventory_sha256": "1194442b5727a508ec6c5faafc7b15f468388a1fdb9e5f433f79e95b77ff5a90"
  },
  "top10_priority": []
 }

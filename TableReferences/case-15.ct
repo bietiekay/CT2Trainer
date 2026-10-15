@@ -35,10 +35,12 @@ aobscanmodule(synProcScan, $process, 89 48 08)
 synProcScan:
 assert(synProcScan, 89 48 08)
 db 90
+registersymbol(synProcScan)
 [DISABLE]
 synProcScan:
 assert(synProcScan, 90)
-db 89</AssemblerScript>
+db 89
+unregistersymbol(synProcScan)</AssemblerScript>
     </CheatEntry>
     <CheatEntry>
       <ID>14</ID>

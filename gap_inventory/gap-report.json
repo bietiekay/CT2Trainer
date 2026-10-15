@@ -61,8 +61,8 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5491,
-   "statically_assumed": 533,
+   "locked": 5492,
+   "statically_assumed": 532,
    "unknown": 40
   },
   "unique_tables": 19
@@ -225,7 +225,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run w2c-case15p2-20261015122058Z",
+ "generated": "run w2c-case15p2b-20261015144326Z",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -152585,6 +152585,7 @@
      "aa_globalalloc_general": 1,
      "address_form_unrecognized": 4,
      "cross_record_symbol": 4,
+     "lua_symbol_api": 1,
      "signed_pointer_offset": 1
     },
     "group_toggle_actions": 0,
@@ -152596,8 +152597,8 @@
     },
     "records": 21,
     "status_counts": {
-     "locked": 5,
-     "statically_assumed": 12,
+     "locked": 6,
+     "statically_assumed": 11,
      "unknown": 4
     }
    },
@@ -152605,12 +152606,14 @@
    "format_version": "46",
    "groups": [],
    "main_initialization": {
-    "gaps": [],
+    "gaps": [
+     "lua_symbol_api"
+    ],
     "id": 13,
     "name": "\"$process AOB scan (WP-19)",
     "note": "first depth-0 script record",
     "source": "record",
-    "status": "statically_assumed",
+    "status": "locked",
     "type": "aa_script"
    },
    "path": "case-15.ct",
@@ -152688,17 +152691,20 @@
        "async": false,
        "category": "persistent_script",
        "depth": 0,
-       "gaps": [],
+       "gaps": [
+        "lua_symbol_api"
+       ],
        "id": 13,
        "lifetime": "held_until_disable_or_target_exit",
        "name": "\"$process AOB scan (WP-19)",
        "parent": null,
        "providers": [
         "aa_grammar",
-        "aob_scan_module"
+        "aob_scan_module",
+        "aa_symbol_registration"
        ],
        "semantics": "AA patch with 1 AOB scan(s) (syntax assumption)",
-       "status": "statically_assumed",
+       "status": "locked",
        "target_build": "unresolved",
        "type": "aa_script"
       },
@@ -153070,8 +153076,8 @@
      ]
     }
    ],
-   "sha256": "bc1d909ae8a143bddfb7c1b52dd1bc8fca4bf4c27b326197f364055e0f5130df",
-   "size_bytes": 7591,
+   "sha256": "5bc013eb2a8215fecae039b4d514968a3ac8d75b22e236786e4a7f7a52cf881b",
+   "size_bytes": 7649,
    "table": "case-15.ct",
    "table_flags": {
     "cheat_codes": false,
@@ -153095,6 +153101,12 @@
      "gap": "cross_record_symbol",
      "label": "Cross-record symbol resolution",
      "requirement": "N-07"
+    },
+    {
+     "affected_records": 1,
+     "gap": "lua_symbol_api",
+     "label": "Lua symbol API",
+     "requirement": "N-07 / N-19"
     },
     {
      "affected_records": 1,
@@ -154159,7 +154171,7 @@
    ]
   }
  ],
- "run_id": "w2c-case15p2-20261015122058Z",
+ "run_id": "w2c-case15p2b-20261015144326Z",
  "top_gaps_pinned": [
   {
    "affected_records": 3381,
@@ -154183,11 +154195,11 @@
    "share_of_expected_actions_percent": 28.42
   },
   {
-   "affected_records": 199,
+   "affected_records": 200,
    "gap": "lua_symbol_api",
    "label": "Lua symbol API",
    "requirement": "N-07 / N-19",
-   "share_of_expected_actions_percent": 3.28
+   "share_of_expected_actions_percent": 3.3
   },
   {
    "affected_records": 36,

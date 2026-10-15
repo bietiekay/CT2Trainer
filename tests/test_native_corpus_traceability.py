@@ -149,7 +149,7 @@ class TraceabilityTests(unittest.TestCase):
         self.assertTrue(by_name["category_counts"]["ok"])
         self.assertTrue(by_name["gap_counts_total"]["ok"])
         self.assertEqual(by_name["status_counts"]["actual"],
-                         {"locked": 5491, "statically_assumed": 533, "unknown": 40})
+                         {"locked": 5492, "statically_assumed": 532, "unknown": 40})
         self.assertEqual(by_name["category_counts"]["actual"],
                          {"custom_value": 4, "navigation": 2,
                           "one_shot": 1723, "persistent_script": 431,
