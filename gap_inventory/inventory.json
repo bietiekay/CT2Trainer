@@ -1,7 +1,7 @@
 {
  "corpus_root": "TableReferences",
  "file_count": 19,
- "generated": "run w2a-case17-20261014112532Z",
+ "generated": "run w2c-case15p2-20261015122058Z",
  "lane": "AP-10 corpus inventory (read-only static analysis)",
  "method": {
   "dedup": "SHA-256 per file; identical bytes counted once, all paths kept",
@@ -77,7 +77,7 @@
   }
  },
  "reference_verification_all_ok": true,
- "run_id": "w2a-case17-20261014112532Z",
+ "run_id": "w2c-case15p2-20261015122058Z",
  "tables": [
   {
    "architecture": {
@@ -939,14 +939,15 @@
    },
    "categories": {
     "persistent_script": 2,
-    "value_freeze": 14
+    "value_freeze": 19
    },
    "duplicate_ids": {},
-   "entries_total": 16,
+   "entries_total": 21,
    "format_version": "46",
    "gap_counts": {
     "aa_globalalloc_general": 1,
-    "address_form_unrecognized": 3,
+    "address_form_unrecognized": 4,
+    "cross_record_symbol": 4,
     "signed_pointer_offset": 1
    },
    "group_toggle_actions": 0,
@@ -962,19 +963,19 @@
    "primary_path": "case-15.ct",
    "record_types": {
     "aa_script": 2,
-    "value": 14
+    "value": 19
    },
-   "records": 16,
+   "records": 21,
    "root_tag": "CheatTable",
    "sections": [
     "CheatEntries"
    ],
-   "sha256": "cdc1ad6ceacb559891c0f4a9cf4086187460dd061df5e03ad7cb82340b1cc44e",
-   "size_bytes": 6178,
+   "sha256": "bc1d909ae8a143bddfb7c1b52dd1bc8fca4bf4c27b326197f364055e0f5130df",
+   "size_bytes": 7591,
    "status_counts": {
-    "locked": 1,
+    "locked": 5,
     "statically_assumed": 12,
-    "unknown": 3
+    "unknown": 4
    },
    "table_flags": {
     "cheat_codes": false,
@@ -1209,15 +1210,15 @@
   }
  ],
  "totals": {
-  "entries_total": 7347,
-  "expected_actions": 6057,
+  "entries_total": 7352,
+  "expected_actions": 6062,
   "gap_counts": {
    "aa_directive_unverified": 32,
    "aa_globalalloc_general": 6,
    "aa_luacall": 6,
-   "address_form_unrecognized": 5,
+   "address_form_unrecognized": 6,
    "async_lifecycle": 24,
-   "cross_record_symbol": 3377,
+   "cross_record_symbol": 3381,
    "custom_type": 4,
    "dropdown_link": 15,
    "lua_ce_engine_api": 36,
@@ -1246,13 +1247,13 @@
    "aa_script": 2154,
    "custom": 4,
    "string": 732,
-   "value": 3169
+   "value": 3174
   },
-  "records": 6059,
+  "records": 6064,
   "status_counts": {
-   "locked": 5487,
+   "locked": 5491,
    "statically_assumed": 533,
-   "unknown": 39
+   "unknown": 40
   },
   "unique_tables": 19
  },

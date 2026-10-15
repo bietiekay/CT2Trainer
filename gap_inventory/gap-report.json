@@ -27,11 +27,11 @@
    "one_shot": 1723,
    "persistent_script": 431,
    "string_write": 732,
-   "value_freeze": 3167
+   "value_freeze": 3172
   },
   "confirmed_game_effect_actions": 0,
   "confirmed_percent": 0.0,
-  "expected_actions": 6057,
+  "expected_actions": 6062,
   "goal_90_percent": "NOT REACHED",
   "group_toggle_actions": 3,
   "groups_total": 1287,
@@ -49,9 +49,9 @@
    "aa_script": 2154,
    "custom": 4,
    "string": 732,
-   "value": 3169
+   "value": 3174
   },
-  "records_total": 6059,
+  "records_total": 6064,
   "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
@@ -61,9 +61,9 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5487,
+   "locked": 5491,
    "statically_assumed": 533,
-   "unknown": 39
+   "unknown": 40
   },
   "unique_tables": 19
  },
@@ -225,7 +225,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run w2a-case17-20261014112532Z",
+ "generated": "run w2c-case15p2-20261015122058Z",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -152577,13 +152577,14 @@
    "counts": {
     "categories": {
      "persistent_script": 2,
-     "value_freeze": 14
+     "value_freeze": 19
     },
-    "entries_total": 16,
-    "expected_actions": 16,
+    "entries_total": 21,
+    "expected_actions": 21,
     "gap_counts": {
      "aa_globalalloc_general": 1,
-     "address_form_unrecognized": 3,
+     "address_form_unrecognized": 4,
+     "cross_record_symbol": 4,
      "signed_pointer_offset": 1
     },
     "group_toggle_actions": 0,
@@ -152591,13 +152592,13 @@
     "navigation_excluded": 0,
     "record_types": {
      "aa_script": 2,
-     "value": 14
+     "value": 19
     },
-    "records": 16,
+    "records": 21,
     "status_counts": {
-     "locked": 1,
+     "locked": 5,
      "statically_assumed": 12,
-     "unknown": 3
+     "unknown": 4
     }
    },
    "duplicate_ids": {},
@@ -152956,12 +152957,121 @@
        "status": "statically_assumed",
        "target_build": "module_binding:ct2synth15.exe",
        "type": "value"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "x64",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 40,
+       "lifetime": "read_write_freezable_value",
+       "name": "cast indirection depth 1",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols DWORD,synProcScan",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "x64",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 41,
+       "lifetime": "read_write_freezable_value",
+       "name": "cast indirection depth 2",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols DWORD,synProcScan",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "x64",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 42,
+       "lifetime": "read_write_freezable_value",
+       "name": "cast indirection depth 3 (stays blocked)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols DWORD,synProcScan",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "unresolved",
+       "architecture": "x64",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "address_form_unrecognized"
+       ],
+       "id": 43,
+       "lifetime": "read_write_freezable_value",
+       "name": "module-prefixed managed label",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (unrecognized address form)",
+       "status": "unknown",
+       "target_build": "unresolved",
+       "type": "value"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "x64",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 44,
+       "lifetime": "read_write_freezable_value",
+       "name": "module-prefixed managed label with offset",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols SynthMethod,ct2synth15.SynthClass",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
       }
      ]
     }
    ],
-   "sha256": "cdc1ad6ceacb559891c0f4a9cf4086187460dd061df5e03ad7cb82340b1cc44e",
-   "size_bytes": 6178,
+   "sha256": "bc1d909ae8a143bddfb7c1b52dd1bc8fca4bf4c27b326197f364055e0f5130df",
+   "size_bytes": 7591,
    "table": "case-15.ct",
    "table_flags": {
     "cheat_codes": false,
@@ -152975,10 +153085,16 @@
    },
    "top_gaps": [
     {
-     "affected_records": 3,
+     "affected_records": 4,
      "gap": "address_form_unrecognized",
      "label": "Unknown address form",
      "requirement": "N-05"
+    },
+    {
+     "affected_records": 4,
+     "gap": "cross_record_symbol",
+     "label": "Cross-record symbol resolution",
+     "requirement": "N-07"
     },
     {
      "affected_records": 1,
@@ -154043,35 +154159,35 @@
    ]
   }
  ],
- "run_id": "w2a-case17-20261014112532Z",
+ "run_id": "w2c-case15p2-20261015122058Z",
  "top_gaps_pinned": [
   {
-   "affected_records": 3377,
+   "affected_records": 3381,
    "gap": "cross_record_symbol",
    "label": "Cross-record symbol resolution",
    "requirement": "N-07",
-   "share_of_expected_actions_percent": 55.75
+   "share_of_expected_actions_percent": 55.77
   },
   {
    "affected_records": 1910,
    "gap": "lua_host_profile",
    "label": "Lua host profile (bounded Lua host profile)",
    "requirement": "N-01 / N-19",
-   "share_of_expected_actions_percent": 31.53
+   "share_of_expected_actions_percent": 31.51
   },
   {
    "affected_records": 1723,
    "gap": "one_shot_save_contract",
    "label": "One-shot without ON/OFF save contract",
    "requirement": "state contract (AP-04)",
-   "share_of_expected_actions_percent": 28.45
+   "share_of_expected_actions_percent": 28.42
   },
   {
    "affected_records": 199,
    "gap": "lua_symbol_api",
    "label": "Lua symbol API",
    "requirement": "N-07 / N-19",
-   "share_of_expected_actions_percent": 3.29
+   "share_of_expected_actions_percent": 3.28
   },
   {
    "affected_records": 36,
@@ -154106,7 +154222,7 @@
    "gap": "lua_worker_thread",
    "label": "Lua worker threads",
    "requirement": "N-15",
-   "share_of_expected_actions_percent": 0.17
+   "share_of_expected_actions_percent": 0.16
   },
   {
    "affected_records": 8,

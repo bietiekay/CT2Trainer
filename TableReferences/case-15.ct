@@ -213,5 +213,45 @@ dealloc(synthShared)</AssemblerScript>
         <Offset>10</Offset>
       </Offsets>
     </CheatEntry>
-  </CheatEntries>
+      <CheatEntry>
+      <ID>40</ID>
+      <Description>"cast indirection depth 1"</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synProcScan+7+(DWORD)[synProcScan+3]</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>41</ID>
+      <Description>"cast indirection depth 2"</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synProcScan+(DWORD)[(DWORD)[synProcScan+3]+7]+4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>42</ID>
+      <Description>"cast indirection depth 3 (stays blocked)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synProcScan+(DWORD)[(DWORD)[(DWORD)[synProcScan+3]+7]+4]</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>43</ID>
+      <Description>"module-prefixed managed label"</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth15.SynthClass::SynthMethod</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>44</ID>
+      <Description>"module-prefixed managed label with offset"</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth15.SynthClass::SynthMethod+78</Address>
+      <Value>0</Value>
+    </CheatEntry>
+</CheatEntries>
 </CheatTable>
