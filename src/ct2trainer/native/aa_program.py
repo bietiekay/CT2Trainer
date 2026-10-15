@@ -50,7 +50,8 @@ from .aa import AAError, validate_symbol, normalize_pattern
 from .aa_blocks import (BlockError, analyze_blocks, label_spans, parse_invocation,
                         parse_label, prune_conditionals, resolve_nested_assembly)
 from .aa_directives import MAX_DISASSEMBLE_COUNT, MAX_PROTECTION_SIZE, PAGE_NAMES
-from .address_expression import AddressExpressionError, expression_symbols, integer, parse_expression, resolve_expression
+from .address_expression import (CAST_TYPES, AddressExpressionError, expression_symbols,
+                                 integer, parse_expression, resolve_expression)
 from .assembler import AssemblyError, NasmAssembler
 
 
@@ -60,12 +61,16 @@ MAX_PROCESS_SCANS = 16
 MAX_BLOCK_BYTES = 1024 * 1024
 MAX_TOTAL_BYTES = 4 * 1024 * 1024
 _SYMBOL_TOKEN = re.compile(r"@?[A-Za-z_][A-Za-z0-9_]*\Z")
+# Named @ label, single or double @ (WP-30d): ``@foo``, ``@@Ashot``.
+# Program-local only (no table-wide lookup); unknown labels keep the
+# fail-closed refusal.
+_AT_LABEL = re.compile(r"@@?[A-Za-z_][A-Za-z0-9_]*\Z")
 _REGISTERS = {"rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp", "eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "ax", "bx", "cx", "dx", "si", "di", "bp", "sp", "al", "bl", "cl", "dl", "ah", "bh", "ch", "dh", "sil", "dil", "bpl", "spl", "rip", "eip", "fs", "gs", "cs", "ds", "es", "ss"}
 _REGISTERS |= {f"r{index}{suffix}" for index in range(8, 16) for suffix in ("", "d", "w", "b")}
 _REGISTERS |= {f"{kind}{index}" for kind in ("xmm", "ymm", "zmm", "mm", "k", "st", "cr", "dr") for index in range(32)}
 _KEYWORDS = {"byte", "word", "dword", "qword", "tword", "oword", "xmmword", "yword", "ymmword", "zword", "zmmword", "short", "near", "far", "strict", "rel", "abs", "to"}
 _FORBIDDEN = {"bits", "org", "section", "segment", "global", "extern", "common", "equ", "times", "incbin", "include", "resb", "resw", "resd", "resq", "istruc", "struc", "endstruc", "iend", "absolute", "default", "cpu", "warning", "map", "alignb"}
-_TOKEN_OPERAND = re.compile(r"'[^'\r\n\\]'|"+r'"[^"\r\n]+"|@[A-Za-z_][A-Za-z0-9_]*|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|[A-Za-z_$][A-Za-z0-9_.$]*|[0-9][0-9a-fA-F]*|\s+|[][+\-*/(),:]')
+_TOKEN_OPERAND = re.compile(r"'[^'\r\n\\]'|"+r'"[^"\r\n]+"|@@?[A-Za-z_][A-Za-z0-9_]*|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|[A-Za-z_$][A-Za-z0-9_.$]*|[0-9][0-9a-fA-F]*|\s+|[][+\-*/(),:]')
 _FLOAT = re.compile(r"\((float|double)\)\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)", re.I)
 # Conditional-block directives pass through cleaning; every other {$...} token
 # stays a fail-closed refusal. Condition/define bodies are validated later by
@@ -164,7 +169,12 @@ def _scalar_expression(text: str) -> bool:
         return True
 
     def scalar(node):
-        return node["kind"] == "integer" or node["kind"] == "unary" and scalar(node["value"]) or node["kind"] == "binary" and scalar(node["left"]) and scalar(node["right"])
+        kind = node["kind"]
+        if kind == "integer":
+            return True
+        if kind in {"cast", "unary"}:
+            return scalar(node["value"])
+        return kind == "binary" and scalar(node["left"]) and scalar(node["right"])
 
     return scalar(parse_expression(text))
 
@@ -312,7 +322,19 @@ def _page_constant(text: str) -> int:
 def _parse_line(line: str) -> dict:
     if line.endswith(":"):
         expression = line[:-1].strip()
-        return {"op": "cursor", "expression": "@@" if expression == "@@" else _expression(expression)}
+        # The bare ``@:`` label line is the ``@@`` anonymous-label cursor
+        # alias (CE 7.5 local-label semantics: ``@:`` positions the
+        # anonymous label that ``@f``/``@b`` reference).  ``@Name`` and
+        # ``@@Name`` (Metro Exodus style, WP-30d) are program-local named
+        # labels; none of these is an address expression, so it is
+        # validated directly instead of going through _expression.
+        if expression in {"@@", "@"}:
+            return {"op": "cursor", "expression": "@@"}
+        if expression.startswith("@"):
+            if not _AT_LABEL.fullmatch(expression):
+                raise ProgramError("Named @ labels may only contain letters, digits and underscores.")
+            return {"op": "cursor", "expression": expression}
+        return {"op": "cursor", "expression": _expression(expression)}
     command = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)", line)
     if command:
         name = command.group(1).casefold()
@@ -343,6 +365,18 @@ def _parse_line(line: str) -> dict:
             if not 1 <= size <= MAX_BLOCK_BYTES:
                 raise ProgramError("Allocation size must contain 1–1048576 bytes.")
             return {"op": "alloc", "symbol": validate_symbol(args[0]), "size": size, "near": _expression(args[2]) if len(args) == 3 else None}
+        if name == "globalalloc":
+            # WP-36: shared RW data allocation; staged under the same
+            # allocation profile as alloc, but the forced RW data
+            # capabilities are applied in prepare_program.  The optional
+            # near address is a bounded expression (3-arg shape, e.g.
+            # $process), parsed with the same grammar as alloc.
+            if len(args) not in {2, 3}:
+                raise ProgramError("globalalloc requires symbol, hexadecimal size and optional near address.")
+            size = integer(args[1])
+            if not 1 <= size <= MAX_BLOCK_BYTES:
+                raise ProgramError("Allocation size must contain 1–1048576 bytes.")
+            return {"op": "globalalloc", "symbol": validate_symbol(args[0]), "size": size, "near": _expression(args[2]) if len(args) == 3 else None}
         if name == "define":
             if len(args) != 2:
                 raise ProgramError("define requires two arguments.")
@@ -432,7 +466,7 @@ def _node_refs(node: dict) -> list[str]:
     values = []
     for key in ("address", "expression", "near", "start", "end"):
         text = node.get(key)
-        if text and text != "@@" and _float_bits(text) is None:
+        if text and not text.startswith("@") and _float_bits(text) is None:
             values.extend(expression_symbols(text))
     if node["op"] == "data":
         for value in node["values"]:
@@ -469,6 +503,9 @@ def _literal_bytes(node, memory, program):
         kind = ast["kind"]
         if kind == "integer":
             return ast["value"]
+        if kind == "cast":
+            # Bounded type cast (WP-30): value-identical to the operand.
+            return scalar(ast["value"])
         if kind == "unary":
             value = scalar(ast["value"])
             return value if ast["operator"] == "+" else -value
@@ -784,7 +821,16 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     if any(node["op"] != "define" for node in sections["preamble"]):
         raise ProgramError("Only define is permitted before ENABLE.")
     if not any(node["op"] in {"data", "instruction", "nops", "readmem", "reassemble"} for node in sections["enable"]):
-        raise ProgramError("Enable section has no executable patch or data.")
+        if any(node["op"] in {"scan", "scan_process", "scan_region"} for node in sections["enable"]):
+            # WP-36: scan-only programs are staged under the existing scan
+            # budget; no executable patch or data is required.
+            pass
+        elif any(node["op"] in {"createthread", "threadwait"} for node in sections["enable"]):
+            raise ProgramError(
+                "createThread()/threadWait() are gated in the native staged "
+                "runtime: no thread backend is part of the shipped trainer profile.")
+        else:
+            raise ProgramError("Enable section has no executable patch or data.")
     # A plain label ("endp:") inside a program-owned allocation defines a
     # local jump/data target owned by this program; outside such a region a
     # plain label keeps the classic semantics of positioning the cursor at
@@ -792,7 +838,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     # cursor: an alloc symbol or a label defined inside an allocation keeps
     # it, any other cursor target leaves it.
     alloc_keys = {node["symbol"].casefold() for node in sections["preamble"] + sections["enable"]
-                  if node["op"] == "alloc"}
+                  if node["op"] in {"alloc", "globalalloc"}}
     declared_labels = {symbol.casefold() for node in sections["preamble"] + sections["enable"]
                        if node["op"] == "label" for symbol in node["symbols"]}
     local_labels = set()
@@ -801,13 +847,13 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     provides = {}
     allocations = []
     for node in sections["preamble"] + sections["enable"]:
-        if node["op"] in {"scan", "scan_region", "scan_process", "alloc", "define"}:
+        if node["op"] in {"scan", "scan_region", "scan_process", "alloc", "globalalloc", "define"}:
             symbol = node["symbol"]
             key = symbol.casefold()
             if key in locals_ and node["op"] != "define":
                 raise ProgramError(f"Duplicate program symbol: {symbol}.")
             locals_[key] = symbol
-            if node["op"] == "alloc":
+            if node["op"] in {"alloc", "globalalloc"}:
                 allocations.append(symbol)
                 # An allocation moves the assembly position into the owned
                 # region, so subsequent plain labels are local definitions.
@@ -821,9 +867,15 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         if node["op"] == "register":
             for symbol in node["symbols"]:
                 provides[symbol.casefold()] = symbol
+        if node["op"] == "globalalloc":
+            # WP-36: globalalloc registers its symbol in the shared symbol
+            # space (CE 7.5: SetUserdefinedSymbolAllocSize), so other
+            # records may require it; the allocation itself stays a
+            # program-owned allocation request.
+            provides[node["symbol"].casefold()] = node["symbol"]
         if node["op"] == "cursor" and node["expression"].startswith("@") and node["expression"] != "@@":
             symbol = node["expression"]
-            if not _SYMBOL_TOKEN.fullmatch(symbol):
+            if not _AT_LABEL.fullmatch(symbol):
                 raise ProgramError("Named @ labels may only contain letters, digits and underscores.")
             locals_[symbol.casefold()] = symbol
         elif node["op"] == "cursor" and node["expression"] != "@@":
@@ -855,7 +907,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     # without any resolvable target the fail-closed refusal is kept.
     program_symbol_keys = {node["symbol"].casefold()
                            for node in sections["preamble"] + sections["enable"]
-                           if node["op"] in {"scan", "scan_region", "scan_process", "alloc", "define"}}
+                           if node["op"] in {"scan", "scan_region", "scan_process", "alloc", "globalalloc", "define"}}
     for phase in ("enable", "disable"):
         phase_nodes = sections[phase]
         anonymous_positions = [index for index, node in enumerate(phase_nodes)
@@ -866,7 +918,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         named_positions = []
         in_alloc = False
         for index, node in enumerate(phase_nodes):
-            if node["op"] == "alloc":
+            if node["op"] in {"alloc", "globalalloc"}:
                 in_alloc = True
                 continue
             elif node["op"] == "dealloc":
@@ -893,7 +945,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
             # Registering a dependency does not confer ownership over it.
             raise ProgramError(f"Cannot register a symbol not owned by this program: {symbol}.")
     for node in sections["disable"]:
-        if node["op"] in {"alloc", "register", "scan", "scan_region", "scan_process"}:
+        if node["op"] in {"alloc", "globalalloc", "register", "scan", "scan_region", "scan_process"}:
             raise ProgramError("Disable may not allocate, scan or register new symbols.")
         if node["op"] in {"unregister", "dealloc"}:
             owned = provides if node["op"] == "unregister" else {name.casefold(): name for name in allocations}
@@ -908,7 +960,9 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         for node in sections[phase]:
             for key in ("address", "expression", "near", "start", "end"):
                 text = node.get(key)
-                if text and text != "@@" and _float_bits(text) is None:
+                # @-label cursors (``@@``, ``@Name``, ``@@Name``) are
+                # program-local names, never address expressions.
+                if text and not text.startswith("@") and _float_bits(text) is None:
                     for label in _managed_labels_in(text):
                         managed.setdefault(label.casefold(), label)
     required = {}
@@ -927,6 +981,14 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     if estimated_bytes > MAX_TOTAL_BYTES:
         raise ProgramError("Program exceeds its total generated-byte bound.")
     allocation_executable, allocation_writable = _allocation_capabilities(sections["enable"], allocations)
+    # WP-36: globalalloc is shared RW data storage owned by the global pool;
+    # it never carries code, so force the data-dialect capabilities
+    # (executable=False, writable=True) regardless of what the capability
+    # analysis proved for the symbol's spelling.
+    for node in sections["preamble"] + sections["enable"]:
+        if node["op"] == "globalalloc":
+            allocation_executable[node["symbol"]] = False
+            allocation_writable[node["symbol"]] = True
     program = {"schema": SCHEMA, "bitness": bitness, "process_name": process_name, "source": source, "source_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(), "defines": defines, "conditional_decisions": [{"line": decision.line, "condition": decision.condition, "chosen": decision.chosen} for decision in pruned.decisions], **sections, "one_shot": one_shot, "requires": sorted(required.values(), key=str.casefold), "provides": sorted(provides.values(), key=str.casefold), "managed_method_labels": sorted(managed.values(), key=str.casefold), "allocations": allocations, "allocation_executable": allocation_executable, "allocation_writable": allocation_writable, "capabilities": capabilities, "requires_coordinator": True}
     if nested_invocations:
         program["nested_invocations"] = nested_invocations
@@ -1013,9 +1075,16 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
                 resolved[node["symbol"].casefold()] = _resolve(node["expression"], memory, resolved, program)
             except AddressExpressionError:
                 deferred.append(node)
-        elif op == "alloc":
+        elif op in {"alloc", "globalalloc"}:
             near = _resolve(node["near"], memory, resolved, program) if node["near"] else None
-            requests.append({"name": node["symbol"], "size": node["size"], "near": near, "executable": program["allocation_executable"][node["symbol"]], "writable": program["allocation_writable"][node["symbol"]]})
+            if op == "globalalloc":
+                # WP-36: shared RW data storage — forced data-dialect
+                # capabilities, independent of the plan's capability maps.
+                executable, writable = False, True
+            else:
+                executable = program["allocation_executable"][node["symbol"]]
+                writable = program["allocation_writable"][node["symbol"]]
+            requests.append({"name": node["symbol"], "size": node["size"], "near": near, "executable": executable, "writable": writable})
         elif op == "assert":
             address = _resolve(node["address"], memory, resolved, program)
             patterns = node["pattern"].split()
@@ -1077,8 +1146,17 @@ def _translate_operands(text: str, names: dict, memory, symbols, program, backwa
     if typed and "[" in text and not re.search(r"\b(?:byte|word|dword|qword)\s+(?:ptr\s+)?\[", text, re.I):
         text = text.replace("[", ("dword " if typed.group(1).casefold() == "float" else "qword ") + "[", 1)
     output = []
-    for token in _operand_tokens(text):
+    tokens = list(_operand_tokens(text))
+    cursor = 0
+    while cursor < len(tokens):
+        token = tokens[cursor]
         key = token.casefold()
+        if (token == "(" and cursor + 2 < len(tokens)
+                and tokens[cursor + 1].casefold() in CAST_TYPES
+                and tokens[cursor + 2] == ")"):
+            # Bounded type cast (WP-30): value no-op for symbol translation.
+            cursor += 3
+            continue
         if key in {"@f", "@b"}:
             label = forward if key == "@f" else backward
             if label is None:
@@ -1096,10 +1174,11 @@ def _translate_operands(text: str, names: dict, memory, symbols, program, backwa
             output.append("0x" + format(_resolve(token, memory, symbols, program), "X"))
         elif re.fullmatch(r"(?:0[xX]|\$)?[0-9a-fA-F]+|#[0-9]+", token):
             output.append("0x" + format(integer(token), "X"))
-        elif _SYMBOL_TOKEN.fullmatch(token):
+        elif _SYMBOL_TOKEN.fullmatch(token) or _AT_LABEL.fullmatch(token):
             raise ProgramError(f"Unresolved instruction symbol: {token}.")
         else:
             output.append(token)
+        cursor += 1
     return "".join(output)
 
 
@@ -1205,7 +1284,7 @@ def _located_value(text, index, anonymous, locations, memory, symbols, program, 
             if label is None:
                 raise ProgramError("Anonymous forward label has no target.")
             output.append("0x" + format(locations[label], "X"))
-        elif token.casefold() in symbols and _SYMBOL_TOKEN.fullmatch(token):
+        elif token.casefold() in symbols and (_SYMBOL_TOKEN.fullmatch(token) or _AT_LABEL.fullmatch(token)):
             # Compare the exact bound symbol value used by the assembler.
             output.append("0x" + format(symbols[token.casefold()], "X"))
         elif token.startswith('"') or token == "$process" or "." in token:
@@ -1219,6 +1298,8 @@ def _located_value(text, index, anonymous, locations, memory, symbols, program, 
     def scalar(node):
         if node["kind"] == "integer":
             value = node["value"]
+        elif node["kind"] == "cast":
+            value = scalar(node["value"])
         elif node["kind"] == "unary":
             value = scalar(node["value"])
             value = value if node["operator"] == "+" else -value
@@ -1634,7 +1715,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                 sections.append(current)
                 if len(sections) > 1024:
                     raise ProgramError("Program contains too many patch sections.")
-        elif op == "alloc":
+        elif op in {"alloc", "globalalloc"}:
             in_alloc = True
             current_alloc_key = node["symbol"].casefold()
         elif op == "dealloc":

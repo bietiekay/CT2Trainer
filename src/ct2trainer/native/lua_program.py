@@ -459,7 +459,7 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *, nt
     if definitions:
         locals_ = set()
         for node in [] if static_program is None else static_program['preamble'] + static_program['enable']:
-            if node['op'] in {'alloc', 'define', 'scan', 'scan_region'}:
+            if node['op'] in {'alloc', 'globalalloc', 'define', 'scan', 'scan_region'}:
                 locals_.add(node['symbol'].casefold())
             elif node['op'] == 'label':
                 locals_.update(name.casefold() for name in node['symbols'])

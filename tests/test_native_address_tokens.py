@@ -39,7 +39,14 @@ from ct2trainer.native.address_expression import (
     parse_expression,
     resolve_expression,
 )
-from ct2trainer.native.aa_program import ProgramError, prepare_program, validate_program
+from ct2trainer.native.aa import AAError, split_expression
+from ct2trainer.native.aa_program import (
+    ProgramError,
+    dry_link_program,
+    prepare_program,
+    validate_program,
+)
+from test_native_process_aob import _owned_memory
 from ct2trainer.native.compiler import NativeCompileError, compile_table, validate_plan
 from ct2trainer.native.engine import (
     NativeRuntimeError,
@@ -569,6 +576,300 @@ class DoubleColonEngineTests(unittest.TestCase):
         finally:
             engine.close()
         self.assertFalse(memory.writes)
+
+
+class ModulePrefixedManagedLabelTests(unittest.TestCase):
+    """WP-30c: module-prefixed managed labels (Kena/Oregon reference shapes).
+
+    ``Module.Class::Method`` tokenizes as one managed atom (the
+    module-prefixed alternative is ordered before the dotted-symbol
+    alternative in the token grammar), keeps the name verbatim, resolves
+    through the injected symbol map, and never contributes symbol requires.
+    """
+
+    def test_three_segment_forms_parse_as_managed_verbatim(self):
+        for name in ("Kena-Win64-Shipping.UMochiState::execHasItem",
+                     "Oregon-Win64-Shipping.AORHealthTankItem_Regenerating::CheckRecharge",
+                     "ct2synth15.SynthClass::SynthMethod",
+                     "ct2synth15.SynthClass:SynthMethod"):
+            with self.subTest(name=name):
+                self.assertEqual(parse_expression(name), {"kind": "managed", "name": name})
+
+    def test_offset_attaches_to_module_prefixed_label(self):
+        self.assertEqual(
+            parse_expression("Kena-Win64-Shipping.UMochiState::execHasItem+78"),
+            {"kind": "binary", "operator": "+",
+             "left": {"kind": "managed", "name": "Kena-Win64-Shipping.UMochiState::execHasItem"},
+             "right": {"kind": "integer", "value": 0x78}})
+
+    def test_module_prefixed_label_resolves_casefolded(self):
+        class Memory:
+            pointer_size = 8
+        symbols = {"Kena-Win64-Shipping.UMochiState::execHasItem": 0x5000}
+        self.assertEqual(
+            resolve_expression("kena-win64-shipping.umochistate::exechasitem+10", Memory(), symbols),
+            0x5010)
+
+    def test_module_prefixed_label_has_no_symbol_dependency(self):
+        for name in ("Kena-Win64-Shipping.UMochiState::execHasItem",
+                     "ct2synth15.SynthClass::SynthMethod+78"):
+            with self.subTest(name=name):
+                self.assertEqual(expression_symbols(name), [])
+
+    def test_unresolved_module_prefixed_label_is_named_error(self):
+        class Memory:
+            pointer_size = 8
+        with self.assertRaisesRegex(
+                AddressExpressionError,
+                re.escape("Unresolved managed method label: ct2synth15.SynthClass::SynthMethod.")):
+            resolve_expression("ct2synth15.SynthClass::SynthMethod", Memory(), {})
+
+    def test_malformed_module_prefixed_forms_stay_refused(self):
+        for text in ("::Method", "Mod.::Method", "Mod.Class::"):
+            with self.subTest(text=text):
+                with self.assertRaises(AddressExpressionError):
+                    parse_expression(text)
+
+    def test_two_segment_managed_export_and_module_forms_unchanged(self):
+        self.assertEqual(parse_expression("Class::Method"), {"kind": "managed", "name": "Class::Method"})
+        self.assertEqual(parse_expression("Namespace.Class.Method"),
+                         {"kind": "managed", "name": "Namespace.Class.Method"})
+        self.assertEqual(parse_expression("GameEngine.GameInstance"),
+                         {"kind": "export", "name": "GameEngine.GameInstance"})
+
+
+class CastGrammarTests(unittest.TestCase):
+    """WP-30: bounded type-cast token; value no-op except deref width selection."""
+
+    def test_cast_operand_binds_at_multiplicative_precedence(self):
+        self.assertEqual(
+            parse_expression("(int)sym1+#4"),
+            {"kind": "binary", "operator": "+",
+             "left": {"kind": "cast", "type": "int", "value": {"kind": "symbol", "name": "sym1"}},
+             "right": {"kind": "integer", "value": 4}})
+        self.assertEqual(
+            parse_expression("(int)sym1*#4"),
+            {"kind": "cast", "type": "int",
+             "value": {"kind": "binary", "operator": "*",
+                       "left": {"kind": "symbol", "name": "sym1"},
+                       "right": {"kind": "integer", "value": 4}}})
+        self.assertEqual(
+            parse_expression("(int)(sym1+#4)"),
+            {"kind": "cast", "type": "int",
+             "value": {"kind": "binary", "operator": "+",
+                       "left": {"kind": "symbol", "name": "sym1"},
+                       "right": {"kind": "integer", "value": 4}}})
+
+    def test_all_cast_names_accepted_case_insensitive(self):
+        for name in ("byte", "word", "short", "ushort", "dword", "int", "uint",
+                     "long", "ulong", "float", "double"):
+            with self.subTest(name=name):
+                node = parse_expression("(" + name.upper() + ")a")
+                self.assertEqual(node["kind"], "cast")
+                self.assertEqual(node["type"], name)
+
+    def test_cast_is_value_noop_and_symbol_neutral(self):
+        class Memory:
+            pointer_size = 8
+        symbols = {"sym": 0x100}
+        self.assertEqual(resolve_expression("(DWORD)sym+#4", Memory(), symbols),
+                         resolve_expression("sym+#4", Memory(), symbols))
+        self.assertEqual(expression_symbols("(dword)sym+#4"), ["sym"])
+        self.assertEqual(expression_symbols("(qword)[sym]+#2"), ["sym"])
+
+    def test_cast_selects_deref_width_only_when_directly_wrapping(self):
+        class WidthMemory:
+            pointer_size = 8
+            def __init__(self):
+                self.reads = []
+                self.store = {0x2000: (0x1111222233334444).to_bytes(8, "little")}
+            def read(self, address, size):
+                self.reads.append((address, size))
+                return self.store[address][:size]
+        symbols = {"base": 0x2000}
+        for text, expected, read_sizes in (
+                ("[base]", 0x1111222233334444, [8]),
+                ("(BYTE)[base]", 0x44, [1]),
+                ("(WORD)[base]", 0x4444, [2]),
+                ("(DWORD)[base]", 0x33334444, [4]),
+                ("(QWORD)[base]", 0x1111222233334444, [8]),
+                ("((DWORD)[base])", 0x33334444, [4]),
+                ("[(DWORD)base]+#2", 0x1111222233334446, [8])):
+            with self.subTest(text=text):
+                memory = WidthMemory()
+                self.assertEqual(resolve_expression(text, memory, symbols), expected)
+                self.assertEqual([size for _, size in memory.reads], read_sizes)
+
+    def test_deref_depth_bound_is_parametric(self):
+        with self.assertRaisesRegex(
+                AddressExpressionError,
+                re.escape("Address expressions allow at most 2 pointer dereferences.")):
+            parse_expression("[[a]][b]", max_deref=2)
+        self.assertEqual(parse_expression("[[a]]", max_deref=2)["kind"], "deref")
+        with self.assertRaisesRegex(
+                AddressExpressionError,
+                re.escape("Pointer dereference bound must be a positive integer.")):
+            parse_expression("[a]", max_deref=0)
+
+    def test_strict_split_depth_three_uses_neutral_message(self):
+        with self.assertRaisesRegex(
+                AAError,
+                re.escape("Address expression exceeds the bounded indirection depth "
+                          "(2 pointer dereferences): '[[[a]]]'.")):
+            split_expression("[[[a]]]")
+
+
+class BoundedAddressPlanTests(unittest.TestCase):
+    """Compile level: cast/indirection and module-prefixed managed rows take
+    the expression profile; authored depth-3 stays fail-closed with the named
+    depth-limit refusal; forged metadata is refused by both validators."""
+
+    CT_BODY = '''<CheatTable CheatEngineTableVersion="45"><CheatEntries>
+<CheatEntry><ID>959</ID><Description>"BaseProvider"</Description><VariableType>Auto Assembler Script</VariableType><AssemblerScript>[ENABLE]
+aobscan(synBase,B801000000)
+registersymbol(synBase)
+[DISABLE]
+unregistersymbol(synBase)
+</AssemblerScript></CheatEntry>
+<CheatEntry><ID>960</ID><Description>"CastDeref"</Description><VariableType>4 Bytes</VariableType><Address>(DWORD)[synBase+4]+2</Address></CheatEntry>
+<CheatEntry><ID>961</ID><Description>"Managed3"</Description><VariableType>4 Bytes</VariableType><Address>ct2synth15.SynthClass::SynthMethod</Address></CheatEntry>
+<CheatEntry><ID>962</ID><Description>"Managed3Off"</Description><VariableType>4 Bytes</VariableType><Address>ct2synth15.SynthClass::SynthMethod+78</Address></CheatEntry>
+<CheatEntry><ID>963</ID><Description>"Depth3"</Description><VariableType>4 Bytes</VariableType><Address>[[[synBase]]]</Address></CheatEntry>
+</CheatEntries></CheatTable>'''
+
+    def compile(self, body, process="ct2synth01.exe"):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "owned.ct"
+            path.write_text(body, encoding="utf-8")
+            return compile_table(path, process)
+
+    def test_cast_and_managed_rows_take_expression_profile_with_clean_requires(self):
+        plan = self.compile(self.CT_BODY)
+        by_id = {entry["id"]: entry for entry in plan["entries"]}
+        row = by_id[960]
+        self.assertTrue(row["supported"], row["reason"])
+        self.assertEqual(row["address_profile"], "expression/v1")
+        self.assertEqual(row["address"], "(DWORD)[synBase+4]+2")
+        self.assertEqual(row["source_address"], "(DWORD)[synBase+4]+2")
+        self.assertEqual(row["pointer_offsets"], [])
+        self.assertEqual(row["requires"], ["synBase"])
+        for identifier, address in ((961, "ct2synth15.SynthClass::SynthMethod"),
+                                   (962, "ct2synth15.SynthClass::SynthMethod+78")):
+            row = by_id[identifier]
+            self.assertTrue(row["supported"], row["reason"])
+            self.assertEqual(row["address_profile"], "expression/v1")
+            self.assertEqual(row["address"], address)
+            self.assertEqual(row["requires"], [])
+        blocked = by_id[963]
+        self.assertFalse(blocked["supported"])
+        self.assertIn("exceeds the bounded indirection depth (2 pointer dereferences)",
+                      blocked["reason"])
+
+    def test_plan_with_bounded_rows_passes_both_validators(self):
+        plan = self.compile(self.CT_BODY)
+        validate_plan(plan)
+        validate_runtime_plan(plan)
+
+    def test_forged_bounded_row_metadata_rejected_by_both_validators(self):
+        plan = self.compile(self.CT_BODY)
+        forged_requires = copy.deepcopy(plan)
+        forged = {entry["id"]: entry for entry in forged_requires["entries"]}
+        forged[961]["requires"] = ["synBase"]
+        for validator, error in ((validate_plan, NativeCompileError),
+                                 (validate_runtime_plan, NativeRuntimeError)):
+            with self.subTest(validator=validator.__name__):
+                with self.assertRaises(error):
+                    validator(forged_requires)
+        forged_offsets = copy.deepcopy(plan)
+        forged = {entry["id"]: entry for entry in forged_offsets["entries"]}
+        forged[960]["pointer_offsets"] = [4]
+        for validator, error in ((validate_plan, NativeCompileError),
+                                 (validate_runtime_plan, NativeRuntimeError)):
+            with self.subTest(validator=validator.__name__):
+                with self.assertRaises(error):
+                    validator(forged_offsets)
+
+
+class AtAnchoredLabelProgramTests(unittest.TestCase):
+    """WP-30d: the ``@:`` anonymous-label alias and double-@ named labels
+    (Metro Exodus reference shape) are program-local and link to internal
+    names; unknown labels keep the fail-closed refusal."""
+
+    METRO_SCRIPT = ("[ENABLE]\n"
+                    "aobscan(anchor,B80100000090??)\n"
+                    "alloc(newmem,$100,anchor)\n"
+                    "label(code)\n"
+                    "label(return)\n"
+                    "newmem:\n"
+                    "  @@Ashot:\n"
+                    "  je @@Ashot\n"
+                    "  mov eax,#2\n"
+                    "  jmp code\n"
+                    "code:\n"
+                    "  nop\n"
+                    "return:\n"
+                    "  mov [anchor],eax\n"
+                    "anchor:\n"
+                    "  jmp newmem\n"
+                    "[DISABLE]\n"
+                    "anchor:\n"
+                    "  db B8 01 00 00 00\n"
+                    "dealloc(newmem)\n")
+    AT_ALIAS_SCRIPT = ("[ENABLE]\n"
+                       "aobscan(anchor,B80100000090??)\n"
+                       "alloc(newmem,$100,anchor)\n"
+                       "label(code)\n"
+                       "label(return)\n"
+                       "newmem:\n"
+                       "  jne @f\n"
+                       "  mov eax,#2\n"
+                       "@:\n"
+                       "  jmp code\n"
+                       "code:\n"
+                       "  nop\n"
+                       "return:\n"
+                       "  mov [anchor],eax\n"
+                       "anchor:\n"
+                       "  jmp newmem\n"
+                       "[DISABLE]\n"
+                       "anchor:\n"
+                       "  db B8 01 00 00 00\n"
+                       "dealloc(newmem)\n")
+
+    def test_at_alias_and_double_at_labels_prepare_and_dry_link(self):
+        for script in (self.AT_ALIAS_SCRIPT, self.METRO_SCRIPT):
+            with self.subTest(script=script.splitlines()[6]):
+                program = prepare_program(script, "owned.exe")
+                validate_program(program)
+                result = dry_link_program(program, _owned_memory())
+                self.assertFalse(result["publishable"])
+
+    def test_metro_double_at_label_links_to_internal_names(self):
+        program = prepare_program(self.METRO_SCRIPT, "owned.exe")
+        cursors = {node["expression"].casefold() for node in program["enable"] if node["op"] == "cursor"}
+        self.assertIn("@@ashot", cursors)
+        result = dry_link_program(program, _owned_memory())
+        for phase in ("enable", "disable"):
+            self.assertNotIn("@@Ashot", result[phase]["nasm_source"])
+            self.assertNotIn("@f", result[phase]["nasm_source"])
+        self.assertRegex(result["enable"]["nasm_source"], r"tf_sym_")
+
+    def test_at_alias_targets_the_anonymous_position(self):
+        program = prepare_program(self.AT_ALIAS_SCRIPT, "owned.exe")
+        result = dry_link_program(program, _owned_memory())
+        self.assertNotIn("@f", result["enable"]["nasm_source"])
+        self.assertRegex(result["enable"]["nasm_source"], r"tf_anon_")
+
+    def test_unknown_double_at_label_is_refused_with_named_error(self):
+        script = self.METRO_SCRIPT.replace("je @@Ashot", "je @@Unknown")
+        program = prepare_program(script, "owned.exe")
+        with self.assertRaisesRegex(ProgramError, re.escape("Unresolved instruction symbol: @@Unknown.")):
+            dry_link_program(program, _owned_memory())
+
+    def test_named_at_labels_reject_bad_characters(self):
+        with self.assertRaisesRegex(ProgramError,
+                                    re.escape("Named @ labels may only contain letters, digits and underscores.")):
+            prepare_program("[ENABLE]\n@@A-shot:\nnop\n[DISABLE]\n", "owned.exe")
 
 
 if __name__ == "__main__":

@@ -19,7 +19,8 @@ import xml.etree.ElementTree as ET
 from ..table import (MAX_ENTRIES, MAX_TABLE_BYTES, SIMPLE_VALUE_TYPES, Entry,
                      numeric_literal_safe, read_table)
 from .aa import (AAError, MAX_OPERATIONS, MAX_PATCH_BYTES, compile_one_shot,
-                 compile_script, expression_symbols, normalize_pattern,
+                 compile_script, expression_symbols, is_flat_expression,
+                normalize_pattern,
                  validate_expression, validate_one_shot_guards,
                  validate_patch_guards, validate_symbol)
 from .aa_blocks import BlockStructureError, extract_label_definitions
@@ -371,17 +372,39 @@ def _compile_value_address(entry: dict, source: Entry, sources: dict[int, Entry]
         entry["address"] = ""
         return
     try:
-        entry["address"] = validate_expression(source.address or "")
+        canonical = validate_expression(source.address or "")
+    except AAError as strict_error:
+        # The strict split refused the shape.  Authored indirection beyond
+        # the bound stays fail-closed with that named depth-limit refusal;
+        # everything the strict split refused for another reason (e.g.
+        # parent-relative bases) falls to the expression profile, which
+        # _effective_address flattens.
+        if (source.address or "").strip().count("[") > 2:
+            raise strict_error
+        _store_expression_profile(entry, source, sources)
+        return
+    if is_flat_expression(canonical):
+        # The flat base/tail canonical stays on the strict static resolver.
+        entry["address"] = canonical
         entry["pointer_offsets"] = _offsets(source.pointer_offsets)
-        entry["requires"] = expression_symbols(entry["address"])
-    except AAError:
-        entry["address"] = _effective_address(source, sources)
-        entry["address_profile"] = "expression/v1"
-        entry["pointer_offsets"] = []
-        required = advanced_expression_symbols(entry["address"])
-        for symbol in required:
-            validate_symbol(symbol)
-        entry["requires"] = required
+        entry["requires"] = expression_symbols(canonical)
+        return
+    # Bounded non-flat shapes (indirection, casts that survive
+    # canonicalization, managed method labels) are evaluated by the runtime
+    # via resolve_expression instead of the strict atom+offset resolver
+    # (WP-30).
+    _store_expression_profile(entry, source, sources)
+
+
+def _store_expression_profile(entry: dict, source: Entry, sources: dict[int, Entry]) -> None:
+    """Route a value record to the runtime expression profile (WP-30)."""
+    entry["address"] = _effective_address(source, sources)
+    entry["address_profile"] = "expression/v1"
+    entry["pointer_offsets"] = []
+    required = advanced_expression_symbols(entry["address"])
+    for symbol in required:
+        validate_symbol(symbol)
+    entry["requires"] = required
 
 
 def _validate_value_address(entry: dict, allow_empty: bool = False) -> None:
