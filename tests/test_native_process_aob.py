@@ -9,6 +9,8 @@ from unittest.mock import Mock, patch
 from ct2trainer.native.aa import normalize_pattern as aa_pattern
 from ct2trainer.native.aa_program import (ProgramError, dry_link_program, link_program,
                                            prepare_program, preflight_program, validate_program)
+from ct2trainer.native.compiler import compile_table
+from ct2trainer.native.lua_program import prepare_lua_program, validate_lua_program
 from ct2trainer.native.aob_scan import AOBScanError, capture_scan, recheck_result, validate_result
 from ct2trainer.native.engine import NativeRuntimeError, TrainerEngine
 from ct2trainer.native.memory import MEM_COMMIT, MEM_FREE, PAGE_GUARD, ProcessMemoryError, _compile_pattern
@@ -366,6 +368,241 @@ class ProcessBudgetTests(unittest.TestCase):
         self.assertFalse(coordinator.held)
         self.assertEqual(memory.scan_process.call_count, 1)
         self.assertEqual(memory.writes, [])
+
+
+class ScanPolicyTests(unittest.TestCase):
+    """WP-36(a): scan-only programs are staged; the 16-scan bound holds."""
+
+    def test_scan_only_program_is_staged(self):
+        source = ("[ENABLE]\n"
+                  "aobscan(sym,B80100000090??)\n"
+                  "registersymbol(sym)\n"
+                  "[DISABLE]\n"
+                  "unregistersymbol(sym)\n")
+        program = prepare_program(source, "owned.exe")
+        self.assertEqual(program["enable"][0]["op"], "scan_process")
+        self.assertEqual(program["requires"], [])
+        self.assertEqual(program["provides"], ["sym"])
+        validate_program(program)
+        # Scan-only programs carry no NASM patch content, so the dry link has
+        # nothing to assemble; the preflight scan capture is the meaningful
+        # check at this level (runtime activation is AP-11 territory).
+        preflight = preflight_program(program, _owned_memory())
+        self.assertEqual(len(preflight["scan_results"]), 1)
+
+    def test_scan_only_program_needs_no_executable_patch(self):
+        # Regression: before WP-36 the generic refusal hit scan-only providers.
+        source = ("[ENABLE]\n"
+                  "aobscanregion(sym,1000,1100,0102)\n"
+                  "registersymbol(sym)\n"
+                  "[DISABLE]\n"
+                  "unregistersymbol(sym)\n")
+        program = prepare_program(source, "owned.exe")
+        self.assertEqual(program["enable"][0]["op"], "scan_region")
+        validate_program(program)
+
+    def test_seventeen_process_scans_exceed_the_bound(self):
+        lines = ["[ENABLE]"]
+        lines.extend(f"aobscan(sym{i:02d},0102)" for i in range(17))
+        lines += ["sym00:", "mov eax,#2", "[DISABLE]", "sym00:", "mov eax,#1"]
+        with self.assertRaisesRegex(ProgramError, "16 complete process-scan bound"):
+            prepare_program("\n".join(lines) + "\n", "owned.exe")
+
+    def test_sixteen_process_scans_stay_within_the_bound(self):
+        lines = ["[ENABLE]"]
+        lines.extend(f"aobscan(sym{i:02d},0102)" for i in range(16))
+        lines += ["sym00:", "mov eax,#2", "[DISABLE]", "sym00:", "mov eax,#1"]
+        program = prepare_program("\n".join(lines) + "\n", "owned.exe")
+        self.assertEqual(sum(node["op"] == "scan_process" for node in program["enable"]), 16)
+
+
+class ThreadGateTests(unittest.TestCase):
+    """WP-36(b): createThread/threadWait get a named staged-runtime gate."""
+
+    def test_thread_only_enable_hits_named_gate_at_prepare(self):
+        with self.assertRaisesRegex(ProgramError, "gated in the native staged runtime"):
+            prepare_program("[ENABLE]\ncreatethread(1000)\n[DISABLE]\n", "owned.exe")
+
+    def test_threadwait_only_enable_hits_named_gate_at_prepare(self):
+        with self.assertRaisesRegex(ProgramError, "gated in the native staged runtime"):
+            prepare_program("[ENABLE]\nthreadwait()\n[DISABLE]\n", "owned.exe")
+
+    def test_createthread_with_patch_is_gated_in_preflight(self):
+        program = prepare_program(
+            "[ENABLE]\n1000:\ndb 01\ncreatethread(1000)\n[DISABLE]\n1000:\ndb 00\n",
+            "owned.exe")
+        with self.assertRaisesRegex(ProgramError, "injected thread backend"):
+            preflight_program(program, _owned_memory())
+
+
+class GlobalAllocTests(unittest.TestCase):
+    """WP-36(c): globalalloc in the program dialect (lua+asm records).
+
+    Per-program RW allocation that is registered into the shared symbol
+    space (CE 7.5: SetUserdefinedSymbolAllocSize), so other records may
+    require it; forced RW data capabilities; 2-arg and 3-arg (near) forms.
+    """
+
+    GLOBAL_SCRIPT = (
+        "[ENABLE]\n"
+        "aobscan(anchor,B80100000090??)\n"
+        "registersymbol(anchor)\n"
+        "globalalloc(pAnchor,8)\n"
+        "globalalloc(pNear,4,anchor)\n"
+        "globalalloc(nCrash,4)\n"
+        "alloc(newmem,$100,anchor)\n"
+        "label(code)\n"
+        "label(return)\n"
+        "nCrash:\n"
+        "dd (int)0\n"
+        "newmem:\n"
+        "  push r15\n"
+        "  mov r15,pAnchor\n"
+        "  mov [r15],rax\n"
+        "  pop r15\n"
+        "code:\n"
+        "  mov eax,#2\n"
+        "  jmp return\n"
+        "return:\n"
+        "  mov [anchor],eax\n"
+        "anchor:\n"
+        "  jmp newmem\n"
+        "[DISABLE]\n"
+        "anchor:\n"
+        "  db B8 01 00 00 00\n"
+        "unregistersymbol(anchor)\n"
+        "dealloc(newmem)\n")
+
+    def test_globalalloc_plan_carries_forced_rw_and_provides(self):
+        program = prepare_program(self.GLOBAL_SCRIPT, "owned.exe")
+        self.assertEqual(program["allocations"], ["pAnchor", "pNear", "nCrash", "newmem"])
+        self.assertEqual(program["provides"], ["anchor", "nCrash", "pAnchor", "pNear"])
+        for symbol in ("pAnchor", "pNear", "nCrash"):
+            self.assertFalse(program["allocation_executable"][symbol])
+            self.assertTrue(program["allocation_writable"][symbol])
+        validate_program(program)
+
+    def test_globalalloc_preflight_requests_forced_rw(self):
+        program = prepare_program(self.GLOBAL_SCRIPT, "owned.exe")
+        memory = _owned_memory()
+        preflight = preflight_program(program, memory)
+        requests = {request["name"].casefold(): request
+                    for request in preflight["allocation_requests"]}
+        self.assertEqual(requests["panchor"]["executable"], False)
+        self.assertEqual(requests["panchor"]["writable"], True)
+        self.assertEqual(requests["pnear"]["near"], 0x1000)
+        self.assertTrue(requests["newmem"]["executable"])
+        memory.scan_process.assert_called_once()
+
+    def test_globalalloc_dry_links_end_to_end(self):
+        program = prepare_program(self.GLOBAL_SCRIPT, "owned.exe")
+        result = dry_link_program(program, _owned_memory())
+        self.assertFalse(result["publishable"])
+        synthetic = result["synthetic_allocations"]
+        self.assertEqual(len(synthetic), 4)
+        self.assertFalse(synthetic["panchor"]["executable"])
+        self.assertTrue(synthetic["panchor"]["writable"])
+
+    def test_lua_plus_asm_record_with_globalalloc_compiles(self):
+        # Resonance shape: single top-level [ENABLE]/[DISABLE] with
+        # {$lua}/{asm} mode switches inside; the Lua registers/releases the
+        # global symbol (provider proof), the static AA body carries the
+        # per-program globalalloc (option B: stays in the program dialect,
+        # forced RW allocation).
+        source = (
+            "[ENABLE]\n"
+            "{$lua}\n"
+            'if not getAddressSafe("pCheatFlags") then registerSymbol("pCheatFlags", allocateMemory(8)) end\n'
+            "{$asm}\n"
+            "aobscan(synSkill,B8 01 00 00 90)\n"
+            "registersymbol(synSkill)\n"
+            "alloc(newmem,$100,synSkill)\n"
+            "globalalloc(pSkill,8)\n"
+            "label(code)\n"
+            "label(return)\n"
+            "newmem:\n"
+            "  push r15\n"
+            "  mov r15,pSkill\n"
+            "  pop r15\n"
+            "code:\n"
+            "  mov eax,#2\n"
+            "  jmp return\n"
+            "synSkill:\n"
+            "  jmp newmem\n"
+            "[DISABLE]\n"
+            "{$lua}\n"
+            'unregisterSymbol("pCheatFlags")\n'
+            "{$asm}\n"
+            "synSkill:\n"
+            "  db B8 01 00 00 00\n"
+            "unregistersymbol(synSkill)\n"
+            "dealloc(newmem)\n")
+        program = prepare_lua_program(source, "owned.exe")
+        static = program["static_program"]
+        self.assertIsNotNone(static)
+        self.assertEqual(static["provides"], ["pSkill", "synSkill"])
+        self.assertEqual(static["requires"], [])
+        self.assertEqual(program["requires"], [])
+        self.assertIn("pCheatFlags", program["provides"])
+        self.assertFalse(program["one_shot"])
+        validate_lua_program(program)
+
+    def test_globalalloc_requires_forced_arguments(self):
+        for bad in ("globalalloc()", "globalalloc(pA)", "globalalloc(pA,0)",
+                    "globalalloc(pA,8,1000,extra)"):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ProgramError):
+                    prepare_program("[ENABLE]\n" + bad + "\n"
+                                    "1000:\ndb 01\n[DISABLE]\n1000:\ndb 00\n", "owned.exe")
+
+    def test_compiled_ct_record_with_lua_and_globalalloc_is_supported(self):
+        # Compiler level: a Resonance-shaped record (Lua register/unregister
+        # provider + static {$asm} body with a per-program globalalloc)
+        # compiles to a supported record with the merged provides list.
+        ct_body = '''<CheatTable CheatEngineTableVersion="45"><CheatEntries>
+<CheatEntry><ID>970</ID><Description>"ResonanceShaped"</Description><VariableType>Auto Assembler Script</VariableType><AssemblerScript>
+[ENABLE]
+{$lua}
+if not getAddressSafe("pCheatFlags") then registerSymbol("pCheatFlags", allocateMemory(8)) end
+{$asm}
+aobscan(synSkill,B8 01 00 00 90)
+registersymbol(synSkill)
+alloc(newmem,$100,synSkill)
+globalalloc(pSkill,8)
+label(code)
+label(return)
+newmem:
+  push r15
+  mov r15,pSkill
+  pop r15
+code:
+  mov eax,#2
+  jmp return
+synSkill:
+  jmp newmem
+[DISABLE]
+{$lua}
+unregisterSymbol("pCheatFlags")
+{$asm}
+synSkill:
+  db B8 01 00 00 00
+unregistersymbol(synSkill)
+dealloc(newmem)
+</AssemblerScript></CheatEntry>
+</CheatEntries></CheatTable>'''
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "owned.ct"
+            path.write_text(ct_body, encoding="utf-8")
+            plan = compile_table(path, "ct2synth01.exe")
+        entry = next(e for e in plan["entries"] if e["id"] == 970)
+        self.assertTrue(entry["supported"], entry["reason"])
+        self.assertIsNotNone(entry.get("lua_program"))
+        static = entry["lua_program"]["static_program"]
+        self.assertIsNotNone(static)
+        self.assertIn("pCheatFlags", entry["provides"])
+        self.assertIn("pSkill", entry["provides"])
+        self.assertEqual(entry["requires"], [])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -589,7 +589,16 @@ class GlobalPool:
             name = request['name'].casefold()
             if name in foreign:
                 raise GlobalError('A global name collides with an external provider.')
-            near = resolve_expression(request['near'], self.memory, symbols or {}) if request['near'] else None
+            if request['near']:
+                # WP-36: the near anchor may be a module token ($process or a
+                # basename); module resolution needs the target's exact
+                # process name and pointer width, mirroring the engine's
+                # staged-copy range resolution.
+                near = resolve_expression(request['near'], self.memory, symbols or {},
+                                          process_name=profile['process_name'],
+                                          pointer_size=profile['bitness'] // 8)
+            else:
+                near = None
             if near is not None and not 0 <= near < (1 << profile['bitness']):
                 raise GlobalError('The near anchor exceeds the target address width.')
             existing = self.members.get(name)

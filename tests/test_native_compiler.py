@@ -767,7 +767,14 @@ class NativeAATests(unittest.TestCase):
         self.assertEqual(expression_symbols("Anchor+10"), ["Anchor"])
         self.assertEqual(expression_symbols("Game.exe+10"), [])
         self.assertEqual(expression_symbols("1234"), [])
-        for expression in ("[Anchor]+4", "lua('x')", "Target.exe*2", "C:\\Target.exe+4", "Anchor+10000000000000000"):
+        # WP-30: the bounded profile now admits typed casts (no-ops) and up
+        # to two pointer dereferences; the canonical form of a cast-only
+        # address drops the cast.
+        self.assertEqual(validate_expression("[Anchor]+4"), "[Anchor]+4")
+        self.assertEqual(validate_expression("[[Anchor]]+4"), "[[Anchor]]+4")
+        self.assertEqual(validate_expression("(dword)Anchor+10"), "Anchor+10")
+        self.assertEqual(expression_symbols("[Anchor]+4"), ["Anchor"])
+        for expression in ("lua('x')", "Target.exe*2", "C:\\Target.exe+4", "Anchor+10000000000000000", "(int)Anchor*2", "[[[Anchor]]]"):
             with self.subTest(expression=expression), self.assertRaises(AAError):
                 validate_expression(expression)
 
