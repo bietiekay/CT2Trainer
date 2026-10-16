@@ -365,6 +365,13 @@ Product behavior (what the generated trainer does)
   automatically re-enabled after a successful re-attach (game or
   trainer restart). A failed enable stays visibly inactive and is
   never re-applied as a saved wish.
+- Optional runtime debug logging: a converter option (GUI checkbox, or
+  the CLI --debug-log flag) makes the generated trainer append one JSON
+  line per runtime event to <TrainerName>.ct2debug.log next to the EXE
+  (attach attempts, every AOB scan with pattern/base/RVA, byte
+  assertions with expected vs. actual bytes, patch writes, rollback
+  results, toggle/value/freeze outcomes, errors with full traceback) -
+  off by default, best-effort only, never changing trainer behavior.
 - Fail-closed: unsupported records stay visible with a named block
   reason and are excluded; the trainer re-proves target identity
   (PID/creation time, PE header, architecture, ownership, current
@@ -524,6 +531,21 @@ What it can do
 - The trainer re-proves the target identity (PID/creation time, PE
   header, architecture, ownership, current bytes) before any memory
   mutation; a stale or mismatched process is refused.
+
+Debug logging (optional)
+========================
+The converter offers an optional **Debug logging** checkbox. When
+enabled, the generated trainer appends one JSON line per runtime event
+to `<TrainerName>.ct2debug.log` next to the trainer EXE: plan identity
+at startup, attach attempts and refusals (process not found,
+architecture mismatch, state conflicts), confirmed attaches (PID, EXE
+path, pointer width), every AOB scan (module, pattern, module base,
+RVA), byte assertions (expected vs. actual bytes), every patch write
+and rollback, toggle/value/freeze outcomes and wish replay. Errors carry
+the exception type, message and full traceback. Repeated identical
+attach failures are logged once per distinct cause. Logging is a
+debugging aid only: it never changes trainer behavior, and with the
+option off (the default) no log file is written at all.
 
 Limits (fail-closed)
 ====================
