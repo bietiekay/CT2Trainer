@@ -596,7 +596,7 @@ def _entry_node_maps(root) -> tuple[dict[int, ET.Element], dict[int, str]]:
 
 def compile_table(path: str | Path, process_name: str, title: str | None = None,
                   selected_ids: list[int] | set[int] | tuple[int, ...] | None = None,
-                  *, architecture: str = "x64") -> dict:
+                  *, architecture: str = "x64", debug_log: bool = False) -> dict:
     """Return all records with explicit supported/blocked states and reasons."""
     validate_process_name(process_name)
     try:
@@ -1009,6 +1009,8 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                        "headings": sum(entry["kind"] == "heading" for entry in entries)},
             "blocked_reasons": dict(Counter(entry["reason"] for entry in entries if not entry["supported"])),
             "runtime_verified": False}
+    if debug_log:
+        plan["debug_log"] = True
     if bootstrap is not None:
         plan['lua_bootstrap'] = bootstrap
     if parent_relations:
@@ -1034,6 +1036,8 @@ def validate_plan(plan: dict) -> None:
     for name, size in (("table_sha256", 64), ("trainer_id", 16)):
         if not isinstance(plan.get(name), str) or re.fullmatch("[0-9a-f]{" + str(size) + "}", plan[name]) is None:
             raise NativeCompileError(f"Invalid native plan {name}.")
+    if "debug_log" in plan and type(plan["debug_log"]) is not bool:
+        raise NativeCompileError("Plan debug_log flag must be a boolean.")
     entries = plan.get("entries")
     if not isinstance(entries, list) or not entries or len(entries) > MAX_ENTRIES:
         raise NativeCompileError("Plan entries must be a bounded list.")

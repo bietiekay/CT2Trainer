@@ -303,6 +303,12 @@ class ProcessMemory:
         return self._pid, self._creation_time
 
     @property
+    def image_path(self) -> str:
+        """Absolute path of the bound target executable (read-only metadata)."""
+        with self._lock:
+            return self._image_path()
+
+    @property
     def pointer_size(self) -> int:
         return self._pointer_size
 

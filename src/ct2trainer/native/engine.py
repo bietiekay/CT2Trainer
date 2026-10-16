@@ -26,6 +26,7 @@ from .aa import (AAError, expression_symbols, normalize_pattern,
 from .one_shot_contract import (OneShotContract, OneShotContractError,
                                 OneShotReceipt)
 from .activation_policy import ActivationPolicyError
+from .debug_log import TrainerDebugLog, create_debug_log
 from .typed_call import TypedCallNotAttached, execute_code_ex
 from .debugger_session import (
     DebuggerAlreadyAttached, DebuggerBadPid, DebuggerNotAttached)
@@ -1023,6 +1024,10 @@ class _OneShotBackend:
 class TrainerEngine:
     """Synchronous controller used identically by UI and headless fixture tests."""
 
+    # No-op fallback for instances constructed without __init__ (e.g. via
+    # object.__new__ in unit tests); __init__ always replaces it per instance.
+    debug_log = TrainerDebugLog(enabled=False)
+
     def __init__(self, plan: dict, state_dir: str | Path | None = None, memory_factory: Callable | None = None,
                  process_lock_dir: str | Path | None = None, hook_coordinator: Any = 'debug-event',
                  process_probe: Any = None, il2cpp_resolver: Any = None,
@@ -1037,6 +1042,10 @@ class TrainerEngine:
                   managed_runtime_factory: Callable | None = None):
         validate_plan(plan)
         self.plan = plan
+        # Optional debug log: only active when the plan carries debug_log.
+        # The header is written immediately so the file is meaningful even if
+        # startup later fails (state claim, provider checks, ...).
+        self.debug_log = create_debug_log(plan)
         self.entries = {entry["id"]: entry for entry in plan["entries"]}
         self.providers: dict[str, int] = {}
         for entry in plan["entries"]:
@@ -1069,7 +1078,12 @@ class TrainerEngine:
                          or (e["kind"] == "heading"
                              and (e.get("parent_activation") is not None
                                   or e.get("parent_mo_bind") is True)))}
-        self.store = _StateStore(directory, plan, wish_ids, shared, process_probe)
+        try:
+            self.store = _StateStore(directory, plan, wish_ids, shared, process_probe)
+        except Exception as exc:
+            self.debug_log.error("engine-init-failed", exc, stage="state-claim",
+                                 state_dir=str(directory))
+            raise
         # If the rest of startup fails after the state claim, release the lock
         # again so a failed start cannot leave a stale lock behind the next
         # attempt; the atexit net covers process exit without an explicit
@@ -1293,11 +1307,21 @@ class TrainerEngine:
                          and entry.get("selected") and entry.get("supported")}
                 self.parent_policy = ActivationController(
                     RecordTable(records, relations, flags=flags))
-        except Exception:
-            try:
-                self.store.close()
-            except Exception:
-                pass
+            self.debug_log.log(
+                "engine-init",
+                state_dir=str(directory),
+                shared_lock_dir=str(shared),
+                wishes=sorted(self.desired),
+                providers=sorted(self.providers.values()),
+            )
+        except Exception as init_exc:
+            self.debug_log.error("engine-init-failed", init_exc, stage="startup")
+            store = getattr(self, "store", None)
+            if store is not None:
+                try:
+                    store.close()
+                except Exception:
+                    pass
             raise
 
     def open_lua_session(self, **broker_handlers: Any) -> Any:
@@ -1571,6 +1595,9 @@ class TrainerEngine:
         return self.memory is not None and not self.blocked and not self.closed
 
     def _block(self, exc: Exception) -> None:
+        entry_errors = getattr(self, "entry_errors", {})
+        self.debug_log.error("engine-blocked", exc,
+                             entry_errors={str(k): v for k, v in sorted(entry_errors.items())})
         self.blocked = True
         self.error = str(exc)
         self.status = "Writes blocked: " + self.error
@@ -1660,6 +1687,9 @@ class TrainerEngine:
             self.store.guard()
             if self.memory is not None:
                 if not self.memory.is_alive():
+                    self.debug_log.log("target-exited",
+                                       pid=getattr(self.memory, "pid", None),
+                                       process_name=self.plan["process_name"])
                     self._cancel_lua_sessions()
                     for scope in self.lua_activations.values():
                         scope.finish_after_exit()
@@ -1732,6 +1762,8 @@ class TrainerEngine:
             try:
                 memory = self.memory_factory(self.plan["process_name"])
             except Exception as exc:
+                self.debug_log.error("attach-attempt-failed", exc,
+                                     process_name=self.plan["process_name"])
                 self.error = str(exc)
                 self.status = "Waiting / hook into game unavailable: " + self.error
                 return self.status
@@ -1743,11 +1775,16 @@ class TrainerEngine:
                     require_target_architecture(self.plan, memory)
                 except ArchitectureError as exc:
                     memory.close()
+                    self.debug_log.error("attach-architecture-refused", exc,
+                                         process_name=self.plan["process_name"],
+                                         pointer_size=getattr(memory, "pointer_size", None))
                     self.error = str(exc)
                     self.status = "Hook into game refused: " + self.error
                     return self.status
                 self.store.claim_session(memory)
-            except Exception:
+            except Exception as exc:
+                self.debug_log.error("attach-session-claim-failed", exc,
+                                     process_name=self.plan["process_name"])
                 memory.close()
                 raise
             if self.call_broker_factory is not None:
@@ -1760,6 +1797,8 @@ class TrainerEngine:
                         raise NativeRuntimeError(
                             'The call broker binds a different target identity than the attached process')
                 except Exception as exc:
+                    self.debug_log.error("attach-call-broker-failed", exc,
+                                         process_name=self.plan["process_name"])
                     self.store.release_session()
                     memory.close()
                     self.error = str(exc)
@@ -1777,6 +1816,12 @@ class TrainerEngine:
                           if self.clock_factory is not None else default_speed_binding())
             self.error = ""
             self.status = f"Connected to {self.plan['process_name']} (PID {memory.pid})"
+            self.debug_log.log("attached",
+                               pid=memory.pid,
+                               process_name=self.plan["process_name"],
+                               image_path=getattr(memory, "image_path", None),
+                               pointer_size=getattr(memory, "pointer_size", None),
+                               creation_time=getattr(memory, "creation_time", None))
             if self.one_shot is not None:
                 self._one_shot_generation += 1
                 wishes = self.one_shot.attach(self._one_shot_generation)
@@ -1797,6 +1842,7 @@ class TrainerEngine:
                 for identifier in sorted(self.desired):
                     self._mirror_parent_state(identifier)
             self.busy = True
+            self.debug_log.log("restore-start", wishes=sorted(self.desired))
             try:
                 for identifier in sorted(self.desired):
                     entry = self.entries[identifier]
@@ -1809,9 +1855,13 @@ class TrainerEngine:
                             # the saved state (not saved as a wish) and is
                             # retried on the next attach.
                             self._enable_one_shot(entry, persist=False)
+                            self.debug_log.log("wish-restored", identifier=identifier,
+                                               label=entry["label"], one_shot=True)
                         continue
                     self._dependencies(entry, persist=False)
                     self._enable(entry, persist=False)
+                    self.debug_log.log("wish-restored", identifier=identifier,
+                                       label=entry["label"])
                 if self.one_shot is not None:
                     attempted, _skipped = self.one_shot.replay_saved_wishes(self._one_shot_backend)
                     for record_id in attempted:
@@ -1819,6 +1869,7 @@ class TrainerEngine:
                             self.entry_errors[record_id] = "One-shot replay failed; the wish is not re-saved"
                     self._persist_one_shot_markers()
             except NativeRuntimeError as exc:
+                self.debug_log.error("restore-failed", exc, identifier=identifier)
                 self.error = str(exc)
                 self.entry_errors[identifier] = self.error
                 self.status = "Restore failed: " + self.error
@@ -1864,22 +1915,52 @@ class TrainerEngine:
             operation = op["op"]
             if operation == "scan":
                 module = self.plan["process_name"] if op["module"] == "$process" else op["module"]
-                symbols[op["symbol"].casefold()] = self.memory.scan_module(module, op["pattern"])
+                try:
+                    address = self.memory.scan_module(module, op["pattern"])
+                except Exception as exc:
+                    self.debug_log.error("scan-failed", exc, symbol=op["symbol"],
+                                         module=module, pattern=op["pattern"],
+                                         section=section)
+                    raise
+                scan_details = {"symbol": op["symbol"], "module": module,
+                                "pattern": op["pattern"], "address": hex(address),
+                                "section": section}
+                if self.debug_log.enabled:
+                    try:
+                        base, size = self.memory.module(module)
+                        scan_details["module_base"] = hex(base)
+                        scan_details["module_size"] = size
+                        scan_details["rva"] = hex(address - base)
+                    except Exception:
+                        pass
+                self.debug_log.log("scan", **scan_details)
+                symbols[op["symbol"].casefold()] = address
             elif operation == "define":
-                symbols[op["symbol"].casefold()] = self.memory.resolve(op["expression"], symbols)
+                address = self.memory.resolve(op["expression"], symbols)
+                symbols[op["symbol"].casefold()] = address
+                self.debug_log.log("define", symbol=op["symbol"],
+                                   expression=op["expression"],
+                                   address=hex(address), section=section)
             elif operation == "register":
                 key = op["symbol"].casefold()
                 if key not in symbols:
                     raise NativeRuntimeError(f"Cannot register undefined symbol {op['symbol']}")
                 registered.add(key)
+                self.debug_log.log("symbol-registered", symbol=op["symbol"], section=section)
             elif operation == "unregister":
                 registered.discard(op["symbol"].casefold())
+                self.debug_log.log("symbol-unregistered", symbol=op["symbol"], section=section)
             elif operation == "assert":
                 address = self.memory.resolve(op["address"], symbols)
                 expected = bytes.fromhex(op["bytes"])
-                if self.memory.read(address, len(expected)) != expected:
+                actual = self.memory.read(address, len(expected))
+                if actual != expected:
+                    self.debug_log.log("assert-failed", address=hex(address),
+                                       expected=expected.hex(" "),
+                                       actual=actual.hex(" "), section=section)
                     raise NativeRuntimeError(f"Byte assertion failed at 0x{address:X}")
                 assertions.append((address, expected))
+                self.debug_log.log("assert", address=hex(address), section=section)
             elif operation == "write":
                 address = self.memory.resolve(op["address"], symbols)
                 changed = bytes.fromhex(op["bytes"])
@@ -1894,6 +1975,9 @@ class TrainerEngine:
                 if any(address < patch.address + len(patch.changed) and patch.address < address + len(changed) for patch in patches):
                     raise NativeRuntimeError("Overlapping patches in one script are unsupported")
                 patches.append(_Patch(address, original, changed))
+                self.debug_log.log("patch-planned", address=hex(address),
+                                   original=original.hex(" "), changed=changed.hex(" "),
+                                   section=section)
         return symbols, registered, patches
 
     @restoration_entry
@@ -1914,7 +1998,11 @@ class TrainerEngine:
             self._write_owned_literal_values(patches)
             return
         for patch in patches:
-            if self.memory.read(patch.address, len(patch.original)) != patch.original:
+            current = self.memory.read(patch.address, len(patch.original))
+            if current != patch.original:
+                self.debug_log.log("write-refused", address=hex(patch.address),
+                                   expected_original=patch.original.hex(" "),
+                                   found=current.hex(" "))
                 raise PatchConflict(f"Bytes changed before write at 0x{patch.address:X}")
         attempted: list[_Patch] = []
         def guard():
@@ -1941,11 +2029,18 @@ class TrainerEngine:
                 _checked_write(self.memory, patch.address, patch.changed, before_kernel=admit)
                 if self.memory.read(patch.address, len(patch.changed)) != patch.changed:
                     raise NativeRuntimeError("Write readback failed")
+                self.debug_log.log("patch-written", address=hex(patch.address),
+                                   original=patch.original.hex(" "),
+                                   changed=patch.changed.hex(" "))
             guard()
             for patch in patches:
                 if self.memory.read(patch.address, len(patch.changed)) != patch.changed:
                     raise PatchConflict("Patch changed before confirmation")
         except Exception as exc:
+            failed = attempted[-1] if attempted else None
+            self.debug_log.error("write-failed", exc,
+                                 attempted_addresses=[hex(p.address) for p in attempted],
+                                 failed_address=hex(failed.address) if failed else None)
             if not attempted:
                 raise NativeRuntimeError('Write refused before mutation: ' + str(exc)) from exc
             try:
@@ -1970,6 +2065,8 @@ class TrainerEngine:
                         if self.memory.read(patch.address, len(patch.original)) != patch.original:
                             raise NativeRuntimeError("Rollback readback failed")
             except Exception as rollback_error:
+                self.debug_log.error("rollback-failed", rollback_error,
+                                     address=hex(failed.address) if failed else None)
                 self._block(NativeRuntimeError(f"Write failed and rollback is uncertain: {exc}; {rollback_error}"))
                 raise NativeRuntimeError(self.error) from exc
             raise NativeRuntimeError(f"Write failed; original bytes restored: {exc}") from exc
@@ -2016,7 +2113,9 @@ class TrainerEngine:
             self._check_patches()
             self.store.save(desired)
             self.desired = set(desired)
+            self.debug_log.log("state-save", desired=sorted(desired))
         except Exception as exc:
+            self.debug_log.error("state-save-failed", exc, desired=sorted(desired))
             self._block(exc)
             raise NativeRuntimeError(str(exc)) from exc
 
@@ -3235,6 +3334,8 @@ class TrainerEngine:
             raise NativeRuntimeError("Another trainer action is in progress")
         entry = self._entry(identifier, self._action_kind(identifier))
         enabled = identifier not in self.applied if enabled is None else bool(enabled)
+        self.debug_log.log("toggle", identifier=identifier, label=entry["label"],
+                           kind=entry["kind"], direction=enabled)
         self.busy = True
         try:
             self._guard()
@@ -3256,8 +3357,12 @@ class TrainerEngine:
                 self.status = f"{entry['label']}: {message}"
             else:
                 self.status = f"{entry['label']}: {'enabled and saved' if enabled else 'disabled and saved'}"
+            self.debug_log.log("toggle-ok", identifier=identifier, label=entry["label"],
+                               direction=enabled)
             return enabled
         except Exception as exc:
+            self.debug_log.error("toggle-failed", exc, identifier=identifier,
+                                 label=entry["label"], direction=enabled)
             self.entry_errors[identifier] = str(exc)
             if isinstance(exc, (PatchConflict, StateError)):
                 self._block(exc)
@@ -3283,10 +3388,14 @@ class TrainerEngine:
             self.store.save(self.desired | {identifier})
             self.desired.add(identifier)
         except Exception as exc:
+            self.debug_log.error("auto-on-request-failed", exc, identifier=identifier,
+                                 label=entry["label"])
             self._block(exc)
             raise NativeRuntimeError(str(exc)) from exc
         self._mirror_parent_state(identifier)
         self.status = f"{entry['label']}: auto-on requested for next game launch"
+        self.debug_log.log("auto-on-requested", identifier=identifier, label=entry["label"],
+                           desired=sorted(self.desired))
 
     def clear_desired(self, identifier: int) -> None:
         self._entry(identifier, self._action_kind(identifier))
@@ -3299,9 +3408,14 @@ class TrainerEngine:
             self.store.save(self.desired - {identifier})
             self.desired.discard(identifier)
         except Exception as exc:
+            self.debug_log.error("auto-on-clear-failed", exc, identifier=identifier,
+                                 label=self.entries[identifier]["label"])
             self._block(exc)
             raise NativeRuntimeError(str(exc)) from exc
         self._mirror_parent_state(identifier)
+        self.debug_log.log("auto-on-cleared", identifier=identifier,
+                           label=self.entries[identifier]["label"],
+                           desired=sorted(self.desired))
 
     def _value_address(self, entry: dict) -> int:
         if entry.get('address_profile') == 'expression/v1':
@@ -3642,6 +3756,8 @@ class TrainerEngine:
             parse_value(entry, text, bytes(self._value_size(entry)))
         if self.busy:
             raise NativeRuntimeError("Another trainer action is in progress")
+        self.debug_log.log("value-write", identifier=identifier, label=entry["label"],
+                           text=text)
         self.busy = True
         try:
             self._guard()
@@ -3668,8 +3784,13 @@ class TrainerEngine:
                 display=format_written_profile_value(entry['value_profile'],raw)
             else:display=format_value(entry,raw)
             self.status = f"{entry['label']}: value confirmed ({display})"
+            self.debug_log.log("value-write-ok", identifier=identifier,
+                               label=entry["label"], address=hex(address),
+                               display=display)
             return display
         except Exception as exc:
+            self.debug_log.error("value-write-failed", exc, identifier=identifier,
+                                 label=entry["label"], text=text)
             self.entry_errors[identifier] = str(exc)
             if isinstance(exc, (StateError, PatchConflict)):
                 self._block(exc)
@@ -3683,6 +3804,8 @@ class TrainerEngine:
         self._guard()
         if self.busy:
             raise NativeRuntimeError("Another trainer action is in progress")
+        self.debug_log.log("freeze-request", identifier=identifier,
+                           label=entry["label"], enabled=enabled)
         self.busy = True
         try:
             self._check_patches()
@@ -3722,8 +3845,15 @@ class TrainerEngine:
             else:
                 self.frozen.pop(identifier, None)
             self.status = f"{entry['label']}: {'current value frozen for this session' if enabled else 'unfrozen'}"
+            freeze_details = {"identifier": identifier, "label": entry["label"],
+                              "enabled": enabled}
+            if enabled:
+                freeze_details["address"] = hex(address)
+            self.debug_log.log("freeze-changed", **freeze_details)
             return enabled
         except Exception as exc:
+            self.debug_log.error("freeze-failed", exc, identifier=identifier,
+                                 label=entry["label"], enabled=enabled)
             self.entry_errors[identifier] = str(exc)
             if isinstance(exc, (StateError, PatchConflict)):
                 self._block(exc)
@@ -3809,8 +3939,12 @@ class TrainerEngine:
             self.store.close()
             self.closed = True
             self.status = "Trainer closed; saved switches will restore on the next game launch"
+            self.debug_log.log("engine-close", clean=True, status=self.status,
+                               still_applied=sorted(self.applied))
+            self.debug_log.close()
             return True
         except Exception as exc:
+            self.debug_log.error("engine-close-failed", exc)
             self._cancel_lua_sessions()
             self._release_call_broker()
             self._release_debugger_session()
@@ -3826,6 +3960,7 @@ class TrainerEngine:
                 self.clock.finish()
                 self.clock = None
             self.closed = True
+            self.debug_log.close()
             return False
 
     def _atexit_close(self) -> None:

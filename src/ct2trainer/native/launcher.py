@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 import sys
 
+from .debug_log import create_debug_log
+
 
 def _record_string_plan_load_failure(report, error):
     """Keep failed gate admission without replacing previous evidence."""
@@ -127,6 +129,12 @@ def main(argv=None) -> int:
         from .ui import run_trainer
         return run_trainer(plan) or 0
     except (OSError, ValueError, RuntimeError, AssertionError) as exc:
+        try:
+            if "plan" in locals() and plan is not None:
+                create_debug_log(plan).error("trainer-startup-failed", exc,
+                                             stage="launcher")
+        except Exception:
+            pass
         if args.smoke or args.smoke_output or owned_mode_requested:
             if sys.stderr is not None:
                 print(str(exc), file=sys.stderr)
