@@ -3,15 +3,15 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 19,
+    "actual": 20,
     "check": "pinned_table_count",
-    "expected": 19,
+    "expected": 20,
     "ok": true
    },
    {
-    "actual": 6057,
+    "actual": 6080,
     "check": "expected_actions",
-    "expected": 6057,
+    "expected": 6080,
     "ok": true
    },
    {
@@ -19,18 +19,18 @@
      "custom_value": 4,
      "navigation": 2,
      "one_shot": 1723,
-     "persistent_script": 431,
+     "persistent_script": 446,
      "string_write": 732,
-     "value_freeze": 3167
+     "value_freeze": 3175
     },
     "check": "category_counts",
     "expected": {
      "custom_value": 4,
      "navigation": 2,
      "one_shot": 1723,
-     "persistent_script": 431,
+     "persistent_script": 446,
      "string_write": 732,
-     "value_freeze": 3167
+     "value_freeze": 3175
     },
     "ok": true
    },
@@ -113,6 +113,10 @@
       "ok": true
      },
      {
+      "name": "case-18.ct",
+      "ok": true
+     },
+     {
       "name": "case-19.ct",
       "ok": true
      },
@@ -132,6 +136,7 @@
     "actual": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
+     "5bc013eb2a8215fecae039b4d514968a3ac8d75b22e236786e4a7f7a52cf881b",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
@@ -143,8 +148,8 @@
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
-     "cdc1ad6ceacb559891c0f4a9cf4086187460dd061df5e03ad7cb82340b1cc44e",
      "cf7ef73a2c326edee6b6d87853f454996789add71e9cea7d7440347e41fcbb25",
+     "e3405ebcf7fa566a101ad424c5318348c89e5e020636d8f2533d125c89f7e2f6",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
@@ -154,6 +159,7 @@
     "expected": [
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
+     "5bc013eb2a8215fecae039b4d514968a3ac8d75b22e236786e4a7f7a52cf881b",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
      "68ca722ed125bbab73571a788012a1dba341b700d254df15c0131bd4096a9b05",
      "69cd8349fa89fedf40e7e5e409605a74278532acfb71e37b1ebd7abe2cd83a47",
@@ -165,8 +171,8 @@
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
-     "cdc1ad6ceacb559891c0f4a9cf4086187460dd061df5e03ad7cb82340b1cc44e",
      "cf7ef73a2c326edee6b6d87853f454996789add71e9cea7d7440347e41fcbb25",
+     "e3405ebcf7fa566a101ad424c5318348c89e5e020636d8f2533d125c89f7e2f6",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
@@ -205,27 +211,27 @@
    "custom_value": 4,
    "navigation": 2,
    "one_shot": 1723,
-   "persistent_script": 431,
+   "persistent_script": 446,
    "string_write": 732,
-   "value_freeze": 3167
+   "value_freeze": 3175
   },
   "confirmed_game_effect_actions": 0,
-  "expected_actions": 6057,
+  "expected_actions": 6080,
   "goal_90_percent": "NOT REACHED",
-  "unique_tables": 19
+  "unique_tables": 20
  },
- "generated": "run w2a-case17-20261014112532Z",
+ "generated": "run w2b-case18-20261016142912Z",
  "lane": "AP-11 game campaign plan (read-only, static)",
- "run_id": "w2a-case17-20261014112532Z",
+ "run_id": "w2b-case18-20261016142912Z",
  "schema": "ap11-campaign/v1",
  "source": {
   "corpus_root": "C:\\Users\\xboxl\\code\\CT2Trainer\\TableReferences",
   "feature_coverage": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\feature-coverage.json",
-  "feature_coverage_sha256": "a7ac37af4c71087d88c77c8713cf884df054104e009499130e77b3f6d108a951",
+  "feature_coverage_sha256": "016d983b020679f46aa7b2373e52a58f25d2f693ee0420a6a46b8636c54d748f",
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "a68685ea8e0818eb553cb1bd8cdfed926f4274d660057f0d03cfb37d8fccef0d",
+  "gap_report_sha256": "4e59fd1ffa1f88c990d902ccea050224dd86c073a8da3fcf2b5de53027f98735",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "d7b6cc2e83e9b2d533a17d17a150155175d3318614386067bc802e153a38ee16"
+  "inventory_sha256": "11bf3fef19278efab6ecb79995d3380833efe278562eb8afd654d45f3c094e60"
  },
  "tables": [
   {
@@ -6547,11 +6553,11 @@
    "architecture": "x64",
    "category_counts": {
     "persistent_script": 2,
-    "value_freeze": 14
+    "value_freeze": 19
    },
    "ct_path": "case-15.ct",
-   "ct_sha256": "cdc1ad6ceacb559891c0f4a9cf4086187460dd061df5e03ad7cb82340b1cc44e",
-   "expected_actions": 16,
+   "ct_sha256": "5bc013eb2a8215fecae039b4d514968a3ac8d75b22e236786e4a7f7a52cf881b",
+   "expected_actions": 21,
    "name": "case-15.ct",
    "navigation_excluded": 0,
    "priority_order": [
@@ -6578,7 +6584,12 @@
     "30": "value_freeze",
     "31": "value_freeze",
     "32": "value_freeze",
-    "33": "value_freeze"
+    "33": "value_freeze",
+    "40": "value_freeze",
+    "41": "value_freeze",
+    "42": "value_freeze",
+    "43": "value_freeze",
+    "44": "value_freeze"
    }
   },
   {
@@ -6639,6 +6650,45 @@
     "15": "string_write",
     "16": "custom_value",
     "17": "value_freeze"
+   }
+  },
+  {
+   "architecture": "x64",
+   "category_counts": {
+    "persistent_script": 15,
+    "value_freeze": 3
+   },
+   "ct_path": "case-18.ct",
+   "ct_sha256": "e3405ebcf7fa566a101ad424c5318348c89e5e020636d8f2533d125c89f7e2f6",
+   "expected_actions": 18,
+   "name": "case-18.ct",
+   "navigation_excluded": 0,
+   "priority_order": [
+    "value_freeze",
+    "persistent_script"
+   ],
+   "process_candidates": [
+    "ct2synth18.exe"
+   ],
+   "records": {
+    "10": "persistent_script",
+    "11": "persistent_script",
+    "12": "value_freeze",
+    "13": "persistent_script",
+    "14": "value_freeze",
+    "15": "persistent_script",
+    "16": "persistent_script",
+    "17": "persistent_script",
+    "18": "persistent_script",
+    "19": "persistent_script",
+    "20": "persistent_script",
+    "21": "persistent_script",
+    "22": "persistent_script",
+    "23": "persistent_script",
+    "24": "persistent_script",
+    "25": "value_freeze",
+    "26": "persistent_script",
+    "27": "persistent_script"
    }
   },
   {
@@ -6703,11 +6753,11 @@
    "custom_value": 4,
    "navigation": 2,
    "one_shot": 1723,
-   "persistent_script": 431,
+   "persistent_script": 446,
    "string_write": 732,
-   "value_freeze": 3167
+   "value_freeze": 3175
   },
-  "expected_actions": 6057,
-  "tables": 19
+  "expected_actions": 6080,
+  "tables": 20
  }
 }

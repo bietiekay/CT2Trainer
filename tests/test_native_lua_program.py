@@ -177,10 +177,16 @@ class NativeLuaProgramTests(unittest.TestCase):
         validate_lua_program(program)
 
     def test_nonempty_static_fragment_still_requires_valid_aa_program(self):
-        for source in ('[ENABLE]\nalloc(cave,1000)\n[DISABLE]\ndealloc(cave)',
-                       '[ENABLE]\n{$lua}\nreturn "1000: db 01"\n{$asm}\n[DISABLE]\n1000:\ndb 00'):
-            with self.subTest(source=source),self.assertRaisesRegex(LuaProgramError,'Static AA envelope'):
-                prepare_lua_program(source,'owned.exe')
+        # WP-29: an ENABLE that only allocates is a supported allocation-only
+        # init profile, so it no longer fails the static envelope.
+        program=prepare_lua_program('[ENABLE]\nalloc(cave,1000)\n[DISABLE]\ndealloc(cave)','owned.exe')
+        self.assertTrue(program['static_program']['allocation_only'])
+        validate_lua_program(program)
+        # A static fragment that still carries no executable patch or data is
+        # refused with the exact envelope reason.
+        source='[ENABLE]\n{$lua}\nreturn "1000: db 01"\n{$asm}\n[DISABLE]\n1000:\ndb 00'
+        with self.subTest(source=source),self.assertRaisesRegex(LuaProgramError,'Static AA envelope'):
+            prepare_lua_program(source,'owned.exe')
 
     def test_forged_metadata_and_unknown_fields_are_reconstructed(self):
         original=prepare_lua_program('{$lua}\nreturn nil\n{$asm}\n'+STATIC,'owned.exe')
@@ -333,7 +339,12 @@ class NativeNthProgramTests(unittest.TestCase):
 
     def test_dependencies_retain_static_source_and_partition_only_proven_local_scans(self):
         program = prepare_lua_program(self.SOURCE, 'owned.exe')
-        self.assertEqual(program['static_program']['requires'], ['external', 'scanOwned'])
+        # WP-28 refined: scanOwned: is the static program's own positional
+        # label, so it is local (exposed via positional_labels) and only
+        # 'external' remains an external requirement.
+        self.assertEqual(program['static_program']['requires'], ['external'])
+        # positional_labels are casefolded by design.
+        self.assertEqual(program['static_program'].get('positional_labels'), ['scanowned'])
         self.assertEqual(program['requires'], ['external'])
         self.assertEqual(program['provides'], ['provider', 'scanOwned'])
         self.assertEqual(program['source'], self.SOURCE)
@@ -344,7 +355,9 @@ class NativeNthProgramTests(unittest.TestCase):
 
     def test_unknown_same_named_table_helper_keeps_its_external_dependencies(self):
         program = prepare_lua_program(self.SOURCE.replace('ct2trainerNthAOB', 'lua_aobscan'), 'owned.exe')
-        self.assertEqual(program['requires'], ['external', 'scanOwned'])
+        # WP-28 refined: scanOwned: is the static program's own positional
+        # label, so only 'external' remains an external requirement.
+        self.assertEqual(program['requires'], ['external'])
         self.assertEqual(program['provides'], ['provider'])
         self.assertNotIn('dynamic_definitions', program)
 

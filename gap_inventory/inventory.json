@@ -1,7 +1,7 @@
 {
  "corpus_root": "TableReferences",
- "file_count": 19,
- "generated": "run w2a-case17-20261014112532Z",
+ "file_count": 20,
+ "generated": "run w2b-case18-20261016142912Z",
  "lane": "AP-10 corpus inventory (read-only static analysis)",
  "method": {
   "dedup": "SHA-256 per file; identical bytes counted once, all paths kept",
@@ -77,7 +77,7 @@
   }
  },
  "reference_verification_all_ok": true,
- "run_id": "w2a-case17-20261014112532Z",
+ "run_id": "w2b-case18-20261016142912Z",
  "tables": [
   {
    "architecture": {
@@ -939,14 +939,16 @@
    },
    "categories": {
     "persistent_script": 2,
-    "value_freeze": 14
+    "value_freeze": 19
    },
    "duplicate_ids": {},
-   "entries_total": 16,
+   "entries_total": 21,
    "format_version": "46",
    "gap_counts": {
     "aa_globalalloc_general": 1,
-    "address_form_unrecognized": 3,
+    "address_form_unrecognized": 4,
+    "cross_record_symbol": 4,
+    "lua_symbol_api": 1,
     "signed_pointer_offset": 1
    },
    "group_toggle_actions": 0,
@@ -962,19 +964,19 @@
    "primary_path": "case-15.ct",
    "record_types": {
     "aa_script": 2,
-    "value": 14
+    "value": 19
    },
-   "records": 16,
+   "records": 21,
    "root_tag": "CheatTable",
    "sections": [
     "CheatEntries"
    ],
-   "sha256": "cdc1ad6ceacb559891c0f4a9cf4086187460dd061df5e03ad7cb82340b1cc44e",
-   "size_bytes": 6178,
+   "sha256": "5bc013eb2a8215fecae039b4d514968a3ac8d75b22e236786e4a7f7a52cf881b",
+   "size_bytes": 7649,
    "status_counts": {
-    "locked": 1,
-    "statically_assumed": 12,
-    "unknown": 3
+    "locked": 6,
+    "statically_assumed": 11,
+    "unknown": 4
    },
    "table_flags": {
     "cheat_codes": false,
@@ -1080,6 +1082,67 @@
    "status_counts": {
     "locked": 1,
     "statically_assumed": 5,
+    "unknown": 2
+   },
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "xml_parsable": true
+  },
+  {
+   "architecture": {
+    "signals": [
+     "instr64:2 lines",
+     "instr32:1 lines (not an architecture signal)"
+    ],
+    "value": "x64"
+   },
+   "categories": {
+    "persistent_script": 15,
+    "value_freeze": 3
+   },
+   "duplicate_ids": {},
+   "entries_total": 18,
+   "format_version": "46",
+   "gap_counts": {
+    "aa_createthread_threadwait": 1,
+    "aa_directive_unverified": 2,
+    "aa_globalalloc_general": 2,
+    "cross_record_symbol": 3,
+    "lua_symbol_api": 12,
+    "lua_worker_thread": 1
+   },
+   "group_toggle_actions": 0,
+   "groups": 0,
+   "module_refs": [
+    "ct2synth18.exe"
+   ],
+   "parse_error": null,
+   "paths": [
+    "case-18.ct"
+   ],
+   "primary_path": "case-18.ct",
+   "record_types": {
+    "aa_script": 15,
+    "value": 3
+   },
+   "records": 18,
+   "root_tag": "CheatTable",
+   "sections": [
+    "CheatEntries"
+   ],
+   "sha256": "e3405ebcf7fa566a101ad424c5318348c89e5e020636d8f2533d125c89f7e2f6",
+   "size_bytes": 8184,
+   "status_counts": {
+    "locked": 15,
+    "statically_assumed": 1,
     "unknown": 2
    },
    "table_flags": {
@@ -1209,15 +1272,16 @@
   }
  ],
  "totals": {
-  "entries_total": 7347,
-  "expected_actions": 6057,
+  "entries_total": 7370,
+  "expected_actions": 6080,
   "gap_counts": {
-   "aa_directive_unverified": 32,
-   "aa_globalalloc_general": 6,
+   "aa_createthread_threadwait": 1,
+   "aa_directive_unverified": 34,
+   "aa_globalalloc_general": 8,
    "aa_luacall": 6,
-   "address_form_unrecognized": 5,
+   "address_form_unrecognized": 6,
    "async_lifecycle": 24,
-   "cross_record_symbol": 3377,
+   "cross_record_symbol": 3384,
    "custom_type": 4,
    "dropdown_link": 15,
    "lua_ce_engine_api": 36,
@@ -1226,9 +1290,9 @@
    "lua_gui_api": 1,
    "lua_host_profile": 1910,
    "lua_managed_runtime": 2,
-   "lua_symbol_api": 199,
+   "lua_symbol_api": 212,
    "lua_typed_target_call": 1,
-   "lua_worker_thread": 10,
+   "lua_worker_thread": 11,
    "managed_method_resolution": 8,
    "one_shot_save_contract": 1723,
    "parent_activation": 1,
@@ -1241,20 +1305,20 @@
   "groups": 1287,
   "navigation": 2,
   "parse_errors": 0,
-  "parseable_tables": 19,
+  "parseable_tables": 20,
   "record_types": {
-   "aa_script": 2154,
+   "aa_script": 2169,
    "custom": 4,
    "string": 732,
-   "value": 3169
+   "value": 3177
   },
-  "records": 6059,
+  "records": 6082,
   "status_counts": {
-   "locked": 5487,
+   "locked": 5507,
    "statically_assumed": 533,
-   "unknown": 39
+   "unknown": 42
   },
-  "unique_tables": 19
+  "unique_tables": 20
  },
- "unique_table_count": 19
+ "unique_table_count": 20
 }

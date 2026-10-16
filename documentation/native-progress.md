@@ -6,8 +6,9 @@ the measurement snapshot are tracked in one place:
 confirmed-state detail (builds, suites, acceptance records); when in doubt
 about current status, check the tracker first.
 
-Status: **October 13, 2026** (0.11 released; reference-corpus closure
-cycle opened on working branch `native-0.12`, plan
+Status: **October 16, 2026** (0.11 released; reference-corpus closure
+cycle on working branch `native-0.12`: Wave 2 closed — W2-A + W2-C +
+W2-B merged, cases 15–18 pinned/extended, 20 pinned tables, plan
 `plans/reference-closure-continuation.md`). This is the binding result list:
 confirmed state, measured numbers, and the prioritized open work. The
 plan (work packages, protocol) lives in
@@ -20,10 +21,16 @@ code/build boundaries in
 
 - **Feature-matrix goal: 100% coverage of the in-scope 0.9 feature set
   (AP-11 excluded) — REACHED 2026-10-10 and closed, extended by WP-14 on
-  2026-10-11, extended by WP-27/32/33/34 (W2-A) on 2026-10-14.** 42/42
-  in-scope features covered (39 gap classes + 3 gates); 100%
-  feature-weighted; 7381/7381 action-weighted over the pinned 6057-action
-  corpus (19 tables, run `w2a-case17-20261014112532Z`). The 2026-10-14
+  2026-10-11, extended by WP-27/32/33/34 (W2-A) on 2026-10-14, extended
+  by WP-30/36 (W2-C) on 2026-10-15 and by WP-28/29/31/35 (W2-B) on
+  2026-10-16.** 42/42 in-scope features covered (39 gap classes + 3
+  gates); 100% feature-weighted; 7408/7408
+  action-weighted over the pinned 6080-action corpus (20
+  tables, run `w2b-case18-20261016142912Z`). The 2026-10-15 state (7387/7387 over
+  the 6062-action corpus, 19 tables, run
+  `w2c-case15p2b-20261015144326Z`), the 2026-10-14 state (7381/7381 over
+  the 6057-action corpus, 19 tables, run
+  `w2a-case17-20261014112532Z`), the 2026-10-14
   state (7376/7376 over the 6047-action corpus, 18 tables, run
   `w1a-case15-20261014011543Z`), the 2026-10-14 state (7371/7371 over
   the 6031-action corpus, 17 tables, run
@@ -36,7 +43,7 @@ code/build boundaries in
   `wp14-staged-20261011T093320Z`) and the 2026-10-10 39/39 over the 5967
   action corpus are superseded; the earlier 90% hurdle is subsumed.
 - **Gates 1–3 are closed with real, tested evidence:**
-  1. `gate:1` per-table completeness for all 19 pinned tables (Forms, Lua
+  1. `gate:1` per-table completeness for all 20 pinned tables (Forms, Lua
      lifecycle, Custom Types, Assets) —
      `tests/test_native_table_completeness.py`.
   2. `gate:2` Source-to-Frozen parity of the 0.9 feature set —
@@ -50,7 +57,7 @@ code/build boundaries in
      exact commands and pinned inputs —
      `tests/test_native_repro_chain.py` (denominator → feature matrix →
      AP-11 manifest, byte-identical per fixed run-id).
-- **AP-11 (observed real-game effect for all 6057 pinned actions)
+- **AP-11 (observed real-game effect for all 6080 pinned actions)
   remains a separate end goal** — 0 confirmed so far — and is excluded
   from the 100% feature metric.
 - **Final product acceptance** is separate on Windows (clean PC/VM, no
@@ -63,12 +70,12 @@ code/build boundaries in
 | --- | --- |
 | Repository baseline | `main` @ `b6c48cc` "initial 0.9 version" (self-contained clean-room tree) |
 | Version | `0.11` (root `VERSION` file; 0.9.0-rc2 was the last user-tested release) |
-| Test suite | **2840 OK / 25 expected skips, 0 failures** (full local dev suite on `native-0.12` after the W2-A merge and the case-20 + case-16 + case-17 + case-15 pins, verified 2026-10-14 at the canonical path; previously 2805 after the W1-A + W1-E merges and the case-20 + case-16 + case-15 pins; previously 2769 after the W1-D + W1-C + W1-B integration; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2710/25 passed (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
-| Feature matrix | **42/42 covered** (100% feature-weighted, 7381/7381 action-weighted; run `w2a-case17-20261014112532Z`; previously 7376/7376, run `w1a-case15-20261014011543Z`) — `gap_inventory/feature-coverage.json` |
-| AP-11 manifest | 19 tables, 6057 expected actions, 0 confirmed, all consistency gates `all_ok` (run `w2a-case17-20261014112532Z`; previously 18 tables / 6047 actions) — `gap_inventory/ap11-campaign.json` |
+| Test suite | **2910 OK / 25 expected skips, 0 failures** (full local dev suite on `native-0.12` after the W2-C + W2-B merges and the case-15 part 2 + case-18 pins, verified 2026-10-16 at the canonical path; previously 2840 after the W2-A merge and the case-20 + case-16 + case-17 + case-15 pins, verified 2026-10-14; previously 2805 after the W1-A + W1-E merges and the case-20 + case-16 + case-15 pins; previously 2769 after the W1-D + W1-C + W1-B integration; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2710/25 passed (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
+| Feature matrix | **42/42 covered** (100% feature-weighted, 7408/7408 action-weighted; run `w2b-case18-20261016142912Z`; previously 7387/7387, run `w2c-case15p2b-20261015144326Z`) — `gap_inventory/feature-coverage.json` |
+| AP-11 manifest | 20 tables, 6080 expected actions, 0 confirmed, all consistency gates `all_ok` (run `w2b-case18-20261016142912Z`; previously 19 tables / 6062 actions) — `gap_inventory/ap11-campaign.json` |
 | Latest verified build | `native-20261011T182033Z-f3317337` (0.11) via `scripts/Build-Native.ps1` from `main` @ `2a16026` (2026-10-11): both ZIPs (`CT2Trainer-0.11-source.zip`, `CT2Trainer-0.11-windows-portable.zip`), in-build suite 2698 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately set, source inputs unchanged. Previous: `native-20261011T121914Z-bfc5fc11` (0.10, in-build suite 2671/25); `native-20261010T172336Z-ffe35eb0` (rc2, in-build suite 2617/25, `api-prototypes.json` present in both EXE payload inventories, user-tested portable) |
 | User-tested portable | run `native-20261010T165731Z-3d1da645`: converter run + generated trainer verified by the user on a machine without CE/Python |
-| Reference-corpus assessment (2026-10-13) | 151 local-only reference tables: baseline 117,019 plan entries, 95,167 supported (incl. 46,987 staged), **21,852 blocked**, 4 whole-table compile errors (run `ref-assessment`); after W1-D (WP-25) + W1-C (WP-22/23): **21,851 of 117,255 blocked**, 3 whole-table compile errors — Octopath compiles (227 supported / 9 blocked, 24 duplicate-ID warnings), 20XX fully supported (10/10), SuperMeatBoy refused with a named legacy-binary error (catalog re-run 2026-10-13); after W1-B + W1-A + W1-E: **10,892 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy legacy binary only; AtomicHeart `$process` closed by WP-19, Cyberpunk `@@` by WP-20) (catalog re-run 2026-10-14); after W2-A (WP-27/32/33/34): **9,962 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy only; catalog re-run 2026-10-14, `blocked-catalog-w2a.json`; −930 blocked, 0 supported regressions, +197 previously masked records now surface the named missing-target reason); consolidated assessment `documentation/reference-gap-assessment.md`, closure plan `plans/reference-closure-continuation.md` (WP-19…WP-42) |
+| Reference-corpus assessment (2026-10-13) | 151 local-only reference tables: baseline 117,019 plan entries, 95,167 supported (incl. 46,987 staged), **21,852 blocked**, 4 whole-table compile errors (run `ref-assessment`); after W1-D (WP-25) + W1-C (WP-22/23): **21,851 of 117,255 blocked**, 3 whole-table compile errors — Octopath compiles (227 supported / 9 blocked, 24 duplicate-ID warnings), 20XX fully supported (10/10), SuperMeatBoy refused with a named legacy-binary error (catalog re-run 2026-10-13); after W1-B + W1-A + W1-E: **10,892 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy legacy binary only; AtomicHeart `$process` closed by WP-19, Cyberpunk `@@` by WP-20) (catalog re-run 2026-10-14); after W2-A (WP-27/32/33/34): **9,962 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy only; catalog re-run 2026-10-14, `blocked-catalog-w2a.json`; −930 blocked, 0 supported regressions, +197 previously masked records now surface the named missing-target reason); after W2-B + W2-C (WP-28/29/31/35 + WP-30/36): **7,577 of 117,624 blocked** (−2,385, 0 supported regressions; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-16, `blocked-catalog-w2final.json`); consolidated assessment `documentation/reference-gap-assessment.md`, closure plan `plans/reference-closure-continuation.md` (WP-19…WP-42) |
 
 ### Portable frozen-build fix (2026-10-10)
 
@@ -103,19 +110,21 @@ copy <scratch3>/ap11-campaign.json gap_inventory/ap11-campaign.json
 
 The committed artifacts are the reference; gate:3
 (`tests/test_native_repro_chain.py`) re-runs the full chain and compares.
-Corpus: 14 synthetic case tables (`TableReferences/case-01.ct` …
-`case-14.ct`, see `TableReferences/README.md` for the case-to-origin
-mapping; case-19 added 2026-10-13), 149 distinct SHA-256 hashes
-collapsed to 15 pinned cases, 6019 expected actions (run
-`w1d-case19-20261013192913Z`).
+Corpus: 20 synthetic case tables (`TableReferences/case-01.ct` …
+`case-14.ct`, `case-15.ct`, `case-16.ct`, `case-17.ct`, `case-18.ct`,
+`case-19.ct`, `case-20.ct`; case-to-origin mapping in
+`TableReferences/README.md`), 143 distinct SHA-256 hashes collapsed to
+20 pinned cases, 6080 expected actions (run
+`w2b-case18-20261016142912Z`).
 
 ## 4. Prioritized open work
 
 1. **Reference-corpus closure campaign (active since 2026-10-13, cycle
    branch `native-0.12`).** The 151-table local-only reference corpus
-   leaves **21,851 of 117,255 entries blocked** (95,404 supported incl.
-   47,166 staged; 3 whole-table compile errors; after W1-D + W1-C,
-   2026-10-13; baseline 21,852 of 117,019 with 4) — consolidated
+   leaves **7,577 of 117,624 entries blocked**
+   (110,047 supported incl. 54,234 staged;
+   1 whole-table compile error; after W2-B + W2-C,
+   2026-10-16; baseline 21,852 of 117,019 with 4) — consolidated
    assessment: `documentation/reference-gap-assessment.md`; work
    packages WP-19…WP-42 (waves, dependencies, derivative corpus cases
    case-15…case-25, catalog-re-run acceptance protocol):

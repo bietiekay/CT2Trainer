@@ -69,7 +69,7 @@ class NativeCompilerTests(unittest.TestCase):
         if not corpus.exists():
             self.skipTest("The synthetic clean-room corpus is intentionally excluded from the Native source distribution.")
         paths = sorted(corpus.glob("*.ct"))
-        self.assertEqual(len(paths), 19, "The repository compatibility corpus must retain all 19 case tables.")
+        self.assertEqual(len(paths), 20, "The repository compatibility corpus must retain all 20 case tables.")
         for path in paths:
             with self.subTest(path=path.name):
                 plan = compile_table(path, "Target.exe")
@@ -100,9 +100,11 @@ class NativeCompilerTests(unittest.TestCase):
         self.assertTrue(all("cycle" in entry["reason"] for entry in plan["entries"]))
 
     def test_unsupported_script_never_returns_partial_operations(self):
-        plan = self.compile(script_record(1, "[ENABLE]\ndefine(Anchor,Target.exe)\nalloc(memory,100)\n[DISABLE]\ndealloc(memory)"))
+        # WP-29: an allocation-only ENABLE is now a supported init profile, so
+        # the genuinely empty ENABLE is the canonical unsupported-script case.
+        plan = self.compile(script_record(1, "[ENABLE]\n[DISABLE]\n"))
         self.assertEqual(plan["entries"][0]["kind"], "blocked")
-        self.assertIn("alloc", plan["entries"][0]["reason"])
+        self.assertIn("no executable patch or data", plan["entries"][0]["reason"])
         self.assertNotIn("enable", plan["entries"][0])
 
     def test_table_lua_is_not_executed_or_used_as_symbol_provider(self):
@@ -806,7 +808,14 @@ class NativeAATests(unittest.TestCase):
         self.assertEqual(expression_symbols("Anchor+10"), ["Anchor"])
         self.assertEqual(expression_symbols("Game.exe+10"), [])
         self.assertEqual(expression_symbols("1234"), [])
-        for expression in ("[Anchor]+4", "lua('x')", "Target.exe*2", "C:\\Target.exe+4", "Anchor+10000000000000000"):
+        # WP-30: the bounded profile now admits typed casts (no-ops) and up
+        # to two pointer dereferences; the canonical form of a cast-only
+        # address drops the cast.
+        self.assertEqual(validate_expression("[Anchor]+4"), "[Anchor]+4")
+        self.assertEqual(validate_expression("[[Anchor]]+4"), "[[Anchor]]+4")
+        self.assertEqual(validate_expression("(dword)Anchor+10"), "Anchor+10")
+        self.assertEqual(expression_symbols("[Anchor]+4"), ["Anchor"])
+        for expression in ("lua('x')", "Target.exe*2", "C:\\Target.exe+4", "Anchor+10000000000000000", "(int)Anchor*2", "[[[Anchor]]]"):
             with self.subTest(expression=expression), self.assertRaises(AAError):
                 validate_expression(expression)
 

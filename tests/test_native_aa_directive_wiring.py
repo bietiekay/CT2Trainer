@@ -191,9 +191,16 @@ class DirectiveParseTests(unittest.TestCase):
                 prepare_program(source, PROCESS, bitness=64)
 
     def test_parse_still_requires_executable_patch_or_data(self):
-        source = "[ENABLE]\nthreadWait()\n[DISABLE]\nFixtureTarget.exe+0x20:\ndd 0"
+        # WP-36: a thread-only ENABLE now hits the named staged-runtime
+        # gate (no thread backend in the shipped trainer profile) instead
+        # of the generic empty-enable message.
+        thread_only = "[ENABLE]\nthreadWait()\n[DISABLE]\nFixtureTarget.exe+0x20:\ndd 0"
+        with self.assertRaisesRegex(ProgramError, "gated in the native staged runtime"):
+            prepare_program(thread_only, PROCESS, bitness=64)
+        # A genuinely empty ENABLE section keeps the generic message.
+        empty = "[ENABLE]\n[DISABLE]\nFixtureTarget.exe+0x20:\ndd 0"
         with self.assertRaisesRegex(ProgramError, "no executable patch or data"):
-            prepare_program(source, PROCESS, bitness=64)
+            prepare_program(empty, PROCESS, bitness=64)
 
 
 class DirectivePreflightTests(unittest.TestCase):

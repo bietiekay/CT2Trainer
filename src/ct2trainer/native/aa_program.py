@@ -50,7 +50,8 @@ from .aa import AAError, validate_symbol, normalize_pattern
 from .aa_blocks import (BlockError, analyze_blocks, label_spans, parse_invocation,
                         parse_label, prune_conditionals, resolve_nested_assembly)
 from .aa_directives import MAX_DISASSEMBLE_COUNT, MAX_PROTECTION_SIZE, PAGE_NAMES
-from .address_expression import AddressExpressionError, expression_symbols, integer, parse_expression, resolve_expression
+from .address_expression import (CAST_TYPES, AddressExpressionError, expression_symbols,
+                                 integer, parse_expression, resolve_expression)
 from .assembler import AssemblyError, NasmAssembler
 
 
@@ -60,12 +61,16 @@ MAX_PROCESS_SCANS = 16
 MAX_BLOCK_BYTES = 1024 * 1024
 MAX_TOTAL_BYTES = 4 * 1024 * 1024
 _SYMBOL_TOKEN = re.compile(r"@?[A-Za-z_][A-Za-z0-9_]*\Z")
+# Named @ label, single or double @ (WP-30d): ``@foo``, ``@@Ashot``.
+# Program-local only (no table-wide lookup); unknown labels keep the
+# fail-closed refusal.
+_AT_LABEL = re.compile(r"@@?[A-Za-z_][A-Za-z0-9_]*\Z")
 _REGISTERS = {"rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp", "eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "ax", "bx", "cx", "dx", "si", "di", "bp", "sp", "al", "bl", "cl", "dl", "ah", "bh", "ch", "dh", "sil", "dil", "bpl", "spl", "rip", "eip", "fs", "gs", "cs", "ds", "es", "ss"}
 _REGISTERS |= {f"r{index}{suffix}" for index in range(8, 16) for suffix in ("", "d", "w", "b")}
 _REGISTERS |= {f"{kind}{index}" for kind in ("xmm", "ymm", "zmm", "mm", "k", "st", "cr", "dr") for index in range(32)}
 _KEYWORDS = {"byte", "word", "dword", "qword", "tword", "oword", "xmmword", "yword", "ymmword", "zword", "zmmword", "short", "near", "far", "strict", "rel", "abs", "to"}
-_FORBIDDEN = {"bits", "org", "section", "segment", "global", "extern", "common", "equ", "times", "incbin", "include", "resb", "resw", "resd", "resq", "istruc", "struc", "endstruc", "iend", "absolute", "default", "cpu", "warning", "map", "alignb"}
-_TOKEN_OPERAND = re.compile(r"'[^'\r\n\\]'|"+r'"[^"\r\n]+"|@[A-Za-z_][A-Za-z0-9_]*|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|[A-Za-z_$][A-Za-z0-9_.$]*|[0-9][0-9a-fA-F]*|\s+|[][+\-*/(),:]')
+_FORBIDDEN = {"bits", "org", "section", "segment", "global", "extern", "common", "equ", "times", "incbin", "include", "resw", "resd", "resq", "istruc", "struc", "endstruc", "iend", "absolute", "default", "cpu", "warning", "map", "alignb"}
+_TOKEN_OPERAND = re.compile(r"'[^'\r\n\\]'|"+r'"[^"\r\n]+"|@@?[A-Za-z_][A-Za-z0-9_]*|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|[A-Za-z_$][A-Za-z0-9_.$]*|[0-9][0-9a-fA-F]*|\s+|[][+\-*/(),:]')
 _FLOAT = re.compile(r"\((float|double)\)\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)", re.I)
 # Conditional-block directives pass through cleaning; every other {$...} token
 # stays a fail-closed refusal. Condition/define bodies are validated later by
@@ -164,7 +169,12 @@ def _scalar_expression(text: str) -> bool:
         return True
 
     def scalar(node):
-        return node["kind"] == "integer" or node["kind"] == "unary" and scalar(node["value"]) or node["kind"] == "binary" and scalar(node["left"]) and scalar(node["right"])
+        kind = node["kind"]
+        if kind == "integer":
+            return True
+        if kind in {"cast", "unary"}:
+            return scalar(node["value"])
+        return kind == "binary" and scalar(node["left"]) and scalar(node["right"])
 
     return scalar(parse_expression(text))
 
@@ -309,10 +319,32 @@ def _page_constant(text: str) -> int:
             f"protect page must be a PAGE_* name or integer constant, got: {text}") from exc
 
 
+def _numeric_token(token: str) -> int | None:
+    """One bare numeric literal (hex, $hex, 0x or #decimal), else None."""
+    if re.fullmatch(r"-?(?:0[xX]|\$)?[0-9A-Fa-f]+|-?#[0-9]+", token) is None:
+        return None
+    try:
+        return integer(token)
+    except AddressExpressionError:
+        return None
+
+
 def _parse_line(line: str) -> dict:
     if line.endswith(":"):
         expression = line[:-1].strip()
-        return {"op": "cursor", "expression": "@@" if expression == "@@" else _expression(expression)}
+        # The bare ``@:`` label line is the ``@@`` anonymous-label cursor
+        # alias (CE 7.5 local-label semantics: ``@:`` positions the
+        # anonymous label that ``@f``/``@b`` reference).  ``@Name`` and
+        # ``@@Name`` (Metro Exodus style, WP-30d) are program-local named
+        # labels; none of these is an address expression, so it is
+        # validated directly instead of going through _expression.
+        if expression in {"@@", "@"}:
+            return {"op": "cursor", "expression": "@@"}
+        if expression.startswith("@"):
+            if not _AT_LABEL.fullmatch(expression):
+                raise ProgramError("Named @ labels may only contain letters, digits and underscores.")
+            return {"op": "cursor", "expression": expression}
+        return {"op": "cursor", "expression": _expression(expression)}
     command = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*)\s*\((.*)\)", line)
     if command:
         name = command.group(1).casefold()
@@ -343,20 +375,53 @@ def _parse_line(line: str) -> dict:
             if not 1 <= size <= MAX_BLOCK_BYTES:
                 raise ProgramError("Allocation size must contain 1–1048576 bytes.")
             return {"op": "alloc", "symbol": validate_symbol(args[0]), "size": size, "near": _expression(args[2]) if len(args) == 3 else None}
+        if name == "globalalloc":
+            # WP-36: shared RW data allocation; staged under the same
+            # allocation profile as alloc, but the forced RW data
+            # capabilities are applied in prepare_program.  The optional
+            # near address is a bounded expression (3-arg shape, e.g.
+            # $process), parsed with the same grammar as alloc.
+            if len(args) not in {2, 3}:
+                raise ProgramError("globalalloc requires symbol, hexadecimal size and optional near address.")
+            size = integer(args[1])
+            if not 1 <= size <= MAX_BLOCK_BYTES:
+                raise ProgramError("Allocation size must contain 1–1048576 bytes.")
+            return {"op": "globalalloc", "symbol": validate_symbol(args[0]), "size": size, "near": _expression(args[2]) if len(args) == 3 else None}
         if name == "define":
             if len(args) != 2:
                 raise ProgramError("define requires two arguments.")
             if _float_bits(args[1]) is None:
                 _expression(args[1])
             return {"op": "define", "symbol": validate_symbol(args[0]), "expression": args[1]}
-        if name in {"label", "registersymbol", "unregistersymbol", "dealloc"}:
+        if name in {"label", "registersymbol", "unregistersymbol", "registerlabel"}:
             args = [symbol for argument in args for symbol in argument.split()]
-            if args == ["*"] and name not in {"unregistersymbol", "dealloc"}:
+            if args == ["*"] and name != "unregistersymbol":
                 raise ProgramError("Wildcard is only supported for scoped cleanup.")
             if args != ["*"]:
                 for symbol in args:
                     validate_symbol(symbol)
-            return {"op": {"registersymbol": "register", "unregistersymbol": "unregister"}.get(name, name), "symbols": args}
+            return {"op": {"registersymbol": "register", "registerlabel": "register", "unregistersymbol": "unregister"}.get(name, name), "symbols": args}
+        if name == "dealloc":
+            if len(args) not in {1, 2}:
+                raise ProgramError("dealloc requires one symbol and an optional byte size.")
+            if args[0] == "*":
+                if len(args) != 1:
+                    raise ProgramError("Wildcard dealloc takes no size.")
+                return {"op": "dealloc", "symbols": ["*"]}
+            validate_symbol(args[0])
+            if len(args) == 1:
+                return {"op": "dealloc", "symbols": [args[0]]}
+            size = _numeric_token(args[1])
+            if size is None or not 1 <= size <= MAX_BLOCK_BYTES:
+                raise ProgramError("dealloc size must contain 1–1048576 bytes.")
+            return {"op": "dealloc", "symbols": [args[0]], "size": size}
+        if name == "fullaccess":
+            if len(args) != 2:
+                raise ProgramError("fullaccess requires an address expression and a byte size.")
+            size = _numeric_token(args[1])
+            if size is None or not 1 <= size <= MAX_PROTECTION_SIZE:
+                raise ProgramError("fullaccess size must contain 1–0x1000000 bytes.")
+            return {"op": "fullaccess", "address": _expression(args[0]), "size": size}
         if name in {"readmem", "reassemble", "assert"}:
             if len(args) != (1 if name == "reassemble" else 2):
                 raise ProgramError(f"{name} has an invalid argument count.")
@@ -400,6 +465,15 @@ def _parse_line(line: str) -> dict:
                 raise ProgramError("getprocaddress requires a quoted module name and a quoted export name.")
             return {"op": "getprocaddress", "module": _quoted_name(args[0], "module name"), "export": _quoted_name(args[1], "export name")}
         raise ProgramError(f"Unsupported AA directive: {name}.")
+    reserve = re.fullmatch(r"(dq|resb)\s*", line, re.I)
+    if reserve:
+        return {"op": "reserve", "directive": reserve.group(1).casefold(), "bytes": 8 if reserve.group(1).casefold() == "dq" else 1}
+    resb_n = re.fullmatch(r"resb\s+(\S+)", line, re.I)
+    if resb_n:
+        count = _numeric_token(resb_n.group(1))
+        if count is None or not 1 <= count <= MAX_BLOCK_BYTES:
+            raise ProgramError("resb count must contain 1–1048576 bytes.")
+        return {"op": "reserve", "directive": "resb", "bytes": count}
     data = re.fullmatch(r"(db|dw|dd|dq)\s+(.+)", line, re.I)
     if data:
         directive = data.group(1).casefold()
@@ -432,7 +506,7 @@ def _node_refs(node: dict) -> list[str]:
     values = []
     for key in ("address", "expression", "near", "start", "end"):
         text = node.get(key)
-        if text and text != "@@" and _float_bits(text) is None:
+        if text and not text.startswith("@") and _float_bits(text) is None:
             values.extend(expression_symbols(text))
     if node["op"] == "data":
         for value in node["values"]:
@@ -469,6 +543,9 @@ def _literal_bytes(node, memory, program):
         kind = ast["kind"]
         if kind == "integer":
             return ast["value"]
+        if kind == "cast":
+            # Bounded type cast (WP-30): value-identical to the operand.
+            return scalar(ast["value"])
         if kind == "unary":
             value = scalar(ast["value"])
             return value if ast["operator"] == "+" else -value
@@ -522,10 +599,12 @@ def _allocation_capabilities(nodes: list[dict], allocations: list[str]) -> tuple
             else:
                 aliases.update(symbol.casefold() for symbol in expression_symbols(node["expression"]) if symbol.casefold() in allocated)
                 current = None
-        elif op in {"instruction", "nops", "data", "readmem", "reassemble", "align"} and current is not None:
-            if not _literal_data(node) and op != "align":
+        elif op in {"instruction", "nops", "data", "readmem", "reassemble", "align", "reserve"} and current is not None:
+            # A reservation is uninitialized zero padding: it never makes an
+            # allocation unsafe (code) but does make it writable data.
+            if op not in {"align", "reserve"} and not _literal_data(node):
                 unsafe.add(current)
-            if op in {"data", "readmem", "align", "reassemble"}:
+            if op in {"data", "readmem", "align", "reassemble", "reserve"}:
                 mutable.add(current)
         if op == "instruction":
             instruction_owners[index] = current
@@ -784,68 +863,132 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     if any(node["op"] != "define" for node in sections["preamble"]):
         raise ProgramError("Only define is permitted before ENABLE.")
     if not any(node["op"] in {"data", "instruction", "nops", "readmem", "reassemble"} for node in sections["enable"]):
-        raise ProgramError("Enable section has no executable patch or data.")
-    # A plain label ("endp:") inside a program-owned allocation defines a
-    # local jump/data target owned by this program; outside such a region a
-    # plain label keeps the classic semantics of positioning the cursor at
-    # an externally provided symbol.  Allocation context follows the data
-    # cursor: an alloc symbol or a label defined inside an allocation keeps
-    # it, any other cursor target leaves it.
+        if any(node["op"] in {"scan", "scan_process", "scan_region"} for node in sections["enable"]):
+            # WP-36: scan-only programs are staged under the existing scan
+            # budget; no executable patch or data is required.
+            pass
+        elif any(node["op"] in {"createthread", "threadwait"} for node in sections["enable"]):
+            raise ProgramError(
+                "createThread()/threadWait() are gated in the native staged "
+                "runtime: no thread backend is part of the shipped trainer profile.")
+        elif (not one_shot
+                and any(node["op"] in {"alloc", "reserve"} for node in sections["enable"])):
+            # WP-29: an allocation-only ENABLE (registersymbol + alloc, no code
+            # or data) is a valid named allocation-only init profile, but only
+            # as a re-enabled program with a DISABLE phase; a one-shot may
+            # never be allocation-only.
+            pass
+        else:
+            raise ProgramError("Enable section has no executable patch or data.")
+    # Per-program label scoping (WP-28, CE label semantics): a bare
+    # positional label ("endp:") is local to this program.  Its cursor
+    # tokens are collected in a pre-pass over all three phases and resolve
+    # against the program's own patch position; they are exposed via
+    # positional_labels so the table compiler can re-declare them as
+    # external requirements when a table-wide registered symbol of the same
+    # name exists (registered symbols win over local label definitions).
+    # A bare cursor that is not one of the program's own label definitions
+    # keeps the classic externally-provided semantics and stays in requires.
+    # Only cursors to symbols this program itself owns (scans, allocs,
+    # defines, declared labels) keep the classic symbol positioning.
+    # An operand-less dq/resb reservation is only admitted inside such an
+    # owned region.
     alloc_keys = {node["symbol"].casefold() for node in sections["preamble"] + sections["enable"]
-                  if node["op"] == "alloc"}
+                  if node["op"] in {"alloc", "globalalloc"}}
     declared_labels = {symbol.casefold() for node in sections["preamble"] + sections["enable"]
                        if node["op"] == "label" for symbol in node["symbols"]}
+    # WP-28 two-stage label resolution: casefolded bare positional cursor
+    # tokens the program itself defines, across all three phases.
+    own_label_defs = {node["expression"].casefold()
+                      for node in sections["preamble"] + sections["enable"] + sections["disable"]
+                      if node["op"] == "cursor" and node["expression"] != "@@"
+                      and _SYMBOL_TOKEN.fullmatch(node["expression"])}
     local_labels = set()
-    in_alloc = False
+    positional_labels = set()
     locals_ = {}
     provides = {}
     allocations = []
-    for node in sections["preamble"] + sections["enable"]:
-        if node["op"] in {"scan", "scan_region", "scan_process", "alloc", "define"}:
-            symbol = node["symbol"]
-            key = symbol.casefold()
-            if key in locals_ and node["op"] != "define":
-                raise ProgramError(f"Duplicate program symbol: {symbol}.")
-            locals_[key] = symbol
-            if node["op"] == "alloc":
-                allocations.append(symbol)
-                # An allocation moves the assembly position into the owned
-                # region, so subsequent plain labels are local definitions.
-                in_alloc = True
-        if node["op"] == "label":
-            for symbol in node["symbols"]:
+    # Per-phase allocation context mirroring the link walk: each phase
+    # starts outside any owned region, an alloc moves the position into the
+    # owned region, and any cursor target other than an alloc symbol or a
+    # label defined inside the allocation leaves it.
+    for phase in ("preamble", "enable", "disable"):
+        in_alloc = False
+        for node in sections[phase]:
+            if node["op"] in {"scan", "scan_region", "scan_process", "alloc", "globalalloc", "define"}:
+                symbol = node["symbol"]
                 key = symbol.casefold()
-                if key in locals_:
-                    raise ProgramError(f"Duplicate label or program symbol: {symbol}.")
+                if key in locals_ and node["op"] != "define":
+                    raise ProgramError(f"Duplicate program symbol: {symbol}.")
                 locals_[key] = symbol
-        if node["op"] == "register":
-            for symbol in node["symbols"]:
-                provides[symbol.casefold()] = symbol
-        if node["op"] == "cursor" and node["expression"].startswith("@") and node["expression"] != "@@":
-            symbol = node["expression"]
-            if not _SYMBOL_TOKEN.fullmatch(symbol):
-                raise ProgramError("Named @ labels may only contain letters, digits and underscores.")
-            locals_[symbol.casefold()] = symbol
-        elif node["op"] == "cursor" and node["expression"] != "@@":
-            expression = node["expression"]
-            key = expression.casefold()
-            if _SYMBOL_TOKEN.fullmatch(expression):
-                if key in declared_labels:
-                    # A declared label keeps the current region.
-                    pass
-                elif key in alloc_keys or key in local_labels:
+                if node["op"] in {"alloc", "globalalloc"}:
+                    allocations.append(symbol)
+                    # An allocation moves the assembly position into the owned
+                    # region, so subsequent plain labels are local definitions.
                     in_alloc = True
-                elif in_alloc and key not in locals_:
-                    # A plain label inside a program-owned allocation defines
-                    # a local jump/data target owned by this program.
-                    locals_[key] = expression
-                    local_labels.add(key)
-                else:
-                    # A plain label outside an owned allocation references an
-                    # externally provided symbol (classic semantics).
-                    in_alloc = False
-            else:
+            if node["op"] == "dealloc":
+                # Mirrors the link walk: releasing the allocation leaves the
+                # owned region, but the cursor position itself persists.
                 in_alloc = False
+            if node["op"] == "label":
+                for symbol in node["symbols"]:
+                    key = symbol.casefold()
+                    if key in locals_:
+                        raise ProgramError(f"Duplicate label or program symbol: {symbol}.")
+                    locals_[key] = symbol
+            if node["op"] == "register":
+                for symbol in node["symbols"]:
+                    provides[symbol.casefold()] = symbol
+            if node["op"] == "globalalloc":
+                # WP-36: globalalloc registers its symbol in the shared symbol
+                # space (CE 7.5: SetUserdefinedSymbolAllocSize), so other
+                # records may require it; the allocation itself stays a
+                # program-owned allocation request.
+                provides[node["symbol"].casefold()] = node["symbol"]
+            if node["op"] == "cursor":
+                expression = node["expression"]
+                if expression == "@@":
+                    pass
+                elif expression.startswith("@"):
+                    symbol = expression
+                    if not _AT_LABEL.fullmatch(symbol):
+                        raise ProgramError("Named @ labels may only contain letters, digits and underscores.")
+                    locals_[symbol.casefold()] = symbol
+                else:
+                    key = expression.casefold()
+                    if _SYMBOL_TOKEN.fullmatch(expression):
+                        if key in declared_labels:
+                            # A declared label keeps the current region.
+                            pass
+                        elif key in alloc_keys or key in local_labels:
+                            in_alloc = True
+                        elif key in locals_:
+                            # A cursor to an owned program symbol positions the
+                            # classic symbol address and leaves any allocation
+                            # region.
+                            in_alloc = False
+                        elif key in own_label_defs:
+                            # A bare positional label is per-program local
+                            # (WP-28): it stays put in the current region and
+                            # is not an external symbol requirement at the
+                            # prepare level.  The table compiler re-declares
+                            # it as an external requirement when another
+                            # supported record provides the same symbol,
+                            # because table-wide registered symbols win over
+                            # local label definitions.
+                            locals_[key] = expression
+                            local_labels.add(key)
+                            positional_labels.add(key)
+                        else:
+                            # A bare label that is not one of this program's
+                            # own label definitions keeps the classic
+                            # externally-provided semantics, leaves any
+                            # allocation region and stays in requires.
+                            in_alloc = False
+                    else:
+                        in_alloc = False
+            if node["op"] == "reserve" and not in_alloc:
+                raise ProgramError("Uninitialized reservation (dq/resb) requires a program-owned allocation.")
     # Anonymous-label validation with trailing-@f fallback: an explicit @@
     # cursor always wins for forward references; a forward reference without
     # a following @@ in the same phase falls back to the next positioned
@@ -855,7 +998,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     # without any resolvable target the fail-closed refusal is kept.
     program_symbol_keys = {node["symbol"].casefold()
                            for node in sections["preamble"] + sections["enable"]
-                           if node["op"] in {"scan", "scan_region", "scan_process", "alloc", "define"}}
+                           if node["op"] in {"scan", "scan_region", "scan_process", "alloc", "globalalloc", "define"}}
     for phase in ("enable", "disable"):
         phase_nodes = sections[phase]
         anonymous_positions = [index for index, node in enumerate(phase_nodes)
@@ -866,7 +1009,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         named_positions = []
         in_alloc = False
         for index, node in enumerate(phase_nodes):
-            if node["op"] == "alloc":
+            if node["op"] in {"alloc", "globalalloc"}:
                 in_alloc = True
                 continue
             elif node["op"] == "dealloc":
@@ -878,7 +1021,12 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
             key = expression.casefold()
             if key in declared_for_phase or expression.startswith("@"):
                 named_positions.append(index)
-            elif in_alloc and _SYMBOL_TOKEN.fullmatch(expression) and key not in program_symbol_keys:
+            elif _SYMBOL_TOKEN.fullmatch(expression) and key not in program_symbol_keys:
+                # WP-28: every bare positional cursor token is one of this
+                # program's own label definitions (own_label_defs pre-pass),
+                # hence a local named position for the @f/@b fallback.
+                # Table-level provider re-declaration happens in the
+                # compiler, not here.
                 named_positions.append(index)
             else:
                 in_alloc = key in alloc_keys
@@ -893,7 +1041,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
             # Registering a dependency does not confer ownership over it.
             raise ProgramError(f"Cannot register a symbol not owned by this program: {symbol}.")
     for node in sections["disable"]:
-        if node["op"] in {"alloc", "register", "scan", "scan_region", "scan_process"}:
+        if node["op"] in {"alloc", "globalalloc", "register", "scan", "scan_region", "scan_process"}:
             raise ProgramError("Disable may not allocate, scan or register new symbols.")
         if node["op"] in {"unregister", "dealloc"}:
             owned = provides if node["op"] == "unregister" else {name.casefold(): name for name in allocations}
@@ -908,7 +1056,9 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         for node in sections[phase]:
             for key in ("address", "expression", "near", "start", "end"):
                 text = node.get(key)
-                if text and text != "@@" and _float_bits(text) is None:
+                # @-label cursors (``@@``, ``@Name``, ``@@Name``) are
+                # program-local names, never address expressions.
+                if text and not text.startswith("@") and _float_bits(text) is None:
                     for label in _managed_labels_in(text):
                         managed.setdefault(label.casefold(), label)
     required = {}
@@ -923,11 +1073,31 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     for nodes in sections.values():
         for node in nodes:
             op = node["op"]
-            estimated_bytes += node["count"] if op == "nops" else node["size"] if op == "readmem" else node["alignment"] - 1 if op == "align" else 15 if op == "instruction" else 64 if op == "reassemble" else sum(len(value[1:-1]) if value.startswith('"') else {"db": 1, "dw": 2, "dd": 4, "dq": 8}[node["directive"]] for value in node["values"]) if op == "data" else 0
+            estimated_bytes += node["count"] if op == "nops" else node["size"] if op == "readmem" else node["alignment"] - 1 if op == "align" else node["bytes"] if op == "reserve" else 15 if op == "instruction" else 64 if op == "reassemble" else sum(len(value[1:-1]) if value.startswith('"') else {"db": 1, "dw": 2, "dd": 4, "dq": 8}[node["directive"]] for value in node["values"]) if op == "data" else 0
     if estimated_bytes > MAX_TOTAL_BYTES:
         raise ProgramError("Program exceeds its total generated-byte bound.")
     allocation_executable, allocation_writable = _allocation_capabilities(sections["enable"], allocations)
+    # WP-36: globalalloc is shared RW data storage owned by the global pool;
+    # it never carries code, so force the data-dialect capabilities
+    # (executable=False, writable=True) regardless of what the capability
+    # analysis proved for the symbol's spelling.
+    for node in sections["preamble"] + sections["enable"]:
+        if node["op"] == "globalalloc":
+            allocation_executable[node["symbol"]] = False
+            allocation_writable[node["symbol"]] = True
     program = {"schema": SCHEMA, "bitness": bitness, "process_name": process_name, "source": source, "source_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(), "defines": defines, "conditional_decisions": [{"line": decision.line, "condition": decision.condition, "chosen": decision.chosen} for decision in pruned.decisions], **sections, "one_shot": one_shot, "requires": sorted(required.values(), key=str.casefold), "provides": sorted(provides.values(), key=str.casefold), "managed_method_labels": sorted(managed.values(), key=str.casefold), "allocations": allocations, "allocation_executable": allocation_executable, "allocation_writable": allocation_writable, "capabilities": capabilities, "requires_coordinator": True}
+    # WP-29: a named allocation-only init profile (ENABLE carries allocs and
+    # registered symbols but no code/data).  The record stays a supported
+    # provider for its registered symbols; consumers resolve as usual.
+    if (not any(node["op"] in {"data", "instruction", "nops", "readmem", "reassemble"}
+                for node in sections["enable"])
+            and any(node["op"] == "alloc" for node in sections["enable"])):
+        program["allocation_only"] = True
+    # WP-28: bare positional label definitions (casefolded) the table
+    # compiler may re-declare as external requirements when another record
+    # provides the same symbol; emitted only when non-empty.
+    if positional_labels:
+        program["positional_labels"] = sorted(positional_labels, key=str.casefold)
     if nested_invocations:
         program["nested_invocations"] = nested_invocations
         program["nested_label_order"] = nested_label_order
@@ -947,7 +1117,37 @@ def validate_program(program: dict) -> None:
     except (TypeError, ValueError) as exc:
         raise ProgramError("AA program must contain valid JSON primitives.") from exc
     if expected != actual:
-        raise ProgramError("AA program metadata/operations do not match their validated source.")
+        # WP-28: the table compiler re-declares program-local positional
+        # labels as external requirements when another supported record
+        # provides the same symbol.  That requires superset is the only
+        # tolerated metadata difference; everything else must stay
+        # byte-exact (positional_labels itself is re-derived, so unforgable).
+        if not _requires_redeclaration_only(program, regenerated):
+            raise ProgramError("AA program metadata/operations do not match their validated source.")
+        if json.dumps({key: value for key, value in program.items() if key != "requires"},
+                      sort_keys=True, separators=(",", ":"), allow_nan=False) != \
+           json.dumps({key: value for key, value in regenerated.items() if key != "requires"},
+                      sort_keys=True, separators=(",", ":"), allow_nan=False):
+            raise ProgramError("AA program metadata/operations do not match their validated source.")
+
+
+def _requires_redeclaration_only(program: dict, regenerated: dict) -> bool:
+    """True if the only diff between program and regenerated requires is the
+    WP-28 table-level re-declaration: every regenerated requirement is still
+    present, and every extra requirement is one of the program's own
+    positional labels."""
+    actual = program.get("requires", [])
+    expected = regenerated.get("requires", [])
+    remaining = {symbol.casefold(): 0 for symbol in actual}
+    for symbol in actual:
+        remaining[symbol.casefold()] += 1
+    for symbol in expected:
+        key = symbol.casefold()
+        if remaining.get(key, 0) == 0:
+            return False
+        remaining[key] -= 1
+    positional = {label.casefold() for label in program.get("positional_labels", [])}
+    return all(symbol.casefold() in positional for symbol in actual if remaining[symbol.casefold()] > 0)
 
 
 def _symbol_map(symbols):
@@ -1013,9 +1213,16 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
                 resolved[node["symbol"].casefold()] = _resolve(node["expression"], memory, resolved, program)
             except AddressExpressionError:
                 deferred.append(node)
-        elif op == "alloc":
+        elif op in {"alloc", "globalalloc"}:
             near = _resolve(node["near"], memory, resolved, program) if node["near"] else None
-            requests.append({"name": node["symbol"], "size": node["size"], "near": near, "executable": program["allocation_executable"][node["symbol"]], "writable": program["allocation_writable"][node["symbol"]]})
+            if op == "globalalloc":
+                # WP-36: shared RW data storage — forced data-dialect
+                # capabilities, independent of the plan's capability maps.
+                executable, writable = False, True
+            else:
+                executable = program["allocation_executable"][node["symbol"]]
+                writable = program["allocation_writable"][node["symbol"]]
+            requests.append({"name": node["symbol"], "size": node["size"], "near": near, "executable": executable, "writable": writable})
         elif op == "assert":
             address = _resolve(node["address"], memory, resolved, program)
             patterns = node["pattern"].split()
@@ -1077,8 +1284,17 @@ def _translate_operands(text: str, names: dict, memory, symbols, program, backwa
     if typed and "[" in text and not re.search(r"\b(?:byte|word|dword|qword)\s+(?:ptr\s+)?\[", text, re.I):
         text = text.replace("[", ("dword " if typed.group(1).casefold() == "float" else "qword ") + "[", 1)
     output = []
-    for token in _operand_tokens(text):
+    tokens = list(_operand_tokens(text))
+    cursor = 0
+    while cursor < len(tokens):
+        token = tokens[cursor]
         key = token.casefold()
+        if (token == "(" and cursor + 2 < len(tokens)
+                and tokens[cursor + 1].casefold() in CAST_TYPES
+                and tokens[cursor + 2] == ")"):
+            # Bounded type cast (WP-30): value no-op for symbol translation.
+            cursor += 3
+            continue
         if key in {"@f", "@b"}:
             label = forward if key == "@f" else backward
             if label is None:
@@ -1096,10 +1312,11 @@ def _translate_operands(text: str, names: dict, memory, symbols, program, backwa
             output.append("0x" + format(_resolve(token, memory, symbols, program), "X"))
         elif re.fullmatch(r"(?:0[xX]|\$)?[0-9a-fA-F]+|#[0-9]+", token):
             output.append("0x" + format(integer(token), "X"))
-        elif _SYMBOL_TOKEN.fullmatch(token):
+        elif _SYMBOL_TOKEN.fullmatch(token) or _AT_LABEL.fullmatch(token):
             raise ProgramError(f"Unresolved instruction symbol: {token}.")
         else:
             output.append(token)
+        cursor += 1
     return "".join(output)
 
 
@@ -1205,7 +1422,7 @@ def _located_value(text, index, anonymous, locations, memory, symbols, program, 
             if label is None:
                 raise ProgramError("Anonymous forward label has no target.")
             output.append("0x" + format(locations[label], "X"))
-        elif token.casefold() in symbols and _SYMBOL_TOKEN.fullmatch(token):
+        elif token.casefold() in symbols and (_SYMBOL_TOKEN.fullmatch(token) or _AT_LABEL.fullmatch(token)):
             # Compare the exact bound symbol value used by the assembler.
             output.append("0x" + format(symbols[token.casefold()], "X"))
         elif token.startswith('"') or token == "$process" or "." in token:
@@ -1219,6 +1436,8 @@ def _located_value(text, index, anonymous, locations, memory, symbols, program, 
     def scalar(node):
         if node["kind"] == "integer":
             value = node["value"]
+        elif node["kind"] == "cast":
+            value = scalar(node["value"])
         elif node["kind"] == "unary":
             value = scalar(node["value"])
             value = value if node["operator"] == "+" else -value
@@ -1604,17 +1823,20 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                     raise ProgramError("Local label is duplicated or has no address cursor.")
                 located.add(key)
                 current["nodes"].append((index, {"op": "location", "name": names[key]}))
-            elif in_alloc and _SYMBOL_TOKEN.fullmatch(expression) and key not in resolved:
-                # A plain label inside a program-owned allocation defines a
-                # local position within that allocation, exactly like a
-                # declared label.  The allocation itself moves the assembly
-                # position into the region, so the first plain label may open
-                # the section without an explicit cursor.  Outside such a
-                # region a plain label keeps the classic semantics of an
-                # externally provided symbol.
+            elif _SYMBOL_TOKEN.fullmatch(expression) and key not in resolved:
+                # A bare positional label is per-program local (WP-28): it
+                # binds to this program's own patch position, never to an
+                # externally provided symbol.  Inside a program-owned
+                # allocation the first plain label may open the section
+                # without an explicit cursor; elsewhere the cursor must
+                # already be positioned.
                 if key in located:
                     raise ProgramError("Local label is duplicated or has no address cursor.")
-                if current is None or current["root_symbol"] != current_alloc_key:
+                if (current is None
+                        or (current_alloc_key is not None
+                            and current["root_symbol"] != current_alloc_key)):
+                    if current_alloc_key is None:
+                        raise ProgramError("Positional label appears before any address cursor.")
                     address = _resolve(current_alloc_key, memory, resolved, program)
                     current = {"address": address, "nodes": [],
                                "root_symbol": current_alloc_key}
@@ -1634,13 +1856,13 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                 sections.append(current)
                 if len(sections) > 1024:
                     raise ProgramError("Program contains too many patch sections.")
-        elif op == "alloc":
+        elif op in {"alloc", "globalalloc"}:
             in_alloc = True
             current_alloc_key = node["symbol"].casefold()
         elif op == "dealloc":
             in_alloc = False
             current_alloc_key = None
-        elif op in {"instruction", "nops", "data", "readmem", "reassemble", "align"}:
+        elif op in {"instruction", "nops", "data", "readmem", "reassemble", "align", "reserve"}:
             if current is None:
                 raise ProgramError("Machine code/data appears before any address cursor.")
             current["nodes"].append((index, node))
@@ -1653,7 +1875,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                     if label_node["op"] == "location"
                     and not label_node["name"].startswith("tf_anon_")]
     if not sections:
-        if phase == "enable":
+        if phase == "enable" and not program.get("allocation_only"):
             raise ProgramError("Program has no patch sections.")
         return {"blocks": [], "literal_data_ranges": [], "symbols": dict(resolved), "exports": {}, "requires": program["requires"], "guards": preflight["guards"], "allocation_requests": [], "deallocations": [symbol for node in nodes if node["op"] == "dealloc" for symbol in node["symbols"]], "unregister": [symbol for node in nodes if node["op"] == "unregister" for symbol in node["symbols"]], "nasm_source": "", "requires_coordinator": False}
     if phase == "enable" and set(declared) - located:
@@ -1755,6 +1977,8 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                 elif op == "align":
                     # NASM align is section-relative; AA aligns the live address.
                     lines.append(f"times ((-{section['address']} - ($ - tf_start_{ordinal})) & {node['alignment'] - 1}) db 0x{node['fill']:X}")
+                elif op == "reserve":
+                    lines.append(f"times {node['bytes']} db 0x0")
                 elif op == "readmem":
                     address = _resolve(node["address"], memory, resolved, program)
                     data = memory.read(address, node["size"])

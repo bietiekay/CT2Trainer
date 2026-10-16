@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import re
 
+from .address_expression import CAST_TYPES, AddressExpressionError, parse_expression
 from .patterns import normalize_pattern as _normalize_byte_pattern
 
 
@@ -21,6 +22,7 @@ _SYMBOL = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
 _HEX = re.compile(r"(?:0x|\$)?[0-9a-fA-F]+\Z", re.IGNORECASE)
 _BASE = r'(?:"[A-Za-z0-9_ .()\-]+"|[A-Za-z_][A-Za-z0-9_.]*|(?:0x|\$)?[0-9A-Fa-f]+)'
 _EXPRESSION = re.compile(r"(?P<base>" + _BASE + r")(?P<tail>(?:\s*[+-]\s*(?:0x|\$)?[0-9A-Fa-f]+)*)\Z", re.IGNORECASE)
+_BASE_RE = re.compile(r"(?:" + _BASE + r")\Z")
 
 
 class AAError(ValueError):
@@ -42,14 +44,68 @@ def _hex_integer(value: str) -> int:
     return int(value.removeprefix("$").removeprefix("0x").removeprefix("0X"), 16)
 
 
+def _strip_leading_casts(expression: str) -> str:
+    """Drop bounded type-cast prefixes such as ``(dword)`` (WP-30).
+
+    A cast is a value no-op, so ``(dword)Sym+10`` splits as the flat base
+    ``Sym`` with offset ``0x10``.  Only an exact cast-name token with no
+    interior whitespace is stripped; anything else stays for the bounded
+    parser to judge.
+    """
+    while expression.startswith("("):
+        closing = expression.find(")")
+        if closing < 2 or expression[1:closing].casefold() not in CAST_TYPES:
+            return expression
+        expression = expression[closing + 1:].lstrip()
+    return expression
+
+
+def _flat_expression_shape(node: dict) -> bool:
+    """Bounded expression shapes the strict static resolver can evaluate.
+
+    The flat data dialect resolves one base atom plus signed hex
+    displacements at runtime.  The bounded expression profile may add up
+    to two pointer dereferences and value-identical casts, but no unary
+    signs or multiplications/divisions the strict resolver cannot
+    evaluate.
+    """
+    kind = node["kind"]
+    if kind in {"integer", "symbol", "module", "managed"}:
+        return True
+    if kind in {"cast", "deref"}:
+        return _flat_expression_shape(node["value"])
+    if kind == "binary" and node["operator"] in {"+", "-"}:
+        return _flat_expression_shape(node["left"]) and _flat_expression_shape(node["right"])
+    return False
+
+
 def split_expression(expression: str) -> tuple[str, int]:
-    """Return one base atom and a signed hexadecimal displacement."""
+    """Return one base atom and a signed hexadecimal displacement.
+
+    Cast-only groups strip down to their flat base and tail.  Beyond the
+    flat dialect, bounded expressions with up to two pointer dereferences
+    are admitted verbatim with a zero displacement; callers route them to
+    the expression profile instead of the strict static resolver.
+    """
     if not isinstance(expression, str) or len(expression) > 256:
         raise AAError("Address expression exceeds 256 characters.")
     expression = expression.strip()
-    match = _EXPRESSION.fullmatch(expression)
+    stripped = _strip_leading_casts(expression)
+    match = _EXPRESSION.fullmatch(stripped)
     if match is None:
-        raise AAError(f"Unsupported address expression: {expression!r}.")
+        if stripped.count("[") > 2:
+            raise AAError(
+                "Address expression exceeds the bounded indirection depth "
+                f"(2 pointer dereferences): {expression!r}.")
+        if stripped != expression:
+            expression = stripped
+        try:
+            node = parse_expression(expression, max_deref=2)
+        except AddressExpressionError as exc:
+            raise AAError(str(exc)) from exc
+        if not _flat_expression_shape(node):
+            raise AAError(f"Unsupported address expression: {expression!r}.")
+        return expression, 0
     base = match.group("base")
     bare = base.strip('"')
     if base.startswith('"'):
@@ -82,11 +138,39 @@ def validate_expression(expression: str) -> str:
     return _with_offset(base, offset)
 
 
+def is_flat_expression(expression: str) -> bool:
+    """True when a canonical address keeps the static flat base/tail shape.
+
+    Flat canonicals stay on the strict static (base, offset) resolver;
+    anything the bounded parser admitted beyond the flat dialect
+    (indirection, bounded grouping) requires the expression profile.
+    """
+    if not isinstance(expression, str) or len(expression) > 256:
+        return False
+    return _EXPRESSION.fullmatch(expression.strip()) is not None
+
+
 def expression_symbols(expression: str) -> list[str]:
-    base, _ = split_expression(expression)
-    if base.startswith('"') or "." in base or _HEX.fullmatch(base):
-        return []
-    return [base]
+    match = _EXPRESSION.fullmatch(expression.strip()) if isinstance(expression, str) else None
+    if match is not None:
+        base = match.group("base")
+        if base.startswith('"') or "." in base or _HEX.fullmatch(base):
+            return []
+        return [base]
+    # Bounded expression form (cast, indirection, grouping): collect the
+    # symbol atoms from the bounded parser AST, case-insensitive, first
+    # spelling wins.
+    found = {}
+
+    def visit(node):
+        if node["kind"] == "symbol":
+            found.setdefault(node["name"].casefold(), node["name"])
+        for key in ("value", "left", "right"):
+            if isinstance(node.get(key), dict):
+                visit(node[key])
+
+    visit(parse_expression(expression))
+    return list(found.values())
 
 
 def normalize_pattern(pattern: str) -> str:
@@ -123,21 +207,37 @@ def _data_bytes(directive: str, text: str) -> str:
 
 
 def _without_comments(script: str) -> str:
-    # The accepted dialect has // and non-nested {...} comments. Compiler
-    # directives such as {$LUA} must be rejected before comment removal.
+    # The accepted dialect has //, non-nested {...} and non-nested /* */
+    # comments.  Compiler directives such as {$LUA} must be rejected before
+    # comment removal.
     if "{$" in script:
         raise AAError("Lua, C and compiler/preprocessor directives are unsupported.")
-    if "/*" in script or "*/" in script:
-        raise AAError("C-style comments are unsupported in the bounded AA dialect.")
     output: list[str] = []
     in_comment = False
+    in_block = False
     for line in script.splitlines():
         clean: list[str] = []
         index = 0
         while index < len(line):
-            ch = line[index]
+            if in_block:
+                if line[index:index + 2] == "*/":
+                    in_block = False
+                    clean.append(" ")
+                    index += 2
+                else:
+                    clean.append(" ")
+                    index += 1
+                continue
+            if not in_comment and line[index:index + 2] == "/*":
+                in_block = True
+                clean.append(" ")
+                index += 2
+                continue
+            if not in_comment and line[index:index + 2] == "*/":
+                raise AAError("Unmatched C block comment terminator.")
             if not in_comment and line[index:index + 2] == "//":
                 break
+            ch = line[index]
             if ch == "{":
                 if in_comment:
                     raise AAError("Nested AA comments are unsupported.")
@@ -153,6 +253,8 @@ def _without_comments(script: str) -> str:
         output.append("".join(clean))
     if in_comment:
         raise AAError("Unterminated AA comment.")
+    if in_block:
+        raise AAError("Unterminated C block comment.")
     return "\n".join(output)
 
 
@@ -173,6 +275,17 @@ def _section(lines: list[str], inherited: set[str]) -> tuple[list[dict], set[str
     current: str | None = None
 
     def need(expression: str) -> str:
+        expression = expression.strip()
+        base, _ = split_expression(expression)
+        if _BASE_RE.fullmatch(base) is None:
+            # The data dialect resolves one base atom plus signed hex
+            # displacements at runtime; indirection and any other bounded
+            # expression shape stay fail-closed with a named reason.
+            if "[" in expression:
+                raise AAError(
+                    "Indirect address expressions are not supported in the data dialect: "
+                    f"{expression!r}.")
+            raise AAError(f"Unsupported address expression: {expression!r}.")
         expression = validate_expression(expression)
         for symbol in expression_symbols(expression):
             spellings[symbol.casefold()] = symbol
@@ -212,15 +325,21 @@ def _section(lines: list[str], inherited: set[str]) -> tuple[list[dict], set[str
                 expression = need(expression)
                 introduce(symbol)
                 operations.append({"op": "define", "symbol": symbol, "expression": expression})
-            elif name in {"registersymbol", "unregistersymbol"}:
-                symbol = _arguments(args, 1)[0]
-                validate_symbol(symbol)
-                spellings[symbol.casefold()] = symbol
-                if symbol.casefold() not in defined:
-                    required.add(symbol.casefold())
-                if name == "registersymbol":
-                    registered.add(symbol.casefold())
-                operations.append({"op": "register" if name == "registersymbol" else "unregister", "symbol": symbol})
+            elif name in {"registersymbol", "registerlabel", "unregistersymbol"}:
+                tokens = [symbol for argument in args.split(",") for symbol in argument.split()]
+                if not tokens:
+                    raise AAError("Expected one or more nonempty directive arguments.")
+                if len(operations) + len(tokens) > MAX_OPERATIONS:
+                    raise AAError("Too many AA operations.")
+                op = "unregister" if name == "unregistersymbol" else "register"
+                for symbol in tokens:
+                    validate_symbol(symbol)
+                    spellings[symbol.casefold()] = symbol
+                    if symbol.casefold() not in defined:
+                        required.add(symbol.casefold())
+                    if op == "register":
+                        registered.add(symbol.casefold())
+                    operations.append({"op": op, "symbol": symbol})
             elif name == "assert":
                 address, data = _arguments(args, 2)
                 operations.append({"op": "assert", "address": need(address), "bytes": _exact_bytes(data)})
