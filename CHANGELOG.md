@@ -52,14 +52,16 @@ Single maintained changelog for CT2Trainer releases.
   attempts fail, the named error reports both attempts and the first
   Win32 code. Two new tests in `tests/test_native_architecture.py` pin
   the fallback and the double-failure error.
-- Release build 0.13: run `native-20261016T181516Z-b8ae88de` cut from
-  `main` @ `7184547` via `scripts/Build-Native.ps1` (2026-10-16);
-  in-build suite 2925 OK / 25 regular skips, `ce_inputs: []`,
+- Release build 0.13: run `native-20261016T190005Z-b3139b30` cut from
+  `main` @ `d57e62c` via `scripts/Build-Native.ps1` (2026-10-16);
+  in-build suite 2927 OK / 25 regular skips, `ce_inputs: []`,
   `runtime_unverified` deliberately kept per gate. Artifacts:
   `CT2Trainer-0.13-source.zip` (sha256
-  `7a12b05ed96e937bce61e1301b1fec5f0a5bf1c4ff809ec3ce00d7d6dd75ddd1`),
+  `23b57307819e4262d8ca894ac16c86d595df9945c1afec25750f66bb9e0c9124`),
   `CT2Trainer-0.13-windows-portable.zip` (sha256
-  `7b3146005b122bc352b8cc0d4bcfa8a4ab3a4024cc83162f7d5c3b2e913b1c55`);
+  `d7f64efbae975f477e5bb011796d64276f32ef4300d4a0986961e95ae63aca78`);
+  superseded 0.13 run `native-20261016T181516Z-b8ae88de` (pre
+  module-snapshot fallback, cut from `main` @ `7184547`).
   both ZIPs ship the elaborated release READMEs (the portable user
   guide now documents the debug-logging option) and this changelog.
   The build carries the released 0.12 content (Wave 2 corpus closure)
