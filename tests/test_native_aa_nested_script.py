@@ -224,7 +224,10 @@ class NestedProgramTests(unittest.TestCase):
 
     def test_repeated_plain_labels_without_invocation_are_allowed(self):
         program = prepare_program(REPEATED_LABELS, PROCESS)
-        self.assertEqual(program["requires"], ["patch_point"])
+        # WP-28: the repeated bare label is positioned behind a classic
+        # address cursor in both phases, so it is per-program local and no
+        # external symbol requirement.
+        self.assertEqual(program["requires"], [])
         self.assertNotIn("nested_invocations", program)
         self.assertNotIn("external_labels", program)
         validate_program(program)
@@ -312,10 +315,11 @@ class NestedTableTests(unittest.TestCase):
         )
         plan = self.start_table("registry.ct", owner, EXTERNAL)
         entries = {entry["id"]: entry for entry in plan["entries"]}
-        # The owner record references the bare label as an address symbol
-        # nobody provides, so it stays blocked (visible reason).
-        self.assertFalse(entries[1]["supported"])
-        self.assertIn("shared_helper", entries[1]["reason"])
+        # WP-28: the owner's bare label is positioned behind its own classic
+        # cursor in [DISABLE], so it is per-program local; the owner no
+        # longer needs an external provider for it.
+        self.assertTrue(entries[1]["supported"], entries[1]["reason"])
+        self.assertEqual(entries[1]["requires"], [])
         # The caller inlines the registry body at its invocation site.
         self.assertTrue(entries[2]["supported"], entries[2]["reason"])
         program = entries[2]["program"]
