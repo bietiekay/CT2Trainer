@@ -43,8 +43,18 @@ Single maintained changelog for CT2Trainer releases.
     semantics, engine integration for attach failure incl. repeated-
     failure dedupe, scan failure, assert failure, state-save failure,
     full toggle/value/close cycle, and no-file-when-disabled).
-- This build is the first release cutting the Wave 2 corpus-closure
-  content (see 0.12) together with the debug-logging option.
+- Release build 0.13: run `native-20261016T181516Z-b8ae88de` cut from
+  `main` @ `7184547` via `scripts/Build-Native.ps1` (2026-10-16);
+  in-build suite 2925 OK / 25 regular skips, `ce_inputs: []`,
+  `runtime_unverified` deliberately kept per gate. Artifacts:
+  `CT2Trainer-0.13-source.zip` (sha256
+  `7a12b05ed96e937bce61e1301b1fec5f0a5bf1c4ff809ec3ce00d7d6dd75ddd1`),
+  `CT2Trainer-0.13-windows-portable.zip` (sha256
+  `7b3146005b122bc352b8cc0d4bcfa8a4ab3a4024cc83162f7d5c3b2e913b1c55`);
+  both ZIPs ship the elaborated release READMEs (the portable user
+  guide now documents the debug-logging option) and this changelog.
+  The build carries the released 0.12 content (Wave 2 corpus closure)
+  unchanged; 0.13 only adds the debug-logging option.
 
 ## 0.12 (2026-10-16)
 

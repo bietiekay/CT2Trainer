@@ -100,23 +100,32 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261016T163910Z-d047f2d2` (0.12,
-cut from `main` @ `ba1d3e4`; in-build suite 2910 OK / 25 regular skips,
+**Latest verified build:** `native-20261016T181516Z-b8ae88de` (0.13,
+cut from `main` @ `7184547`; in-build suite 2925 OK / 25 regular skips,
 `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; source
-ZIP `CT2Trainer-0.12-source.zip` sha256
+ZIP `CT2Trainer-0.13-source.zip` sha256
+`7a12b05ed96e937bce61e1301b1fec5f0a5bf1c4ff809ec3ce00d7d6dd75ddd1`,
+portable ZIP `CT2Trainer-0.13-windows-portable.zip` sha256
+`7b3146005b122bc352b8cc0d4bcfa8a4ab3a4024cc83162f7d5c3b2e913b1c55`).
+The 0.13 build adds the optional runtime debug logging option
+(converter checkbox / CLI `--debug-log`; per-event JSON log next to the
+trainer EXE, off by default, best-effort only) on top of the released
+0.12 content; 20 pinned corpus tables, 6,080 AP-11 actions, weights
+7,408/7,408 over run `w2b-case18-20261016142912Z`; both ZIPs ship the
+elaborated release READMEs (source: product overview + build guide;
+portable: full user guide, now including the debug-logging section) and
+the changelog with the 0.13 + 0.12 entries. Previous release build:
+`native-20261016T163910Z-d047f2d2` (0.12, cut from `main` @ `ba1d3e4`;
+in-build suite 2910 OK / 25 regular skips; source ZIP sha256
 `f5a5468da6e49ee5d4812dce3edea71e87e4bb9736ce4bf3486dfc0c66e70165`,
-portable ZIP `CT2Trainer-0.12-windows-portable.zip` sha256
-`7bd582e33f2978c641bb36a22ad8fc5f21bc9b695bb16930bed19720eaa81619`).
-The 0.12 build contains the full Wave 2 set: W2-A (WP-27/32/33/34,
-merge `aa6371b`), W2-C (WP-30/36, merge `32e0cdd`) and W2-B
-(WP-28/29/31/35, merge `2f68f80`); 20 pinned corpus tables, 6,080
-AP-11 actions, weights 7,408/7,408 over run
-`w2b-case18-20261016142912Z`; both ZIPs ship the elaborated release
-READMEs (source: product overview + build guide; portable: full user
-guide) and the changelog with the 0.12 + retro 0.11 entries.
-Superseded 0.12 runs: `native-20261016T161905Z-e8ef67a0` (byte-identical
-re-cut of the final tree) and `native-20261016T154141Z-2de774ab`
-(pre release-docs update). Superseded 0.11 run:
+portable ZIP sha256
+`7bd582e33f2978c641bb36a22ad8fc5f21bc9b695bb16930bed19720eaa81619`),
+which contains the full Wave 2 set: W2-A (WP-27/32/33/34, merge
+`aa6371b`), W2-C (WP-30/36, merge `32e0cdd`) and W2-B
+(WP-28/29/31/35, merge `2f68f80`). Superseded 0.12 runs:
+`native-20261016T161905Z-e8ef67a0` (byte-identical re-cut of the final
+tree) and `native-20261016T154141Z-2de774ab` (pre release-docs update).
+Superseded 0.11 run:
 `native-20261012T092729Z-2d8aaf12` (0.11, cut from `main` @ `9a76eb8`;
 in-build suite 2710 OK / 25 regular skips; source ZIP sha256
 `168c14a452595588a6483140f1d43bec818d0f0d0e9eb72167453a80624469db`,
