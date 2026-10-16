@@ -1679,6 +1679,18 @@ class TrainerEngine:
             consumers.extend(self._provider_consumers(manager, exclude_scope=identifier))
         return consumers
 
+    def _log_attach_failure(self, event: str, exc: Exception, **details: Any) -> None:
+        """Attach-stage failures repeat on every poll; log each distinct cause once.
+
+        The signature is cleared on a confirmed attach so the same cause
+        recurring in a later attach attempt is reported again.
+        """
+        key = (event, type(exc).__name__, str(exc))
+        if getattr(self, "_last_attach_failure", None) == key:
+            return
+        self._last_attach_failure = key
+        self.debug_log.error(event, exc, **details)
+
     @restoration_entry
     def poll(self) -> str:
         if self.closed or self.blocked or self.busy:
@@ -1762,8 +1774,8 @@ class TrainerEngine:
             try:
                 memory = self.memory_factory(self.plan["process_name"])
             except Exception as exc:
-                self.debug_log.error("attach-attempt-failed", exc,
-                                     process_name=self.plan["process_name"])
+                self._log_attach_failure("attach-attempt-failed", exc,
+                                         process_name=self.plan["process_name"])
                 self.error = str(exc)
                 self.status = "Waiting / hook into game unavailable: " + self.error
                 return self.status
@@ -1775,16 +1787,16 @@ class TrainerEngine:
                     require_target_architecture(self.plan, memory)
                 except ArchitectureError as exc:
                     memory.close()
-                    self.debug_log.error("attach-architecture-refused", exc,
-                                         process_name=self.plan["process_name"],
-                                         pointer_size=getattr(memory, "pointer_size", None))
+                    self._log_attach_failure("attach-architecture-refused", exc,
+                                             process_name=self.plan["process_name"],
+                                             pointer_size=getattr(memory, "pointer_size", None))
                     self.error = str(exc)
                     self.status = "Hook into game refused: " + self.error
                     return self.status
                 self.store.claim_session(memory)
             except Exception as exc:
-                self.debug_log.error("attach-session-claim-failed", exc,
-                                     process_name=self.plan["process_name"])
+                self._log_attach_failure("attach-session-claim-failed", exc,
+                                         process_name=self.plan["process_name"])
                 memory.close()
                 raise
             if self.call_broker_factory is not None:
@@ -1797,8 +1809,8 @@ class TrainerEngine:
                         raise NativeRuntimeError(
                             'The call broker binds a different target identity than the attached process')
                 except Exception as exc:
-                    self.debug_log.error("attach-call-broker-failed", exc,
-                                         process_name=self.plan["process_name"])
+                    self._log_attach_failure("attach-call-broker-failed", exc,
+                                             process_name=self.plan["process_name"])
                     self.store.release_session()
                     memory.close()
                     self.error = str(exc)
@@ -1822,6 +1834,7 @@ class TrainerEngine:
                                image_path=getattr(memory, "image_path", None),
                                pointer_size=getattr(memory, "pointer_size", None),
                                creation_time=getattr(memory, "creation_time", None))
+            self._last_attach_failure = None
             if self.one_shot is not None:
                 self._one_shot_generation += 1
                 wishes = self.one_shot.attach(self._one_shot_generation)

@@ -191,6 +191,20 @@ class EngineDebugLogTests(unittest.TestCase):
         self.assertIn("found 0", failed[0]["error"])
         self.assertIn("Traceback", failed[0]["traceback"])
 
+    def test_repeated_identical_attach_failure_is_logged_once(self):
+        plan = compile_table(FIXTURE, "FixtureTarget.exe", debug_log=True)
+
+        def factory(name):
+            raise OSError("Expected one exact FixtureTarget.exe process; found 0.")
+
+        engine = self._start(plan, attach=False, factory=factory)
+        engine.poll()
+        engine.poll()
+        engine.poll()
+        events = read_events(self.log_path)
+        failed = [e for e in events if e["event"] == "attach-attempt-failed"]
+        self.assertEqual(len(failed), 1)
+
     def test_scan_failure_is_logged_with_pattern(self):
         plan = compile_table(FIXTURE, "FixtureTarget.exe", debug_log=True)
         for entry in plan["entries"]:

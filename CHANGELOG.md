@@ -26,6 +26,9 @@ Single maintained changelog for CT2Trainer releases.
     attach, state saves, auto-on requests, engine blocking, and
     clean/unclean close. Errors carry exception type, message and full
     traceback.
+  - Attach-stage failures are logged once per distinct cause so the
+    repeating 250 ms poll loop cannot flood the log; the signature clears
+    on a confirmed attach, so a recurring cause is reported again.
   - Logging is best-effort and never changes trainer behavior; disabled
     plans (the default) write no file at all.
   - New module `src/ct2trainer/native/debug_log.py`; instrumentation in
@@ -34,12 +37,12 @@ Single maintained changelog for CT2Trainer releases.
     `clear_desired`, `_block`, `close`), `ui.py` (action failures,
     startup failures), `launcher.py` (startup failures); `memory.py`
     exposes the bound target's `image_path`.
-  - New tests: `tests/test_native_debug_log.py` (14 tests: plan flag
+  - New tests: `tests/test_native_debug_log.py` (15 tests: plan flag
     default/opt-in/typo validation + trainer-ID stability, log writer
     JSON-line format / error traceback capture / disabled no-op / close
-    semantics, engine integration for attach failure, scan failure,
-    assert failure, state-save failure, full toggle/value/close cycle,
-    and no-file-when-disabled).
+    semantics, engine integration for attach failure incl. repeated-
+    failure dedupe, scan failure, assert failure, state-save failure,
+    full toggle/value/close cycle, and no-file-when-disabled).
 - This build is the first release cutting the Wave 2 corpus-closure
   content (see 0.12) together with the debug-logging option.
 
