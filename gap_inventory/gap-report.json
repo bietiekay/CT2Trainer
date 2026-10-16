@@ -25,18 +25,18 @@
    "custom_value": 4,
    "navigation": 2,
    "one_shot": 1723,
-   "persistent_script": 431,
+   "persistent_script": 446,
    "string_write": 732,
-   "value_freeze": 3172
+   "value_freeze": 3175
   },
   "confirmed_game_effect_actions": 0,
   "confirmed_percent": 0.0,
-  "expected_actions": 6062,
+  "expected_actions": 6080,
   "goal_90_percent": "NOT REACHED",
   "group_toggle_actions": 3,
   "groups_total": 1287,
   "missing_gates": [
-   "Real game installs/builds for the 19 pinned tables (user question unanswered)",
+   "Real game installs/builds for the 20 pinned tables (user question unanswered)",
    "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
    "VM/Clean-PC gate without CE/Python",
    "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -46,12 +46,12 @@
   ],
   "navigation_excluded": 2,
   "record_types": {
-   "aa_script": 2154,
+   "aa_script": 2169,
    "custom": 4,
    "string": 732,
-   "value": 3174
+   "value": 3177
   },
-  "records_total": 6064,
+  "records_total": 6082,
   "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
@@ -61,11 +61,11 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5492,
-   "statically_assumed": 532,
-   "unknown": 40
+   "locked": 5507,
+   "statically_assumed": 533,
+   "unknown": 42
   },
-  "unique_tables": 19
+  "unique_tables": 20
  },
  "gap_labels": {
   "aa_conditional_block": {
@@ -225,7 +225,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run w2c-case15p2b-20261015144326Z",
+ "generated": "run w2b-case18-20261016142912Z",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -153658,6 +153658,538 @@
   },
   {
    "architecture": {
+    "signals": [
+     "instr64:2 lines",
+     "instr32:1 lines (not an architecture signal)"
+    ],
+    "value": "x64"
+   },
+   "counts": {
+    "categories": {
+     "persistent_script": 15,
+     "value_freeze": 3
+    },
+    "entries_total": 18,
+    "expected_actions": 18,
+    "gap_counts": {
+     "aa_createthread_threadwait": 1,
+     "aa_directive_unverified": 2,
+     "aa_globalalloc_general": 2,
+     "cross_record_symbol": 3,
+     "lua_symbol_api": 12,
+     "lua_worker_thread": 1
+    },
+    "group_toggle_actions": 0,
+    "groups": 0,
+    "navigation_excluded": 0,
+    "record_types": {
+     "aa_script": 15,
+     "value": 3
+    },
+    "records": 18,
+    "status_counts": {
+     "locked": 15,
+     "statically_assumed": 1,
+     "unknown": 2
+    }
+   },
+   "duplicate_ids": {},
+   "format_version": "46",
+   "groups": [],
+   "main_initialization": {
+    "gaps": [
+     "lua_symbol_api"
+    ],
+    "id": 13,
+    "name": "alloc-only init provider",
+    "note": "named main script",
+    "source": "record",
+    "status": "locked",
+    "type": "aa_script"
+   },
+   "path": "case-18.ct",
+   "paths": [
+    "case-18.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 10,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "return hook one",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 11,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "return hook two",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "symbol",
+       "architecture": "x64",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 12,
+       "lifetime": "read_write_freezable_value",
+       "name": "hook base value",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 13,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "alloc-only init provider",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "x64",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 14,
+       "lifetime": "read_write_freezable_value",
+       "name": "alloc-only consumer",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols synthBase13",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 15,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "two-arg dealloc",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 16,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "multi-token registersymbol",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "aa_directive_unverified",
+        "lua_symbol_api"
+       ],
+       "id": 17,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "registerlabel",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "unknown",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "aa_directive_unverified"
+       ],
+       "id": 18,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "fullaccess no-op",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aob_scan_module"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "unknown",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [],
+       "id": 19,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "block comment in data dialect",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aob_scan_module"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 20,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "dq reservation span",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 21,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "process-wide aobscan",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aob_scan_process",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 22,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "aobscanregion",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aob_scan_region",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x86",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "aa_createthread_threadwait",
+        "lua_worker_thread"
+       ],
+       "id": 23,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "createthread gate",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 24,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "three-arg globalalloc",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aob_scan_module",
+        "aa_globalalloc",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "x64",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 25,
+       "lifetime": "read_write_freezable_value",
+       "name": "global alloc consumer",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols synthBase24",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "aa_globalalloc_general",
+        "lua_symbol_api"
+       ],
+       "id": 26,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "globalalloc DISABLE reinit (stays blocked)",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aob_scan_module",
+        "aa_globalalloc",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "x64",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "aa_globalalloc_general",
+        "lua_symbol_api"
+       ],
+       "id": 27,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "globalalloc label directive in init (stays blocked)",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aob_scan_module",
+        "aa_globalalloc",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth18.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth18.exe",
+       "type": "aa_script"
+      }
+     ]
+    }
+   ],
+   "sha256": "e3405ebcf7fa566a101ad424c5318348c89e5e020636d8f2533d125c89f7e2f6",
+   "size_bytes": 8184,
+   "table": "case-18.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 12,
+     "gap": "lua_symbol_api",
+     "label": "Lua symbol API",
+     "requirement": "N-07 / N-19"
+    },
+    {
+     "affected_records": 3,
+     "gap": "cross_record_symbol",
+     "label": "Cross-record symbol resolution",
+     "requirement": "N-07"
+    },
+    {
+     "affected_records": 2,
+     "gap": "aa_directive_unverified",
+     "label": "Unverified AA directives (residual tokens)",
+     "requirement": "AP-02"
+    },
+    {
+     "affected_records": 2,
+     "gap": "aa_globalalloc_general",
+     "label": "Globalalloc beyond the literal path",
+     "requirement": "AP-08 (Global)"
+    },
+    {
+     "affected_records": 1,
+     "gap": "aa_createthread_threadwait",
+     "label": "AA thread control (createThread/threadWait)",
+     "requirement": "N-15"
+    },
+    {
+     "affected_records": 1,
+     "gap": "lua_worker_thread",
+     "label": "Lua worker threads",
+     "requirement": "N-15"
+    }
+   ]
+  },
+  {
+   "architecture": {
     "signals": [],
     "value": "unknown"
    },
@@ -154171,35 +154703,35 @@
    ]
   }
  ],
- "run_id": "w2c-case15p2b-20261015144326Z",
+ "run_id": "w2b-case18-20261016142912Z",
  "top_gaps_pinned": [
   {
-   "affected_records": 3381,
+   "affected_records": 3384,
    "gap": "cross_record_symbol",
    "label": "Cross-record symbol resolution",
    "requirement": "N-07",
-   "share_of_expected_actions_percent": 55.77
+   "share_of_expected_actions_percent": 55.66
   },
   {
    "affected_records": 1910,
    "gap": "lua_host_profile",
    "label": "Lua host profile (bounded Lua host profile)",
    "requirement": "N-01 / N-19",
-   "share_of_expected_actions_percent": 31.51
+   "share_of_expected_actions_percent": 31.41
   },
   {
    "affected_records": 1723,
    "gap": "one_shot_save_contract",
    "label": "One-shot without ON/OFF save contract",
    "requirement": "state contract (AP-04)",
-   "share_of_expected_actions_percent": 28.42
+   "share_of_expected_actions_percent": 28.34
   },
   {
-   "affected_records": 200,
+   "affected_records": 212,
    "gap": "lua_symbol_api",
    "label": "Lua symbol API",
    "requirement": "N-07 / N-19",
-   "share_of_expected_actions_percent": 3.3
+   "share_of_expected_actions_percent": 3.49
   },
   {
    "affected_records": 36,
@@ -154209,18 +154741,18 @@
    "share_of_expected_actions_percent": 0.59
   },
   {
-   "affected_records": 32,
+   "affected_records": 34,
    "gap": "aa_directive_unverified",
    "label": "Unverified AA directives (residual tokens)",
    "requirement": "AP-02",
-   "share_of_expected_actions_percent": 0.53
+   "share_of_expected_actions_percent": 0.56
   },
   {
    "affected_records": 24,
    "gap": "async_lifecycle",
    "label": "Async record lifecycle",
    "requirement": "N-08",
-   "share_of_expected_actions_percent": 0.4
+   "share_of_expected_actions_percent": 0.39
   },
   {
    "affected_records": 15,
@@ -154230,17 +154762,17 @@
    "share_of_expected_actions_percent": 0.25
   },
   {
-   "affected_records": 10,
+   "affected_records": 11,
    "gap": "lua_worker_thread",
    "label": "Lua worker threads",
    "requirement": "N-15",
-   "share_of_expected_actions_percent": 0.16
+   "share_of_expected_actions_percent": 0.18
   },
   {
    "affected_records": 8,
-   "gap": "managed_method_resolution",
-   "label": "Managed method resolution (IL2CPP injection labels)",
-   "requirement": "N-12 / N-13 / N-14",
+   "gap": "aa_globalalloc_general",
+   "label": "Globalalloc beyond the literal path",
+   "requirement": "AP-08 (Global)",
    "share_of_expected_actions_percent": 0.13
   }
  ]

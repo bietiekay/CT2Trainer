@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-18 (WP-28/29/31/35/36 — AA label & directive pack). Module ct2synth18.exe.
+     Probe + pin after W2-B/W2-C merges. Pre-state captured on base 80587b2. -->
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>10</ID>
+      <Description>"return hook one"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob10, ct2synth18.exe, 48 8B 05 01 02 03 04)
+alloc(synthHook10, 64, synthAob10)
+registersymbol(synthAob10)
+synthHook10:
+mov rax, [rax]
+jmp return
+synthAob10:
+jmp synthHook10
+return:
+[DISABLE]
+synthAob10:
+db 48 8B 05 01 02 03 04
+dealloc(synthHook10)
+unregistersymbol(synthAob10)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>11</ID>
+      <Description>"return hook two"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob11, ct2synth18.exe, 48 8B 05 05 06 07 08)
+alloc(synthHook11, 64, synthAob11)
+registersymbol(synthAob11)
+synthHook11:
+mov rax, [rax]
+jmp return
+synthAob11:
+jmp synthHook11
+return:
+[DISABLE]
+synthAob11:
+db 48 8B 05 05 06 07 08
+dealloc(synthHook11)
+unregistersymbol(synthAob11)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>12</ID>
+      <Description>"hook base value"</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synthAob10</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>13</ID>
+      <Description>"alloc-only init provider"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+registersymbol(synthBase13)
+registersymbol(synthFlag13)
+
+alloc(synthBase13, 8)
+alloc(synthFlag13, 4)
+
+[DISABLE]
+unregistersymbol(synthBase13)
+unregistersymbol(synthFlag13)
+
+dealloc(synthBase13)
+dealloc(synthFlag13)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>14</ID>
+      <Description>"alloc-only consumer"</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synthBase13+10</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>15</ID>
+      <Description>"two-arg dealloc"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob15, ct2synth18.exe, 89 48 08)
+alloc(synthCave15, 64, synthAob15)
+registersymbol(synthAob15)
+synthAob15:
+db 90
+[DISABLE]
+synthAob15:
+db 89 48 08
+unregistersymbol(synthAob15)
+dealloc(synthCave15, 64)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>16</ID>
+      <Description>"multi-token registersymbol"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob16, ct2synth18.exe, 89 48 08)
+alloc(synthCave16, 8, synthAob16)
+registersymbol(synthAob16)
+synth16a:
+db 90
+synth16b:
+db 91
+registersymbol(synth16a,synth16b)
+synthAob16:
+db 90
+[DISABLE]
+synthAob16:
+db 89 48 08
+unregistersymbol(synth16a,synth16b)
+unregistersymbol(synthAob16)
+dealloc(synthCave16)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>17</ID>
+      <Description>"registerlabel"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob17, ct2synth18.exe, 89 48 08)
+alloc(synthCave17, 16, synthAob17)
+registersymbol(synthAob17)
+registerlabel(synth17label)
+synth17label:
+dd #11 22
+synthAob17:
+db 90
+[DISABLE]
+synthAob17:
+db 89 48 08
+unregistersymbol(synthAob17)
+dealloc(synthCave17)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>18</ID>
+      <Description>"fullaccess no-op"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob18, ct2synth18.exe, 89 48 08)
+fullAccess(ct2synth18.exe+500,$200)
+synthAob18:
+db 90
+[DISABLE]
+synthAob18:
+db 89 48 08</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>19</ID>
+      <Description>"block comment in data dialect"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob19, ct2synth18.exe, 89 48 08)
+/* synthetic comment
+   spanning two lines */
+synthAob19:
+db 90
+[DISABLE]
+synthAob19:
+db 89 48 08</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>20</ID>
+      <Description>"dq reservation span"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob20, ct2synth18.exe, 89 48 08)
+alloc(synthRes20, 16, synthAob20)
+registersymbol(synthAob20)
+synthRes20:
+dq
+dd #11 22 33 44
+synthAob20:
+db 90
+[DISABLE]
+synthAob20:
+db 89 48 08
+unregistersymbol(synthAob20)
+dealloc(synthRes20)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>21</ID>
+      <Description>"process-wide aobscan"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscan(synthAob21, 89 48 08)
+registersymbol(synthAob21)
+synthAob21:
+db 90
+[DISABLE]
+synthAob21:
+db 89 48 08
+unregistersymbol(synthAob21)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>22</ID>
+      <Description>"aobscanregion"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanregion(synthAob22, ct2synth18.exe+400, ct2synth18.exe+1400, 89 48 08)
+registersymbol(synthAob22)
+synthAob22:
+db 90
+[DISABLE]
+synthAob22:
+db 89 48 08
+unregistersymbol(synthAob22)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>23</ID>
+      <Description>"createthread gate"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+label(synthThread23)
+createthread(synthThread23)
+synthThread23:
+threadwait
+mov eax, eax
+[DISABLE]
+threadwait</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>24</ID>
+      <Description>"three-arg globalalloc"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob24, ct2synth18.exe, 89 48 08)
+registersymbol(synthAob24)
+alloc(synthCave24, $100, synthAob24)
+globalalloc(synthBase24, 8, $process)
+globalalloc(synthFlag24, 1, $process)
+synthBase24:
+db 11 22 33 44
+synthFlag24:
+db 1
+synthCave24:
+jmp synthAob24+5
+nop 2
+synthAob24:
+db 90
+[DISABLE]
+synthAob24:
+db 89 48 08
+unregistersymbol(synthAob24)
+dealloc(synthCave24)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>25</ID>
+      <Description>"global alloc consumer"</Description>
+      <Color>FF8080</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synthBase24+4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>26</ID>
+      <Description>"globalalloc DISABLE reinit (stays blocked)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob26, ct2synth18.exe, 89 48 08)
+registersymbol(synthAob26)
+globalalloc(synthRe26, 1, $process)
+synthRe26:
+db 1
+synthAob26:
+db 90
+[DISABLE]
+synthRe26:
+db 0
+synthAob26:
+db 89 48 08
+unregistersymbol(synthAob26)
+dealloc(synthRe26)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>27</ID>
+      <Description>"globalalloc label directive in init (stays blocked)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob27, ct2synth18.exe, 89 48 08)
+registersymbol(synthAob27)
+globalalloc(synthGa27, 8, $process)
+synthGa27:
+label(synthMid27)
+dd #11 22 33 44
+synthAob27:
+db 90
+[DISABLE]
+synthAob27:
+db 89 48 08
+unregistersymbol(synthAob27)
+dealloc(synthGa27)</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

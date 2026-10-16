@@ -1,7 +1,7 @@
 {
  "ap11_exclusions": [
   {
-   "gate": "Real game installs/builds for the 19 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 20 pinned tables (user question unanswered)",
    "reason": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists."
   },
   {
@@ -21,21 +21,21 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 19,
+    "actual": 20,
     "check": "pinned_table_count",
-    "expected": 19,
+    "expected": 20,
     "ok": true
    },
    {
-    "actual": 6062,
+    "actual": 6080,
     "check": "expected_actions",
-    "expected": 6062,
+    "expected": 6080,
     "ok": true
    },
    {
-    "actual": 6064,
+    "actual": 6082,
     "check": "category_counts_sum",
-    "expected": 6064,
+    "expected": 6082,
     "ok": true
    },
    {
@@ -46,34 +46,35 @@
    },
    {
     "actual": [
-     3381,
+     3384,
      1910,
      1723,
-     200,
+     212,
      36,
-     32,
+     34,
      24,
      15,
-     10,
+     11,
      8
     ],
     "check": "top_gaps_pinned_match",
     "expected": [
-     3381,
+     3384,
      1910,
      1723,
-     200,
+     212,
      36,
-     32,
+     34,
      24,
      15,
-     10,
+     11,
      8
     ],
     "ok": true
    },
    {
     "actual": [
+     "aa_createthread_threadwait",
      "aa_directive_unverified",
      "aa_globalalloc_general",
      "aa_luacall",
@@ -101,6 +102,7 @@
     ],
     "check": "pinned_gaps_subset_of_labels",
     "expected": [
+     "aa_createthread_threadwait",
      "aa_directive_unverified",
      "aa_globalalloc_general",
      "aa_luacall",
@@ -261,6 +263,7 @@
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
      "cf7ef73a2c326edee6b6d87853f454996789add71e9cea7d7440347e41fcbb25",
+     "e3405ebcf7fa566a101ad424c5318348c89e5e020636d8f2533d125c89f7e2f6",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
@@ -283,6 +286,7 @@
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
      "cf7ef73a2c326edee6b6d87853f454996789add71e9cea7d7440347e41fcbb25",
+     "e3405ebcf7fa566a101ad424c5318348c89e5e020636d8f2533d125c89f7e2f6",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
@@ -305,9 +309,9 @@
  "coverage": {
   "action_weighted_coverage_percent": 100.0,
   "actions_weight_ap11_excluded": 0,
-  "actions_weight_covered": 7387,
-  "actions_weight_in_scope": 7387,
-  "actions_weight_total": 7387,
+  "actions_weight_covered": 7408,
+  "actions_weight_in_scope": 7408,
+  "actions_weight_total": 7408,
   "feature_weighted_coverage_percent": 100.0,
   "features_covered": 42,
   "features_excluded_ap11": 4,
@@ -338,7 +342,7 @@
    "status": "covered"
   },
   "aa_createthread_threadwait": {
-   "affected_records": 0,
+   "affected_records": 1,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_aa_directives.py",
@@ -378,7 +382,7 @@
    "status": "covered"
   },
   "aa_directive_unverified": {
-   "affected_records": 32,
+   "affected_records": 34,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_assembler.py",
@@ -396,7 +400,7 @@
    "status": "covered"
   },
   "aa_globalalloc_general": {
-   "affected_records": 6,
+   "affected_records": 8,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_global_alloc.py",
@@ -537,9 +541,9 @@
    "affected_records": null,
    "ap11_excluded": true,
    "evidence": [],
-   "gate": "Real game installs/builds for the 19 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 20 pinned tables (user question unanswered)",
    "kind": "missing_gate",
-   "label": "Real game installs/builds for the 19 pinned tables (user question unanswered)",
+   "label": "Real game installs/builds for the 20 pinned tables (user question unanswered)",
    "modules": [],
    "note": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists.",
    "requirement": "AP-11 game gate",
@@ -602,7 +606,7 @@
    "status": "covered"
   },
   "cross_record_symbol": {
-   "affected_records": 3381,
+   "affected_records": 3384,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_compiler.py",
@@ -898,7 +902,7 @@
    "status": "covered"
   },
   "lua_symbol_api": {
-   "affected_records": 200,
+   "affected_records": 212,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_lua.py",
@@ -935,7 +939,7 @@
    "status": "covered"
   },
   "lua_worker_thread": {
-   "affected_records": 10,
+   "affected_records": 11,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_lua.py",
@@ -1162,15 +1166,15 @@
    "status": "covered"
   }
  },
- "generated": "run w2c-case15p2b-20261015144326Z",
+ "generated": "run w2b-case18-20261016142912Z",
  "lane": "AP-10 feature matrix and coverage metric (read-only, static)",
- "run_id": "w2c-case15p2b-20261015144326Z",
+ "run_id": "w2b-case18-20261016142912Z",
  "schema": "corpus-feature-matrix/v1",
  "source": {
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "f2082b62fc170f4bfb8324cd9f8b9f5448d826812a1eba2085f786dc72961292",
+  "gap_report_sha256": "4e59fd1ffa1f88c990d902ccea050224dd86c073a8da3fcf2b5de53027f98735",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "1194442b5727a508ec6c5faafc7b15f468388a1fdb9e5f433f79e95b77ff5a90"
+  "inventory_sha256": "11bf3fef19278efab6ecb79995d3380833efe278562eb8afd654d45f3c094e60"
  },
  "top10_priority": []
 }
