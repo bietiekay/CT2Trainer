@@ -475,6 +475,28 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None) -> None
                 continue
             for entry in candidates:
                 _block(entry, f"Symbol provider is ambiguous: {symbol}.")
+    # WP-28 two-stage label resolution: prepare_program keeps a program's
+    # bare positional labels local (they are the program's own definitions),
+    # but a table-wide registered symbol of the same name wins over the
+    # local label definition.  Re-declare each program's positional labels
+    # as external requirements whenever another supported entry provides the
+    # same symbol, so the classic provider/dependency machinery (and the
+    # staged-metadata rules) applies.  entry["requires"] is the same list
+    # object as entry["program"]["requires"] — extend in place.
+    for entry in entries:
+        if not entry["supported"] or entry["kind"] != "script":
+            continue
+        program = entry.get("program")
+        if not isinstance(program, dict):
+            continue
+        known = {symbol.casefold() for symbol in entry["requires"]}
+        for symbol in program.get("positional_labels", []):
+            key = symbol.casefold()
+            if key in known:
+                continue
+            if any(provider["id"] != entry["id"] for provider in providers.get(key, [])):
+                entry["requires"].append(symbol)
+                known.add(key)
     while True:
         changed = False
         for entry in entries:

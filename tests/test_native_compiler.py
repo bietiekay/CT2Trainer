@@ -100,9 +100,11 @@ class NativeCompilerTests(unittest.TestCase):
         self.assertTrue(all("cycle" in entry["reason"] for entry in plan["entries"]))
 
     def test_unsupported_script_never_returns_partial_operations(self):
-        plan = self.compile(script_record(1, "[ENABLE]\ndefine(Anchor,Target.exe)\nalloc(memory,100)\n[DISABLE]\ndealloc(memory)"))
+        # WP-29: an allocation-only ENABLE is now a supported init profile, so
+        # the genuinely empty ENABLE is the canonical unsupported-script case.
+        plan = self.compile(script_record(1, "[ENABLE]\n[DISABLE]\n"))
         self.assertEqual(plan["entries"][0]["kind"], "blocked")
-        self.assertIn("alloc", plan["entries"][0]["reason"])
+        self.assertIn("no executable patch or data", plan["entries"][0]["reason"])
         self.assertNotIn("enable", plan["entries"][0])
 
     def test_table_lua_is_not_executed_or_used_as_symbol_provider(self):

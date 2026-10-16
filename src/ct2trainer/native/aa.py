@@ -207,21 +207,37 @@ def _data_bytes(directive: str, text: str) -> str:
 
 
 def _without_comments(script: str) -> str:
-    # The accepted dialect has // and non-nested {...} comments. Compiler
-    # directives such as {$LUA} must be rejected before comment removal.
+    # The accepted dialect has //, non-nested {...} and non-nested /* */
+    # comments.  Compiler directives such as {$LUA} must be rejected before
+    # comment removal.
     if "{$" in script:
         raise AAError("Lua, C and compiler/preprocessor directives are unsupported.")
-    if "/*" in script or "*/" in script:
-        raise AAError("C-style comments are unsupported in the bounded AA dialect.")
     output: list[str] = []
     in_comment = False
+    in_block = False
     for line in script.splitlines():
         clean: list[str] = []
         index = 0
         while index < len(line):
-            ch = line[index]
+            if in_block:
+                if line[index:index + 2] == "*/":
+                    in_block = False
+                    clean.append(" ")
+                    index += 2
+                else:
+                    clean.append(" ")
+                    index += 1
+                continue
+            if not in_comment and line[index:index + 2] == "/*":
+                in_block = True
+                clean.append(" ")
+                index += 2
+                continue
+            if not in_comment and line[index:index + 2] == "*/":
+                raise AAError("Unmatched C block comment terminator.")
             if not in_comment and line[index:index + 2] == "//":
                 break
+            ch = line[index]
             if ch == "{":
                 if in_comment:
                     raise AAError("Nested AA comments are unsupported.")
@@ -237,6 +253,8 @@ def _without_comments(script: str) -> str:
         output.append("".join(clean))
     if in_comment:
         raise AAError("Unterminated AA comment.")
+    if in_block:
+        raise AAError("Unterminated C block comment.")
     return "\n".join(output)
 
 
@@ -307,15 +325,21 @@ def _section(lines: list[str], inherited: set[str]) -> tuple[list[dict], set[str
                 expression = need(expression)
                 introduce(symbol)
                 operations.append({"op": "define", "symbol": symbol, "expression": expression})
-            elif name in {"registersymbol", "unregistersymbol"}:
-                symbol = _arguments(args, 1)[0]
-                validate_symbol(symbol)
-                spellings[symbol.casefold()] = symbol
-                if symbol.casefold() not in defined:
-                    required.add(symbol.casefold())
-                if name == "registersymbol":
-                    registered.add(symbol.casefold())
-                operations.append({"op": "register" if name == "registersymbol" else "unregister", "symbol": symbol})
+            elif name in {"registersymbol", "registerlabel", "unregistersymbol"}:
+                tokens = [symbol for argument in args.split(",") for symbol in argument.split()]
+                if not tokens:
+                    raise AAError("Expected one or more nonempty directive arguments.")
+                if len(operations) + len(tokens) > MAX_OPERATIONS:
+                    raise AAError("Too many AA operations.")
+                op = "unregister" if name == "unregistersymbol" else "register"
+                for symbol in tokens:
+                    validate_symbol(symbol)
+                    spellings[symbol.casefold()] = symbol
+                    if symbol.casefold() not in defined:
+                        required.add(symbol.casefold())
+                    if op == "register":
+                        registered.add(symbol.casefold())
+                    operations.append({"op": op, "symbol": symbol})
             elif name == "assert":
                 address, data = _arguments(args, 2)
                 operations.append({"op": "assert", "address": need(address), "bytes": _exact_bytes(data)})

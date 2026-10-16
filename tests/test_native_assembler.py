@@ -788,5 +788,191 @@ class TempCleanupTests(unittest.TestCase):
         self.assertEqual(root.attempts, 3)
 
 
+ALLOCATION_ONLY = "[ENABLE]\nalloc(memory,0x100)\nregistersymbol(memory)\n[DISABLE]\nunregistersymbol(memory)\ndealloc(memory)"
+
+
+class AllocationOnlyProgramTests(unittest.TestCase):
+    """WP-29: a named allocation-only init profile (alloc + register, no
+    code/data) is a supported re-enabled program, never a one-shot."""
+
+    def test_prepare_marks_allocation_only_and_provides(self):
+        program = prepare_program(ALLOCATION_ONLY, "Target.exe")
+        self.assertTrue(program["allocation_only"])
+        self.assertFalse(program["one_shot"])
+        self.assertEqual(program["provides"], ["memory"])
+        self.assertEqual(program["allocations"], ["memory"])
+        # No cursor ever enters the allocation, so the capability heuristic
+        # stays conservative (RWX) rather than proving a data-only profile.
+        self.assertTrue(program["allocation_executable"]["memory"])
+        self.assertTrue(program["allocation_writable"]["memory"])
+        validate_program(program)
+
+    def test_one_shot_allocation_only_still_refused(self):
+        # An empty DISABLE section makes the program a one-shot, which may
+        # never be allocation-only.
+        with self.assertRaisesRegex(ProgramError, "Enable section has no executable patch or data."):
+            prepare_program("[ENABLE]\nalloc(memory,0x100)\n[DISABLE]\n", "Target.exe")
+
+    def test_preflight_requests_the_owned_allocation(self):
+        program = prepare_program(ALLOCATION_ONLY, "Target.exe")
+        result = preflight_program(program, Memory())
+        # No cursor ever enters the allocation, so the capability heuristic
+        # stays conservative (RWX), mirroring prepare_program's flags.
+        self.assertEqual(result["allocation_requests"],
+                         [{"name": "memory", "size": 256, "near": None, "executable": True, "writable": True}])
+        self.assertEqual(result["guards"], [])
+
+
+class AllocationOnlyLinkTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        try:
+            cls.assembler = NasmAssembler()
+        except AssemblyError as exc:
+            raise unittest.SkipTest(str(exc))
+
+    def test_dry_link_yields_empty_blocks_and_cleanup_lists(self):
+        memory = Memory()
+        result = dry_link_program(prepare_program(ALLOCATION_ONLY, "Target.exe"), memory, assembler=self.assembler)
+        self.assertEqual(result["enable"]["blocks"], [])
+        self.assertIn("memory", result["synthetic_allocations"])
+        self.assertEqual(result["disable"]["blocks"], [])
+        self.assertEqual(result["disable"]["deallocations"], ["memory"])
+        self.assertEqual(result["disable"]["unregister"], ["memory"])
+
+    def test_link_enable_and_disable_have_empty_patch_plans(self):
+        program = prepare_program(ALLOCATION_ONLY, "Target.exe")
+        memory = Memory()
+        allocations = {"memory": {"address": 0x10000, "size": 256}}
+        enable = link_program(program, memory, allocations=allocations, assembler=self.assembler)
+        self.assertEqual(enable["blocks"], [])
+        # The empty-sections return carries no block plan; allocation
+        # requests reach the engine through preflight_program, which
+        # test_preflight_requests_the_owned_allocation covers.
+        self.assertEqual(enable["allocation_requests"], [])
+        disable = link_program(program, memory, allocations=allocations, phase="disable", assembler=self.assembler)
+        self.assertEqual(disable["blocks"], [])
+        self.assertEqual(disable["deallocations"], ["memory"])
+        self.assertEqual(disable["unregister"], ["memory"])
+
+
+class DirectiveGrammarTests(unittest.TestCase):
+    """WP-31: 2-arg dealloc, registerlabel, fullaccess no-op."""
+
+    def test_dealloc_one_and_two_arg_forms(self):
+        one = prepare_program("[ENABLE]\nalloc(memory,0x100)\n[DISABLE]\ndealloc(memory)", "Target.exe")
+        self.assertEqual(next(node for node in one["disable"] if node["op"] == "dealloc"),
+                         {"op": "dealloc", "symbols": ["memory"]})
+        two = prepare_program("[ENABLE]\nalloc(memory,0x100)\n[DISABLE]\ndealloc(memory,0x100)", "Target.exe")
+        self.assertEqual(next(node for node in two["disable"] if node["op"] == "dealloc"),
+                         {"op": "dealloc", "symbols": ["memory"], "size": 256})
+
+    def test_dealloc_size_rejections(self):
+        for line, needle in (("dealloc(memory,0)", "dealloc size must contain"),
+                             ("dealloc(memory,zz)", "dealloc size must contain"),
+                             ("dealloc(memory,0x100001)", "dealloc size must contain"),
+                             ("dealloc(memory,100,10)", "dealloc requires one symbol"),
+                             ("dealloc(*,100)", "Wildcard dealloc takes no size.")):
+            with self.subTest(line=line), self.assertRaisesRegex(ProgramError, needle):
+                prepare_program(f"[ENABLE]\nalloc(memory,0x100)\n[DISABLE]\n{line}", "Target.exe")
+
+    def test_registerlabel_owned_positional_label(self):
+        program = prepare_program("[ENABLE]\nalloc(cave,0x100)\ncave:\nflag:\ndb 0\n"
+                                  "registerlabel(flag)\n[DISABLE]\ndealloc(*)\nunregistersymbol(flag)", "Target.exe")
+        self.assertEqual(program["provides"], ["flag"])
+
+    def test_registerlabel_unowned_symbol_refused(self):
+        with self.assertRaisesRegex(ProgramError, "Cannot register a symbol not owned by this program: unknown."):
+            prepare_program("[ENABLE]\nalloc(cave,0x100)\ncave:\ndb 0\n"
+                            "registerlabel(unknown)\n[DISABLE]\ndealloc(*)", "Target.exe")
+
+    def test_fullaccess_accepted_as_bounded_noop(self):
+        program = prepare_program("[ENABLE]\n1000:\ndb 90\nfullaccess(1000, 0x1000)\n[DISABLE]\n1000:\ndb 00",
+                                  "Target.exe")
+        self.assertIn("fullaccess", program["capabilities"])
+        self.assertEqual(next(node for node in program["enable"] if node["op"] == "fullaccess"),
+                         {"op": "fullaccess", "address": "1000", "size": 4096})
+
+    def test_fullaccess_rejections(self):
+        for line, needle in (("fullaccess(1000)", "fullaccess requires an address expression and a byte size."),
+                             ("fullaccess(1000, 0)", "fullaccess size must contain"),
+                             ("fullaccess(1000, 0x1000001)", "fullaccess size must contain")):
+            with self.subTest(line=line), self.assertRaisesRegex(ProgramError, needle):
+                prepare_program(f"[ENABLE]\n1000:\ndb 90\n{line}\n[DISABLE]\n1000:\ndb 00", "Target.exe")
+
+
+class ReserveDirectiveTests(unittest.TestCase):
+    """WP-35: operand-less dq/resb reservations inside owned allocations."""
+
+    def test_bare_dq_inside_alloc_is_reserve_node(self):
+        program = prepare_program("[ENABLE]\nalloc(memory,0x100)\ncave:\ndq\ndb 0\n[DISABLE]\ndealloc(*)", "Target.exe")
+        self.assertEqual(next(node for node in program["enable"] if node["op"] == "reserve"),
+                         {"op": "reserve", "directive": "dq", "bytes": 8})
+
+    def test_resb_count_inside_alloc(self):
+        program = prepare_program("[ENABLE]\nalloc(memory,0x100)\ncave:\nresb 5\n[DISABLE]\ndealloc(*)", "Target.exe")
+        self.assertEqual(next(node for node in program["enable"] if node["op"] == "reserve"),
+                         {"op": "reserve", "directive": "resb", "bytes": 5})
+
+    def test_reserve_outside_owned_allocation_refused(self):
+        for line in ("dq", "resb 4"):
+            with self.subTest(line=line), self.assertRaisesRegex(ProgramError,
+                                                                "Uninitialized reservation \\(dq/resb\\) requires a program-owned allocation."):
+                prepare_program(f"[ENABLE]\n1000:\n{line}\n[DISABLE]\n1000:\ndb 00", "Target.exe")
+
+    def test_resb_count_rejections(self):
+        for line in ("resb 0", "resb zz", "resb 0x100001"):
+            with self.subTest(line=line), self.assertRaisesRegex(ProgramError, "resb count must contain"):
+                prepare_program(f"[ENABLE]\nalloc(memory,0x100)\ncave:\n{line}\n[DISABLE]\ndealloc(*)", "Target.exe")
+
+    def test_dq_with_operands_stays_a_data_node(self):
+        program = prepare_program("[ENABLE]\nalloc(memory,0x100)\ncave:\ndq 0\n[DISABLE]\ndealloc(*)", "Target.exe")
+        self.assertEqual([node["op"] for node in program["enable"]], ["alloc", "cursor", "data"])
+
+    def test_reserve_counts_toward_the_generated_byte_bound(self):
+        # 3 * resb(0x100000) + resb(#1048568) == 4194296 generated bytes.
+        # A bare dq on top lands exactly on MAX_TOTAL_BYTES, proving the
+        # bare dq counts exactly 8; one further resb 1 overflows the bound.
+        from ct2trainer.native.aa_program import MAX_BLOCK_BYTES, MAX_TOTAL_BYTES
+        self.assertEqual(3 * MAX_BLOCK_BYTES + 1048568 + 8, MAX_TOTAL_BYTES,
+                         "test arithmetic drift: bare dq must count exactly 8 bytes")
+        filler = "resb 0x100000\n" * 3 + "resb #1048568\n"
+        program = prepare_program("[ENABLE]\nalloc(memory,0x100000)\ncave:\n" + filler
+                                  + "dq\n[DISABLE]\ndealloc(*)", "Target.exe")
+        self.assertTrue(program["allocation_writable"]["memory"])
+        with self.assertRaisesRegex(ProgramError, "generated-byte"):
+            prepare_program("[ENABLE]\nalloc(memory,0x100000)\ncave:\n" + filler
+                            + "dq\nresb 1\n[DISABLE]\ndealloc(*)", "Target.exe")
+
+
+class NewDirectiveLinkTests(unittest.TestCase):
+    """WP-29/31/35 link-level byte-exact behavior (pinned NASM)."""
+
+    @classmethod
+    def setUpClass(cls):
+        try:
+            cls.assembler = NasmAssembler()
+        except AssemblyError as exc:
+            raise unittest.SkipTest(str(exc))
+
+    def test_reserve_emits_zero_filled_bytes_byte_exact(self):
+        for source, expected in (("[ENABLE]\nalloc(cave,0x10)\ncave:\ndq\n[DISABLE]\ndealloc(*)", "00" * 8),
+                                 ("[ENABLE]\nalloc(cave,0x10)\ncave:\nresb 5\n[DISABLE]\ndealloc(*)", "00" * 5)):
+            with self.subTest(expected=expected):
+                program = prepare_program(source, "Target.exe")
+                linked = link_program(program, Memory(),
+                                      allocations={"cave": {"address": 0x10000, "size": 16,
+                                                            "executable": False, "writable": True}},
+                                      assembler=self.assembler)
+                self.assertEqual(linked["blocks"][0]["bytes"], expected)
+
+    def test_fullaccess_is_never_emitted_to_nasm(self):
+        program = prepare_program("[ENABLE]\n1000:\ndb 90\nfullaccess(1000, 0x1000)\n[DISABLE]\n1000:\ndb 00",
+                                  "Target.exe")
+        linked = link_program(program, Memory(), assembler=self.assembler)
+        self.assertEqual(linked["blocks"][0]["bytes"], "90")
+        self.assertNotIn("fullaccess", linked["nasm_source"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -98,7 +98,13 @@ class ManagedMethodProgramTests(unittest.TestCase):
         script = ("[ENABLE]\nMyLabel:\ndb c3\n[DISABLE]\nMyLabel:\ndb c3\n")
         program = prepare_program(script, "FixtureTarget.exe")
         self.assertEqual(program["managed_method_labels"], [])
-        self.assertEqual(program["requires"], ["MyLabel"])
+        # WP-28 refined: a bare positional label the program defines itself
+        # is local; it surfaces via positional_labels, not as an external
+        # requirement (the table compiler re-declares it only when another
+        # supported record provides the same symbol).
+        self.assertEqual(program["requires"], [])
+        # positional_labels are casefolded by design.
+        self.assertEqual(program["positional_labels"], ["mylabel"])
 
     def test_triple_colon_form_is_refused(self):
         with self.assertRaises(ProgramError):

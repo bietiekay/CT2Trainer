@@ -5,7 +5,9 @@ import inspect
 from pathlib import Path
 import sys
 import unittest
+from ct2trainer.native import aa as aadata
 from ct2trainer.native import aa_program as aa
+from ct2trainer.native.aa import AAError, compile_script
 from test_native_hooks import _Memory
 from iced_x86 import Decoder
 
@@ -106,5 +108,101 @@ class LiteralOnlyTests(unittest.TestCase):
             self.assertTrue(instructions and all(not item.is_invalid for item in instructions))
             self.assertEqual(instructions[0].immediate8to32 if bits==32 else instructions[0].immediate8to64,82)
             self.assertEqual(instructions[2].immediate8to32,21)
+
+class DataDialectCCommentTests(unittest.TestCase):
+    """WP-31: non-nested C block comments in the bounded data dialect."""
+
+    def _base_script(self):
+        # No trailing newline: _without_comments joins lines with "\n", so a
+        # trailing newline in the input would shrink the line count by one.
+        return ("[ENABLE]\n"
+                "aobscanmodule(Anchor,owned.exe,00 11)\n"
+                "assert(Anchor,11)\n"
+                "Anchor:\n"
+                "db 22\n"
+                "[DISABLE]\n"
+                "assert(Anchor,22)\n"
+                "Anchor:\n"
+                "db 11")
+
+    def test_multiline_block_comment_accepted_and_line_count_preserved(self):
+        script = self._base_script().replace("Anchor:\ndb 22",
+                                             "/* block comment\n   spanning lines */\nAnchor:\ndb 22", 1)
+        clean = aadata._without_comments(script)
+        self.assertEqual(clean.count("\n"), script.count("\n"))
+        result = compile_script(script)
+        self.assertEqual([op["op"] for op in result["enable"]], ["scan", "assert", "write"])
+        self.assertEqual(result["provides"], [])
+
+    def test_nested_block_comment_treated_sequentially(self):
+        # The first /* opens, the inner /* is content, the first */ closes;
+        # the trailing db on the same line is live code.
+        script = self._base_script().replace("Anchor:\ndb 22",
+                                             "Anchor:\n/* a /* b */ db 33", 1) \
+                                     .replace("assert(Anchor,22)", "assert(Anchor,33)")
+        clean = aadata._without_comments(script)
+        self.assertIn("db 33", clean)
+        result = compile_script(script)
+        write = next(op for op in result["enable"] if op["op"] == "write")
+        self.assertEqual(write["bytes"], "33")
+
+    def test_unmatched_block_terminator_refused(self):
+        with self.assertRaisesRegex(AAError, "Unmatched C block comment terminator."):
+            compile_script("[ENABLE]\n*/\n[DISABLE]\n")
+
+    def test_unterminated_block_comment_refused(self):
+        with self.assertRaisesRegex(AAError, "Unterminated C block comment."):
+            compile_script("[ENABLE]\n/* a\n[DISABLE]\n")
+
+    def test_compiler_directives_still_refused_inside_block_comment(self):
+        with self.assertRaisesRegex(AAError, "Lua, C and compiler/preprocessor directives are unsupported."):
+            compile_script("/* {$lua} */\n[ENABLE]\n[DISABLE]\n")
+
+
+class DataDialectRegisterTests(unittest.TestCase):
+    """WP-31: multi-token register directives and registerlabel."""
+
+    def _script(self, enable_directive, disable_directive):
+        return ("[ENABLE]\n"
+                "define(Alpha,0x1000)\n"
+                "define(Beta,0x1004)\n"
+                + enable_directive + "\n"
+                "[DISABLE]\n"
+                + disable_directive + "\n")
+
+    def test_multi_token_registersymbol_creates_two_register_ops(self):
+        result = compile_script(self._script("registersymbol(Alpha, Beta)", "unregistersymbol(Alpha, Beta)"))
+        self.assertEqual([(op["op"], op["symbol"]) for op in result["enable"] if op["op"] == "register"],
+                         [("register", "Alpha"), ("register", "Beta")])
+        self.assertEqual(result["provides"], ["Alpha", "Beta"])
+
+    def test_multi_token_unregistersymbol_creates_two_unregister_ops(self):
+        result = compile_script(self._script("registersymbol(Alpha,Beta)", "unregistersymbol(Alpha,Beta)"))
+        self.assertEqual([(op["op"], op["symbol"]) for op in result["disable"] if op["op"] == "unregister"],
+                         [("unregister", "Alpha"), ("unregister", "Beta")])
+
+    def test_registerlabel_accepted_in_data_dialect(self):
+        result = compile_script(self._script("registerlabel(Alpha, Beta)", "unregistersymbol(Alpha, Beta)"))
+        self.assertEqual([(op["op"], op["symbol"]) for op in result["enable"] if op["op"] == "register"],
+                         [("register", "Alpha"), ("register", "Beta")])
+        self.assertEqual(result["provides"], ["Alpha", "Beta"])
+
+    def test_single_token_registersymbol_unchanged(self):
+        script = ("[ENABLE]\n"
+                  "define(Alpha,0x1000)\n"
+                  "registersymbol(Alpha)\n"
+                  "[DISABLE]\n"
+                  "unregistersymbol(Alpha)\n")
+        result = compile_script(script)
+        self.assertEqual([(op["op"], op["symbol"]) for op in result["enable"] if op["op"] == "register"],
+                         [("register", "Alpha")])
+        self.assertEqual(result["provides"], ["Alpha"])
+
+    def test_register_symbol_wildcard_refused(self):
+        # The data dialect has no scoped cleanup wildcard: validate_symbol
+        # rejects the asterisk token.
+        with self.assertRaisesRegex(AAError, "Symbol must contain ASCII letters, digits or underscores."):
+            compile_script(self._script("registersymbol(*)", "unregistersymbol(Alpha, Beta)"))
+
 
 if __name__=='__main__':unittest.main()
