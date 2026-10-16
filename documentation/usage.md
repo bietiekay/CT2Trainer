@@ -64,7 +64,33 @@ python -m ct2trainer.native recover plan.json --state-dir <state> --process-lock
 A new trainer must still attach to a freshly verified target before
 applying saved switches.
 
-## 5. Final acceptance
+## 5. Debug logging (optional)
+
+The converter offers an optional **debug logging** option (checkbox in the
+converter GUI, `--debug-log` flag in the source CLI). When enabled, the
+generated trainer writes an append-only log file with one JSON line per
+runtime event:
+
+- **Location:** next to the trainer EXE, named
+  `<TrainerName>.ct2debug.log` (source runtime:
+  `ct2trainer-debug.log` in the working directory).
+- **Contents:** plan identity at startup (trainer ID, process, state
+  directory, saved wishes), every attach attempt and refusal (process not
+  found, architecture mismatch, state conflicts, call broker), confirmed
+  attaches (PID, EXE path, pointer width), every AOB scan (symbol, module,
+  pattern, module base, RVA, result), definitions, symbol registrations,
+  byte assertions (with expected vs. actual bytes on failure), every patch
+  write (address, original and new bytes, read-back verification), all
+  toggle/value/freeze attempts, wish replay on attach, state saves, and
+  clean or unclean shutdown.
+- **Errors** are logged with exception type, message and full traceback.
+
+Logging is best-effort: a failed log write never changes trainer behavior,
+and without the option no log file is created at all. The option does not
+change plan identity (trainer ID) or state directories, so a log-enabled
+trainer stays compatible with state created by a standard trainer.
+
+## 6. Final acceptance
 
 Final acceptance is **separate on Windows and on a real Steam Deck under
 Proton with touch operation**; fixture tests and a green build do not

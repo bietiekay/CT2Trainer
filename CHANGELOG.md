@@ -2,6 +2,47 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.13 (2026-10-16)
+
+- Optional runtime debug logging for generated trainers (user-requested
+  feature for diagnosing red/disabled toggles on real tables):
+  - New converter option **Debug logging** — checkbox in the converter
+    GUI, `--debug-log` flag on the source CLI `inspect`/`prepare`/`build`.
+    It sets the plan flag `debug_log: true` (default plans are
+    byte-identical to before; the plan identity / trainer ID is
+    unaffected, so state directories stay shared).
+  - When enabled, the generated Trainer.exe appends one JSON line per
+    runtime event to `<TrainerName>.ct2debug.log` next to the EXE (source
+    runtime: `ct2trainer-debug.log` in the working directory): plan
+    identity header, engine init + saved wishes, attach attempts and
+    refusals (process not found, architecture mismatch, session claim,
+    call broker), confirmed attach (PID, target EXE path, pointer width,
+    creation time), target exit, every AOB scan (symbol, module, pattern,
+    module base, size, RVA; failures with full traceback), definitions,
+    symbol register/unregister, byte asserts (expected vs. actual bytes on
+    failure), planned and written patches (address, original, new bytes;
+    refusals, write failures, rollback failures), toggle / value-write /
+    freeze attempts with success and failure outcomes, wish replay on
+    attach, state saves, auto-on requests, engine blocking, and
+    clean/unclean close. Errors carry exception type, message and full
+    traceback.
+  - Logging is best-effort and never changes trainer behavior; disabled
+    plans (the default) write no file at all.
+  - New module `src/ct2trainer/native/debug_log.py`; instrumentation in
+    `engine.py` (init, poll/attach, `_operations`, `_write_transaction`,
+    `_save`, `toggle`, `set_value`, `set_freeze`, `request_auto_on`,
+    `clear_desired`, `_block`, `close`), `ui.py` (action failures,
+    startup failures), `launcher.py` (startup failures); `memory.py`
+    exposes the bound target's `image_path`.
+  - New tests: `tests/test_native_debug_log.py` (14 tests: plan flag
+    default/opt-in/typo validation + trainer-ID stability, log writer
+    JSON-line format / error traceback capture / disabled no-op / close
+    semantics, engine integration for attach failure, scan failure,
+    assert failure, state-save failure, full toggle/value/close cycle,
+    and no-file-when-disabled).
+- This build is the first release cutting the Wave 2 corpus-closure
+  content (see 0.12) together with the debug-logging option.
+
 ## 0.12 (2026-10-16)
 
 - Wave 2 of the reference-corpus closure cycle on `native-0.12`

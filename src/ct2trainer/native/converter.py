@@ -43,6 +43,9 @@ def main() -> int:
     ttk.Label(top, text="Target architecture").grid(row=3, column=0, sticky="w", pady=8)
     architecture_choice = ttk.Combobox(top, textvariable=architecture, values=("x86", "x64"), state="readonly")
     architecture_choice.grid(row=3, column=1, sticky="ew", padx=8)
+    debug_log = tk.BooleanVar(value=False)
+    ttk.Checkbutton(top, text="Debug logging (trainer writes a detailed .ct2debug.log next to the EXE)",
+                    variable=debug_log).grid(row=4, column=0, columnspan=2, sticky="w", pady=(8, 0))
     top.columnconfigure(1, weight=1)
     tree_frame = ttk.Frame(root, padding=(12, 0))
     tree_frame.pack(fill="both", expand=True)
@@ -60,7 +63,7 @@ def main() -> int:
     def inspect():
         try:
             plan = compile_table(Path(table_path.get()), process.get(), title=title.get(),
-                                 architecture=architecture.get())
+                                 architecture=architecture.get(), debug_log=debug_log.get())
             model["plan"] = plan
             model["selected"] = {e["id"] for e in plan["entries"] if e["supported"]}
             render()
@@ -134,7 +137,7 @@ def main() -> int:
         if not model["selected"]:
             raise ValueError("Include at least one record.")
         return compile_table(Path(table_path.get()), process.get(), title=title.get(), selected_ids=model["selected"],
-                             architecture=architecture.get())
+                             architecture=architecture.get(), debug_log=debug_log.get())
 
     def build():
         try:

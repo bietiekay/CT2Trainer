@@ -256,6 +256,8 @@ class TrainerWindow:
         try:
             callback()
         except Exception as exc:
+            self.engine.debug_log.error("ui-action-failed", exc,
+                                        trainer_id=self.engine.plan.get("trainer_id"))
             messagebox.showerror("Trainer action failed", str(exc), parent=self.root)
         self.status_text.set(self.engine.status)
         self.render()
@@ -489,6 +491,11 @@ def run_trainer(plan: dict | str | Path) -> int:
         except LiveStateConflict as exc:
             live = exc
         except Exception as exc:
+            try:
+                from .debug_log import create_debug_log
+                create_debug_log(plan).error("trainer-startup-failed", exc)
+            except Exception:
+                pass
             messagebox.showerror("CT2Trainer cannot start", str(exc), parent=root)
             root.destroy()
             return 1

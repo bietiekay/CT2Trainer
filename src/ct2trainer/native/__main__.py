@@ -18,6 +18,9 @@ def main(argv=None) -> int:
         sub.add_argument("--architecture", choices=("x86", "x64"), default="x64",
                          help="Fixed target architecture (default: x64); attach refuses a different target. Controller remains x64.")
         sub.add_argument("--include-id", type=int, action="append")
+        sub.add_argument("--debug-log", action="store_true",
+                         help="Enable detailed runtime debug logging in the generated trainer "
+                              "(plan flag debug_log; the trainer writes a *.ct2debug.log file next to the EXE)")
         if command != "inspect":
             sub.add_argument("--output", type=Path, required=True)
             sub.add_argument("--force", action="store_true")
@@ -79,7 +82,7 @@ def main(argv=None) -> int:
             return 0 if result.completed else 2 if result.status == 'refused' else 3
         from .compiler import compile_table
         plan = compile_table(args.table, args.process, title=args.title, selected_ids=args.include_id,
-                             architecture=args.architecture)
+                             architecture=args.architecture, debug_log=args.debug_log)
         if args.command == "inspect":
             print(json.dumps(plan, ensure_ascii=True, indent=2))
         elif args.command == "prepare":
