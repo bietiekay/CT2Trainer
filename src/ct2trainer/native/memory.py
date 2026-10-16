@@ -715,6 +715,19 @@ class ProcessMemory:
             self._require_alive()
             return result
 
+    def _take_module_snapshot(self, flags: int, operation: str) -> int:
+        """Create a toolhelp module snapshot, retrying only on BAD_LENGTH."""
+        snapshot = None
+        for _ in range(3):
+            snapshot = self._kernel.CreateToolhelp32Snapshot(flags, self._pid)
+            if snapshot != ctypes.c_void_p(-1).value:
+                break
+            if ctypes.get_last_error() != ERROR_BAD_LENGTH:
+                raise _windows_error(operation)
+        if not snapshot or snapshot == ctypes.c_void_p(-1).value:
+            raise _windows_error(operation)
+        return snapshot
+
     def module_for_architecture(self, name: str, pointer_size: int) -> tuple[int, int]:
         """Select a uniquely named mapped PE image with explicit x86/x64 ABI."""
         _basename(name)
@@ -722,15 +735,24 @@ class ProcessMemory:
             raise ValueError("A module architecture requires a 4/8-byte pointer width.")
         with self._lock:
             self._require_alive()
-            snapshot = None
-            for _ in range(3):
-                snapshot = self._kernel.CreateToolhelp32Snapshot(0x08 | 0x10, self._pid)
-                if snapshot != ctypes.c_void_p(-1).value:
-                    break
-                if ctypes.get_last_error() != ERROR_BAD_LENGTH:
-                    raise _windows_error("CreateToolhelp32Snapshot architecture modules")
-            if not snapshot or snapshot == ctypes.c_void_p(-1).value:
-                raise _windows_error("CreateToolhelp32Snapshot architecture modules")
+            try:
+                snapshot = self._take_module_snapshot(
+                    0x08 | 0x10, "CreateToolhelp32Snapshot architecture modules")
+            except ProcessMemoryError as exc:
+                # Some Windows builds reject the combined native/WOW64 module
+                # snapshot (observed in the field: Win32 error 299). This
+                # controller is 64-bit, where TH32CS_SNAPMODULE alone already
+                # lists both the 32- and 64-bit modules of the target, so
+                # retry with the native flag before failing.
+                try:
+                    snapshot = self._take_module_snapshot(
+                        0x08,
+                        "CreateToolhelp32Snapshot architecture modules (native-only fallback)")
+                except ProcessMemoryError:
+                    raise ProcessMemoryError(
+                        "CreateToolhelp32Snapshot architecture modules failed with "
+                        "the combined native/WOW64 flags and again with the "
+                        "native-only fallback; first failure: " + str(exc)) from exc
             matches = {}
             started, examined = time.monotonic(), 0
             try:

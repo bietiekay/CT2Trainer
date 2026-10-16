@@ -43,6 +43,15 @@ Single maintained changelog for CT2Trainer releases.
     semantics, engine integration for attach failure incl. repeated-
     failure dedupe, scan failure, assert failure, state-save failure,
     full toggle/value/close cycle, and no-file-when-disabled).
+- Module-snapshot robustness fix (surfaced in the field by the new debug
+  logging): the target module inventory used by every AOB scan and by
+  target-architecture re-verification now retries with the native-only
+  TH32CS_SNAPMODULE flag when the combined native/WOW64 snapshot fails
+  (observed in the field: Win32 error 299,
+  ERROR_INVALID_STARTING_ADDRESS, on some Windows builds); if both
+  attempts fail, the named error reports both attempts and the first
+  Win32 code. Two new tests in `tests/test_native_architecture.py` pin
+  the fallback and the double-failure error.
 - Release build 0.13: run `native-20261016T181516Z-b8ae88de` cut from
   `main` @ `7184547` via `scripts/Build-Native.ps1` (2026-10-16);
   in-build suite 2925 OK / 25 regular skips, `ce_inputs: []`,
@@ -54,7 +63,8 @@ Single maintained changelog for CT2Trainer releases.
   both ZIPs ship the elaborated release READMEs (the portable user
   guide now documents the debug-logging option) and this changelog.
   The build carries the released 0.12 content (Wave 2 corpus closure)
-  unchanged; 0.13 only adds the debug-logging option.
+  unchanged; 0.13 adds the debug-logging option and the module-snapshot
+  fallback only.
 
 ## 0.12 (2026-10-16)
 

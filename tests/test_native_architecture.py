@@ -491,6 +491,42 @@ class ArchitectureMemoryTests(unittest.TestCase):
         with patch('ctypes.get_last_error', return_value=18, create=True):
             self.assertEqual(memory.module('owned.exe'), (0x1000, 0x100))
 
+    def test_combined_module_snapshot_failure_falls_back_to_native_only_flags(self):
+        from ct2trainer.native.memory import ProcessMemoryError
+        record = (0x100000000, 0x100, r'C:\owned.exe', 0x8664, 0x20b)
+        memory = self.modules([record], pointer_size=8)
+        original = memory._kernel
+        snapshot_calls = []
+        def snapshot(flags, pid):
+            snapshot_calls.append(flags)
+            if flags == (0x08 | 0x10):
+                return ctypes.c_void_p(-1).value
+            return 7
+        memory._kernel = SimpleNamespace(
+            CreateToolhelp32Snapshot=Mock(side_effect=snapshot),
+            Module32FirstW=original.Module32FirstW,
+            Module32NextW=original.Module32NextW,
+            CloseHandle=original.CloseHandle)
+        with patch('ctypes.get_last_error', side_effect=[299, 18, 18], create=True):
+            self.assertEqual(memory.module('owned.exe'), (0x100000000, 0x100))
+        self.assertEqual(snapshot_calls, [0x08 | 0x10, 0x08])
+        memory._kernel.CloseHandle.assert_called_once_with(7)
+
+    def test_module_snapshot_fails_named_when_fallback_also_fails(self):
+        from ct2trainer.native.memory import ProcessMemoryError
+        record = (0x100000000, 0x100, r'C:\owned.exe', 0x8664, 0x20b)
+        memory = self.modules([record], pointer_size=8)
+        def snapshot(flags, pid):
+            return ctypes.c_void_p(-1).value
+        memory._kernel = SimpleNamespace(
+            CreateToolhelp32Snapshot=Mock(side_effect=snapshot),
+            Module32FirstW=Mock(), Module32NextW=Mock(),
+            CloseHandle=Mock(return_value=True))
+        with patch('ctypes.get_last_error', side_effect=[299, 299, 299, 299], create=True):
+            with self.assertRaisesRegex(
+                    ProcessMemoryError, 'native-only fallback'):
+                memory.module('owned.exe')
+
     def test_module_scan_time_bound_closes_snapshot_without_truncated_success(self):
         from ct2trainer.native.memory import ProcessMemoryError
         memory = self.modules([(0x1000, 0x100, r'C:\owned.exe', 0x14c, 0x10b)])
