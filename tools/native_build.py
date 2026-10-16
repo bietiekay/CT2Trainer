@@ -329,6 +329,63 @@ def build(output):
         raise ValueError('Native source changed during freezing; preserve this run and build a fresh stable snapshot')
     source_readme = f"""CT2Trainer {VERSION} development source
 
+What this is
+============
+CT2Trainer is an independently authored, clean-room converter and
+Windows trainer for .CT (Cheat Engine XML) table files. It reads a
+table plus the exact game process EXE name and produces a standalone
+trainer EXE that attaches to the running game and toggles the table's
+features - with no Cheat Engine implementation code, binaries or data
+anywhere in the chain; only the public .CT/XML format contract and
+documented behavior are derived.
+
+The ZIP contains the full source tree, hash-pinned offline build
+inputs, the test suite, the synthetic corpus under TableReferences/,
+the committed measurement artifacts under gap_inventory/ and the
+release documentation (build, usage, derivation, runtime,
+verification, Proton/Steam Deck protocol, feature matrix, changelog).
+
+Product behavior (what the generated trainer does)
+=================================================
+- Value records: 4/8/16/32/64-bit integers (decimal and hex),
+  float/double - including raw IEEE-754 bit-pattern editing - strings
+  (bounded ASCII/UTF-16LE), and dropdowns including value-linked
+  dropdowns whose choices are validated against the record's own type.
+- Auto Assembler patches: byte/code data patches, AOB scans
+  (process/module/range, including the $process module token),
+  program-owned allocations and dq/resb reservations, allocation-only
+  initialization, one-shot scripts, per-program label scoping, and
+  Lua-driven records (owned Lua 5.3 execution).
+- Activation structures: parent/child groups with flag cascades,
+  record-ID activation sets, and staged records - records whose
+  address needs a symbol from another record show a pending state and
+  unlock automatically once their provider is enabled; turning the
+  provider off releases the children first.
+- Saved toggles: only confirmed ON-switches persist; they are
+  automatically re-enabled after a successful re-attach (game or
+  trainer restart). A failed enable stays visibly inactive and is
+  never re-applied as a saved wish.
+- Fail-closed: unsupported records stay visible with a named block
+  reason and are excluded; the trainer re-proves target identity
+  (PID/creation time, PE header, architecture, ownership, current
+  bytes) before any memory mutation; one-shot scripts get the honest
+  one-shot contract (no faked OFF/save/re-apply).
+- Still in development: broad async/table forms, managed
+  lookup/target invocation, remote speed control. Static IL2CPP file
+  analysis produces a read-only report (no live managed resolver).
+  Explicit stale-session recovery is available through the source CLI.
+
+Quick build (fully offline)
+===========================
+scripts/Build-Native.ps1 verifies the pinned inputs, runs the full
+test suite and produces both CT2Trainer-{VERSION}-source.zip and
+CT2Trainer-{VERSION}-windows-portable.zip plus a build report
+(build.json) in a fresh build/runs/ folder:
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Build-Native.ps1
+
+Manual build and test from this ZIP
+===================================
 Use Windows x64 Python 3.12. No CE implementation or binaries are included.
 Owned C targets and CT fixtures are included; no external trainer code or
 third-party game tables are included. User CT rights are separate.
@@ -412,7 +469,80 @@ gap_inventory/feature-coverage.json. Release notes: CHANGELOG.md.
         archive.write(ROOT / "LICENSE.md", "LICENSE.md")
         archive.write(ROOT / "CHANGELOG.md", "CHANGELOG.md")
         archive.write(output / "payload-inventory.json", "payload-inventory.json")
-        archive.writestr("README.md", f"CT2Trainer {VERSION} development build\n\nRun CT2Trainer-Converter.exe. Open a CT, enter the exact target EXE basename, include records and build a trainer EXE. Python and CE do not need to be installed.\nNative assembler/linking, owned Lua53 record activation, private table helpers, exact arrays, coordinated bitfields, bounded ASCII/UTF-16LE Strings and Freeze, bounded process/module/range AA scans, source-bound literal RW data patches and shared RW globals are implemented. Executable hooks use Windows debug-event coordination and source-proven provider literal spans. Published globals remain allocated until target exit; closing a live controller quarantines that session. Single printable ASCII instruction literals are supported; target API resolution remains separate. Static IL2CPP file analysis does not provide a live managed resolver. Broad async/table forms, managed lookup/target invocation and remote speed control remain in development. Explicit recovery is currently available through the source CLI.\nOwned x64/WOW64 fixture validation is separate from games, other PCs, touch and Proton/Steam Deck.\nKeep licenses/ with redistributions. The same notices are embedded in generated trainers. User CT rights are separate.\n")
+        archive.writestr("README.md", f"""CT2Trainer {VERSION} - Windows portable
+
+What this is
+============
+CT2Trainer is a standalone Windows converter and trainer for .CT table
+files (the XML table format used by Cheat Engine). It turns a .CT table
+into a small, self-contained trainer EXE that attaches to the running
+game and lets you toggle the table's features - without installing or
+running Cheat Engine, and without Python on the machine.
+
+Why it exists
+=============
+.CT tables are usually created in Cheat Engine, but you may want to use
+them on a machine where Cheat Engine is not installed or not wanted
+(clean test machines, or a Steam Deck under Proton where a full debug
+suite is impractical). CT2Trainer reuses your existing tables and builds
+a dedicated trainer EXE for the exact game process you name. The scope
+is private own use: your tables, your game processes.
+
+How to use it
+=============
+1. Run CT2Trainer-Converter.exe.
+2. Open your .CT table file.
+3. Enter the exact game process EXE name (basename, e.g. game.exe) and
+   confirm the architecture (x64).
+4. The converter statically inspects every record and shows its state:
+   supported, staged, or blocked (with a named reason). Select the
+   records you want.
+5. Build the trainer EXE. Start the game, then run the generated
+   trainer: it attaches to the verified process and shows one switch
+   card per record. Toggle switches on and off.
+6. Saved toggles: only confirmed ON-switches are persisted, and they are
+   automatically re-enabled after a successful re-attach (game or
+   trainer restart, on a freshly verified target). A failed enable
+   attempt stays visibly inactive and is never re-applied as a saved
+   wish.
+
+What it can do
+==============
+- Value records: 4/8/16/32/64-bit integers (decimal and hex),
+  float/double - including raw IEEE-754 bit-pattern editing - strings
+  (bounded ASCII/UTF-16LE), and dropdowns including value-linked
+  dropdowns whose choices are validated against the record's own type.
+- Auto Assembler patches: byte/code data patches, AOB scans
+  (process/module/range, including the $process module token),
+  program-owned allocations and dq/resb reservations, one-shot
+  scripts, and Lua-driven records (owned Lua 5.3 execution).
+- Activation structures: parent/child groups with flag cascades,
+  record-ID activation sets, and staged records - records whose
+  address needs a symbol provided by another record show a pending
+  state and unlock automatically once their provider is enabled;
+  turning the provider off releases the children first.
+- The trainer re-proves the target identity (PID/creation time, PE
+  header, architecture, ownership, current bytes) before any memory
+  mutation; a stale or mismatched process is refused.
+
+Limits (fail-closed)
+====================
+- Records that cannot be supported stay visible with a named block
+  reason and are excluded from the generated trainer - no silent
+  guessing.
+- One-shot (irreversible) scripts get the honest one-shot contract:
+  no faked OFF/save/re-apply.
+- Broad async/table forms, managed lookup/target invocation and remote
+  speed control remain in development. Static IL2CPP file analysis
+  produces a read-only report only (no live managed resolver).
+- Explicit stale-session recovery is available through the source CLI
+  (see the source ZIP).
+- Final acceptance on a real Steam Deck under Proton with touch
+  operation is pending; this build is marked runtime_unverified.
+
+Keep licenses/ with redistributions. The same notices are embedded in
+generated trainers. User CT rights are separate.
+""")
     report = {"schema": "ct2trainer-repository-build/v1", "version": VERSION, "python": sys.version, "pyinstaller": __import__("PyInstaller").__version__, "ce_inputs": [], "runtime_unverified": True,
               "source_inputs": [{"path": p.relative_to(ROOT).as_posix(), "sha256": digest(p)} for p in files],
               "outputs": [{"file": p.name, "sha256": digest(p), "bytes": p.stat().st_size} for p in (template, converter, source_zip, portable_zip)]}
