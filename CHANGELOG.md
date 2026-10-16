@@ -2,6 +2,117 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.12 (2026-10-16)
+
+- Wave 2 of the reference-corpus closure cycle on `native-0.12`
+  (all ten work packages merged; full local suite 2910 OK / 25 expected
+  skips, 0 failures):
+  - W2-A (WP-27/32/33/34, lane `w2-a` @ `a49a1db`, merge `aa6371b`):
+    - WP-27 profile-aware linked dropdowns: every choice validated
+      against the record's own value type at compile time (per-choice
+      named refusals: byte-array hex-byte width, bit-field range,
+      integer type width); missing vs. ambiguous link targets split;
+      engine validator delegates to the compiler refusal so both layers
+      agree; reference dropdown family 1,215 → 0.
+    - WP-32 addressless value-record demotion to supported
+      non-actionable placeholder headings (`Addressless value record is
+      a non-actionable table placeholder.`); relative-address children
+      stay blocked; demoted placeholders excluded from the
+      parent-activation cascade.
+    - WP-33 IEEE-754 bit-pattern editing for hex Float/Double (exactly
+      8/16 hex digits, optional `0x` prefix, little-endian raw bytes,
+      `struct` round-trip proof shared by parse/format/dropdown/
+      value-link layers); fixed-width policy shared across
+      engine/compiler.
+    - WP-34 diagnostics: `Dropdown link target is missing or
+      ambiguous` split into per-name missing/ambiguous refusals;
+      comma-decimal Float/Double choice normalization (FLAG-2
+      follow-up); per-choice width-precision refusal names the
+      offending choice; AP-08.3/08.7 citations aligned.
+  - W2-C (WP-30/36, lane commit `e5c039e`, merge `32e0cdd`):
+    - WP-30 bounded address-expression profile: typed casts are no-ops
+      for symbol extraction, nested indirection up to depth 2, `@`
+      forms accepted; the `requires == address symbols` match gate kept;
+      malformed forms refused with named depth-limit reasons.
+    - WP-36 `aobscan`/`aobscanregion` staged under the existing scan
+      budget; `createThread()/threadWait()` keep the named fail-closed
+      capability gate; 3-arg `globalalloc(sym,size,$process)` accepted
+      in the global-init profile with shared symbol registration.
+  - W2-B (WP-28/29/31/35, lane commit `d4d062d`, merge `2f68f80`):
+    - WP-28 two-stage per-program label scoping: a program's own bare
+      positional labels (`return:`, `endp:`) are local at the prepare
+      level (`positional_labels`); the table compiler re-declares them
+      as external requirements whenever another supported record
+      provides the same symbol (registered symbols win over local label
+      definitions); bare labels without a provider or an address anchor
+      refused (`Positional label appears before any address cursor.`).
+      P3Reload `return:` family unblocked; reference catalog P3Reload
+      blocked 3,006 → 331.
+    - WP-29 `alloc` in the data dialect + allocation-only
+      initialization profile (no game write; `dealloc`/
+      `unregistersymbol` on disable; no dead-allocation publication);
+      one-shot programs stay refused (`Enable section has no
+      executable patch or data.`).
+    - WP-31 data-dialect grammar: 2-arg `dealloc`, multi-token
+      `registersymbol` pre-pass, `registerlabel`, bounded no-op
+      `fullaccess(addr,size)`, `/* */` comments, line-attached error
+      messages; comment-only scripts classified `inert/documented`.
+    - WP-35 operand-less `dq`/`resb` reservation spans as
+      program-owned allocations (must be written before publish, no
+      cross-program access); outside owned regions refused
+      (`Uninitialized reservation (dq/resb) requires a program-owned
+      allocation.`).
+- Corpus: 20 pinned tables (was 19): case-16 part 2 refined and
+  case-17 pinned as the 19th table (W2-A); case-15 part 2 refined and
+  re-pinned — 21 records, cast/indirection records, chain
+  `w2c-case15p2b-20261015144326Z` (W2-C); case-18 pinned as the 20th
+  table — `ct2synth18.exe`, 18 records, IDs 10–27: 16 supported,
+  IDs 26/27 deliberately kept blocked with named reasons (W2-B).
+  gate:1 now covers all 20 pinned tables.
+- Feature matrix stays 42/42 in-scope (100% feature-weighted,
+  7408/7408 action-weighted over run `w2b-case18-20261016142912Z`);
+  AP-11 campaign: 0/6,080 confirmed (separate end goal, excluded from
+  the 100% feature metric).
+- Reference catalog re-run (151 local-only tables, 143 distinct
+  hashes): 110,047 supported (54,234 staged), 7,577 of 117,624 blocked
+  (was 9,962 after W2-A); 1 whole-table compile error (SuperMeatBoy
+  legacy binary).
+- Release build 0.12: cut from `main` via `scripts/Build-Native.ps1`
+  (2026-10-16); in-build suite 2910 OK / 25 regular skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Artifacts: `CT2Trainer-0.12-source.zip` and
+  `CT2Trainer-0.12-windows-portable.zip` (per-run sha256 values in the
+  run folder's `build.json`, recorded in
+  `documentation/native-verification.md`).
+
+## 0.11 (2026-10-12)
+
+- WP-15 (L2-37): fully-permitted executable bit-field writes routed
+  through the engine (merge `d3316aa`; suite 2688).
+- WP-16 (L5-19): named table-Lua tabs gathered into the table-Lua
+  bootstrap source — main-body-only byte identity, document-order
+  joining, fail-closed invalid-tab activation (merge `38a830d`;
+  suite 2679).
+- WP-17: build version in the converter and trainer window titles plus
+  a clickable GitHub repository link in both windows; fail-closed
+  `verify_version_sync` fails the build on VERSION/`__version__` drift
+  (merge `557b2ac`; suite 2698).
+- WP-18: `$process` AOB module token for `aobscanmodule` at both engine
+  scan dispatch sites; trailing `@F` without explicit `@@` falls back
+  to the next positioned named label (explicit `@@` still wins);
+  PRAGMATA reference table 595/595 supported, 0 blocked (merge
+  `9a76eb8`; suite 2710).
+- Release build 0.11: run `native-20261012T092729Z-2d8aaf12` cut from
+  `main` @ `9a76eb8` via `scripts/Build-Native.ps1` (2026-10-12);
+  in-build suite 2710 OK / 25 regular skips, `ce_inputs: []`,
+  `runtime_unverified` deliberately kept per gate. Artifacts:
+  `CT2Trainer-0.11-source.zip` (sha256
+  `168c14a452595588a6483140f1d43bec818d0f0d0e9eb72167453a80624469db`)
+  and `CT2Trainer-0.11-windows-portable.zip` (sha256
+  `8a2d6ac6f8b802714fe7578de54cea432506a41f8bf91d597a03fa086b04f196`).
+  Superseded 0.11 run: `native-20261011T182033Z-f3317337` (pre-WP-18,
+  in-build suite 2698/25).
+
 ## 0.10 (in cycle, 2026-10-11)
 
 - WP-14 "Staged Capabilities" (PRAGMATA-class tables):
