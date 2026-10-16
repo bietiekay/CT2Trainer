@@ -1,7 +1,7 @@
 # CT2Trainer — Central Gap & Goal Tracking
 
-**Status: 2026-10-16** (baseline `main` @ `9a76eb8`, 0.11, build
-`native-20261012T092729Z-2d8aaf12`; Wave 2 closed on `native-0.12`:
+**Status: 2026-10-16** (baseline `main` @ `ba1d3e4`, 0.12, build
+`native-20261016T163910Z-d047f2d2`; Wave 2 closed on `native-0.12`:
 W2-A merged (WP-27/32/33/34, merge `aa6371b`), case-16 part 2 + case-17
 pinned; W2-C merged (WP-30/36, merge `32e0cdd`), case-15 part 2 refined
 and pinned (chain `w2c-case15p2b-20261015144326Z`); W2-B merged
@@ -48,7 +48,7 @@ linked documents and are NOT duplicated here:
 | GOAL-4 | Final acceptance Windows (clean PC/VM, no CE/Python) | **open** | Portable start, trainer run, Unicode paths, UAC/rights, debugger conflict, saved-wish replay, target restart. Last user-tested release: 0.9.0-rc2 (`native-20261010T172336Z-ffe35eb0`). |
 | GOAL-5 | Final acceptance Steam Deck (real Proton, touch) | **open** | Protocol `tests/deck/compatibility-matrix.md`. |
 | GOAL-6 | `runtime_unverified` flipped | **open** | Requires GOAL-4 + GOAL-5 evidence recorded in `documentation/native-verification.md`. |
-| GOAL-7 | Release 0.12 (end of closure cycle) | **open** | After Wave 1+2 integrations are stable: full suite green, matrix artifacts regenerated, both ZIPs via `scripts/Build-Native.ps1`, `ce_inputs: []`. |
+| GOAL-7 | Release 0.12 (end of closure cycle) | **done** (2026-10-16) | Build `native-20261016T163910Z-d047f2d2` cut from `main` @ `ba1d3e4`: in-build suite 2910 OK / 25 regular skips, `ce_inputs: []`, matrix artifacts regenerated (run `w2b-case18-20261016142912Z`, 6,080 actions), both ZIPs via `scripts/Build-Native.ps1` (source sha256 `f5a5468d…`, portable sha256 `7bd582e3…`), both ZIPs ship elaborated release READMEs + changelog (0.12 + retro 0.11). |
 
 ## 2. Gap inventory - reference corpus (baseline 21,852 blocked; 21,959 after W1-D/W1-C/W1-B; 10,892 after W1-A + W1-E; 9,962 after W2-A; 7,577 after W2-B + W2-C)
 
