@@ -1,12 +1,14 @@
 # CT2Trainer — Central Gap & Goal Tracking
 
-**Status: 2026-10-16** (baseline `main` @ `ba1d3e4`, 0.12, build
-`native-20261016T163910Z-d047f2d2`; Wave 2 closed on `native-0.12`:
+**Status: 2026-10-16** (baseline `main` @ `7184547`, 0.13, build
+`native-20261016T181516Z-b8ae88de`; Wave 2 closed on `native-0.12`,
+released as 0.12 build `native-20261016T163910Z-d047f2d2`:
 W2-A merged (WP-27/32/33/34, merge `aa6371b`), case-16 part 2 + case-17
 pinned; W2-C merged (WP-30/36, merge `32e0cdd`), case-15 part 2 refined
 and pinned (chain `w2c-case15p2b-20261015144326Z`); W2-B merged
 (WP-28/29/31/35, merge `2f68f80`), case-18 pinned as 20th
-table; suite 2910 OK / 25 expected skips).
+table; 0.13 adds the optional runtime debug logging option
+(converter checkbox / CLI `--debug-log`); suite 2925 OK / 25 expected skips).
 
 This is the **single central tracking document** for every gap and every goal
 of the project. It is maintained by the root agent on every integration and is
