@@ -77,13 +77,22 @@ Single maintained changelog for CT2Trainer releases.
   hashes): 110,047 supported (54,234 staged), 7,577 of 117,624 blocked
   (was 9,962 after W2-A); 1 whole-table compile error (SuperMeatBoy
   legacy binary).
-- Release build 0.12: cut from `main` via `scripts/Build-Native.ps1`
-  (2026-10-16); in-build suite 2910 OK / 25 regular skips,
-  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
-  Artifacts: `CT2Trainer-0.12-source.zip` and
-  `CT2Trainer-0.12-windows-portable.zip` (per-run sha256 values in the
-  run folder's `build.json`, recorded in
-  `documentation/native-verification.md`).
+- Release build 0.12: run `native-20261016T163910Z-d047f2d2` cut from
+  `main` @ `ba1d3e4` via `scripts/Build-Native.ps1` (2026-10-16);
+  in-build suite 2910 OK / 25 regular skips, `ce_inputs: []`,
+  `runtime_unverified` deliberately kept per gate. Artifacts:
+  `CT2Trainer-0.12-source.zip` (sha256
+  `f5a5468da6e49ee5d4812dce3edea71e87e4bb9736ce4bf3486dfc0c66e70165`,
+  12,811,693 bytes) and
+  `CT2Trainer-0.12-windows-portable.zip` (sha256
+  `7bd582e33f2978c641bb36a22ad8fc5f21bc9b695bb16930bed19720eaa81619`,
+  28,313,477 bytes); EXEs: `CT2Trainer-Template.exe` (sha256
+  `14c0d86726404087299a2e7e924cb3d960562671f7d9e2e174d8706992343edc`,
+  14,516,772 bytes), `CT2Trainer-Converter.exe` (sha256
+  `1ebbf708631fea59618c7d0c18e5de229a699e09678595977033bc7ac40307f5`,
+  28,569,255 bytes). Both ZIPs ship the elaborated release READMEs
+  (source: product overview + build guide; portable: full user guide)
+  and this changelog (0.12 + retro 0.11 entries).
 
 ## 0.11 (2026-10-12)
 
