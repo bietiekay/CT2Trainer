@@ -315,6 +315,50 @@ class DirectivePreflightTests(unittest.TestCase):
         self.assertEqual(result["observations"][0]["module"], "fixture.dll")
         self.assertEqual(result["observations"][0]["base"], 0x710000)
 
+    def test_preflight_reports_scans_to_the_on_scan_callback(self):
+        source = ("[ENABLE]\naobscanmodule(MARK,FixtureTarget.exe,D2 04 00 00)"
+                  "\nregistersymbol(MARK)\nMARK+4:\ndd 1"
+                  "\n[DISABLE]\nMARK+4:\ndd 0")
+        program = prepare_program(source, PROCESS, bitness=64)
+        events = []
+
+        def on_scan(symbol, module, pattern, *, address=None, error=None,
+                    extra=None):
+            events.append({"symbol": symbol, "module": module,
+                           "pattern": pattern, "address": address,
+                           "error": error, "extra": extra})
+
+        preflight_program(program, self.memory, {}, on_scan=on_scan)
+        self.assertEqual(len(events), 1)
+        event = events[0]
+        self.assertEqual(event["symbol"], "MARK")
+        self.assertEqual(event["module"], "FixtureTarget.exe")
+        self.assertEqual(event["pattern"].replace(" ", "").upper(), "D2040000")
+        self.assertEqual(event["address"], 0x1010)
+        self.assertIsNone(event["error"])
+
+    def test_preflight_reports_a_failed_scan_to_the_on_scan_callback(self):
+        source = ("[ENABLE]\naobscanmodule(GONE,FixtureTarget.exe,DE AD BE EF)"
+                  "\nregistersymbol(GONE)\nGONE+4:\ndd 1"
+                  "\n[DISABLE]\nGONE+4:\ndd 0")
+        program = prepare_program(source, PROCESS, bitness=64)
+        events = []
+
+        def on_scan(symbol, module, pattern, *, address=None, error=None,
+                    extra=None):
+            events.append({"symbol": symbol, "module": module,
+                           "pattern": pattern, "address": address,
+                           "error": error, "extra": extra})
+
+        with self.assertRaises(OSError):
+            preflight_program(program, self.memory, {}, on_scan=on_scan)
+        self.assertEqual(len(events), 1)
+        event = events[0]
+        self.assertEqual(event["symbol"], "GONE")
+        self.assertEqual(event["module"], "FixtureTarget.exe")
+        self.assertIsNone(event["address"])
+        self.assertIsInstance(event["error"], OSError)
+
     def test_preflight_export_dedup_on_rerun(self):
         program = prepare_program(EXPORT_PROC_SOURCE, PROCESS, bitness=64)
         for _ in range(3):

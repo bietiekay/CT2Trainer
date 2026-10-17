@@ -2,6 +2,46 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.14 (2026-10-17)
+
+- Per-wish restore isolation: a scan miss in one saved record no longer
+  blocks the whole trainer (field finding from the 0.13 debug log: a stale
+  AOB pattern in one record fell into the restore loop's catch-all
+  exception path and blocked the engine, making every other saved toggle
+  unusable until the process restart):
+  - New `ScanMiss(ProcessMemoryError)` in `memory.py` for definite
+    scan-result failures (pattern not found, ambiguous match, module
+    changed while scanning, module-inventory or scan-quota bounds);
+    process-level errors (identity change, inventory progress anomalies,
+    read/write failures) stay plain `ProcessMemoryError` and still
+    fail-close.
+  - The engine's saved-wish restore loop now isolates each wish: a
+    `ScanMiss` or `NativeRuntimeError` from one record fails that record
+    only (logged as `restore-failed` with identifier and label, recorded
+    in `entry_errors`) and the remaining saved wishes keep restoring;
+    the engine stays connected and usable. A `StateError`/`PatchConflict`
+    that already blocked the engine stops the loop; `RetryableAction`
+    keeps the outer "waiting for a safe data-write point" handling.
+- Debug logging now covers program (AA script) preflight scans, which
+  previously bypassed the byte-patch `_operations` scan events:
+  - `preflight_program()` accepts an optional `on_scan` callback; every
+    `scan` / `scan_process` / `scan_region` op reports its symbol,
+    module, pattern and resolved address, or the exception on failure.
+  - `_install_program` logs `scan` / `scan-failed` events with
+    `entry_id`, symbol, module, pattern, address and (while logging is
+    enabled) module base / size / RVA; failures carry the full
+    traceback. Byte-patch scan events in `_operations` now include
+    `entry_id` as well.
+- New tests: 2 restore-isolation tests in `tests/test_native_engine.py`
+  (stale anchor fails only the affected wishes; an independent later wish
+  still restores), 2 `on_scan` callback tests in
+  `tests/test_native_aa_directive_wiring.py`, and a `ScanMiss`
+  classification test in `tests/test_native_memory.py`.
+- Release build 0.14: cut from `main` via `scripts/Build-Native.ps1`
+  (2026-10-17); the run record, in-build suite result and artifact
+  hashes are recorded in the release build record commit. Latest verified
+  build so far: `native-20261016T190005Z-b3139b30` (0.13).
+
 ## 0.13 (2026-10-16)
 
 - Optional runtime debug logging for generated trainers (user-requested

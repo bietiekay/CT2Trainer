@@ -1164,7 +1164,7 @@ def _resolve(text, memory, symbols, program):
     return floating[0] if floating else resolve_expression(text, memory, symbols, process_name=program["process_name"], pointer_size=program["bitness"] // 8)
 
 
-def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None = None, *, phase: str = "enable", scan_results=None, disassembler=None, thread_model=None, protection_model=None, export_model=None, execute_side_effects: bool = True) -> dict:
+def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None = None, *, phase: str = "enable", scan_results=None, disassembler=None, thread_model=None, protection_model=None, export_model=None, execute_side_effects: bool = True, on_scan=None) -> dict:
     validate_program(program)
     if phase not in {"enable", "disable"}:
         raise ProgramError("Invalid AA phase.")
@@ -1189,16 +1189,32 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
             module = program["process_name"] if node["module"] == "$process" else node["module"]
             if module is None:
                 raise ProgramError("$process requires an exact process name.")
-            resolved[node["symbol"].casefold()] = memory.scan_module(module, node["pattern"])
+            try:
+                resolved[node["symbol"].casefold()] = memory.scan_module(module, node["pattern"])
+            except Exception as exc:
+                if on_scan is not None:
+                    on_scan(node["symbol"], module, node["pattern"], address=None, error=exc)
+                raise
+            if on_scan is not None:
+                on_scan(node["symbol"], module, node["pattern"],
+                        address=resolved[node["symbol"].casefold()], error=None)
         elif op == "scan_process":
             if type(memory.pointer_size) is not int or memory.pointer_size != program["bitness"] // 8:
                 raise ProgramError("Process scan source bitness differs from the held target.")
             from .aob_scan import capture_scan, recheck_result
-            if scan_results is None:
-                result = capture_scan(node, program["source_sha256"], memory)
-            else:
-                result = scan_results[len(captured)]
-                recheck_result(result, memory, program["source_sha256"], node)
+            try:
+                if scan_results is None:
+                    result = capture_scan(node, program["source_sha256"], memory)
+                else:
+                    result = scan_results[len(captured)]
+                    recheck_result(result, memory, program["source_sha256"], node)
+            except Exception as exc:
+                if on_scan is not None:
+                    on_scan(node["symbol"], None, node["pattern"], address=None, error=exc)
+                raise
+            if on_scan is not None:
+                on_scan(node["symbol"], None, node["pattern"],
+                        address=result["address"], error=None)
             captured.append(result)
             resolved[node["symbol"].casefold()] = result["address"]
             guards.append({"address": result["address"], "bytes": result["bytes"].upper()})
@@ -1207,7 +1223,19 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
                 raise ProgramError("The memory backend has no bounded region scanner.")
             start = _resolve(node["start"], memory, resolved, program)
             end = _resolve(node["end"], memory, resolved, program)
-            resolved[node["symbol"].casefold()] = memory.scan_region(start, end, node["pattern"])
+            try:
+                addr = memory.scan_region(start, end, node["pattern"])
+            except Exception as exc:
+                if on_scan is not None:
+                    on_scan(node["symbol"], None, node["pattern"],
+                            address=None, error=exc,
+                            extra={"start": hex(start), "end": hex(end)})
+                raise
+            if on_scan is not None:
+                on_scan(node["symbol"], None, node["pattern"],
+                        address=addr, error=None,
+                        extra={"start": hex(start), "end": hex(end)})
+            resolved[node["symbol"].casefold()] = addr
         elif op == "define":
             try:
                 resolved[node["symbol"].casefold()] = _resolve(node["expression"], memory, resolved, program)

@@ -36,6 +36,7 @@ from .managed_session import (
 
 
 from .architecture import ArchitectureError, require_target_architecture
+from .memory import ScanMiss
 
 
 class NativeRuntimeError(RuntimeError):
@@ -1859,23 +1860,49 @@ class TrainerEngine:
             try:
                 for identifier in sorted(self.desired):
                     entry = self.entries[identifier]
-                    if entry.get("one_shot") and entry.get("async") is not True:
+                    try:
+                        if entry.get("one_shot") and entry.get("async") is not True:
+                            self._dependencies(entry, persist=False)
+                            if (self.one_shot is not None
+                                    and identifier not in self.one_shot.saved_wish_ids()):
+                                # Pending auto-on wish: fulfill it exactly once for
+                                # this attach generation; a failed attempt stays in
+                                # the saved state (not saved as a wish) and is
+                                # retried on the next attach.
+                                self._enable_one_shot(entry, persist=False)
+                                self.debug_log.log("wish-restored", identifier=identifier,
+                                                   label=entry["label"], one_shot=True)
+                            continue
                         self._dependencies(entry, persist=False)
-                        if (self.one_shot is not None
-                                and identifier not in self.one_shot.saved_wish_ids()):
-                            # Pending auto-on wish: fulfill it exactly once for
-                            # this attach generation; a failed attempt stays in
-                            # the saved state (not saved as a wish) and is
-                            # retried on the next attach.
-                            self._enable_one_shot(entry, persist=False)
-                            self.debug_log.log("wish-restored", identifier=identifier,
-                                               label=entry["label"], one_shot=True)
-                        continue
-                    self._dependencies(entry, persist=False)
-                    self._enable(entry, persist=False)
-                    self.debug_log.log("wish-restored", identifier=identifier,
-                                       label=entry["label"])
-                if self.one_shot is not None:
+                        self._enable(entry, persist=False)
+                        self.debug_log.log("wish-restored", identifier=identifier,
+                                           label=entry["label"])
+                    except RetryableAction:
+                        # A safe-data-write wait is a session-level condition,
+                        # not a per-record failure: re-raise so the outer
+                        # handler sets the waiting status and the next poll
+                        # retries the remaining wishes.
+                        raise
+                    except (NativeRuntimeError, ScanMiss) as exc:
+                        # One record's failed restore (stale pattern, missing
+                        # provider, …) fails that record only; the remaining
+                        # saved wishes keep restoring and the engine stays
+                        # usable.  The fail-close rule mirrors interactive
+                        # toggle: PatchConflict/StateError blocks the engine
+                        # (a StateError from _guard() or _save() has already
+                        # called _block()), and the loop then stops because
+                        # further writes are forbidden.
+                        if (isinstance(exc, (PatchConflict, StateError))
+                                and not self.blocked):
+                            self._block(exc)
+                        self.debug_log.error("restore-failed", exc,
+                                             identifier=identifier, label=entry["label"])
+                        self.entry_errors[identifier] = str(exc)
+                        if self.blocked:
+                            break
+                        self.error = str(exc)
+                        self.status = "Restore failed: " + self.error
+                if self.one_shot is not None and not self.blocked:
                     attempted, _skipped = self.one_shot.replay_saved_wishes(self._one_shot_backend)
                     for record_id in attempted:
                         if self.one_shot.query(record_id)["last_outcome"] == "failed":
@@ -1931,11 +1958,13 @@ class TrainerEngine:
                 try:
                     address = self.memory.scan_module(module, op["pattern"])
                 except Exception as exc:
-                    self.debug_log.error("scan-failed", exc, symbol=op["symbol"],
+                    self.debug_log.error("scan-failed", exc, entry_id=entry["id"],
+                                         symbol=op["symbol"],
                                          module=module, pattern=op["pattern"],
                                          section=section)
                     raise
-                scan_details = {"symbol": op["symbol"], "module": module,
+                scan_details = {"entry_id": entry["id"], "symbol": op["symbol"],
+                                "module": module,
                                 "pattern": op["pattern"], "address": hex(address),
                                 "section": section}
                 if self.debug_log.enabled:
@@ -3119,11 +3148,37 @@ class TrainerEngine:
                     'but the export binding was not provided for this '
                     'trainer. The record was not activated. No target '
                     'memory was allocated or changed.')
+        # Log program (AA script) scans the same way the byte-patch path logs
+        # them in _operations, so a stale pattern is diagnosable from the
+        # debug log (symbol, module, pattern, address/RVA on success; full
+        # traceback on failure).
+        def _preflight_scan_log(symbol, module, pattern, *, address=None,
+                                error=None, extra=None):
+            details = {"entry_id": owner, "symbol": symbol, "pattern": pattern,
+                       "section": "program"}
+            if module is not None:
+                details["module"] = module
+            if extra:
+                details.update(extra)
+            if error is not None:
+                self.debug_log.error("scan-failed", error, **details)
+                return
+            details["address"] = hex(address)
+            if self.debug_log.enabled:
+                try:
+                    base, size = link_memory.module(module)
+                    details["module_base"] = hex(base)
+                    details["module_size"] = size
+                    details["rva"] = hex(address - base)
+                except Exception:
+                    pass
+            self.debug_log.log("scan", **details)
         preflight = preflight_program(program, link_memory, symbols,
                                       disassembler=disassembler,
                                       thread_model=thread_model,
                                       protection_model=protection_model,
-                                      export_model=export_model)
+                                      export_model=export_model,
+                                      on_scan=_preflight_scan_log)
         requests = preflight['allocation_requests']
         sizes = [((r['size'] + 65535) // 65536) * 65536 for r in requests]
         if (self._hook_lifetime_count + len(sizes) > 128

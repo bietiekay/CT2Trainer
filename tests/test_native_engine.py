@@ -361,6 +361,81 @@ class NativeEngineTests(unittest.TestCase):
         self.assertNotIn(1, self.engine.applied)
         self.assertEqual(self.engine.desired, {0})
 
+    def test_restore_scan_miss_fails_wishes_without_blocking_engine(self):
+        # Field case from the 0.13 debug log: a saved wish whose module AOB
+        # pattern no longer exists in the target image (game update).  The
+        # scan miss is a ScanMiss, so the restore fails the affected records
+        # only; the engine stays usable instead of failing closed.
+        from ct2trainer.native.memory import ScanMiss
+        engine = self.start()
+        engine.toggle(1, True)
+        engine.close()
+        self.memory = FakeMemory()
+        anchor = "435432542D4649582D323032362D3031"
+        original_scan = self.memory.scan_module
+
+        def scan_module(name, pattern):
+            if pattern.replace(" ", "").upper() == anchor:
+                raise ScanMiss(
+                    "The module byte pattern was not found in readable committed memory.")
+            return original_scan(name, pattern)
+        self.memory.scan_module = scan_module
+        self.engine = TrainerEngine(self.plan, self.directory, self.factory, self.shared)
+        self.engine.poll()
+        self.assertTrue(self.engine.connected, self.engine.status)
+        self.assertFalse(self.engine.blocked)
+        self.assertEqual(self.engine.applied, {})
+        self.assertIn(0, self.engine.entry_errors)
+        self.assertIn(1, self.engine.entry_errors)
+        self.assertIn("not found", self.engine.entry_errors[0])
+        self.assertIn("Restore failed", self.engine.status)
+        self.assertEqual(self.engine.desired, {0, 1})
+        self.assertTrue(self.engine.close())
+
+    def test_restore_continues_to_later_wishes_after_scan_miss(self):
+        # Entry 1 carries its own scan so a stale anchor in wish 0 cannot mask
+        # wish 1: per-wish isolation must let the later wish still restore.
+        from ct2trainer.native.memory import ScanMiss
+        entry = next(e for e in self.plan["entries"] if e["id"] == 1)
+        entry["requires"] = []
+        entry["dependency_ids"] = []
+        entry.pop("staged", None)
+        entry["enable"] = [
+            {"op": "scan", "symbol": "Anchor2", "module": "FixtureTarget.exe",
+             "pattern": "D2 04 00 00"},
+            {"op": "assert", "address": "Anchor2+4", "bytes": "00000000"},
+            {"op": "write", "address": "Anchor2+4", "bytes": "01000000"},
+        ]
+        entry["disable"] = [
+            {"op": "assert", "address": "Anchor2+4", "bytes": "01000000"},
+            {"op": "write", "address": "Anchor2+4", "bytes": "00000000"},
+        ]
+        engine = self.start()
+        engine.toggle(0, True)
+        engine.toggle(1, True)
+        engine.close()
+        self.memory = FakeMemory()
+        anchor = "435432542D4649582D323032362D3031"
+        original_scan = self.memory.scan_module
+
+        def scan_module(name, pattern):
+            if pattern.replace(" ", "").upper() == anchor:
+                raise ScanMiss(
+                    "The module byte pattern was not found in readable committed memory.")
+            return original_scan(name, pattern)
+        self.memory.scan_module = scan_module
+        self.engine = TrainerEngine(self.plan, self.directory, self.factory, self.shared)
+        self.engine.poll()
+        self.assertFalse(self.engine.blocked)
+        self.assertNotIn(0, self.engine.applied)
+        self.assertIn(1, self.engine.applied)
+        self.assertIn(0, self.engine.entry_errors)
+        self.assertNotIn(1, self.engine.entry_errors)
+        self.assertEqual(self.engine.desired, {0, 1})
+        self.assertEqual(self.memory.read(0x1014, 4), b"\1\0\0\0")
+        self.assertTrue(self.engine.close())
+        self.assertEqual(self.memory.read(0x1014, 4), b"\0\0\0\0")
+
     def test_unselected_record_rejects_direct_actions(self):
         self.plan = compile_table(FIXTURE, "FixtureTarget.exe", selected_ids=[2])
         engine = self.start()

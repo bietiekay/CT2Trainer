@@ -57,6 +57,16 @@ class ProcessMemoryError(OSError):
     """A failed or ambiguous memory/identity operation; no success is implied."""
 
 
+class ScanMiss(ProcessMemoryError):
+    """A bounded scan or module lookup finished without a usable result.
+
+    The target process itself remains healthy; only the requested pattern or
+    module does not match the current image (stale table, renamed module,
+    ambiguous pattern, or a scan quota was reached).  The engine treats this
+    as a per-record failure so the rest of the trainer stays usable.
+    """
+
+
 class _FILETIME(ctypes.Structure):
     _fields_ = [("low", _DWORD), ("high", _DWORD)]
 
@@ -763,7 +773,7 @@ class ProcessMemory:
                 while True:
                     examined += 1
                     if examined > 4096 or time.monotonic() - started > 5:
-                        raise ProcessMemoryError("Module inventory exceeds its count/time bound.")
+                        raise ScanMiss("Module inventory exceeds its count/time bound.")
                     if _names_equal(entry.szModule, name):
                         base, size = int(entry.modBaseAddr or 0), int(entry.modBaseSize)
                         if not base or not 64 <= size <= 0xFFFFFFFF:
@@ -794,7 +804,7 @@ class ProcessMemory:
                     raise _windows_error("CloseHandle architecture module snapshot")
             self._require_alive()
             if len(matches) != 1:
-                raise ProcessMemoryError(f"Expected one exact {pointer_size * 8}-bit module {name}; found {len(matches)}.")
+                raise ScanMiss(f"Expected one exact {pointer_size * 8}-bit module {name}; found {len(matches)}.")
             return next(iter(matches.values()))
 
     def resolve_export(self, module_name: str, export_name: str,
@@ -835,7 +845,7 @@ class ProcessMemory:
             while cursor < end:
                 broker_checkpoint()
                 if time.monotonic() > deadline:
-                    raise ProcessMemoryError("The module byte scan exceeded its time bound.")
+                    raise ScanMiss("The module byte scan exceeded its time bound.")
                 self._require_alive()
                 region = self._query(cursor)
                 region_end = min(end, int(region.BaseAddress or 0) + region.RegionSize)
@@ -852,21 +862,21 @@ class ProcessMemory:
                         candidates += 1
                         if candidates % 2048 == 0: broker_checkpoint()
                         if candidates > MAX_SCAN_CANDIDATES or candidates % 2048 == 0 and time.monotonic() > deadline:
-                            raise ProcessMemoryError("The module byte scan exceeded its candidate/time bound.")
+                            raise ScanMiss("The module byte scan exceeded its candidate/time bound.")
                         if candidate < 0 or candidate + pattern_size > len(data) or not matcher.match(data, candidate):
                             continue
                         found = start + candidate
                         if base <= found and found + pattern_size <= end:
                             matches.add(found)
                             if len(matches) > 1:
-                                raise ProcessMemoryError("The module byte pattern is ambiguous (multiple matches).")
+                                raise ScanMiss("The module byte pattern is ambiguous (multiple matches).")
                     tail = data[-(pattern_size - 1):] if pattern_size > 1 else b""
                     cursor += length
             broker_checkpoint()
             if self.module(name) != (base, size):
-                raise ProcessMemoryError("The module changed while scanning.")
+                raise ScanMiss("The module changed while scanning.")
             if len(matches) != 1:
-                raise ProcessMemoryError("The module byte pattern was not found in readable committed memory.")
+                raise ScanMiss("The module byte pattern was not found in readable committed memory.")
             return matches.pop()
 
     def scan_matches(self, pattern: str, start: int = 0, end: int | None = None,
@@ -943,7 +953,7 @@ class ProcessMemory:
                 check()
                 regions += 1
                 if regions > MAX_PROCESS_SCAN_REGIONS or time.monotonic() > deadline:
-                    raise ProcessMemoryError("Process scan exceeded its region/time bound; no partial results returned.")
+                    raise ScanMiss("Process scan exceeded its region/time bound; no partial results returned.")
                 self._require_alive()
                 region = self._query(cursor)
                 region_end = min(scan_end, int(region.BaseAddress or 0) + region.RegionSize)
@@ -963,11 +973,11 @@ class ProcessMemory:
                 while cursor < region_end:
                     check()
                     if time.monotonic() > deadline:
-                        raise ProcessMemoryError("Process scan exceeded its time bound; no partial results returned.")
+                        raise ScanMiss("Process scan exceeded its time bound; no partial results returned.")
                     length = min(SCAN_CHUNK_SIZE, region_end - cursor)
                     scanned += length
                     if scanned > MAX_PROCESS_SCAN_BYTES:
-                        raise ProcessMemoryError("Process scan exceeded its byte-read bound; no partial results returned.")
+                        raise ScanMiss("Process scan exceeded its byte-read bound; no partial results returned.")
                     data = tail + self.read(cursor, length)
                     beginning = cursor - len(tail)
                     for candidate in _candidate_offsets(data, anchor, anchor_offset):
@@ -975,7 +985,7 @@ class ProcessMemory:
                         if candidates % 2048 == 0:
                             check()
                         if candidates > MAX_SCAN_CANDIDATES or candidates % 2048 == 0 and time.monotonic() > deadline:
-                            raise ProcessMemoryError("Process scan exceeded its candidate/time bound; no partial results returned.")
+                            raise ScanMiss("Process scan exceeded its candidate/time bound; no partial results returned.")
                         if candidate < 0 or candidate + pattern_size > len(data) or not matcher.match(data, candidate):
                             continue
                         address = beginning + candidate
@@ -984,7 +994,7 @@ class ProcessMemory:
                                 and (alignment_type != 2 or address & suffix_mask == suffix_value)):
                             matches.add(address)
                             if len(matches) > max_results:
-                                raise ProcessMemoryError("Process scan exceeded its result bound; no partial results returned.")
+                                raise ScanMiss("Process scan exceeded its result bound; no partial results returned.")
                     tail = data[-(pattern_size - 1):] if pattern_size > 1 else b""
                     cursor += length
             check()
@@ -1002,9 +1012,9 @@ class ProcessMemory:
             if self.identity != identity or self.pointer_size != width:
                 raise ProcessMemoryError("Bound target identity/architecture changed during AOB scan.")
             if not matches:
-                raise ProcessMemoryError("The byte pattern was not found in readable committed memory.")
+                raise ScanMiss("The byte pattern was not found in readable committed memory.")
             if len(matches) != 1:
-                raise ProcessMemoryError("The byte pattern is ambiguous (multiple matches).")
+                raise ScanMiss("The byte pattern is ambiguous (multiple matches).")
             return matches[0]
 
     def scan_process(self, pattern: str, *, checkpoint=None) -> int:

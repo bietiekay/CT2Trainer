@@ -245,6 +245,23 @@ class ModuleScanTests(unittest.TestCase):
             memory.scan_module("game.exe", "41 42")
         memory.read.assert_not_called()
 
+    def test_scan_result_failures_are_scan_miss_not_generic_memory_errors(self):
+        # A stale table (pattern no longer in the image) is a scan-result
+        # failure, not a target-level fault: it must surface as ScanMiss so
+        # the engine can fail one record without blocking the whole session.
+        from ct2trainer.native.memory import ScanMiss
+        miss = self.scanner([_region(0x1000, 8)], {0x1000: b"xxxxxxxx"})
+        with self.assertRaises(ScanMiss):
+            miss.scan_module("game.exe", "41 42 43")
+        ambiguous = self.scanner([_region(0x1000, 8)], {0x1000: b"ABxxAByy"})
+        with self.assertRaises(ScanMiss):
+            ambiguous.scan_module("game.exe", "41 42")
+        changed = self.scanner([_region(0x1000, 8)], {0x1000: b"ABxxAByy"})
+        changed.module.side_effect = [(0x1000, 8), (0x2000, 8)]
+        with self.assertRaises(ScanMiss):
+            changed.scan_module("game.exe", "41 42")
+        self.assertFalse(isinstance(ProcessMemoryError("identity changed"), ScanMiss))
+
 
 class MemoryWriteTests(unittest.TestCase):
     def writer(self, protection=0x20):
