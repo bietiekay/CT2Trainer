@@ -37,10 +37,15 @@ Single maintained changelog for CT2Trainer releases.
   still restores), 2 `on_scan` callback tests in
   `tests/test_native_aa_directive_wiring.py`, and a `ScanMiss`
   classification test in `tests/test_native_memory.py`.
-- Release build 0.14: cut from `main` via `scripts/Build-Native.ps1`
-  (2026-10-17); the run record, in-build suite result and artifact
-  hashes are recorded in the release build record commit. Latest verified
-  build so far: `native-20261016T190005Z-b3139b30` (0.13).
+- Release build 0.14: run `native-20261017T115850Z-1ebb48b7` cut from
+  `main` @ `fca6b06` via `scripts/Build-Native.ps1` (2026-10-17); in-build
+  suite 2932 OK / 25 regular skips, `ce_inputs: []`,
+  `runtime_unverified` deliberately kept per gate; source ZIP
+  `CT2Trainer-0.14-source.zip` sha256
+  `a5b075cf6535c5eef3807da7b7b9429dda08a3cf9f9dba6fdafb879e0dfce0a9`,
+  portable ZIP `CT2Trainer-0.14-windows-portable.zip` sha256
+  `e57fe9b9fb56ef7a97f81a98f04455976c4b5e9ebddee655b24cbb64e7ed3103`.
+  Both ZIPs ship the elaborated release READMEs and this changelog.
 
 ## 0.13 (2026-10-16)
 

@@ -100,26 +100,35 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261016T190005Z-b3139b30` (0.13,
-cut from `main` @ `d57e62c`; in-build suite 2927 OK / 25 regular skips,
+**Latest verified build:** `native-20261017T115850Z-1ebb48b7` (0.14,
+cut from `main` @ `fca6b06`; in-build suite 2932 OK / 25 regular skips,
 `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; source
-ZIP `CT2Trainer-0.13-source.zip` sha256
+ZIP `CT2Trainer-0.14-source.zip` sha256
+`a5b075cf6535c5eef3807da7b7b9429dda08a3cf9f9dba6fdafb879e0dfce0a9`,
+portable ZIP `CT2Trainer-0.14-windows-portable.zip` sha256
+`e57fe9b9fb56ef7a97f81a98f04455976c4b5e9ebddee655b24cbb64e7ed3103`).
+The 0.14 build adds per-wish restore isolation (a `ScanMiss`
+scan-result failure in one saved record no longer blocks the engine;
+the remaining saved wishes keep restoring; field finding from the 0.13
+Great Circle debug log, where a stale AOB pattern in entry 29143
+blocked the whole trainer) and per-scan debug logging for program
+(AA script) preflight scans (entry/symbol/module/pattern per scan,
+module base/size/RVA, full traceback on failure) on top of the
+released 0.13 content; 20 pinned corpus tables, 6,080 AP-11 actions,
+weights 7,408/7,408 over run `w2b-case18-20261016142912Z`; both ZIPs
+ship the elaborated release READMEs (source: product overview + build
+guide; portable: full user guide, including the debug-logging section)
+and the changelog with the 0.14 + 0.13 + 0.12 entries. Previous
+release build: `native-20261016T190005Z-b3139b30` (0.13, cut from
+`main` @ `d57e62c`; in-build suite 2927 OK / 25 regular skips; source
+ZIP sha256
 `23b57307819e4262d8ca894ac16c86d595df9945c1afec25750f66bb9e0c9124`,
-portable ZIP `CT2Trainer-0.13-windows-portable.zip` sha256
+portable ZIP sha256
 `d7f64efbae975f477e5bb011796d64276f32ef4300d4a0986961e95ae63aca78`).
-The 0.13 build adds the optional runtime debug logging option
-(converter checkbox / CLI `--debug-log`; per-event JSON log next to the
-trainer EXE, off by default, best-effort only) and the module-snapshot
-fallback for Win32 error 299 (first 0.13 field finding, from the
-Great Circle debug log) on top of the released 0.12 content; 20 pinned
-corpus tables, 6,080 AP-11 actions, weights 7,408/7,408 over run
-`w2b-case18-20261016142912Z`; both ZIPs ship the elaborated release
-READMEs (source: product overview + build guide; portable: full user
-guide, now including the debug-logging section) and the changelog with
-the 0.13 + 0.12 entries. Superseded 0.13 run:
-`native-20261016T181516Z-b8ae88de` (pre module-snapshot fallback, cut
-from `main` @ `7184547`). Previous release build:
-`native-20261016T163910Z-d047f2d2` (0.12, cut from `main` @ `ba1d3e4`;
+Superseded 0.13 run: `native-20261016T181516Z-b8ae88de` (pre
+module-snapshot fallback, cut from `main` @ `7184547`). Earlier
+release build: `native-20261016T163910Z-d047f2d2` (0.12, cut from
+`main` @ `ba1d3e4`;
 in-build suite 2910 OK / 25 regular skips; source ZIP sha256
 `f5a5468da6e49ee5d4812dce3edea71e87e4bb9736ce4bf3486dfc0c66e70165`,
 portable ZIP sha256
