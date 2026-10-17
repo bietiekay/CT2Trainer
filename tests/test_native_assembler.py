@@ -191,6 +191,47 @@ class RealNasmTests(unittest.TestCase):
         restored = link_program(program, memory, symbols=linked["symbols"], allocations=allocations, phase="disable", assembler=self.assembler)
         self.assertEqual(restored["blocks"][0]["bytes"], original.hex().upper())
 
+    def test_byte_patch_prefix_cut_flag_from_live_target_code(self):
+        # Field shape (Great Circle stealth/no-reload tables): a 2-byte
+        # prefix rewrite of a 6-byte conditional jump reuses its original
+        # displacement; the linker must verify it live and flag the block.
+        source = ("[ENABLE]\n"
+                  "aobscanmodule(stealthpatch,owned.exe,0F 87 * * 00 00)\n"
+                  "stealthpatch:\n"
+                  " db 90 E9\n"
+                  "registersymbol(stealthpatch)\n"
+                  "[DISABLE]\n"
+                  "stealthpatch:\n"
+                  " db 0F 87\n"
+                  "unregistersymbol(stealthpatch)")
+        memory = Memory()
+        memory.seed(0x140001000, bytes.fromhex("0F87DEAD0000") + bytes(64))
+        linked = link_program(prepare_program(source), memory, allocations={}, assembler=self.assembler)
+        block = linked["blocks"][0]
+        self.assertEqual(block["bytes"], "90E9")
+        self.assertEqual(block["original"], "0F87")
+        self.assertTrue(block["prefix_cut"])
+        restored = link_program(prepare_program(source), memory, symbols=linked["symbols"], allocations={}, phase="disable", assembler=self.assembler)
+        self.assertTrue(restored["blocks"][0]["prefix_cut"])
+
+    def test_complete_originals_do_not_claim_a_prefix_cut(self):
+        source = ("[ENABLE]\n"
+                  "aobscanmodule(stealthpatch,owned.exe,90 90)\n"
+                  "stealthpatch:\n"
+                  " db 90 C3\n"
+                  "registersymbol(stealthpatch)\n"
+                  "[DISABLE]\n"
+                  "stealthpatch:\n"
+                  " db 90 90\n"
+                  "unregistersymbol(stealthpatch)")
+        memory = Memory()
+        memory.seed(0x140001000, bytes.fromhex("9090") + bytes(64))
+        linked = link_program(prepare_program(source), memory, allocations={}, assembler=self.assembler)
+        block = linked["blocks"][0]
+        self.assertEqual(block["bytes"], "90C3")
+        self.assertEqual(block["original"], "9090")
+        self.assertFalse(block["prefix_cut"])
+
     def test_anonymous_avx_float_and_remote_alignment(self):
         source = """[ENABLE]
 alloc(cave,1000)

@@ -31,6 +31,7 @@ MAX_HOOK_BYTES = 16 * 1024 * 1024
 MAX_HOOK_ALLOCATIONS = 128
 MAX_HOOK_BLOCKS = 4096
 MAX_ENTRY_BYTES = 65536
+_ENTRY_PATCH_TAIL = 64  # live bytes read past a cut patch (max x86 op is ~15)
 MAX_JOURNAL_BYTES = 72 * 1024 * 1024
 MAX_LITERAL_ISSUER_DEPTH = 64
 _issuer_checks = threading.local()
@@ -127,6 +128,69 @@ def validate_entry_control_flow(address: int, raw: bytes, bitness: int,
         if instruction.flow_control in {FlowControl.CALL, FlowControl.INDIRECT_CALL,
                                         FlowControl.INTERRUPT, FlowControl.EXCEPTION}:
             raise HookError("Calls/interrupts in entry instructions need a stronger return-context proof.")
+
+
+def validate_entry_prefix_cut(memory, address: int, raw: bytes, original: bytes,
+                              bitness: int) -> None:
+    """Live verification for a linked prefix-cut byte patch.
+
+    Called only for executable entry blocks whose captured original bytes do
+    not form a complete instruction sequence. The classic byte-patch shape:
+    the replaced prefix plus the remaining bytes of the covered original
+    instruction form a complete, valid instruction stream ending exactly on
+    the first original instruction boundary at or past the patch length
+    (for example ``db 90 E9`` over a 6-byte conditional jump becomes
+    ``nop; jmp`` with the original displacement). Fails closed on
+    unreadable targets, byte drift, unresolvable boundaries, decode
+    failures, and call/interrupt hazards in the resulting entry stream.
+    """
+    if (bitness not in {32, 64} or not raw or not original
+            or len(raw) != len(original) or len(raw) > MAX_ENTRY_BYTES):
+        raise HookError("Invalid executable entry range or target bitness.")
+    try:
+        from iced_x86 import Decoder, FlowControl
+    except ImportError as exc:
+        raise HookError("Executable hooks require the pinned MIT iced-x86 decoder.") from exc
+    # Fast path: the captured original already displaces complete
+    # instructions, so the historical static contract applies.
+    try:
+        validate_instruction_boundary(address, original, bitness)
+    except HookError:
+        pass
+    else:
+        validate_entry_control_flow(address, raw, bitness, inline_jump=True)
+        return
+    try:
+        window = memory.read(address, len(raw) + _ENTRY_PATCH_TAIL)
+    except Exception as exc:
+        raise HookError(
+            "Entry patch cuts an instruction that cannot be fully read "
+            "back for validation.") from exc
+    if len(window) < len(raw) or bytes(window[:len(raw)]) != original:
+        raise HookError(
+            "Entry patch bytes changed before validation; recompile without mutating.")
+    boundary = 0
+    for instruction in Decoder(bitness, window, ip=address):
+        if instruction.is_invalid:
+            raise HookError("Entry patch cuts or contains an invalid instruction.")
+        boundary += instruction.len
+        if boundary >= len(raw):
+            break
+    if boundary < len(raw):
+        raise HookError(
+            "Entry patch boundary cannot be resolved in the target instruction stream.")
+    post = raw + bytes(window[len(raw):boundary])
+    decoded = 0
+    for instruction in Decoder(bitness, post, ip=address):
+        if instruction.is_invalid:
+            raise HookError("Entry patch cuts or contains an invalid instruction.")
+        if instruction.flow_control in {FlowControl.CALL, FlowControl.INDIRECT_CALL,
+                                        FlowControl.INTERRUPT, FlowControl.EXCEPTION}:
+            raise HookError(
+                "Calls/interrupts in entry instructions need a stronger return-context proof.")
+        decoded += instruction.len
+    if decoded != len(post):
+        raise HookError("Entry patch does not end on an instruction boundary.")
 
 
 def _serialize(value: dict) -> bytes:
@@ -519,9 +583,19 @@ class HookManager:
                         for start, length in self.owned_data_ranges)):
                     raise HookError("Uncoordinated writes require controller-proven owned nonexecutable data.")
                 if executable and not data_semantics:
-                    validate_instruction_boundary(address, original, self.memory.pointer_size * 8)
-                    validate_entry_control_flow(address, raw, self.memory.pointer_size * 8,
-                                                inline_jump=True)
+                    try:
+                        validate_instruction_boundary(address, original, self.memory.pointer_size * 8)
+                        validate_entry_control_flow(address, raw, self.memory.pointer_size * 8,
+                                                    inline_jump=True)
+                    except HookError:
+                        # Only linked blocks whose AA source is a deliberate
+                        # byte-patch prefix (verified live at link time) may
+                        # cut their first original instruction; every other
+                        # block keeps the strict complete-instruction contract.
+                        if block.get("prefix_cut") is not True:
+                            raise
+                        validate_entry_prefix_cut(self.memory, address, raw, original,
+                                                 self.memory.pointer_size * 8)
             else:
                 executable = block["executable"]
                 if executable and not self.allocations[allocation]["executable"]:

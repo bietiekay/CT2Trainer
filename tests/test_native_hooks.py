@@ -714,6 +714,104 @@ class DecoderTests(unittest.TestCase):
                 validate_instruction_boundary(0x1000, raw, 64)
 
 
+class EntryPrefixPatchTests(unittest.TestCase):
+    """Byte-patch prefixes that cut the first original instruction.
+
+    Classic field case (TheGreatCircle stealth/reload tables): ``db 90 E9``
+    over a 6-byte conditional jump turns it into ``nop; jmp`` reusing the
+    original displacement. Validation must prove that against the live
+    target bytes, and keep failing closed on every other shape.
+    """
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.path = Path(self.temporary.name) / "hook.json"
+        self.memory = _Memory()
+        self.coordinator = _Coordinator()
+        self.manager = HookManager(self.memory, self.path, self.coordinator,
+                                  "prefix-patch-test")
+
+    def _stage(self, code, replacement, address=0x1000, prefix_cut=True):
+        # prefix_cut mirrors what link_program sets after its live
+        # link-time verification; these tests exercise the stage-time
+        # re-verification in _normalize.
+        self.memory.data[address] = code
+        original = bytes(code[:len(replacement)])
+        block = _block(address, replacement, original, executable=True)
+        if prefix_cut:
+            block["prefix_cut"] = True
+        self.manager.stage([block])
+        return address
+
+    def test_two_byte_cut_reusing_original_displacement_is_accepted(self):
+        # jae rel32 (6 bytes) at the entry; db 90 E9 -> nop; jmp rel32.
+        self._stage(bytes.fromhex("0F87DEAD0000") + bytes(64),
+                    bytes.fromhex("90E9"))
+        self.assertEqual(self.manager.state, "staged")
+
+    def test_one_byte_cut_of_two_byte_jump_is_accepted(self):
+        # jnz rel8 (2 bytes) at the entry; db EB -> jmp rel8.
+        self._stage(bytes.fromhex("7505") + bytes(64),
+                    bytes.fromhex("EB"))
+        self.assertEqual(self.manager.state, "staged")
+
+    def test_cut_across_two_instructions_is_accepted_when_post_stream_is_valid(self):
+        # jnz rel8 (2) + add [rax],al (2); a 3-byte cut must end on the
+        # second original instruction boundary with a valid post stream.
+        self._stage(bytes.fromhex("75050000") + bytes(64),
+                    bytes.fromhex("909000"))
+        self.assertEqual(self.manager.state, "staged")
+
+    def test_unflagged_prefix_cut_keeps_the_strict_contract(self):
+        # Without the linker's live proof (no prefix_cut flag) the historical
+        # strict rejection stands: incomplete original bytes are refused.
+        with self.assertRaisesRegex(HookError, "cuts or contains"):
+            self._stage(bytes.fromhex("0F87DEAD0000") + bytes(64),
+                        bytes.fromhex("90E9"), prefix_cut=False)
+
+    def test_complete_instruction_replacement_is_still_accepted(self):
+        # inc eax (2 bytes) replaced by a 2-byte nop; strict path unchanged.
+        self._stage(bytes.fromhex("FFC890") + bytes(64),
+                    bytes.fromhex("6690"))
+        self.assertEqual(self.manager.state, "staged")
+
+    def test_cut_leaving_an_invalid_entry_stream_is_rejected(self):
+        # mov [rip+0], imm32 (10 bytes); a 2-byte cut leaves the tail
+        # undecodable as a complete instruction at the old boundary.
+        code = bytes.fromhex("C70500000000DEADBE") + bytes(64)
+        with self.assertRaisesRegex(HookError, "invalid instruction"):
+            self._stage(code, bytes.fromhex("90C3"))
+
+    def test_cut_reusing_a_call_displacement_is_rejected_by_flow_check(self):
+        # nop + call rel32 (6 bytes); a 3-byte cut that re-encodes the
+        # displacement into a call at the entry.
+        code = bytes.fromhex("90E805020190") + bytes(64)
+        with self.assertRaisesRegex(HookError, "return-context"):
+            self._stage(code, bytes.fromhex("E80502"))
+
+    def test_byte_drift_before_validation_is_rejected(self):
+        code = bytes.fromhex("0F87DEAD0000") + bytes(64)
+        address = 0x1000
+        self.memory.data[address] = code
+        block = _block(address, bytes.fromhex("90E9"), bytes.fromhex("0F84"),
+                       executable=True)
+        block["prefix_cut"] = True
+        with self.assertRaisesRegex(HookError, "changed before validation"):
+            self.manager.stage([block])
+
+    def test_unreadable_tail_fails_closed(self):
+        # Region ends inside the first original instruction; the tail cannot
+        # be read back, so the cut cannot be proven.
+        code = bytes.fromhex("488B050000")
+        address = 0x1000
+        self.memory.data[address] = code
+        block = _block(address, bytes(len(code)), code, executable=True)
+        block["prefix_cut"] = True
+        with self.assertRaisesRegex(HookError, "instruction"):
+            self.manager.stage([block])
+
+
 @unittest.skipUnless(sys.platform == "win32", "real owned Win32 allocation gate")
 class OwnedWin32AllocationTests(unittest.TestCase):
     def test_current_process_allocation_staging_rx_retirement_and_owned_release(self):
