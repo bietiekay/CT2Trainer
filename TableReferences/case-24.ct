@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-24 (WP-37 - Lua-owned symbol handover).
+     Module ct2synth24.exe.  Record 1 registers SynthHandBase24 from
+     record Lua (registerSymbol on enable, unregisterSymbol on disable);
+     record 2 is an allocation-only program that registers
+     synthHandAlloc24.  Records 3-5 are consumers that require those
+     symbols without registering them (two value freezes and one AA patch)
+     and therefore depend on the owning records, which release each
+     symbol exactly once on their own deactivation.  Records 6 and 7
+     duplicate the Lua provider for SynthHandDup24; record 7 loses the
+     deterministic keep-first resolution (blocked with the named duplicate
+     reason), so the contested symbol stays out of the external-ownership
+     map while record 6 keeps serving consumer dependencies.  Record 8
+     requires SynthHandBase24 but unregisters it in its own DISABLE
+     phase; the named foreign-release refusal blocks it.  Pinned
+     2026-10-18 in the W3 integration on base d15268a. -->
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"handover base provider (record Lua)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+registerSymbol('SynthHandBase24', 0x1040)
+{$asm}
+[DISABLE]
+{$lua}
+unregisterSymbol('SynthHandBase24')
+{$asm}</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"handover alloc provider (allocation-only)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synthHandAlloc24,64)
+registersymbol(synthHandAlloc24)
+[DISABLE]
+unregistersymbol(synthHandAlloc24)
+dealloc(synthHandAlloc24)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"consumer value (Lua provider)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>SynthHandBase24+10</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>4</ID>
+      <Description>"consumer value (alloc provider)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synthHandAlloc24+4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>5</ID>
+      <Description>"consumer patch record"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+assert(SynthHandBase24+20, 00 00 00 00)
+SynthHandBase24+20:
+db 01
+[DISABLE]
+assert(SynthHandBase24+20, 01 00 00 00)
+SynthHandBase24+20:
+db 00</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"duplicate provider (kept)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+registerSymbol('SynthHandDup24', 0x1060)
+{$asm}
+[DISABLE]
+{$lua}
+unregisterSymbol('SynthHandDup24')
+{$asm}</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>7</ID>
+      <Description>"duplicate provider (keep-first loser)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+registerSymbol('SynthHandDup24', 0x1070)
+{$asm}
+[DISABLE]
+{$lua}
+unregisterSymbol('SynthHandDup24')
+{$asm}</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>8</ID>
+      <Description>"foreign release attempt (blocked)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+assert(SynthHandBase24+30, 00 00 00 00)
+SynthHandBase24+30:
+db 02
+[DISABLE]
+assert(SynthHandBase24+30, 02 00 00 00)
+SynthHandBase24+30:
+db 00
+unregistersymbol(SynthHandBase24)</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

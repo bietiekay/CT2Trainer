@@ -3,15 +3,15 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 23,
+    "actual": 24,
     "check": "pinned_table_count",
-    "expected": 23,
+    "expected": 24,
     "ok": true
    },
    {
-    "actual": 6092,
+    "actual": 6100,
     "check": "expected_actions",
-    "expected": 6092,
+    "expected": 6100,
     "ok": true
    },
    {
@@ -19,18 +19,18 @@
      "custom_value": 4,
      "navigation": 2,
      "one_shot": 1723,
-     "persistent_script": 452,
+     "persistent_script": 458,
      "string_write": 732,
-     "value_freeze": 3181
+     "value_freeze": 3183
     },
     "check": "category_counts",
     "expected": {
      "custom_value": 4,
      "navigation": 2,
      "one_shot": 1723,
-     "persistent_script": 452,
+     "persistent_script": 458,
      "string_write": 732,
-     "value_freeze": 3181
+     "value_freeze": 3183
     },
     "ok": true
    },
@@ -135,6 +135,10 @@
      {
       "name": "case-23.ct",
       "ok": true
+     },
+     {
+      "name": "case-24.ct",
+      "ok": true
      }
     ]
    },
@@ -163,6 +167,7 @@
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
      "cf7ef73a2c326edee6b6d87853f454996789add71e9cea7d7440347e41fcbb25",
+     "dcca38baf1ac4b08fc2a33f986083c071f815befd5ac868b1ea70cf9f6ea5ae6",
      "e3405ebcf7fa566a101ad424c5318348c89e5e020636d8f2533d125c89f7e2f6",
      "e3568de1225e5d84d8b468b0daaad64153c70c034a550754eb022caaa001dab3",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
@@ -189,6 +194,7 @@
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
      "bc88a8f96c234564304186721c5448abdff75731b2d47eeb26b4ba257e2973c7",
      "cf7ef73a2c326edee6b6d87853f454996789add71e9cea7d7440347e41fcbb25",
+     "dcca38baf1ac4b08fc2a33f986083c071f815befd5ac868b1ea70cf9f6ea5ae6",
      "e3405ebcf7fa566a101ad424c5318348c89e5e020636d8f2533d125c89f7e2f6",
      "e3568de1225e5d84d8b468b0daaad64153c70c034a550754eb022caaa001dab3",
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
@@ -229,27 +235,27 @@
    "custom_value": 4,
    "navigation": 2,
    "one_shot": 1723,
-   "persistent_script": 452,
+   "persistent_script": 458,
    "string_write": 732,
-   "value_freeze": 3181
+   "value_freeze": 3183
   },
   "confirmed_game_effect_actions": 0,
-  "expected_actions": 6092,
+  "expected_actions": 6100,
   "goal_90_percent": "NOT REACHED",
-  "unique_tables": 23
+  "unique_tables": 24
  },
- "generated": "run w3d-case22-20261018040510Z",
+ "generated": "run w3e-case24-20261018051230",
  "lane": "AP-11 game campaign plan (read-only, static)",
- "run_id": "w3d-case22-20261018040510Z",
+ "run_id": "w3e-case24-20261018051230",
  "schema": "ap11-campaign/v1",
  "source": {
   "corpus_root": "C:\\Users\\xboxl\\code\\CT2Trainer\\TableReferences",
   "feature_coverage": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\feature-coverage.json",
-  "feature_coverage_sha256": "8deb92bd68695e4b2402ad1ccd2e9b0b77fabaee676583ecf13c1c29aba85f17",
+  "feature_coverage_sha256": "1952c95e4b9ceb6fa394874331137780d14753a88683f36852fa632ac372eee9",
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "bbd0108f7345f56ab5404d9c48d32448c828b37725e41cb75a462207650828bb",
+  "gap_report_sha256": "5deb362dea183266170a26b0a6f0e84b5fca2e2702018d5425e845dcf9b8b4f4",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "47704fdaeea0a4be53bba078b99e4bae6c5ac9bb97c1b173e653899b6aaa8c56"
+  "inventory_sha256": "f648f043cb4d9cf47649feb692f55d357255b1fd3e99440bfca71873b1262fa5"
  },
  "tables": [
   {
@@ -6839,6 +6845,35 @@
     "2": "value_freeze",
     "3": "persistent_script"
    }
+  },
+  {
+   "architecture": "unknown",
+   "category_counts": {
+    "persistent_script": 6,
+    "value_freeze": 2
+   },
+   "ct_path": "case-24.ct",
+   "ct_sha256": "dcca38baf1ac4b08fc2a33f986083c071f815befd5ac868b1ea70cf9f6ea5ae6",
+   "expected_actions": 8,
+   "name": "case-24.ct",
+   "navigation_excluded": 0,
+   "priority_order": [
+    "value_freeze",
+    "persistent_script"
+   ],
+   "process_candidates": [
+    "ct2synth24.exe"
+   ],
+   "records": {
+    "1": "persistent_script",
+    "2": "persistent_script",
+    "3": "value_freeze",
+    "4": "value_freeze",
+    "5": "persistent_script",
+    "6": "persistent_script",
+    "7": "persistent_script",
+    "8": "persistent_script"
+   }
   }
  ],
  "totals": {
@@ -6846,11 +6881,11 @@
    "custom_value": 4,
    "navigation": 2,
    "one_shot": 1723,
-   "persistent_script": 452,
+   "persistent_script": 458,
    "string_write": 732,
-   "value_freeze": 3181
+   "value_freeze": 3183
   },
-  "expected_actions": 6092,
-  "tables": 23
+  "expected_actions": 6100,
+  "tables": 24
  }
 }

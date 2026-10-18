@@ -44,7 +44,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(_PKG_DIR))
 REFERENCE_INVENTORY = os.path.join(REPO_ROOT, "tests", "fixtures",
                                    "reference-inventory.json")
 
-# Pinned start corpus (AP-10): 23 tables, 7 of them byte-pinned in
+# Pinned start corpus (AP-10): 24 tables, 7 of them byte-pinned in
 # tests/fixtures/reference-inventory.json. Paths relative to the corpus root, "/".
 PINNED = [
     "case-01.ct",
@@ -70,6 +70,7 @@ PINNED = [
     "case-21.ct",
     "case-22.ct",
     "case-23.ct",
+    "case-24.ct",
 ]
 
 # gap id -> (label, requirement/package mapping)
@@ -116,7 +117,7 @@ GAP_LABELS = {
 }
 
 MISSING_GATES = [
-    "Real game installs/builds for the 23 pinned tables (user question unanswered)",
+    "Real game installs/builds for the 24 pinned tables (user question unanswered)",
     "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
     "VM/Clean-PC gate without CE/Python",
     "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",

@@ -25,18 +25,18 @@
    "custom_value": 4,
    "navigation": 2,
    "one_shot": 1723,
-   "persistent_script": 452,
+   "persistent_script": 458,
    "string_write": 732,
-   "value_freeze": 3181
+   "value_freeze": 3183
   },
   "confirmed_game_effect_actions": 0,
   "confirmed_percent": 0.0,
-  "expected_actions": 6092,
+  "expected_actions": 6100,
   "goal_90_percent": "NOT REACHED",
   "group_toggle_actions": 3,
   "groups_total": 1288,
   "missing_gates": [
-   "Real game installs/builds for the 23 pinned tables (user question unanswered)",
+   "Real game installs/builds for the 24 pinned tables (user question unanswered)",
    "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
    "VM/Clean-PC gate without CE/Python",
    "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -46,12 +46,12 @@
   ],
   "navigation_excluded": 2,
   "record_types": {
-   "aa_script": 2175,
+   "aa_script": 2181,
    "custom": 4,
    "string": 732,
-   "value": 3183
+   "value": 3185
   },
-  "records_total": 6094,
+  "records_total": 6102,
   "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
@@ -61,11 +61,11 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5514,
-   "statically_assumed": 538,
+   "locked": 5521,
+   "statically_assumed": 539,
    "unknown": 42
   },
-  "unique_tables": 23
+  "unique_tables": 24
  },
  "gap_labels": {
   "aa_conditional_block": {
@@ -225,7 +225,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run w3d-case22-20261018040510Z",
+ "generated": "run w3e-case24-20261018051230",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -155202,37 +155202,301 @@
      "requirement": "N-07"
     }
    ]
+  },
+  {
+   "architecture": {
+    "signals": [],
+    "value": "unknown"
+   },
+   "counts": {
+    "categories": {
+     "persistent_script": 6,
+     "value_freeze": 2
+    },
+    "entries_total": 8,
+    "expected_actions": 8,
+    "gap_counts": {
+     "cross_record_symbol": 2,
+     "lua_host_profile": 3,
+     "lua_symbol_api": 5
+    },
+    "group_toggle_actions": 0,
+    "groups": 0,
+    "navigation_excluded": 0,
+    "record_types": {
+     "aa_script": 6,
+     "value": 2
+    },
+    "records": 8,
+    "status_counts": {
+     "locked": 7,
+     "statically_assumed": 1
+    }
+   },
+   "duplicate_ids": {},
+   "format_version": "45",
+   "groups": [],
+   "main_initialization": {
+    "gaps": [
+     "lua_host_profile",
+     "lua_symbol_api"
+    ],
+    "id": 1,
+    "name": "handover base provider (record Lua)",
+    "note": "first depth-0 script record",
+    "source": "record",
+    "status": "locked",
+    "type": "aa_script"
+   },
+   "path": "case-24.ct",
+   "paths": [
+    "case-24.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_host_profile",
+        "lua_symbol_api"
+       ],
+       "id": 1,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "handover base provider (record Lua)",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label); with embedded Lua (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 2,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "handover alloc provider (allocation-only)",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 3,
+       "lifetime": "read_write_freezable_value",
+       "name": "consumer value (Lua provider)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols SynthHandBase24",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 4,
+       "lifetime": "read_write_freezable_value",
+       "name": "consumer value (alloc provider)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols synthHandAlloc24",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [],
+       "id": 5,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "consumer patch record",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "statically_assumed",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_host_profile",
+        "lua_symbol_api"
+       ],
+       "id": 6,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "duplicate provider (kept)",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label); with embedded Lua (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_host_profile",
+        "lua_symbol_api"
+       ],
+       "id": 7,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "duplicate provider (keep-first loser)",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label); with embedded Lua (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 8,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "foreign release attempt (blocked)",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      }
+     ]
+    }
+   ],
+   "sha256": "dcca38baf1ac4b08fc2a33f986083c071f815befd5ac868b1ea70cf9f6ea5ae6",
+   "size_bytes": 3987,
+   "table": "case-24.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 5,
+     "gap": "lua_symbol_api",
+     "label": "Lua symbol API",
+     "requirement": "N-07 / N-19"
+    },
+    {
+     "affected_records": 3,
+     "gap": "lua_host_profile",
+     "label": "Lua host profile (bounded Lua host profile)",
+     "requirement": "N-01 / N-19"
+    },
+    {
+     "affected_records": 2,
+     "gap": "cross_record_symbol",
+     "label": "Cross-record symbol resolution",
+     "requirement": "N-07"
+    }
+   ]
   }
  ],
- "run_id": "w3d-case22-20261018040510Z",
+ "run_id": "w3e-case24-20261018051230",
  "top_gaps_pinned": [
   {
-   "affected_records": 3385,
+   "affected_records": 3387,
    "gap": "cross_record_symbol",
    "label": "Cross-record symbol resolution",
    "requirement": "N-07",
-   "share_of_expected_actions_percent": 55.56
+   "share_of_expected_actions_percent": 55.52
   },
   {
-   "affected_records": 1914,
+   "affected_records": 1917,
    "gap": "lua_host_profile",
    "label": "Lua host profile (bounded Lua host profile)",
    "requirement": "N-01 / N-19",
-   "share_of_expected_actions_percent": 31.42
+   "share_of_expected_actions_percent": 31.43
   },
   {
    "affected_records": 1723,
    "gap": "one_shot_save_contract",
    "label": "One-shot without ON/OFF save contract",
    "requirement": "state contract (AP-04)",
-   "share_of_expected_actions_percent": 28.28
+   "share_of_expected_actions_percent": 28.25
   },
   {
-   "affected_records": 215,
+   "affected_records": 220,
    "gap": "lua_symbol_api",
    "label": "Lua symbol API",
    "requirement": "N-07 / N-19",
-   "share_of_expected_actions_percent": 3.53
+   "share_of_expected_actions_percent": 3.61
   },
   {
    "affected_records": 36,

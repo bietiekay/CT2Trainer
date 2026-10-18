@@ -1,6 +1,6 @@
 # Synthetic clean-room corpus (TableReferences)
 
-This directory contains the 23 pinned case tables used by the corpus
+This directory contains the 24 pinned case tables used by the corpus
 denominator tool (`tools/corpus_denominator/`). All files are
 independently authored, synthetic `.CT` tables; no third-party game table
 content is part of this repository. They exercise the same 39 gap classes
@@ -38,6 +38,7 @@ case number.
 | `case-21.ct` | Synthetic runtime dynamic address provider (WP-38 / GC-B6: Lua provider registers exactly one symbol on enable and unregisters it on disable; the nearest heading carries the `address_provider` binding; three relative children `+10`/`+14`/`+18` adopt the runtime-resolved base as `expression/v1` values; the static module-relative sibling pins the module token) | `ct2synth21.exe` | `1f4ee77ea9b1e3d06ace85551fdbfd7e9662895485e5ea43dbd18559d3c5acbf` |
 | `case-22.ct` | Synthetic table-Lua bootstrap (WP-41, phase 1: read-only table LuaScript with the main body defining top-level globals `synthBase22` (read from `0x1008`) and the helper function `synthStep22`, plus the named script tab `SynthTab22` adding the constant global `synthLimit22` in document order; two record scripts reference the table globals and count as inactive at plan time, one record script is independent of the table source, one static module-relative value sibling) | `ct2synth22.exe` | `0f90e1bf8699469113b85fd812a4eb317d884eee905456e2c7afd37b4f0ce528` |
 | `case-23.ct` | Synthetic record-hotkey derivative (WP-40: F1 (VK 112) activation hotkey on the alloc-only anchor script, F2 (VK 113) value operation on the child 4-byte row, first-wins F1 conflict pair on the second script record) | `ct2synth23.exe` | `e3568de1225e5d84d8b468b0daaad64153c70c034a550754eb022caaa001dab3` |
+| `case-24.ct` | Synthetic Lua-owned symbol handover (WP-37: record 1 registers `SynthHandBase24` from record Lua, record 2 is an allocation-only provider of `synthHandAlloc24`; value records 3/4 and AA patch record 5 consume the symbols and depend on their owners; records 6/7 duplicate the `SynthHandDup24` provider so record 7 is blocked by the named keep-first reason and the contested symbol stays out of the external-ownership map; record 8 attempts a foreign `unregistersymbol` of `SynthHandBase24` and is blocked by the named foreign-release refusal) | `ct2synth24.exe` | `dcca38baf1ac4b08fc2a33f986083c071f815befd5ac868b1ea70cf9f6ea5ae6` |
 
 Game names appear only as documentation-level provenance of the synthetic
 shapes; the tables themselves contain no game code, assets or strings.
