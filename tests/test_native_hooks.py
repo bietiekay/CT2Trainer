@@ -811,6 +811,38 @@ class EntryPrefixPatchTests(unittest.TestCase):
         with self.assertRaisesRegex(HookError, "instruction"):
             self.manager.stage([block])
 
+    def test_linker_extended_receipt_publishes_through_strict_window_check(self):
+        # Field regression (0.15-ext2 Great Circle log): Stealth and No
+        # Reload toggles failed in the debug coordinator's
+        # _check_overwrite_windows because the 2-byte receipt fragment
+        # (0F 87 / 90 E9) is not a complete instruction sequence. The linker
+        # now extends the receipt to the full original instruction; publish
+        # through a coordinator running the real strict window check must
+        # succeed and write the extended replacement.
+        from ct2trainer.native.debug_coordinator import _check_overwrite_windows
+
+        class _StrictCoordinator(_Coordinator):
+            def hold_entries(self, memory, windows, *, literal_windows=(),
+                             exclusion_ranges=()):
+                ranges = [(address, len(original))
+                          for address, original, _, _ in windows]
+                _check_overwrite_windows(memory, ranges, tuple(windows))
+                return self.hold(memory, ranges)
+
+        address = 0x1000
+        self.memory.data[address] = bytes.fromhex("0F8783000000") + bytes(64)
+        block = _block(address, bytes.fromhex("90E983000000"),
+                       bytes.fromhex("0F8783000000"), executable=True)
+        block["prefix_cut"] = True
+        strict_path = Path(self.temporary.name) / "strict-window-hook.json"
+        manager = HookManager(self.memory, strict_path, _StrictCoordinator(),
+                              "prefix-patch-strict-window")
+        manager.stage([block])
+        manager.publish()
+        self.assertEqual(manager.state, "enabled")
+        written = dict(self.memory.writes)
+        self.assertEqual(written[address], bytes.fromhex("90E983000000"))
+
 
 @unittest.skipUnless(sys.platform == "win32", "real owned Win32 allocation gate")
 class OwnedWin32AllocationTests(unittest.TestCase):

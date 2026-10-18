@@ -192,6 +192,31 @@ class EntryWindowTests(unittest.TestCase):
             with self.subTest(original=original.hex()), self.assertRaisesRegex(HookError, "return-context"):
                 _check_overwrite_windows(memory, [(0x1000, 14)], ((0x1000, original, replacement, replacement),))
 
+    def test_extended_prefix_cut_receipt_passes_the_strict_window_check(self):
+        # Field fix (0.15 prefix-cut, 0.15-ext2 log): the linker now extends
+        # prefix-cut receipts to the full original instruction, so the
+        # historical strict complete-sequence contract applies at the
+        # coordinator window too. Stealth shape: jnz rel32 +131 ->
+        # nop; jmp rel32 +131 (displacement tail written back unchanged).
+        original = bytes.fromhex("0F8783000000")
+        replacement = bytes.fromhex("90E983000000")
+        memory = _Memory()
+        memory.is_executable = lambda address, size: True
+        memory.read = lambda address, size: original
+        _check_overwrite_windows(memory, [(0x1000, 6)], ((0x1000, original, replacement, original),))
+
+    def test_unextended_prefix_cut_fragment_still_fails_closed(self):
+        # The pre-extension 2-byte receipt fragment (0F 87 / 90 E9) is not a
+        # complete instruction sequence on either side; the strict contract
+        # refuses it without a live prefix-cut proof.
+        fragment = bytes.fromhex("0F87")
+        memory = _Memory()
+        memory.is_executable = lambda address, size: True
+        memory.read = lambda address, size: fragment
+        with self.assertRaisesRegex(HookError, "cuts or contains"):
+            _check_overwrite_windows(memory, [(0x1000, 2)],
+                                     ((0x1000, fragment, bytes.fromhex("90E9"), fragment),))
+
 
 @unittest.skipUnless(sys.platform == "win32", "Win32 debugger cleanup API contract")
 class DebugCoordinatorTests(unittest.TestCase):

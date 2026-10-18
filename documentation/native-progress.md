@@ -102,6 +102,50 @@ coverage: `tests/test_native_mono_runtime.py` class
 `PinnedTablePathTests` (source + frozen path resolution). User-verified:
 portable converter now generates a trainer EXE inside the ZIP.
 
+### 0.15 prefix-cut coordinator-window fix (2026-10-18, part 2)
+
+Field report (Great Circle table, trainer build `0.15-ext2`, debug log
+`Indiana Jones and the Great Circle (0.15-ext2).ct2debug.log`,
+2026-10-18): every formerly broken entry now toggles — except
+**Stealth Mode (ID 24)** and **No Reload (ID 19)**, both still rejected
+with `Entry patch cuts or contains an invalid instruction`. The traceback
+locates the rejection in the publish path, not staging:
+`hooks.publish` → `DebugEventCoordinator._check_overwrite_windows` →
+`hooks.validate_entry_control_flow` applied to the 2-byte prefix-cut
+receipts, where **both** sides (original `0F 87`/`0F 84` and replacement
+`90 E9`) are instruction fragments. The part-1 fix (`d15268a`) made the
+stage-time gate accept the shape, but the coordinator's overwrite-window
+check (and the thread-IP exclusion range) still ran the strict
+complete-instruction contract on the fragment receipt — so the fix never
+survived publish. Also observed in the same log: an engine-blocked
+receipt drift (`ReadProcessMemory failed (Win32 error 299)`) after the
+two failed toggles; consistent with a target-side change and covered by
+the existing module-snapshot fallback, no code change required.
+
+Fix: `link_program` extends a proven prefix-cut receipt to the full first
+original instruction. `_entry_prefix_cut` (already decoding the live
+window and proving the patched stream) now returns the live tail bytes
+(patch end → first original instruction boundary) instead of a bare
+bool; the block then carries original = complete jcc (6 bytes) and
+bytes = patch + unchanged tail (`90 E9` + original rel32 =
+`nop; jmp` to the same target). Every downstream layer — coordinator
+window check, thread-IP exclusion (now the full instruction, not 2
+bytes), restore on disable — sees complete instruction sequences on both
+sides, so the historical strict contract is unchanged everywhere. The
+`prefix_cut` flag remains for provenance and the stage-time live
+re-proof still covers any un-extended receipt. Fails closed on every
+doubt exactly as before. Tests: `tests/test_native_assembler.py`
+(link-level extended receipt, enable + disable),
+`tests/test_native_debug_coordinator.py` (extended receipt passes the
+strict window check; un-extended fragment stays refused),
+`tests/test_native_hooks.py` (stage → publish through a coordinator that
+runs the real `_check_overwrite_windows`). Focused suites 109 OK;
+full local run: failure set identical to the pre-fix baseline
+(pre-existing local-environment gaps only). The released 0.15 ZIPs
+(`native-20261018T055505Z-39f20180`) predate this fix; the re-cut
+build carries it. No table change required — the field table keeps the
+build-independent `db 90 E9` entries.
+
 ## 3. Deterministic measurement chain
 
 All committed `gap_inventory/` artifacts are reproducible byte-identically
