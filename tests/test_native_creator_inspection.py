@@ -95,7 +95,10 @@ EXPECTED_WARNING_WARNINGS = [
     "activation; top-level writes, callbacks and unsupported APIs block "
     "activation.",
     "Table-level sections not interpreted: Forms.",
-    "Original CE record hotkeys are metadata only and are not registered.",
+    # WP-40 replaced the generic hotkey warning with per-case named
+    # warnings; the fixture record's "12" is not a parsable key.
+    "Record 0 ('hotkey value (supported)'): hotkey (Toggle Activation) "
+    "not registered: no parsable key.",
 ]
 
 MIXED_CT = """<?xml version="1.0" encoding="utf-8"?>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-23 (WP-40 — record hotkeys). Module ct2synth23.exe.
+     F1 (VK 112) activation hotkey on the anchor script, F2 (VK 113) value
+     operation on the child value row, and one first-wins F1 conflict pair
+     against a second script record. Pinned at the W3 integration on base
+     d15268a. -->
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"hotkey anchor script"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+registersymbol(synthBase23)
+registersymbol(synthFlag23)
+
+alloc(synthBase23, 8)
+alloc(synthFlag23, 4)
+
+[DISABLE]
+unregistersymbol(synthBase23)
+unregistersymbol(synthFlag23)
+
+dealloc(synthBase23)
+dealloc(synthFlag23)</AssemblerScript>
+      <Hotkeys>
+        <Hotkey Active="1">
+          <Keys><Key>112</Key></Keys>
+          <Action>Toggle Activation</Action>
+        </Hotkey>
+      </Hotkeys>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"hotkey value (4 Bytes)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synthBase23+10</Address>
+      <Hotkeys>
+        <Hotkey Active="1">
+          <Keys><Key>113</Key></Keys>
+          <Action>Set Value</Action>
+          <Value>5</Value>
+          <Description>F2 sets the value from the source table</Description>
+        </Hotkey>
+      </Hotkeys>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"conflicting F1 script"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+registersymbol(synthBase23B)
+
+alloc(synthBase23B, 8)
+
+[DISABLE]
+unregistersymbol(synthBase23B)
+
+dealloc(synthBase23B)</AssemblerScript>
+      <Hotkeys>
+        <Hotkey Active="1">
+          <Keys><Key>112</Key></Keys>
+          <Action>Toggle Activation</Action>
+        </Hotkey>
+      </Hotkeys>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

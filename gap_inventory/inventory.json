@@ -1,7 +1,7 @@
 {
  "corpus_root": "TableReferences",
- "file_count": 20,
- "generated": "run w2b-case18-20261016142912Z",
+ "file_count": 21,
+ "generated": "run w3-case23-20261018012531Z",
  "lane": "AP-10 corpus inventory (read-only static analysis)",
  "method": {
   "dedup": "SHA-256 per file; identical bytes counted once, all paths kept",
@@ -77,7 +77,7 @@
   }
  },
  "reference_verification_all_ok": true,
- "run_id": "w2b-case18-20261016142912Z",
+ "run_id": "w3-case23-20261018012531Z",
  "tables": [
   {
    "architecture": {
@@ -1269,11 +1269,61 @@
     "user_defined_symbols": 0
    },
    "xml_parsable": true
+  },
+  {
+   "architecture": {
+    "signals": [],
+    "value": "unknown"
+   },
+   "categories": {
+    "persistent_script": 2,
+    "value_freeze": 1
+   },
+   "duplicate_ids": {},
+   "entries_total": 3,
+   "format_version": "45",
+   "gap_counts": {
+    "cross_record_symbol": 1,
+    "lua_symbol_api": 2
+   },
+   "group_toggle_actions": 0,
+   "groups": 0,
+   "module_refs": [],
+   "parse_error": null,
+   "paths": [
+    "case-23.ct"
+   ],
+   "primary_path": "case-23.ct",
+   "record_types": {
+    "aa_script": 2,
+    "value": 1
+   },
+   "records": 3,
+   "root_tag": "CheatTable",
+   "sections": [
+    "CheatEntries"
+   ],
+   "sha256": "e3568de1225e5d84d8b468b0daaad64153c70c034a550754eb022caaa001dab3",
+   "size_bytes": 2089,
+   "status_counts": {
+    "locked": 3
+   },
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "xml_parsable": true
   }
  ],
  "totals": {
-  "entries_total": 7370,
-  "expected_actions": 6080,
+  "entries_total": 7373,
+  "expected_actions": 6083,
   "gap_counts": {
    "aa_createthread_threadwait": 1,
    "aa_directive_unverified": 34,
@@ -1281,7 +1331,7 @@
    "aa_luacall": 6,
    "address_form_unrecognized": 6,
    "async_lifecycle": 24,
-   "cross_record_symbol": 3384,
+   "cross_record_symbol": 3385,
    "custom_type": 4,
    "dropdown_link": 15,
    "lua_ce_engine_api": 36,
@@ -1290,7 +1340,7 @@
    "lua_gui_api": 1,
    "lua_host_profile": 1910,
    "lua_managed_runtime": 2,
-   "lua_symbol_api": 212,
+   "lua_symbol_api": 214,
    "lua_typed_target_call": 1,
    "lua_worker_thread": 11,
    "managed_method_resolution": 8,
@@ -1305,20 +1355,20 @@
   "groups": 1287,
   "navigation": 2,
   "parse_errors": 0,
-  "parseable_tables": 20,
+  "parseable_tables": 21,
   "record_types": {
-   "aa_script": 2169,
+   "aa_script": 2171,
    "custom": 4,
    "string": 732,
-   "value": 3177
+   "value": 3178
   },
-  "records": 6082,
+  "records": 6085,
   "status_counts": {
-   "locked": 5507,
+   "locked": 5510,
    "statically_assumed": 533,
    "unknown": 42
   },
-  "unique_tables": 20
+  "unique_tables": 21
  },
- "unique_table_count": 20
+ "unique_table_count": 21
 }

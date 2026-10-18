@@ -25,18 +25,18 @@
    "custom_value": 4,
    "navigation": 2,
    "one_shot": 1723,
-   "persistent_script": 446,
+   "persistent_script": 448,
    "string_write": 732,
-   "value_freeze": 3175
+   "value_freeze": 3176
   },
   "confirmed_game_effect_actions": 0,
   "confirmed_percent": 0.0,
-  "expected_actions": 6080,
+  "expected_actions": 6083,
   "goal_90_percent": "NOT REACHED",
   "group_toggle_actions": 3,
   "groups_total": 1287,
   "missing_gates": [
-   "Real game installs/builds for the 20 pinned tables (user question unanswered)",
+   "Real game installs/builds for the 21 pinned tables (user question unanswered)",
    "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
    "VM/Clean-PC gate without CE/Python",
    "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -46,12 +46,12 @@
   ],
   "navigation_excluded": 2,
   "record_types": {
-   "aa_script": 2169,
+   "aa_script": 2171,
    "custom": 4,
    "string": 732,
-   "value": 3177
+   "value": 3178
   },
-  "records_total": 6082,
+  "records_total": 6085,
   "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
@@ -61,11 +61,11 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5507,
+   "locked": 5510,
    "statically_assumed": 533,
    "unknown": 42
   },
-  "unique_tables": 20
+  "unique_tables": 21
  },
  "gap_labels": {
   "aa_conditional_block": {
@@ -225,7 +225,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run w2b-case18-20261016142912Z",
+ "generated": "run w3-case23-20261018012531Z",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -154701,37 +154701,186 @@
      "requirement": "WP-14"
     }
    ]
+  },
+  {
+   "architecture": {
+    "signals": [],
+    "value": "unknown"
+   },
+   "counts": {
+    "categories": {
+     "persistent_script": 2,
+     "value_freeze": 1
+    },
+    "entries_total": 3,
+    "expected_actions": 3,
+    "gap_counts": {
+     "cross_record_symbol": 1,
+     "lua_symbol_api": 2
+    },
+    "group_toggle_actions": 0,
+    "groups": 0,
+    "navigation_excluded": 0,
+    "record_types": {
+     "aa_script": 2,
+     "value": 1
+    },
+    "records": 3,
+    "status_counts": {
+     "locked": 3
+    }
+   },
+   "duplicate_ids": {},
+   "format_version": "45",
+   "groups": [],
+   "main_initialization": {
+    "gaps": [
+     "lua_symbol_api"
+    ],
+    "id": 1,
+    "name": "hotkey anchor script",
+    "note": "first depth-0 script record",
+    "source": "record",
+    "status": "locked",
+    "type": "aa_script"
+   },
+   "path": "case-23.ct",
+   "paths": [
+    "case-23.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 1,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "hotkey anchor script",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 2,
+       "lifetime": "read_write_freezable_value",
+       "name": "hotkey value (4 Bytes)",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols synthBase23",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 3,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "conflicting F1 script",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      }
+     ]
+    }
+   ],
+   "sha256": "e3568de1225e5d84d8b468b0daaad64153c70c034a550754eb022caaa001dab3",
+   "size_bytes": 2089,
+   "table": "case-23.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 2,
+     "gap": "lua_symbol_api",
+     "label": "Lua symbol API",
+     "requirement": "N-07 / N-19"
+    },
+    {
+     "affected_records": 1,
+     "gap": "cross_record_symbol",
+     "label": "Cross-record symbol resolution",
+     "requirement": "N-07"
+    }
+   ]
   }
  ],
- "run_id": "w2b-case18-20261016142912Z",
+ "run_id": "w3-case23-20261018012531Z",
  "top_gaps_pinned": [
   {
-   "affected_records": 3384,
+   "affected_records": 3385,
    "gap": "cross_record_symbol",
    "label": "Cross-record symbol resolution",
    "requirement": "N-07",
-   "share_of_expected_actions_percent": 55.66
+   "share_of_expected_actions_percent": 55.65
   },
   {
    "affected_records": 1910,
    "gap": "lua_host_profile",
    "label": "Lua host profile (bounded Lua host profile)",
    "requirement": "N-01 / N-19",
-   "share_of_expected_actions_percent": 31.41
+   "share_of_expected_actions_percent": 31.4
   },
   {
    "affected_records": 1723,
    "gap": "one_shot_save_contract",
    "label": "One-shot without ON/OFF save contract",
    "requirement": "state contract (AP-04)",
-   "share_of_expected_actions_percent": 28.34
+   "share_of_expected_actions_percent": 28.32
   },
   {
-   "affected_records": 212,
+   "affected_records": 214,
    "gap": "lua_symbol_api",
    "label": "Lua symbol API",
    "requirement": "N-07 / N-19",
-   "share_of_expected_actions_percent": 3.49
+   "share_of_expected_actions_percent": 3.52
   },
   {
    "affected_records": 36,

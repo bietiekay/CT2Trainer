@@ -210,8 +210,8 @@ class CorpusLinkDiagnosticShapeTests(unittest.TestCase):
                 "The synthetic clean-room corpus is intentionally excluded "
                 "from the Native source distribution.")
         paths = sorted(corpus.glob("*.ct"))
-        self.assertEqual(len(paths), 20, "The repository compatibility corpus "
-                                         "must retain all 20 case tables.")
+        self.assertEqual(len(paths), 21, "The repository compatibility corpus "
+                                         "must retain all 21 case tables.")
         missing = ambiguous = 0
         for path in paths:
             with self.subTest(path=path.name):
