@@ -36,6 +36,10 @@ from .managed_session import (
 
 
 from .architecture import ArchitectureError, require_target_architecture
+from .hotkey_model import (ACTIVATION_HOTKEY_ACTIONS, VALUE_HOTKEY_ACTIONS,
+                           HotkeyController, HotkeyModelError, HotKeySpec,
+                           ToggleOutcome, ToggleOutcomeStatus, format_hotkey_keys,
+                           vk_to_spec)
 from .memory import ScanMiss
 
 
@@ -1022,6 +1026,31 @@ class _OneShotBackend:
         return OneShotReceipt(record_id=record_id, confirmed=confirmed)
 
 
+class _HotkeyGate:
+    """Adapter from the protected engine toggle path to the model gate contract.
+
+    The hotkey model dispatches through this gate when no binding handler
+    is set: a pressed combination flips the bound record through the
+    ordinary toggle transaction (state save included) and is reported as a
+    confirmed, saved outcome; a failed transaction is a failed outcome and
+    the published binding is left in place for the next attempt.
+    """
+
+    def __init__(self, engine: "TrainerEngine"):
+        self._engine = engine
+
+    @property
+    def blocked(self) -> bool:
+        return self._engine.blocked
+
+    def toggle(self, identifier: int) -> ToggleOutcome:
+        try:
+            self._engine.toggle(identifier)
+        except NativeRuntimeError as exc:
+            return ToggleOutcome(ToggleOutcomeStatus.FAILED, False, str(exc))
+        return ToggleOutcome(ToggleOutcomeStatus.CONFIRMED, True)
+
+
 class TrainerEngine:
     """Synchronous controller used identically by UI and headless fixture tests."""
 
@@ -1048,6 +1077,19 @@ class TrainerEngine:
         # startup later fails (state claim, provider checks, ...).
         self.debug_log = create_debug_log(plan)
         self.entries = {entry["id"]: entry for entry in plan["entries"]}
+        # WP-40: record hotkey registration (first-wins policy over the
+        # protected toggle path) plus the live record set the controller was
+        # last reconciled against.  Warnings are deduplicated, monotonic and
+        # surfaced by the trainer UI; the plan keeps every original binding.
+        self.hotkey_warnings: list[str] = []
+        self._hotkey_live: set[int] = set()
+        self._hotkey_owner = plan["trainer_id"]
+        self.hotkey_controller = HotkeyController(
+            _HotkeyGate(self),
+            focus_provider=lambda: self.memory is not None,
+            text_focus_provider=lambda: False,
+            binding_handler=self._hotkey_dispatch,
+        )
         self.providers: dict[str, int] = {}
         for entry in plan["entries"]:
             if entry["selected"] and entry["supported"] and entry["kind"] == "script":
@@ -1743,6 +1785,7 @@ class TrainerEngine:
                     self.local_symbols.clear()
                     self.symbols.clear()
                     self.frozen.clear()
+                    self._hotkey_sync()
                     self.status = "Target ended; waiting for " + self.plan["process_name"]
                     return self.status
                 require_target_architecture(self.plan, self.memory)
@@ -1771,6 +1814,7 @@ class TrainerEngine:
                 if strings:
                     from .string_runtime import write_strings
                     write_strings(self,strings)
+                self._hotkey_sync()
                 return self.status
             try:
                 memory = self.memory_factory(self.plan["process_name"])
@@ -1920,6 +1964,7 @@ class TrainerEngine:
             self.status = 'Waiting for a safe data-write point: ' + self.error
         except Exception as exc:
             self._block(exc)
+        self._hotkey_sync()
         return self.status
 
     def _check_patches(self) -> None:
@@ -3427,6 +3472,7 @@ class TrainerEngine:
                 self.status = f"{entry['label']}: {'enabled and saved' if enabled else 'disabled and saved'}"
             self.debug_log.log("toggle-ok", identifier=identifier, label=entry["label"],
                                direction=enabled)
+            self._hotkey_sync()
             return enabled
         except Exception as exc:
             self.debug_log.error("toggle-failed", exc, identifier=identifier,
@@ -3729,6 +3775,250 @@ class TrainerEngine:
         address = self._value_address(entry)
         return format_value(entry, self.memory.read(address, self._value_size(entry)))
 
+    # ----------------------------------------------------------- WP-40: record hotkeys
+    #
+    # The plan carries every original <Hotkey> binding (byte-verified by
+    # both plan validators).  The engine publishes the live subset through
+    # the tested hotkey_model controller with the first-wins conflict
+    # policy; every refusal is a named, deduplicated entry of
+    # self.hotkey_warnings, and the losing record stays fully functional.
+
+    def _hotkey_record_live(self, record_id: int) -> bool:
+        """True while the record's hotkeys may be published.
+
+        Script records and flagged parent headings are live while applied
+        (their activation effect is present in the target).  Value records
+        are live while selected, supported and - when staged - every
+        provider effect is live; a staged-pending value row keeps its
+        value-operation hotkeys unregistered until the provider activates
+        (the steady poll re-syncs the controller).  No binding exists
+        without an attached session.
+        """
+        if self.memory is None:
+            return False
+        entry = self.entries[record_id]
+        if not (entry.get("selected") and entry.get("supported")):
+            return False
+        if entry["kind"] == "value":
+            staged = entry.get("staged")
+            if staged:
+                for provider_id in staged["provider_ids"]:
+                    if not self._parent_effect_live(provider_id):
+                        return False
+            return True
+        if entry["kind"] in {"script", "heading"}:
+            return record_id in self.applied
+        return False
+
+    @staticmethod
+    def _hotkey_toggleable(entry: dict) -> bool:
+        """Activation hotkeys exist only on script records and flagged parent headings."""
+        return bool(entry.get("supported") and (
+            entry["kind"] == "script"
+            or (entry["kind"] == "heading"
+                and (entry.get("parent_activation") is not None
+                     or entry.get("parent_mo_bind") is True))))
+
+    @staticmethod
+    def _hotkey_value_actionable(entry: dict) -> bool:
+        """Value-operation hotkeys map only to actionable value rows."""
+        return bool(entry.get("selected") and entry.get("supported")
+                    and entry["kind"] == "value")
+
+    def _hotkey_warn(self, message: str) -> None:
+        if message not in self.hotkey_warnings:
+            self.hotkey_warnings.append(message)
+
+    def _hotkey_register_record(self, record_id: int) -> None:
+        """Publish one newly live record's declared hotkeys (first-wins).
+
+        Unregisterable cases surface as named warnings in
+        self.hotkey_warnings (the plan keeps the original binding either
+        way); an already-owned combination loses by first-wins with a
+        warning that names both records, and the losing record keeps its
+        ordinary UI actions.
+        """
+        entry = self.entries[record_id]
+        label = entry.get("label") or str(record_id)
+        for hotkey in entry.get("hotkeys", ()):
+            if not hotkey.get("active", True):
+                continue
+            action = hotkey.get("action") or ""
+            keys = list(hotkey.get("keys", ()))
+            try:
+                spec = vk_to_spec(keys)
+            except HotkeyModelError:
+                self._hotkey_warn(
+                    f"Record {record_id} ('{label}'): hotkey ({action}) "
+                    f"not registered: no parsable key.")
+                continue
+            key_text = format_hotkey_keys(keys)
+            if action in VALUE_HOTKEY_ACTIONS:
+                if not self._hotkey_value_actionable(entry):
+                    self._hotkey_warn(
+                        f"Record {record_id} ('{label}'): hotkey {key_text} ({action}) "
+                        f"not registered: value row is not actionable.")
+                    continue
+            elif action in ACTIVATION_HOTKEY_ACTIONS:
+                if not self._hotkey_toggleable(entry):
+                    reason = ("record is blocked" if not entry.get("supported")
+                              else "record has no activation action")
+                    self._hotkey_warn(
+                        f"Record {record_id} ('{label}'): hotkey {key_text} ({action}) "
+                        f"not registered: {reason}.")
+                    continue
+            else:
+                self._hotkey_warn(
+                    f"Record {record_id} ('{label}'): hotkey {key_text} ({action!r}) "
+                    f"not registered: unsupported action.")
+                continue
+            registered, winner = self.hotkey_controller.register_first_wins(
+                self._hotkey_owner, record_id, spec)
+            if not registered:
+                winner_entry = self.entries.get(winner.record_id)
+                winner_label = (winner_entry or {}).get("label") or str(winner.record_id)
+                self._hotkey_warn(
+                    f"Record {record_id} ('{label}'): hotkey {key_text} not registered: "
+                    f"key already bound to record {winner.record_id} "
+                    f"('{winner_label}') by first-wins")
+
+    def _hotkey_sync(self) -> None:
+        """Reconcile the published hotkey bindings with the live record set.
+
+        Called on toggle success, attach/restore completion, every steady
+        poll tick and confirmed target exit.  Records register in
+        activation order (applied insertion order, value rows by record
+        id).  Deliberate scope limit: no automatic re-claim - when the
+        winning record disables, its binding is dropped and the losing
+        claimant keeps no binding until its own liveness changes again.
+        """
+        if self.closed:
+            return
+        live = {record_id for record_id in self.entries
+                if self._hotkey_record_live(record_id)}
+        for record_id in sorted(self._hotkey_live - live):
+            self.hotkey_controller.unregister(self._hotkey_owner, record_id)
+        newly = live - self._hotkey_live
+        self._hotkey_live = live
+        if not newly:
+            return
+        activation_order = [record_id for record_id in self.applied if record_id in newly]
+        rest = sorted(newly - set(activation_order))
+        for record_id in activation_order + rest:
+            self._hotkey_register_record(record_id)
+
+    def _hotkey_for_binding(self, entry: dict, spec: HotKeySpec) -> dict | None:
+        """The record's declared hotkey carrying exactly this key combination."""
+        for hotkey in entry.get("hotkeys", ()):
+            try:
+                if vk_to_spec(list(hotkey.get("keys", ()))) == spec:
+                    return hotkey
+            except HotkeyModelError:
+                continue
+        return None
+
+    def _hotkey_dispatch(self, binding) -> ToggleOutcome:
+        """Route one published binding to the record hotkey that declared it.
+
+        One record may hold several bindings; the full binding identifies
+        the exact declared action.  Activation actions flip the record
+        through the ordinary toggle transaction; value actions write
+        through set_value (staged provider checks and ownership rules
+        included).  Failures are named, visible FAILED outcomes; the
+        binding stays published so the record remains fully functional.
+        """
+        entry = self.entries.get(binding.record_id)
+        if entry is None:
+            return ToggleOutcome(ToggleOutcomeStatus.FAILED, False, "Unknown hotkey record")
+        hotkey = self._hotkey_for_binding(entry, binding.spec)
+        if hotkey is None:
+            return ToggleOutcome(ToggleOutcomeStatus.FAILED, False, "Binding has no declared record hotkey")
+        action = hotkey.get("action") or ""
+        try:
+            if action in ACTIVATION_HOTKEY_ACTIONS:
+                self.toggle(binding.record_id)
+                return ToggleOutcome(ToggleOutcomeStatus.CONFIRMED, True)
+            if action in VALUE_HOTKEY_ACTIONS:
+                if action == "Set Value":
+                    self.set_value(binding.record_id, hotkey.get("value") or "")
+                else:
+                    self._hotkey_value_step(binding.record_id, action, hotkey)
+                return ToggleOutcome(ToggleOutcomeStatus.CONFIRMED, False)
+            return ToggleOutcome(ToggleOutcomeStatus.FAILED, False, "Unsupported hotkey action")
+        except Exception as exc:
+            return ToggleOutcome(ToggleOutcomeStatus.FAILED, False, str(exc))
+
+    def _hotkey_value_step(self, record_id: int, action: str, hotkey: dict) -> None:
+        """Increase/Decrease Value hotkeys: one step through set_value.
+
+        The source Value element carries the step literal: a decimal
+        integer for byte/word/dword/quad rows (ShowAsHex rows are written
+        back as lowercase hex without a 0x prefix) and a finite decimal
+        number for decimal Float/Double rows.  Hexadecimal float
+        bit-pattern rows and profile-backed rows (string, byte array,
+        bit field) have no bounded numeric step and refuse with a named
+        reason before any write.
+        """
+        entry = self.entries[record_id]
+        direction = 1 if action == "Increase Value" else -1
+        step_text = (hotkey.get("value") or "").strip()
+        profile = entry.get("value_profile") or {}
+        if profile.get("kind") in {"string", "byte_array", "bitfield"}:
+            raise NativeRuntimeError(
+                f"Hotkey value step is not defined for {profile['kind']} rows")
+        if entry.get("show_as_hex") and entry.get("variable_type") in ("Float", "Double"):
+            raise NativeRuntimeError("Hotkey value step is not defined for hex float rows")
+        current = self.read_value(record_id)
+        if entry.get("variable_type") in ("Float", "Double"):
+            if not re.fullmatch(r"[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?", step_text):
+                raise NativeRuntimeError("Hotkey value step must be a finite decimal number")
+            step = float(step_text)
+            if not math.isfinite(step):
+                raise NativeRuntimeError("Hotkey value step must be finite")
+            candidate = str(float(current) + direction * step)
+        elif entry.get("show_as_hex"):
+            if not re.fullmatch(r"[+-]?[0-9]+", step_text):
+                raise NativeRuntimeError("Hotkey value step must be a decimal integer")
+            candidate = format(int(current, 16) + direction * int(step_text, 10), "x")
+        else:
+            if not re.fullmatch(r"[+-]?[0-9]+", step_text):
+                raise NativeRuntimeError("Hotkey value step must be a decimal integer")
+            candidate = str(int(current) + direction * int(step_text, 10))
+        self.set_value(record_id, candidate)
+
+    def hotkey_registered_keys(self, identifier: int) -> tuple[tuple[str, bool], ...]:
+        """Display contract input: the record's original bindings.
+
+        Returns ``(key_text, registered)`` per declared hotkey in plan
+        order; ``registered`` is True while the first-wins policy has the
+        combination published for this record.  Pure state read - plan
+        metadata plus the published binding list, no memory access.
+        """
+        entry = self.entries.get(identifier)
+        if entry is None:
+            raise NativeRuntimeError(f"Unknown record id {identifier}")
+        owned = {item.spec for item in self.hotkey_controller.registrations()
+                 if item.record_id == identifier}
+        rows = []
+        for hotkey in entry.get("hotkeys", ()):
+            keys = list(hotkey.get("keys", ()))
+            try:
+                registered = vk_to_spec(keys) in owned
+            except HotkeyModelError:
+                registered = False
+            rows.append((format_hotkey_keys(keys), registered))
+        return tuple(rows)
+
+    def dispatch_hotkey(self, spec: HotKeySpec):
+        """Route one pressed key combination through the hotkey controller.
+
+        The OS hotkey callback (owned Windows RegisterHotKey route, AP-11
+        gate) feeds the parsed combination here; dispatch enforces the
+        model focus/text-focus/block checks and routes through the
+        binding handler to the record's declared action.
+        """
+        return self.hotkey_controller.dispatch(spec)
+
     def _set_recursive_value(self, identifier: int, entry: dict, text: str) -> str:
         """Apply one moRecursiveSetValue write across the value-descendant closure.
 
@@ -4004,6 +4294,8 @@ class TrainerEngine:
                 # (fence plus lease close) before the session ends.
                 self.clock.finish()
                 self.clock = None
+            self.hotkey_controller.close(self._hotkey_owner)
+            self._hotkey_live.clear()
             self.store.close()
             self.closed = True
             self.status = "Trainer closed; saved switches will restore on the next game launch"
@@ -4027,6 +4319,8 @@ class TrainerEngine:
             if self.clock is not None:
                 self.clock.finish()
                 self.clock = None
+            self.hotkey_controller.close(self._hotkey_owner)
+            self._hotkey_live.clear()
             self.closed = True
             self.debug_log.close()
             return False

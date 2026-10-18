@@ -10,6 +10,8 @@ from ct2trainer.native.hotkey_model import (
     HotKeySpec,
     ToggleOutcome,
     ToggleOutcomeStatus,
+    format_hotkey_keys,
+    vk_to_spec,
 )
 
 
@@ -100,12 +102,20 @@ class HotkeyRegistrationTests(unittest.TestCase):
         with self.assertRaises(HotkeyModelError):
             controller.register("trainer-2", 5, HotKeySpec.parse("F2"))
 
-    def test_record_cannot_have_two_published_bindings(self):
+    def test_record_can_hold_several_published_bindings_for_its_owner(self):
         state = _focused()
-        controller = _controller(state)
+        gate = FakeGate()
+        controller = _controller(state, gate=gate)
+        # WP-40: a source record may carry several hotkeys (one toggle key
+        # and one value-operation key); both publish under the same owner.
         controller.register("trainer-1", 5, HotKeySpec.parse("F1"))
-        with self.assertRaises(HotkeyModelError):
-            controller.register("trainer-1", 5, HotKeySpec.parse("F2"))
+        controller.register("trainer-1", 5, HotKeySpec.parse("F2"))
+        self.assertEqual(
+            [item.spec for item in controller.registrations()],
+            [HotKeySpec.parse("F1"), HotKeySpec.parse("F2")])
+        self.assertEqual(controller.dispatch(HotKeySpec.parse("F1")).status, "triggered")
+        self.assertEqual(controller.dispatch(HotKeySpec.parse("F2")).status, "triggered")
+        self.assertEqual(gate.calls, [5, 5])
 
     def test_cancel_pending_registration_before_publication(self):
         state = _focused()
@@ -262,6 +272,79 @@ class HotKeySpecValidationTests(unittest.TestCase):
         for bad_record in (0, -1, "5"):
             with self.assertRaises(HotkeyModelError):
                 controller.register("trainer-1", bad_record, HotKeySpec.parse("F1"))
+
+
+class HotkeyFirstWinsTests(unittest.TestCase):
+    def test_first_published_binding_wins_the_combination(self):
+        controller = _controller(_focused())
+        controller.register_first_wins("trainer-1", 5, HotKeySpec.parse("Ctrl+F1"))
+        ok, winner = controller.register_first_wins("trainer-1", 6, HotKeySpec.parse("Ctrl+F1"))
+        self.assertFalse(ok)
+        self.assertEqual(winner.record_id, 5)
+        self.assertEqual(controller.find(HotKeySpec.parse("Ctrl+F1")).record_id, 5)
+        # the winner binding is untouched; the loser keeps no binding and no exception
+        self.assertEqual([item.record_id for item in controller.registrations()], [5])
+        self.assertIsNone(controller.binding_for(6))
+
+    def test_first_wins_is_idempotent_for_the_same_record(self):
+        controller = _controller(_focused())
+        ok1, winner1 = controller.register_first_wins("trainer-1", 7, HotKeySpec.parse("F3"))
+        ok2, winner2 = controller.register_first_wins("trainer-1", 7, HotKeySpec.parse("F3"))
+        self.assertTrue(ok1)
+        self.assertIsNone(winner1)  # the first registration found no earlier binding
+        self.assertTrue(ok2)
+        self.assertEqual(winner2.record_id, 7)  # re-registration finds its own binding
+        self.assertEqual(len(controller.registrations()), 1)
+        self.assertEqual(controller.dispatch(HotKeySpec.parse("F3")).record_id, 7)
+
+    def test_register_first_wins_keeps_strict_register_rejection(self):
+        controller = _controller(_focused())
+        controller.register_first_wins("trainer-1", 5, HotKeySpec.parse("F9"))
+        with self.assertRaises(HotkeyCollisionError):
+            controller.register("trainer-2", 6, HotKeySpec.parse("F9"))
+
+    def test_register_first_wins_validates_owner_and_record_id(self):
+        controller = _controller(_focused())
+        with self.assertRaises(HotkeyModelError):
+            controller.register_first_wins("", 5, HotKeySpec.parse("F1"))
+        with self.assertRaises(HotkeyModelError):
+            controller.register_first_wins("trainer-1", 0, HotKeySpec.parse("F1"))
+
+
+class HotkeyVkMappingTests(unittest.TestCase):
+    def test_vk_to_spec_maps_modifiers_and_main_key(self):
+        spec = vk_to_spec([17, 112])  # Ctrl + F1
+        self.assertEqual(spec, HotKeySpec.parse("Ctrl+F1"))
+        self.assertEqual(spec.modifiers, frozenset({"ctrl"}))
+
+    def test_vk_to_spec_folds_left_and_right_modifier_variants(self):
+        left = vk_to_spec([162, 91, 160, 164, 65])
+        self.assertEqual(left, HotKeySpec.parse("Ctrl+Meta+Shift+Alt+A"))
+        right = vk_to_spec([163, 92, 161, 165, 66])
+        self.assertEqual(right, HotKeySpec.parse("Ctrl+Meta+Shift+Alt+B"))
+
+    def test_vk_to_spec_rejects_unmappable_codes(self):
+        with self.assertRaisesRegex(HotkeyModelError, "Unsupported hotkey key VK 31"):
+            vk_to_spec([31])
+
+    def test_vk_to_spec_rejects_modifier_only_combinations(self):
+        with self.assertRaisesRegex(HotkeyModelError, "no main key"):
+            vk_to_spec([17, 18])
+
+    def test_vk_to_spec_rejects_multiple_main_keys(self):
+        with self.assertRaisesRegex(HotkeyModelError, "more than one main key"):
+            vk_to_spec([17, 65, 66])
+
+    def test_vk_to_spec_rejects_empty_duplicates_and_out_of_range(self):
+        for bad in ([], [112, 112], [0], [256], ["112"], [16.0]):
+            with self.assertRaises(HotkeyModelError):
+                vk_to_spec(bad)
+
+    def test_format_hotkey_keys_renders_canonical_text(self):
+        self.assertEqual(format_hotkey_keys([17, 112]), "ctrl+F1")
+        self.assertEqual(format_hotkey_keys([164, 16, 163, 91, 65]), "alt+ctrl+meta+shift+A")
+        self.assertEqual(format_hotkey_keys([31, 65]), "VK31+A")
+        self.assertEqual(format_hotkey_keys([]), "(none)")
 
 
 if __name__ == "__main__":

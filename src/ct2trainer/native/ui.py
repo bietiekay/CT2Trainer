@@ -24,6 +24,8 @@ from .ui_layout import (
     enter_group,
     exit_group,
     filtered_entries,
+    hotkey_binding_line,
+    hotkey_conflict_banner,
     is_navigable_group,
     level_entries,
     page_size_for_cards,
@@ -109,8 +111,14 @@ class TrainerWindow:
         repo_link(header, bg=BG_HEADER, fg=FG).pack(side="right")
         status = tk.Frame(root, bg=BG, padx=12)
         status.pack(fill="x")
+        self.status_frame = status
         tk.Label(status, textvariable=self.status_text, anchor="w", justify="left", wraplength=900, bg=BG, fg=FG).pack(side="left", fill="x", expand=True)
         self._button(status, "Status / help", self.show_status, width=12).pack(side="right")
+        # WP-40: trainer-wide hotkey warning banner (first-wins conflicts and
+        # named registration refusals). Packed only while warnings exist; the
+        # pure layout contract is untouched.
+        self.hotkey_banner = tk.Label(root, text="", anchor="w", justify="left",
+                                      wraplength=900, bg=BG, fg=FG_DIM)
         toolbar = tk.Frame(root, bg=BG, padx=12)
         toolbar.pack(fill="x")
         self.toolbar = toolbar
@@ -176,9 +184,12 @@ class TrainerWindow:
         set_summary = activation_set_summary(entry, self.engine.entries)
         set_line = ("\n" + set_summary + " (source: %s)"
                     % entry["activation_sets"].get("source", "unknown")) if set_summary else ""
+        hotkeys = self.engine.hotkey_registered_keys(entry["id"])
+        hotkey_line = ("\nHotkeys:\n" + "\n".join(
+            hotkey_binding_line(text, registered) for text, registered in hotkeys)) if hotkeys else ""
         messagebox.showinfo("Entry information", f"{entry['label']}\nID: {entry['id']}\nPath: {path}\n" +
             f"Type: {entry.get('variable_type', entry['kind'])}\n" +
-            (entry.get("reason") or "Supported by the bounded native engine") + staged_line + set_line + "\n" +
+            (entry.get("reason") or "Supported by the bounded native engine") + staged_line + set_line + hotkey_line + "\n" +
             self.engine.entry_errors.get(entry["id"], "") +
             "\nRequired symbols: " + ", ".join(entry.get("requires", [])), parent=self.root)
 
@@ -261,6 +272,7 @@ class TrainerWindow:
             messagebox.showerror("Trainer action failed", str(exc), parent=self.root)
         self.status_text.set(self.engine.status)
         self.render()
+        self._update_hotkey_banner()
 
     def step(self, entry, direction):
         variable = self.drafts[entry["id"]]
@@ -363,6 +375,7 @@ class TrainerWindow:
                 if master and self.engine.memory is not None:
                     current = "Set applied" if active else "Set not applied"
                 tk.Label(card, text=f"Current: {current}   Next game launch: {'ON' if identifier in self.engine.desired else 'OFF'}", anchor="w", bg=BG_CARD, fg=FG_DIM).pack(fill="x")
+                self._hotkey_card_line(card, identifier)
                 set_summary = activation_set_summary(entry, self.engine.entries)
                 if set_summary:
                     tk.Label(card, text=set_summary, anchor="w", justify="left", bg=BG_CARD, fg=FG_DIM,
@@ -398,6 +411,7 @@ class TrainerWindow:
                                    anchor="w", bg=BG_CARD, fg=FG_DIM)
                 current.pack(fill="x")
                 self.current_labels[identifier] = current
+                self._hotkey_card_line(card, identifier)
                 row = tk.Frame(card, bg=BG_CARD)
                 row.pack(fill="x")
                 dropdown = entry.get("dropdown") or {}
@@ -427,15 +441,47 @@ class TrainerWindow:
                         draft_button.configure(state="disabled")
                     draft_button.pack(side="left", fill="x", expand=True)
 
+    def _hotkey_card_line(self, card, identifier):
+        """WP-40: show the record's original hotkey bindings with live state.
+
+        One line per declared source binding (plan order); the engine
+        reports whether the first-wins policy currently publishes it.
+        """
+        hotkeys = self.engine.hotkey_registered_keys(identifier)
+        if not hotkeys:
+            return
+        tk.Label(card, text="Hotkeys: " + ", ".join(
+            hotkey_binding_line(text, registered) for text, registered in hotkeys),
+            anchor="w", justify="left", bg=BG_CARD, fg=FG_DIM,
+            wraplength=max(280, self.root.winfo_width() - 60)).pack(fill="x")
+
+    def _update_hotkey_banner(self):
+        """WP-40: render the trainer-wide hotkey warning banner.
+
+        The banner carries the engine's deduplicated registration warnings
+        (first-wins conflicts, named refusals) and is packed only while
+        non-empty so the pure layout contract stays untouched.
+        """
+        banner = hotkey_conflict_banner(self.engine.hotkey_warnings)
+        if banner:
+            if not self.hotkey_banner.winfo_ismapped():
+                self.hotkey_banner.pack(fill="x", after=self.status_frame)
+            self.hotkey_banner.configure(text=banner)
+        elif self.hotkey_banner.winfo_ismapped():
+            self.hotkey_banner.pack_forget()
+
     def poll(self):
         if self.engine.closed:
             return
-        before = (self.engine.connected, self.engine.blocked, tuple(self.engine.applied), tuple(self.engine.desired))
+        before = (self.engine.connected, self.engine.blocked, tuple(self.engine.applied),
+                  tuple(self.engine.desired), tuple(self.engine.hotkey_warnings))
         self.engine.poll()
         self.status_text.set(self.engine.status)
-        after = (self.engine.connected, self.engine.blocked, tuple(self.engine.applied), tuple(self.engine.desired))
+        after = (self.engine.connected, self.engine.blocked, tuple(self.engine.applied),
+                 tuple(self.engine.desired), tuple(self.engine.hotkey_warnings))
         if before != after:
             self.render()
+        self._update_hotkey_banner()
         for identifier, label in self.current_labels.items():
             try:
                 value = self.engine.read_value(identifier)

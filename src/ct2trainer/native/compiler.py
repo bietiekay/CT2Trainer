@@ -16,8 +16,11 @@ import math
 import struct
 import xml.etree.ElementTree as ET
 
-from ..table import (MAX_ENTRIES, MAX_TABLE_BYTES, SIMPLE_VALUE_TYPES, Entry,
+from ..table import (MAX_ENTRIES, MAX_TABLE_BYTES, MAX_HOTKEYS_PER_RECORD,
+                     SIMPLE_VALUE_TYPES, Entry,
                      numeric_literal_safe, read_table)
+from .hotkey_model import (ACTIVATION_HOTKEY_ACTIONS, VALUE_HOTKEY_ACTIONS,
+                           format_hotkey_keys)
 from .aa import (AAError, MAX_OPERATIONS, MAX_PATCH_BYTES, compile_one_shot,
                  compile_script, expression_symbols, is_flat_expression,
                 normalize_pattern,
@@ -664,6 +667,15 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                  "requires": [], "provides": [], "dependency_ids": [],
                  "source_hotkey_count": source.hotkey_count,
                  "runtime_verified": False}
+        # WP-40: the plan mirrors the record's source <Hotkey> bindings
+        # byte-exactly (the plan validators re-derive the list from
+        # source_hotkey_count).  Records without source hotkeys keep the
+        # legacy plan shape (no key) so pinned canonical plans of
+        # hotkey-free tables stay byte-stable.
+        if source.hotkeys:
+            entry["hotkeys"] = [{"keys": list(hk.keys), "action": hk.action,
+                                 "value": hk.value, "description": hk.description,
+                                 "active": hk.active} for hk in source.hotkeys]
         entries.append(entry)
         try:
             if source.is_group_header:
@@ -988,8 +1000,44 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
             omitted.append(section.name)
     if omitted:
         warnings.append("Table-level sections not interpreted: " + ", ".join(sorted(set(omitted))) + ".")
-    if any(entry.hotkey_count for entry in table.entries):
-        warnings.append("Original CE record hotkeys are metadata only and are not registered.")
+    # WP-40: per-case named warnings for source hotkeys that cannot be
+    # registered (the engine keeps the first-wins policy for conflicts at
+    # runtime; the plan records every original binding either way).
+    for entry in entries:
+        for hotkey in entry.get("hotkeys", ()):
+            if not hotkey["active"]:
+                continue
+            keys = hotkey["keys"]
+            if not keys:
+                warnings.append(
+                    f"Record {entry['id']} ('{entry['label']}'): hotkey ({hotkey['action']}) "
+                    f"not registered: no parsable key.")
+                continue
+            key_text = format_hotkey_keys(keys)
+            action = hotkey["action"]
+            if action in VALUE_HOTKEY_ACTIONS:
+                if entry["supported"] and entry["kind"] == "value":
+                    continue
+                warnings.append(
+                    f"Record {entry['id']} ('{entry['label']}'): hotkey {key_text} ({action}) "
+                    f"not registered: value row is not actionable.")
+            elif action in ACTIVATION_HOTKEY_ACTIONS:
+                toggleable = entry["supported"] and (
+                    entry["kind"] == "script"
+                    or (entry["kind"] == "heading"
+                        and (entry.get("parent_activation") is not None
+                             or entry.get("parent_mo_bind") is True)))
+                if toggleable:
+                    continue
+                reason = "record is blocked" if not entry["supported"] \
+                    else "record has no activation action"
+                warnings.append(
+                    f"Record {entry['id']} ('{entry['label']}'): hotkey {key_text} ({action}) "
+                    f"not registered: {reason}.")
+            else:
+                warnings.append(
+                    f"Record {entry['id']} ('{entry['label']}'): hotkey {key_text} ({action!r}) "
+                    f"not registered: unsupported action.")
     identity = json.dumps({"engine": "ct2trainer", "schema": 2,
                            "target_architecture": target_architecture,
                            "table_sha256": table.source_sha256,
@@ -1279,6 +1327,44 @@ def validate_plan(plan: dict) -> None:
                     raise NativeCompileError(str(exc)) from exc
                 if write_ids != expected:
                     raise NativeCompileError("Recursive value metadata does not match the record structure.")
+            # WP-40: source hotkey projection must be bounded and re-derive
+            # byte-exactly from the record's raw <Hotkey> count; records
+            # without source hotkeys keep the legacy plan shape (no key),
+            # which stays valid only while the count stays zero.
+            hotkeys = entry.get("hotkeys")
+            if "hotkeys" in entry:
+                if (not isinstance(hotkeys, list)
+                        or len(hotkeys) > MAX_HOTKEYS_PER_RECORD):
+                    raise NativeCompileError("Record hotkey metadata must be a bounded list.")
+                for hotkey in hotkeys:
+                    if (not isinstance(hotkey, dict)
+                            or set(hotkey) != {"keys", "action", "value",
+                                               "description", "active"}):
+                        raise NativeCompileError("Hotkey metadata fields are fixed.")
+                    keys = hotkey["keys"]
+                    if (not isinstance(keys, list) or len(keys) > 5
+                            or any(type(code) is not int or not 0 < code <= 255
+                                   for code in keys)
+                            or keys != sorted(set(keys))):
+                        raise NativeCompileError(
+                            "Hotkey keys must be sorted unique codes up to 255.")
+                    if (not isinstance(hotkey["action"], str) or not hotkey["action"]
+                            or len(hotkey["action"]) > 64):
+                        raise NativeCompileError(
+                            "Hotkey action must be bounded nonempty text.")
+                    for text in ("value", "description"):
+                        if not isinstance(hotkey[text], str) or len(hotkey[text]) > 512:
+                            raise NativeCompileError(
+                                f"Hotkey {text} must be bounded text.")
+                    if type(hotkey["active"]) is not bool:
+                        raise NativeCompileError("Hotkey active flag must be a boolean.")
+                source_count = entry.get("source_hotkey_count")
+                if type(source_count) is not int or source_count != len(hotkeys):
+                    raise NativeCompileError(
+                        "Hotkey metadata count differs from the source record.")
+            elif entry.get("source_hotkey_count") not in (None, 0):
+                raise NativeCompileError(
+                    "Hotkey metadata count differs from the source record.")
             dependencies = entry.get("dependency_ids", [])
             if (not isinstance(dependencies, list) or len(dependencies) > MAX_OPERATIONS
                     or any(type(item) is not int or item not in ids for item in dependencies)):

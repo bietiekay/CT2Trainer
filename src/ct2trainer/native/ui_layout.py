@@ -386,3 +386,53 @@ def filtered_entries(entries: dict, view: str, needle: str, applied, desired,
             continue
         result.append(entry)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Record hotkey display (WP-40, pure, Tk-free)
+#
+# The plan entry's "hotkeys" list carries every original source binding
+# (byte-verified by both plan validators); the engine publishes the live
+# subset with the first-wins conflict policy.  These render the per-record
+# binding lines (original binding + active state) and the trainer-wide
+# warning banner from plain state.
+# ---------------------------------------------------------------------------
+
+
+def hotkey_binding_line(key_text: str, registered: bool) -> str:
+    """One original-binding line: 'F1 (active)' or 'F2 (not registered)'.
+
+    ``key_text`` is the canonical human form of the source key
+    combination; ``registered`` reflects the engine's first-wins
+    publication state for the record that declared the binding.
+    """
+    if not isinstance(key_text, str) or not key_text:
+        raise LayoutError("Hotkey binding line needs a nonempty key text.")
+    if type(registered) is not bool:
+        raise LayoutError("Hotkey binding line needs a boolean registration state.")
+    return f"{key_text} (active)" if registered else f"{key_text} (not registered)"
+
+
+def hotkey_conflict_banner(warnings, limit: int = 3) -> str:
+    """Trainer-wide banner text for hotkey registration warnings.
+
+    ``warnings`` is the engine's deduplicated, monotonic warning list;
+    at most ``limit`` warnings render verbatim, the remainder collapse
+    into a bounded counter so the banner stays one readable line on
+    large tables.  Empty string when there is nothing to warn.
+    """
+    if not isinstance(limit, int) or limit < 1:
+        raise LayoutError("Hotkey banner limit must be a positive integer.")
+    if warnings is None:
+        warnings = []
+    if not isinstance(warnings, (list, tuple)):
+        raise LayoutError("Hotkey banner needs a warning list.")
+    if not all(isinstance(item, str) for item in warnings):
+        raise LayoutError("Hotkey banner warnings must be text.")
+    if not warnings:
+        return ""
+    shown = list(warnings[:limit])
+    text = "Hotkeys: " + " | ".join(shown)
+    if len(warnings) > limit:
+        text += f" | {len(warnings) - limit} more"
+    return text

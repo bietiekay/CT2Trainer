@@ -17,6 +17,10 @@ import xml.etree.ElementTree as ET
 MAX_TABLE_BYTES = 32 * 1024 * 1024
 MAX_ENTRIES = 20_000
 MAX_ENTRY_DEPTH = 64
+# WP-40: a source record may declare several hotkeys; the plan projection is
+# bounded per record (the plan validators enforce the same bound).
+MAX_HOTKEYS_PER_RECORD = 16
+HOTKEY_ACTION_DEFAULT = "Toggle Activation"
 # Legacy pre-XML binary tables (CE 5.x era) start with this magic header;
 # they are refused with a named, distinct error (WP-25).
 LEGACY_BINARY_CT_HEADER = b"CHEATENGINE\t"
@@ -29,6 +33,25 @@ HEX_DIGITS_BY_TYPE = {"Byte": 2, "2 Bytes": 4, "4 Bytes": 8, "8 Bytes": 16}
 
 class TableError(ValueError):
     """A table cannot be safely represented by the current inspector."""
+
+
+@dataclass(frozen=True)
+class RecordHotkey:
+    """One <Hotkey> element of a source record (WP-40).
+
+    ``keys`` holds the source decimal Windows virtual-key codes normalized to
+    a sorted unique tuple (empty when nothing parsed); ``action`` is the
+    source action text, with the missing-Action CE contract default applied;
+    ``active`` mirrors the source ``Active`` attribute (default True).  Long
+    text fields are projected to their bounded plan lengths (the full source
+    text stays in the CT file itself).
+    """
+
+    keys: tuple[int, ...]
+    action: str
+    value: str
+    description: str
+    active: bool
 
 
 @dataclass(frozen=True)
@@ -67,6 +90,7 @@ class Entry:
     # the native compiler performs the strict cross-record contract checks).
     registers_symbols: bool = False
     activation_set_lua: bool = False
+    hotkeys: tuple[RecordHotkey, ...] = ()
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -331,6 +355,50 @@ def _entry_kind(element: ET.Element, variable_type: str | None,
     return "unsupported"
 
 
+def _entry_hotkeys(element: ET.Element) -> tuple[RecordHotkey, ...]:
+    """Parse a record's <Hotkeys> block into bounded, canonical records.
+
+    The CT contract (CE 4.x+ format) stores up to five decimal Windows
+    virtual-key codes per hotkey under <Keys>, the action text under
+    <Action>, an optional value/description, and an optional Active
+    attribute (missing means active).  Unparsable key codes are dropped,
+    the key list is normalized to a sorted unique tuple capped at five
+    codes, and missing action text falls back to the CE contract default
+    ("Toggle Activation").  The result is sorted so plan output is
+    deterministic independent of the source document order.
+    """
+    container = element.find("Hotkeys")
+    if container is None:
+        return ()
+    hotkeys: list[RecordHotkey] = []
+    for node in container.findall("Hotkey"):
+        raw_keys: list[int] = []
+        keys_node = node.find("Keys")
+        if keys_node is not None:
+            for key_node in keys_node.findall("Key"):
+                text = (key_node.text or "").strip()
+                if not text:
+                    continue
+                try:
+                    code = int(text, 10)
+                except ValueError:
+                    continue
+                if 0 < code <= 255:
+                    raw_keys.append(code)
+        keys = tuple(sorted(set(raw_keys))[:5])
+        action = (node.findtext("Action") or "").strip() or HOTKEY_ACTION_DEFAULT
+        hotkeys.append(RecordHotkey(
+            keys=keys,
+            action=action[:64],
+            value=(node.findtext("Value") or "").strip()[:512],
+            description=(node.findtext("Description") or "").strip()[:512],
+            active=node.attrib.get("Active", "1") != "0",
+        ))
+    hotkeys.sort(key=lambda item: (item.keys, item.action, item.value,
+                                   item.description, item.active))
+    return tuple(hotkeys)
+
+
 def read_table(path: str | Path) -> Table:
     """Parse a .CT without evaluating any embedded Lua or Auto Assembler.
 
@@ -457,6 +525,7 @@ def read_table(path: str | Path) -> Table:
             has_disable_section=bool(re.search(r"\[\s*DISABLE\s*\]", script, re.IGNORECASE)),
             async_script=script_element is not None and script_element.attrib.get("Async") == "1",
             hotkey_count=len(element.findall("./Hotkeys/Hotkey")),
+            hotkeys=_entry_hotkeys(element),
             pointer_offsets=tuple(offset.text or "" for offset in element.findall("./Offsets/Offset")),
             options=tuple(key for key, value in options_element.attrib.items() if value == "1")
                     if options_element is not None else (),
