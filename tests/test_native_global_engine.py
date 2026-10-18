@@ -130,7 +130,7 @@ class Tests(unittest.TestCase):
         self.assertNotIn('shared',e.symbols)
         self.assertEqual(len(e.global_pool.members),1)
 
-    def test_explicit_global_selection_excludes_ordinary_alternative_but_both_refuse(self):
+    def test_explicit_global_selection_excludes_ordinary_alternative_and_both_selected_keep_first(self):
         ordinary=source(entry=0x2000).replace('globalalloc(shared,4)','alloc(shared,4)\nregistersymbol(shared)')
         ordinary=ordinary.replace('[DISABLE]','[DISABLE]\nunregistersymbol(shared)')
         p=self.table((source(),ordinary),('shared',),selected=[1,3])
@@ -141,9 +141,15 @@ class Tests(unittest.TestCase):
         self.assertEqual(p['entries'][2]['dependency_ids'],[1])
         validate_plan(p)
         both=self.table((source(),ordinary),('shared',),selected=[1,2,3])
-        self.assertFalse(both['entries'][0]['supported'])
+        # WP-37 keep-first: the document-order-first supported provider (the
+        # global one) stays; the later ordinary duplicate is blocked with
+        # the named reason and the consumer binds to the kept provider.
+        self.assertTrue(both['entries'][0]['supported'])
         self.assertFalse(both['entries'][1]['supported'])
-        self.assertFalse(both['entries'][2]['supported'])
+        self.assertIn('Symbol provider duplicate: shared (kept provider 1)',both['entries'][1]['reason'])
+        self.assertTrue(both['entries'][2]['supported'])
+        self.assertEqual(both['entries'][2]['dependency_ids'],[1])
+        validate_plan(both)
 
     def test_frozen_child_must_release_before_implicit_global_provider(self):
         e=self.engine(self.table(values=('shared',)))

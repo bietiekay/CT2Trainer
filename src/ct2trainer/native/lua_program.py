@@ -392,7 +392,22 @@ def _parse(source: str) -> tuple[list[_Part], str, bool]:
     return parts, static_source, static_body
 
 
-def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *, nth_aob_helper=None) -> dict:
+def lua_symbol_provides(source: str) -> list[str]:
+    """WP-37: the symbol names a record's embedded Lua proves to own.
+
+    Pure-text re-derivation of the WP-14 C1 extraction (``registerSymbol`` /
+    ``symbol='...'`` in the ENABLE Lua, ``unregisterSymbol`` in the DISABLE
+    Lua) so the table compiler can separate Lua-owned providers from static
+    AA registrations without re-preparing the record's whole Lua program.
+    """
+    parts, _static_source, _static_body = _parse(source)
+    from .lua_symbol_providers import extract_lua_symbol_providers
+    return extract_lua_symbol_providers(parts)
+
+
+def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
+                        nth_aob_helper=None,
+                        external_owned: frozenset[str] = frozenset()) -> dict:
     """Prepare canonical metadata without compiling or executing original Lua.
 
     ``static_source`` uses LF, canonical phase markers and visible AA code only.
@@ -431,7 +446,8 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *, nt
     except NthAOBError as exc:
         raise LuaProgramError(str(exc)) from exc
     try:
-        static_program = prepare_program(static_source, process_name, bitness=bitness) if static_body else None
+        static_program = prepare_program(static_source, process_name, bitness=bitness,
+                                         external_owned=external_owned) if static_body else None
     except ProgramError as exc:
         raise LuaProgramError('Static AA envelope: ' + str(exc)) from exc
     one_shot = (all(part.phase != 'disable' or part.kind == 'phase'
