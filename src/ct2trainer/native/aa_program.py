@@ -1436,60 +1436,64 @@ def _check_direct_branch(data, address, expected, bitness):
 def _entry_prefix_cut(memory, address, replacement, original, bitness):
     """Decide whether a byte patch may cut its first original instruction.
 
-    True only when the captured original bytes do not form a complete
-    instruction sequence, the first original instruction boundary at or
-    past the patch length resolves in live target memory, and the patched
-    prefix plus the remaining original bytes decode as a complete, valid
-    instruction stream without calls or interrupts. This is the classic
-    byte-patch shape (``db 90 E9`` over a conditional jump reuses the
-    original displacement). Every doubt fails closed to False, in which
-    case the hook layer keeps its strict complete-instruction contract.
+    Returns None when the patch is not a proven prefix cut, otherwise the
+    live bytes from the patch end up to the first original instruction
+    boundary. The linker extends the entry receipt over that tail so every
+    downstream contract (stage re-verification, the coordinator's
+    overwrite-window check, the thread-IP exclusion range, and restore)
+    sees complete instruction sequences on both sides. The classic
+    byte-patch shape: ``db 90 E9`` over a conditional jump reuses the
+    original displacement to form ``nop; jmp``. Every doubt fails closed
+    to None, in which case the hook layer keeps its strict
+    complete-instruction contract.
     """
     if (bitness not in (32, 64) or not replacement or not original
             or len(replacement) != len(original)):
-        return False
+        return None
     try:
         from iced_x86 import Decoder, FlowControl
         from .hooks import _ENTRY_PATCH_TAIL, validate_instruction_boundary
     except ImportError:
-        return False
+        return None
     try:
         validate_instruction_boundary(address, original, bitness)
     except Exception:
         pass
     else:
-        return False
+        return None
     try:
         window = memory.read(address, len(replacement) + _ENTRY_PATCH_TAIL)
     except Exception:
-        return False
+        return None
     if len(window) < len(replacement) or bytes(window[:len(replacement)]) != original:
-        return False
+        return None
     boundary = 0
     try:
         for instruction in Decoder(bitness, window, ip=address):
             if instruction.is_invalid:
-                return False
+                return None
             boundary += instruction.len
             if boundary >= len(replacement):
                 break
     except Exception:
-        return False
+        return None
     if boundary < len(replacement) or boundary > len(window):
-        return False
+        return None
     post = replacement + bytes(window[len(replacement):boundary])
     decoded = 0
     try:
         for instruction in Decoder(bitness, post, ip=address):
             if instruction.is_invalid:
-                return False
+                return None
             if instruction.flow_control in {FlowControl.CALL, FlowControl.INDIRECT_CALL,
                                             FlowControl.INTERRUPT, FlowControl.EXCEPTION}:
-                return False
+                return None
             decoded += instruction.len
     except Exception:
-        return False
-    return decoded == len(post)
+        return None
+    if decoded != len(post):
+        return None
+    return bytes(window[len(replacement):boundary])
 
 
 def _memory_operands(node, names):
@@ -2234,13 +2238,23 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
         # complete instructions is only acceptable as a deliberate byte patch
         # that rewrites an instruction prefix while reusing its original
         # operand tail (e.g. `db 90 E9` over a conditional jump). Prove it
-        # against the live target here; the hook layer re-proves it at stage
-        # time for flagged blocks only.
-        prefix_cut = (not is_allocation and executable
-                      and _entry_prefix_cut(memory, address,
-                                            bytes(binary[offset:offset + size]),
-                                            original, program["bitness"]))
-        blocks.append({"address": address, "bytes": binary[offset:offset + size].hex().upper(), "original": original.hex().upper(), "is_allocation": is_allocation, "executable": executable, "literal_data": literal_data, "data_semantics": bool(not is_allocation and trusted_executable_data), "literal_data_ranges": block_literal_ranges, "requires_coordinator": executable, "prefix_cut": prefix_cut})
+        # against the live target here; a proven cut extends the receipt over
+        # the cut original instruction so that stage re-verification, the
+        # coordinator's overwrite-window check, the thread-IP exclusion
+        # range, and restore all see complete instruction sequences on both
+        # sides. The hook layer keeps its live prefix-cut re-proof for any
+        # flagged block that reaches it still un-extended.
+        cut_tail = None
+        if not is_allocation and executable:
+            cut_tail = _entry_prefix_cut(memory, address,
+                                         bytes(binary[offset:offset + size]),
+                                         original, program["bitness"])
+        prefix_cut = cut_tail is not None
+        patch_bytes = bytes(binary[offset:offset + size])
+        if cut_tail is not None:
+            patch_bytes += cut_tail
+            original = original + cut_tail
+        blocks.append({"address": address, "bytes": patch_bytes.hex().upper(), "original": original.hex().upper(), "is_allocation": is_allocation, "executable": executable, "literal_data": literal_data, "data_semantics": bool(not is_allocation and trusted_executable_data), "literal_data_ranges": block_literal_ranges, "requires_coordinator": executable, "prefix_cut": prefix_cut})
     external_permits = ()
     if external_candidates:
         from .hooks import _seal_external_literals
