@@ -112,6 +112,11 @@ class NativeCompilerTests(unittest.TestCase):
         self.assertFalse(plan["entries"][0]["supported"])
         self.assertEqual(plan['lua_bootstrap']['source'], 'raise_error_if_executed()')
         self.assertTrue(any("not executed" in warning for warning in plan["warnings"]))
+        # WP-41: plan time records the refusal-free default; the engine fills
+        # executed/reasons on each confirmed attach.  No record script in this
+        # table references a table-level global, so none stay inactive.
+        self.assertEqual(plan['table_lua'],
+                         {'executed': False, 'reasons': [], 'record_scripts_inactive': 0})
 
     def test_owned_lua_profile_is_prepared_without_execution_or_assembly(self):
         source = "[ENABLE]\n{$lua}\nerror('conversion must not execute this')\n{$asm}\n" + patch_script().split("[ENABLE]\n", 1)[1]

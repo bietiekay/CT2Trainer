@@ -103,6 +103,9 @@ class PerTableCompletenessTests(unittest.TestCase):
                 self.assertEqual(
                     ("lua_bootstrap" in plan), facts["has_lua"],
                     "table-Lua lifecycle mismatch")
+                self.assertEqual(
+                    ("table_lua" in plan), facts["has_lua"],
+                    "table-Lua bootstrap metadata mismatch")
 
                 # Custom-typed records are present and consistently reported.
                 plan_custom = [e for e in plan["entries"] if e.get("variable_type") == "Custom"]

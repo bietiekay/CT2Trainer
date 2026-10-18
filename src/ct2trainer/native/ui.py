@@ -45,6 +45,8 @@ FG = "#f2f5fa"
 FG_DIM = "#c3ccda"
 ON_BG, ON_FG = "#1fbf4a", "#07130a"
 OFF_BG, OFF_FG = "#e5484d", "#ffffff"
+BANNER_BG = "#3a2f14"
+BANNER_FG = "#ffd977"
 
 # Pre-synthesized toggle tones, kept in module scope for the whole process:
 # winsound SND_MEMORY + SND_ASYNC requires the buffer to stay alive for the
@@ -111,6 +113,13 @@ class TrainerWindow:
         status.pack(fill="x")
         tk.Label(status, textvariable=self.status_text, anchor="w", justify="left", wraplength=900, bg=BG, fg=FG).pack(side="left", fill="x", expand=True)
         self._button(status, "Status / help", self.show_status, width=12).pack(side="right")
+        # WP-41: while the table-Lua bootstrap did not run cleanly for the
+        # attached target, keep this banner row visible under the status line.
+        # It starts hidden; poll() packs it with the exact contract text while
+        # the attached plan reports a refused or failed bootstrap.
+        self.table_lua_banner = tk.Label(
+            root, bg=BANNER_BG, fg=BANNER_FG, anchor="w",
+            justify="left", wraplength=1100, padx=12, pady=4)
         toolbar = tk.Frame(root, bg=BG, padx=12)
         toolbar.pack(fill="x")
         self.toolbar = toolbar
@@ -433,6 +442,17 @@ class TrainerWindow:
         before = (self.engine.connected, self.engine.blocked, tuple(self.engine.applied), tuple(self.engine.desired))
         self.engine.poll()
         self.status_text.set(self.engine.status)
+        table_lua = self.engine.plan.get("table_lua")
+        if (self.engine.memory is not None
+                and table_lua is not None
+                and table_lua.get("executed") is False):
+            self.table_lua_banner.configure(
+                text="Table Lua not executed on load — "
+                     + str(table_lua.get("record_scripts_inactive", 0))
+                     + " record scripts stay inactive")
+            self.table_lua_banner.pack(fill="x", before=self.toolbar)
+        else:
+            self.table_lua_banner.pack_forget()
         after = (self.engine.connected, self.engine.blocked, tuple(self.engine.applied), tuple(self.engine.desired))
         if before != after:
             self.render()

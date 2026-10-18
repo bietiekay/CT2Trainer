@@ -62,7 +62,7 @@ class AutomaticLuaRecordTests(unittest.TestCase):
             self.engine.poll()
             self.engine.close()
 
-    def make_engine(self, source=MIXED, bootstrap=None):
+    def make_engine(self, source=MIXED, bootstrap=None, memory=None):
         plan = compile_table(FIXTURE, 'FixtureTarget.exe')
         if bootstrap is not None:
             plan['lua_bootstrap'] = prepare_lua_bootstrap(bootstrap)
@@ -75,6 +75,7 @@ class AutomaticLuaRecordTests(unittest.TestCase):
         # compiler-derived staged marker (if any) must go with them.
         row.pop('staged', None)
         validate_plan(plan)
+        self.memory = memory if memory is not None else Memory()
         self.engine = TrainerEngine(plan, state_dir=self.root / 'state', process_lock_dir=self.root / 'shared',
                                     memory_factory=lambda name: self.memory, hook_coordinator=Coordinator())
         self.engine.poll()
@@ -120,21 +121,64 @@ class AutomaticLuaRecordTests(unittest.TestCase):
         self.assertIsNot(first.host, engine.lua_activations[1].host)
         self.assertEqual(self.memory.read(0x1080, 4), bytes.fromhex('1f000000'))
 
-    def test_top_level_table_writes_and_scheduled_work_block_before_any_record_write(self):
-        for bootstrap in ('pcall(function() writeInteger(0x1080,42) end)',
-                          'pcall(function() createTimer(nil,false) end)'):
-            with self.subTest(bootstrap=bootstrap):
-                engine = self.make_engine(bootstrap=bootstrap)
-                with self.assertRaises(NativeRuntimeError):
-                    engine.toggle(1, True)
-                self.assertEqual(self.memory.read(0x1040, 4), bytes(4))
-                self.assertEqual(self.memory.read(0x1080, 4), bytes(4))
-                self.assertFalse(engine.applied)
-                self.assertFalse(engine.desired)
-                self.assertFalse(engine.blocked)
-                self.assertFalse(engine.lua_activations)
-                self.assertTrue(engine.close())
-                self.engine = None
+    def _close_subtest_engine(self):
+        # Full target-exit teardown: a plain close with a live target leaves
+        # the owned receipts unfinalized for the next engine.
+        if self.engine is not None and not self.engine.closed:
+            self.memory.alive = False
+            self.engine.poll()
+            self.assertTrue(self.engine.close())
+        self.engine = None
+
+    def test_refused_write_records_named_reason_without_blocking_independent_records(self):
+        # WP-41: the write-API call is refused at the once-per-load bootstrap
+        # (recorded with the exact reason, answered with nil so the read-only
+        # remainder of the table source still runs); the MIXED record
+        # references no table-level global, so it toggles as usual.
+        try:
+            engine = self.make_engine(bootstrap='pcall(function() writeInteger(0x1080,42) end)')
+            self.assertEqual(engine.plan['table_lua'],
+                             {'executed': False,
+                              'reasons': ['Table Lua uses a write API: writeInteger.'],
+                              'record_scripts_inactive': 0})
+            self.assertIsNone(engine.table_lua_scope)
+            self.assertEqual(self.memory.read(0x1080, 4), bytes(4))
+            self.assertTrue(engine.toggle(1, True))
+            self.assertEqual(self.memory.read(0x1040, 4), bytes.fromhex('01000000'))
+            self.assertEqual(self.memory.read(0x1080, 4), bytes.fromhex('17000000'))
+            self.assertFalse(engine.toggle(1, False))
+            self.assertEqual(self.memory.read(0x1040, 4), bytes(4))
+            self.assertEqual(self.memory.read(0x1080, 4), bytes(4))
+            self.assertNotIn(1, engine.applied)
+            self.assertNotIn(1, engine.desired)
+            self.assertFalse(engine.blocked)
+        finally:
+            self._close_subtest_engine()
+
+    def test_table_lua_scheduler_work_runs_at_load_but_replay_blocks_activation(self):
+        # WP-41: a table that schedules work executes it once at load in the
+        # sandboxed bootstrap scope (no refusal; the scope retires with the
+        # table).  Record activations replay the table source through the
+        # helper contract, which refuses scheduler creation even under pcall,
+        # so the record fails fail-closed with the named helper error.
+        try:
+            engine = self.make_engine(bootstrap='pcall(function() createTimer(nil,false) end)')
+            self.assertEqual(engine.plan['table_lua'],
+                             {'executed': True, 'reasons': [],
+                              'record_scripts_inactive': 0})
+            self.assertIsNotNone(engine.table_lua_scope)
+            self.assertEqual(self.memory.read(0x1080, 4), bytes(4))
+            with self.assertRaises(NativeRuntimeError) as caught:
+                engine.toggle(1, True)
+            self.assertIn('forbidden mutation or scheduler', str(caught.exception))
+            self.assertEqual(self.memory.read(0x1040, 4), bytes(4))
+            self.assertEqual(self.memory.read(0x1080, 4), bytes(4))
+            self.assertFalse(engine.applied)
+            self.assertFalse(engine.desired)
+            self.assertFalse(engine.lua_activations)
+            self.assertFalse(engine.blocked)
+        finally:
+            self._close_subtest_engine()
 
     def test_invalid_nasm_after_lua_write_compensates_without_saved_wish(self):
         engine = self.make_engine(MIXED.replace('dd 1', 'unknown_instruction eax,ecx'))

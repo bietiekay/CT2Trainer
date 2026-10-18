@@ -12,6 +12,7 @@ from .lua_work_budget import controller_cleanup, broker_checkpoint
 
 from .aa import validate_symbol
 from .engine import NativeRuntimeError, PatchConflict, StateError, _Patch
+from .lua_bootstrap import table_lua_bootstrap_gate
 from .lua_host import EngineLuaBroker, LuaHost, LuaHostError
 
 
@@ -411,7 +412,16 @@ class LuaActivation:
             checker.broker = ReadOverlayBroker()
             bootstrap = self.engine.plan.get('lua_bootstrap')
             if bootstrap is not None and not checker.helper_sources:
-                checker.install_helpers(bootstrap['source'])
+                # WP-41: a refused or failed table bootstrap blocks dependent
+                # record scripts with the named reason; non-dependent records
+                # skip the replay instead of failing on the unrun table source.
+                decision, reason = table_lua_bootstrap_gate(
+                    bootstrap['source'], program['source'],
+                    self.engine.plan.get('table_lua'))
+                if decision == 'block':
+                    raise LuaHostError(reason)
+                if decision == 'replay':
+                    checker.install_helpers(bootstrap['source'])
             return phase_expansion(checker, program, 'enable', nth_resolver=resolve)
         expanded = self.host._disposable_check(expand)
         self.check()
@@ -457,7 +467,17 @@ class LuaActivation:
             self.check_program(program)
         bootstrap = self.engine.plan.get('lua_bootstrap')
         if bootstrap is not None:
-            self.host.install_helpers(bootstrap['source'])
+            # WP-41: replay the table source only when the bootstrap executed
+            # cleanly (or the plan predates the bootstrap metadata); a refused
+            # or failed bootstrap blocks dependent record scripts with the
+            # named reason and skips the replay for non-dependent ones.
+            decision, reason = table_lua_bootstrap_gate(
+                bootstrap['source'], program['source'],
+                self.engine.plan.get('table_lua'))
+            if decision == 'block':
+                raise LuaHostError(reason)
+            if decision == 'replay':
+                self.host.install_helpers(bootstrap['source'])
         expanded = phase_expansion(self.host, program, 'enable', nth_resolver=self._resolve_nth)
         from .nth_aob import recheck_result
         for result in self.nth_aob_results:
