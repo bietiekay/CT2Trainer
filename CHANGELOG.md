@@ -2,6 +2,53 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.15 (2026-10-18)
+
+- Prefix-cut byte-patch validation (field fix from the 0.14-ext2 Great
+  Circle debug log, `d15268a`): the Stealth Mode and No Reload (2nd hook)
+  entries use the classic byte-patch technique `db 90 E9` over a 6-byte
+  conditional jump (je/jae rel32), reusing the original displacement to
+  form `nop; jmp rel32`. Stage-time validation only accepted entry
+  patches whose recorded original bytes AND whose patch bytes each decode
+  as complete instruction sequences, so both halves of the legitimate
+  prefix patch were rejected ("Entry patch cuts or contains an invalid
+  instruction.") and the entries silently failed on attach.
+  - `aa_program.link_program` now proves a prefix cut against the live
+    target at link time: the recorded original must fail the
+    complete-sequence check, the first original instruction boundary at
+    or past the patch length must resolve inside a live window, and the
+    patched prefix plus the original tail up to that boundary must decode
+    as complete, valid instructions with no call/interrupt hazards.
+    Passing blocks carry a `prefix_cut: true` flag.
+  - `hooks._normalize` keeps the historical strict complete-instruction
+    contract for every block; only blocks flagged `prefix_cut` at link
+    time get the live re-verification (window read, head-byte match
+    against the recorded original, boundary resolution, post-patch
+    decode, control-flow safety) and fail closed on unreadable targets.
+- Wave 3 reference-corpus closure features (trainer/converter):
+  - Per-record hotkeys: source `<Hotkey>` bindings compile into plan
+    metadata, register first-wins in the engine with deduplicated
+    warnings, dispatch value operations on value records, and show
+    original-binding cards plus a table-wide conflict banner in the UI.
+  - Trainer-creator per-table inspection: structured supported/blocked
+    results with named per-record reasons and named per-file
+    diagnostics in the conversion GUI.
+  - Runtime dynamic address providers: a Lua provider registers exactly
+    one symbol on enable; relative children resolve the runtime base per
+    activation; static module-relative siblings keep the module binding.
+  - Read-only table-Lua bootstrap: the table LuaScript top level executes
+    exactly once per attach through a read-only broker; refused or failed
+    bootstraps surface a named banner and dependent record scripts stay
+    visibly inactive.
+  - Lua-owned symbol handover: record-Lua registerSymbol pairs and
+    allocation-only programs publish symbols in the per-table
+    `external_owned_providers` map; consumers carry explicit
+    dependencies on their owning record, and the engine enforces the
+    teardown order (owner deactivation only after consumers, exactly-once
+    symbol release).
+- Pinned reference corpus: 24 tables, 6,100 expected AP-11 actions
+  (7,426/7,426 action-weighted feature coverage).
+
 ## 0.14 (2026-10-17)
 
 - Per-wish restore isolation: a scan miss in one saved record no longer
