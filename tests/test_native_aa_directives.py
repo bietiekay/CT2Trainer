@@ -872,7 +872,7 @@ class SectionContractTests(unittest.TestCase):
     def test_small_no_markers_rejected_in_preamble(self):
         with self.assertRaisesRegex(
                 AAError,
-                "Only define/label declarations are allowed before ENABLE"):
+                "Only define, label and register declarations are allowed before ENABLE"):
             compile_script(SECTION_SOURCES["no_markers"])
 
     def test_small_both_empty_rejected_no_actions(self):

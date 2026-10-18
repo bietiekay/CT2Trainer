@@ -59,13 +59,17 @@ class LiteralOnlyTests(unittest.TestCase):
         with self.assertRaises(aa.AddressExpressionError):link(aa.prepare_program(source('push "R"'),bitness=32),Memory())
 
     def test_empty_multibyte_controls_escapes_and_unterminated_literals_refuse(self):
-        bad=("''","'RR'","'é'","'\t'","'\x7f'","'\\n'","'\\'","'R", "'R'; times 100 nop")
+        # WP-43: multi-character single-quoted strings are now instruction
+        # byte strings, so 'RR' is no longer a refusal case here.
+        bad=("''","'é'","'\t'","'\x7f'","'\\n'","'\\'","'R", "'R'; times 100 nop")
         for value in bad:
             with self.subTest(value=value),self.assertRaises(aa.ProgramError):aa.prepare_program(source('push '+value),bitness=32)
         with self.assertRaises(aa.ProgramError):aa.prepare_program(source("push 'R\n'"),bitness=32)
 
     def test_character_literals_cannot_become_data_names_or_address_authority(self):
-        for line in ("db 'R'","dw 'R'","dd 'R'","dq 'R'","label('R')","registersymbol('R')",
+        # WP-43: a single-quoted db byte string is a legitimate data value;
+        # the remaining refusals keep the quote-out-of-grammar boundary.
+        for line in ("dw 'R'","dd 'R'","dq 'R'","label('R')","registersymbol('R')",
                      "define('R',1000)","define(alias,'R')","alloc('R',1000)","'R':"):
             with self.subTest(line=line),self.assertRaises(aa.ProgramError):aa.prepare_program(source(line),bitness=32)
         with self.assertRaises(aa.ProgramError):aa._expression("'R'")

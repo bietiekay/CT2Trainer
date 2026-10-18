@@ -45,6 +45,34 @@ _PROFILE_VALUE_TYPES = {"Array of byte", "Binary", "String"}
 _ADDRESSLESS_PLACEHOLDER_REASON = (
     "Addressless value record is a non-actionable table placeholder.")
 
+# WP-44: canonical inert-script demotion.  A script record whose source has
+# no executable effect in either dialect (no registered symbols and no
+# guarded byte-patch) is demoted to a supported, non-actionable heading so
+# tables with inert comment-only or banner scripts compile fully supported;
+# the record carries no enable actions and no cascade promise.
+_INERT_SCRIPT_REASON = (
+    "Inert script: no registered symbols and no guarded byte-patch action; "
+    "activation is a verified no-op.")
+_DATA_NO_ACTION_REASON = (
+    "Script has no registered symbols or guarded byte-patch action.")
+_NATIVE_NO_CONTENT_REASON = "Enable section has no executable patch or data."
+_LUA_ENVELOPE_PREFIX = "Static AA envelope: "
+
+
+def _is_inert_no_action(message: str) -> bool:
+    """WP-44: both dialects must independently report the no-action refusal.
+
+    Direct scripts reach the handler as ``<data reason> Native assembly:
+    <native reason>``; a Lua envelope carries the ``Static AA envelope: ``
+    prefix on the native side only, and its embedded Lua still runs at
+    activation, so an envelope record is never demoted inert.  Only the
+    combination of the two canonical no-action reasons demotes; any other
+    failure stays blocked.
+    """
+    message = message.removeprefix(_LUA_ENVELOPE_PREFIX)
+    return (_DATA_NO_ACTION_REASON in message
+            and _NATIVE_NO_CONTENT_REASON in message)
+
 # WP-37: canonical handover reason strings.  The named release/wildcard
 # reasons are raised by the AA and program dialects; the two generic
 # cleanup reasons below are the wave-A error texts that wave B1 re-derives
@@ -74,6 +102,19 @@ def _is_addressless_placeholder(entry: dict) -> bool:
             and entry.get("variable_type") in SIMPLE_VALUE_TYPES | _PROFILE_VALUE_TYPES
             and entry.get("source_address") == ""
             and entry.get("reason") == _ADDRESSLESS_PLACEHOLDER_REASON)
+
+
+def _is_inert_script(entry: dict) -> bool:
+    """WP-44: canonical shape of a demoted no-action script record.
+
+    A supported navigation heading (kind=heading, source_kind=script) with
+    the exact inert reason and no executable metadata; it is never a
+    cascade target, never carries an async marker, and promises no
+    activation (mirror of the WP-32 addressless placeholder).
+    """
+    return (entry["kind"] == "heading"
+            and entry.get("source_kind") == "script"
+            and entry.get("reason") == _INERT_SCRIPT_REASON)
 
 
 class NativeCompileError(ValueError):
@@ -1074,7 +1115,15 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
         # is caught explicitly to keep a malformed expression per-record
         # instead of aborting the whole table (WP-20).
         except (AAError, LuaProgramError, ValueTypeError, AddressExpressionError) as exc:
-            _block(entry, str(exc))
+            if _is_inert_no_action(str(exc)):
+                # WP-44: demote the no-action script to a supported inert
+                # heading; the record keeps no executable metadata, no
+                # cascade promise and no activation marker.
+                entry["kind"] = "heading"
+                entry["reason"] = _INERT_SCRIPT_REASON
+                entry.pop("parent_activation", None)
+            else:
+                _block(entry, str(exc))
     # WP-37: Lua-owned symbol handover contract.  A symbol is *externally
     # owned* when exactly one supported record provides it through a
     # handover-capable mechanism: (a) embedded record Lua that proves a
@@ -1207,7 +1256,10 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     # (Lua, global, one-shot, program, byte patch) gets the same contract
     # for the engine, independent of the branch that prepared it.
     for entry in entries:
-        if entry["id"] in async_ids and entry["supported"]:
+        # WP-44: an inert demoted script has no activation to defer, so it
+        # never receives the async lifecycle marker.
+        if (entry["id"] in async_ids and entry["supported"]
+                and not _is_inert_script(entry)):
             entry["async"] = True
             prefix = entry["reason"] + " " if entry["reason"] else ""
             entry["reason"] = prefix + (
@@ -1290,7 +1342,8 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
             for child_id in children_by_parent.get(node_id, ()):
                 child = by_id[child_id]
                 if (child["supported"] and child["selected"]
-                        and not _is_addressless_placeholder(child)):
+                        and not _is_addressless_placeholder(child)
+                        and not _is_inert_script(child)):
                     children[child_id] = flag
                 stack.append(child_id)
         if children:
@@ -1685,6 +1738,19 @@ def validate_plan(plan: dict) -> None:
                         or entry.get("dependency_ids") != []
                         or entry.get("dropdown") != {"choices": [], "read_only": False}):
                     raise NativeCompileError("Invalid addressless placeholder heading.")
+            elif _is_inert_script(entry):
+                # WP-44: demoted no-action script — canonical shape: supported
+                # navigation heading with the exact inert reason and no
+                # executable metadata, dependencies or dropdown payload.
+                if (entry.get("value_profile") is not None
+                        or entry.get("program") is not None
+                        or entry.get("lua_program") is not None
+                        or entry.get("global_program") is not None
+                        or entry.get("enable") or entry.get("disable")
+                        or entry.get("requires") != [] or entry.get("provides") != []
+                        or entry.get("dependency_ids") != []
+                        or entry.get("dropdown") != {"choices": [], "read_only": False}):
+                    raise NativeCompileError("Invalid inert script heading.")
             elif (entry["kind"] == "heading" and entry.get("source_kind") in {"value", "unsupported"}
                   and entry.get("variable_type") in SIMPLE_VALUE_TYPES | _PROFILE_VALUE_TYPES):
                 # WP-32: any remaining value-type heading is a tampered
@@ -1848,6 +1914,7 @@ def validate_plan(plan: dict) -> None:
                             or entry["kind"] not in ("heading", "script")
                             or not entry["supported"]
                             or _is_addressless_placeholder(entry)
+                            or _is_inert_script(entry)
                             or entry["id"] not in selected):
                         raise NativeCompileError(
                             "Parent flag class requires a supported selected heading or script parent.")
@@ -1858,7 +1925,8 @@ def validate_plan(plan: dict) -> None:
                         for child_id in children_by_parent.get(node_id, ()):
                             child = by_id[child_id]
                             if (child["supported"] and child["id"] in selected
-                                    and not _is_addressless_placeholder(child)):
+                                    and not _is_addressless_placeholder(child)
+                                    and not _is_inert_script(child)):
                                 children[child_id] = flag
                             stack.append(child_id)
                     if not children:
@@ -1867,6 +1935,7 @@ def validate_plan(plan: dict) -> None:
             for entry in entries:
                 if entry.get("parent_mo_bind") is True and (entry["kind"] != "heading"
                         or not entry["supported"] or _is_addressless_placeholder(entry)
+                        or _is_inert_script(entry)
                         or entry["id"] not in selected):
                     raise NativeCompileError("moBindActivation marker requires a supported selected heading.")
             # WP-14 (C1): staged metadata must re-derive byte-exactly from

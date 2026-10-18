@@ -71,6 +71,9 @@ _REGISTERS |= {f"{kind}{index}" for kind in ("xmm", "ymm", "zmm", "mm", "k", "st
 _KEYWORDS = {"byte", "word", "dword", "qword", "tword", "oword", "xmmword", "yword", "ymmword", "zword", "zmmword", "short", "near", "far", "strict", "rel", "abs", "to"}
 _FORBIDDEN = {"bits", "org", "section", "segment", "global", "extern", "common", "equ", "times", "incbin", "include", "resw", "resd", "resq", "istruc", "struc", "endstruc", "iend", "absolute", "default", "cpu", "warning", "map", "alignb"}
 _TOKEN_OPERAND = re.compile(r"'[^'\r\n\\]'|"+r'"[^"\r\n]+"|@@?[A-Za-z_][A-Za-z0-9_]*|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|[A-Za-z_$][A-Za-z0-9_.$]*|[0-9][0-9a-fA-F]*|\s+|[][+\-*/(),:]')
+# WP-43: single-quoted string operand at the current token position (any
+# content; the content rules are enforced explicitly in _operand_tokens).
+_QUOTED_STRING_OPERAND = re.compile(r"'([^'\r\n]*)'")
 _FLOAT = re.compile(r"\((float|double)\)\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)", re.I)
 # Conditional-block directives pass through cleaning; every other {$...} token
 # stays a fail-closed refusal. Condition/define bodies are validated later by
@@ -180,7 +183,7 @@ def _scalar_expression(text: str) -> bool:
 
 
 def _data_values(text: str, directive: str) -> list[str]:
-    values = re.findall(r'"[^"\r\n]*"|\((?:float|double)\)\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|[^\s,]+', text, re.I)
+    values = re.findall(r'"[^"\r\n]*"|\'[^\'\r\n]*\'|\((?:float|double)\)\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|[^\s,]+', text, re.I)
     if not values or len(values) > 65536:
         raise ProgramError("Data directives require a bounded nonempty value list.")
     reconstructed = re.sub(r"\s|,", "", text)
@@ -188,9 +191,14 @@ def _data_values(text: str, directive: str) -> list[str]:
         raise ProgramError("Malformed data directive.")
     size = {"db": 1, "dw": 2, "dd": 4, "dq": 8}[directive]
     for value in values:
-        if value.startswith('"'):
+        if value.startswith('"') or value.startswith("'"):
+            # WP-43: single-quoted string literals are accepted exactly where
+            # double-quoted ones are (db only, ASCII only); backslash escapes
+            # are refused in both quote styles.
             if directive != "db" or any(ord(char) > 127 for char in value[1:-1]):
                 raise ProgramError("Only db supports ASCII string constants.")
+            if "\\" in value[1:-1]:
+                raise ProgramError("Quoted data literals must not contain backslash escapes.")
         elif _float_bits(value):
             if _float_bits(value)[1] > size:
                 raise ProgramError("Floating bit-pattern does not fit the data directive.")
@@ -204,15 +212,27 @@ def _operand_tokens(text: str):
     text = _FLOAT.sub(lambda match: "0x" + format(_float_bits(match.group())[0], "X"), text)
     position, values = 0, []
     while position < len(text):
+        quoted = _QUOTED_STRING_OPERAND.match(text, position)
+        if quoted is not None:
+            # WP-43: a quoted operand is a byte string.  The single-character
+            # behavior is unchanged (one printable ASCII byte as hex token);
+            # multi-character strings (1–8 printable ASCII bytes, no
+            # backslash) encode as the little-endian integer of their bytes,
+            # so e.g. 'Ryo ' becomes 0x206F7952 for mov/cmp operands.
+            content = quoted.group(1)
+            if "\\" in content:
+                raise ProgramError("Instruction character literals must not contain backslash escapes.")
+            if len(content) == 1 and not 32 <= ord(content) <= 126:
+                raise ProgramError("Instruction character literals require one printable ASCII byte.")
+            if not 1 <= len(content) <= 8 or any(ord(char) < 32 or ord(char) > 126 for char in content):
+                raise ProgramError("Instruction string literals require 1–8 printable ASCII bytes.")
+            values.append("0x" + format(int.from_bytes(content.encode("ascii"), "little"), "X"))
+            position = quoted.end()
+            continue
         match = _TOKEN_OPERAND.match(text, position)
         if match is None:
             raise ProgramError(f"Unsupported instruction operand near {text[position:position + 25]!r}.")
-        token=match.group()
-        if token.startswith("'"):
-            if not 32<=ord(token[1])<=126:
-                raise ProgramError('Instruction character literals require one printable ASCII byte.')
-            token='0x'+format(ord(token[1]),'X')
-        values.append(token)
+        values.append(match.group())
         position = match.end()
     return values
 
@@ -510,7 +530,7 @@ def _node_refs(node: dict) -> list[str]:
             values.extend(expression_symbols(text))
     if node["op"] == "data":
         for value in node["values"]:
-            if not value.startswith('"') and _float_bits(value) is None:
+            if not value.startswith(('"', "'")) and _float_bits(value) is None:
                 values.extend(expression_symbols(value))
     if node["op"] == "instruction":
         text = node["text"].split(None, 1)
@@ -521,7 +541,7 @@ def _node_refs(node: dict) -> list[str]:
 
 
 def _literal_data(node: dict) -> bool:
-    return node["op"] == "data" and all(value.startswith('"') or _scalar_expression(value) for value in node["values"])
+    return node["op"] == "data" and all(value.startswith(('"', "'")) or _scalar_expression(value) for value in node["values"])
 
 
 def _pure_literal_profile(program):
@@ -562,7 +582,7 @@ def _literal_bytes(node, memory, program):
             raise ProgramError("Literal arithmetic overflows the bounded scalar domain.")
         return value
     for text in node["values"]:
-        if text.startswith('"'):
+        if text.startswith(('"', "'")):
             result.extend(text[1:-1].encode("ascii"))
         else:
             floating = _float_bits(text)
@@ -860,8 +880,8 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     if seen != {"enable", "disable"}:
         raise ProgramError("Program requires explicit ENABLE and DISABLE sections.")
     one_shot = not sections["disable"]
-    if any(node["op"] != "define" for node in sections["preamble"]):
-        raise ProgramError("Only define is permitted before ENABLE.")
+    if any(node["op"] not in {"define", "label", "register"} for node in sections["preamble"]):
+        raise ProgramError("Only define, label and register are permitted before ENABLE.")
     if not any(node["op"] in {"data", "instruction", "nops", "readmem", "reassemble"} for node in sections["enable"]):
         if any(node["op"] in {"scan", "scan_process", "scan_region"} for node in sections["enable"]):
             # WP-36: scan-only programs are staged under the existing scan
@@ -1102,7 +1122,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     for nodes in sections.values():
         for node in nodes:
             op = node["op"]
-            estimated_bytes += node["count"] if op == "nops" else node["size"] if op == "readmem" else node["alignment"] - 1 if op == "align" else node["bytes"] if op == "reserve" else 15 if op == "instruction" else 64 if op == "reassemble" else sum(len(value[1:-1]) if value.startswith('"') else {"db": 1, "dw": 2, "dd": 4, "dq": 8}[node["directive"]] for value in node["values"]) if op == "data" else 0
+            estimated_bytes += node["count"] if op == "nops" else node["size"] if op == "readmem" else node["alignment"] - 1 if op == "align" else node["bytes"] if op == "reserve" else 15 if op == "instruction" else 64 if op == "reassemble" else sum(len(value[1:-1]) if value.startswith(('"', "'")) else {"db": 1, "dw": 2, "dd": 4, "dq": 8}[node["directive"]] for value in node["values"]) if op == "data" else 0
     if estimated_bytes > MAX_TOTAL_BYTES:
         raise ProgramError("Program exceeds its total generated-byte bound.")
     allocation_executable, allocation_writable = _allocation_capabilities(sections["enable"], allocations)
@@ -1909,7 +1929,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
     for node in nodes + preflight["deferred_defines"]:
         texts = [node["text"].split(None, 1)[1]] if node["op"] == "instruction" and len(node["text"].split(None, 1)) == 2 else node["values"] if node["op"] == "data" else [node["expression"]] if node["op"] == "define" else []
         for text in texts:
-            if node["op"] == "data" and text.startswith('"'):
+            if node["op"] == "data" and text.startswith(('"', "'")):
                 continue
             for token in _operand_tokens(text):
                 if (token.startswith('"') or token == "$process" or "." in token) and token.casefold() not in names:
@@ -2083,7 +2103,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                         lines.append(f"tf_literal_start_{index}:")
                     values = []
                     for value in node["values"]:
-                        if value.startswith('"'):
+                        if value.startswith(('"', "'")):
                             values.extend(f"0x{ord(char):X}" for char in value[1:-1])
                         else:
                             values.append(_translate_operands(value, names, memory, resolved, program, backward, forward))
@@ -2201,7 +2221,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                 continue
             start, end = locations[f"tf_literal_start_{index}"], locations[f"tf_literal_end_{index}"]
             unit = {"db": 1, "dw": 2, "dd": 4, "dq": 8}[node["directive"]]
-            expected_size = unit * sum(len(value) - 2 if value.startswith('"') else 1 for value in node["values"])
+            expected_size = unit * sum(len(value) - 2 if value.startswith(('"', "'")) else 1 for value in node["values"])
             if not address <= start <= end <= address + size or end - start != expected_size:
                 raise ProgramError("Assembled literal data provenance differs from its source or block bounds.")
             if _allow_external_literals and literal_data:
