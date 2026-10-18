@@ -48,6 +48,15 @@ Single maintained changelog for CT2Trainer releases.
     symbol release).
 - Pinned reference corpus: 24 tables, 6,100 expected AP-11 actions
   (7,426/7,426 action-weighted feature coverage).
+- Release build 0.15: run `native-20261018T055505Z-39f20180` cut from
+  `main` @ `ed0b97b` via `scripts/Build-Native.ps1` (2026-10-18); in-build
+  suite 3057 OK / 25 regular skips, `ce_inputs: []`,
+  `runtime_unverified` deliberately kept per gate; source ZIP
+  `CT2Trainer-0.15-source.zip` sha256
+  `5d5a85f63f0b0948b05e06bfba8f40fa91e7bf75e5d981da22b33a3a5f522581`,
+  portable ZIP `CT2Trainer-0.15-windows-portable.zip` sha256
+  `cfcc8e06f65d0b3c6ec1ef4671f2be520c45c1c6c85572f1dbe6e69d15ea8414`.
+  Both ZIPs ship the elaborated release READMEs and this changelog.
 
 ## 0.14 (2026-10-17)
 

@@ -122,12 +122,13 @@ copy <scratch3>/ap11-campaign.json gap_inventory/ap11-campaign.json
 
 The committed artifacts are the reference; gate:3
 (`tests/test_native_repro_chain.py`) re-runs the full chain and compares.
-Corpus: 20 synthetic case tables (`TableReferences/case-01.ct` …
+Corpus: 24 synthetic case tables (`TableReferences/case-01.ct` …
 `case-14.ct`, `case-15.ct`, `case-16.ct`, `case-17.ct`, `case-18.ct`,
-`case-19.ct`, `case-20.ct`; case-to-origin mapping in
+`case-19.ct`, `case-20.ct`, `case-21.ct`, `case-22.ct`, `case-23.ct`,
+`case-24.ct`; case-to-origin mapping in
 `TableReferences/README.md`), 143 distinct SHA-256 hashes collapsed to
-20 pinned cases, 6080 expected actions (run
-`w2b-case18-20261016142912Z`).
+24 pinned cases, 6100 expected actions (run
+`w3e-case24-20261018051230`).
 
 ## 4. Prioritized open work
 

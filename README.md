@@ -174,7 +174,7 @@ source CLI offers explicit `assess-recovery` / `recover` steps (see
 | `tools/` | build helper (`native_build.py`), corpus denominator tooling, icon generator |
 | `scripts/Build-Native.ps1` | the single build entry point |
 | `tests/` | native test suite, Windows fixture targets, Proton/Steam Deck protocol |
-| `TableReferences/` | synthetic clean-room corpus (20 pinned case tables) |
+| `TableReferences/` | synthetic clean-room corpus (24 pinned case tables) |
 | `gap_inventory/` | committed measurement artifacts (run `repo-reproducible`) |
 | `dependencies/` | hash-pinned offline build inputs (Python, PyInstaller, NASM, iced-x86, Lupa, selected Mono API sources) |
 | `licenses/` | CT2Trainer MIT grant and third-party notices |
@@ -184,14 +184,14 @@ source CLI offers explicit `assess-recovery` / `recover` steps (see
 
 ## Verification status
 
-- Full native suite: **2910 OK / 25 expected skips, 0 failures**.
+- Full native suite: **3057 OK / 25 expected skips, 0 failures**.
 - Feature matrix: **42/42 in-scope features covered** (100%
-  feature-weighted, 7408/7408 action-weighted) over the pinned corpus of
-  6,080 expected actions (20 pinned case tables, run
-  `w2b-case18-20261016142912Z`).
+  feature-weighted, 7426/7426 action-weighted) over the pinned corpus of
+  6,100 expected actions (24 pinned case tables, run
+  `w3e-case24-20261018051230`).
 - Gates 1–3 (per-table completeness, Source-to-Frozen parity, reproducible
   chain) are closed with tested evidence.
-- The AP-11 campaign (observed real-game effect for all 6,080 actions) is
+- The AP-11 campaign (observed real-game effect for all 6,100 actions) is
   a separate open end goal and is excluded from the 100% feature metric.
 - `runtime_unverified` stays set until real Windows and Steam Deck/Proton
   acceptance runs pass. See

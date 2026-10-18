@@ -107,33 +107,39 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261017T115850Z-1ebb48b7` (0.14,
-cut from `main` @ `fca6b06`; in-build suite 2932 OK / 25 regular skips,
+**Latest verified build:** `native-20261018T055505Z-39f20180` (0.15,
+cut from `main` @ `ed0b97b`; in-build suite 3057 OK / 25 regular skips,
 `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; source
-ZIP `CT2Trainer-0.14-source.zip` sha256
+ZIP `CT2Trainer-0.15-source.zip` sha256
+`5d5a85f63f0b0948b05e06bfba8f40fa91e7bf75e5d981da22b33a3a5f522581`,
+portable ZIP `CT2Trainer-0.15-windows-portable.zip` sha256
+`cfcc8e06f65d0b3c6ec1ef4671f2be520c45c1c6c85572f1dbe6e69d15ea8414`).
+The 0.15 build adds the prefix-cut byte-patch validation (the
+0.14-ext2 Great Circle field fix: `db 90 E9` over a 6-byte conditional
+jump is now proven against the live target at link time and re-verified
+at stage time, restoring the Stealth Mode and No Reload entries) and
+the full Wave 3 feature set (per-record hotkeys, creator per-table
+inspection, runtime dynamic address providers, read-only table-Lua
+bootstrap with trainer banner, Lua-owned symbol handover with
+teardown-order invariants) on top of the released 0.14 content; 24
+pinned corpus tables, 6,100 AP-11 actions, weights 7,426/7,426 over
+run `w3e-case24-20261018051230`; both ZIPs ship the elaborated release
+READMEs (source: product overview + build guide; portable: full user
+guide, including the debug-logging section) and the changelog with the
+0.15 + 0.14 + 0.13 entries. Previous release build:
+`native-20261017T115850Z-1ebb48b7` (0.14, cut from `main` @ `fca6b06`;
+in-build suite 2932 OK / 25 regular skips; source ZIP sha256
 `a5b075cf6535c5eef3807da7b7b9429dda08a3cf9f9dba6fdafb879e0dfce0a9`,
-portable ZIP `CT2Trainer-0.14-windows-portable.zip` sha256
+portable ZIP sha256
 `e57fe9b9fb56ef7a97f81a98f04455976c4b5e9ebddee655b24cbb64e7ed3103`).
-The 0.14 build adds per-wish restore isolation (a `ScanMiss`
-scan-result failure in one saved record no longer blocks the engine;
-the remaining saved wishes keep restoring; field finding from the 0.13
-Great Circle debug log, where a stale AOB pattern in entry 29143
-blocked the whole trainer) and per-scan debug logging for program
-(AA script) preflight scans (entry/symbol/module/pattern per scan,
-module base/size/RVA, full traceback on failure) on top of the
-released 0.13 content; 20 pinned corpus tables, 6,080 AP-11 actions,
-weights 7,408/7,408 over run `w2b-case18-20261016142912Z`; both ZIPs
-ship the elaborated release READMEs (source: product overview + build
-guide; portable: full user guide, including the debug-logging section)
-and the changelog with the 0.14 + 0.13 + 0.12 entries. Previous
-release build: `native-20261016T190005Z-b3139b30` (0.13, cut from
+Earlier release build: `native-20261016T190005Z-b3139b30` (0.13, cut from
 `main` @ `d57e62c`; in-build suite 2927 OK / 25 regular skips; source
 ZIP sha256
 `23b57307819e4262d8ca894ac16c86d595df9945c1afec25750f66bb9e0c9124`,
 portable ZIP sha256
 `d7f64efbae975f477e5bb011796d64276f32ef4300d4a0986961e95ae63aca78`).
 Superseded 0.13 run: `native-20261016T181516Z-b8ae88de` (pre
-module-snapshot fallback, cut from `main` @ `7184547`). Earlier
+module-snapshot fallback, cut from `main` @ `7184547`). Prior
 release build: `native-20261016T163910Z-d047f2d2` (0.12, cut from
 `main` @ `ba1d3e4`;
 in-build suite 2910 OK / 25 regular skips; source ZIP sha256
