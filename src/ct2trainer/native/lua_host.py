@@ -1423,3 +1423,45 @@ class EngineLuaBroker:
         except Exception as exc:
             self.engine._block(exc)
             raise LuaHostError('Controller patch confirmation failed: '+str(exc)) from exc
+
+
+class TableLuaBroker:
+    """Per-table bootstrap scope broker (WP-41): read-only by classification.
+
+    Wraps the standard ``EngineLuaBroker`` dispatch (built without any
+    mutation/assembler/message handlers) and applies the table-Lua read
+    allowlist extracted from that dispatch: admitted read names are
+    forwarded to the wrapped broker, every other call is refused with its
+    exact WP-41 named reason, recorded in encounter order (bounded), and
+    answered with nil so the table source keeps running its read-only
+    code. The scope is generation-zero and retires through
+    ``invalidate()`` with the wrapped dispatch.
+    """
+
+    def __init__(self, engine: Any):
+        from .lua_bootstrap import (MAX_TABLE_LUA_REASONS,
+                                    TABLE_LUA_READ_ONLY_NAMES,
+                                    table_lua_refusal_reason)
+        self.inner = EngineLuaBroker(engine)
+        self._reads = TABLE_LUA_READ_ONLY_NAMES
+        self._refusal_reason = table_lua_refusal_reason
+        self._max_reasons = MAX_TABLE_LUA_REASONS
+        self.reasons: list[str] = []
+
+    @property
+    def generation(self) -> int:
+        return self.inner.generation
+
+    def invalidate(self) -> None:
+        self.inner.invalidate()
+
+    def call(self, name: str, arguments: tuple, *, generation: int,
+             syntaxcheck: bool) -> Any:
+        if name in self._reads:
+            return self.inner.call(name, arguments,
+                                   generation=self.inner.generation,
+                                   syntaxcheck=syntaxcheck)
+        reason = self._refusal_reason(name)
+        if len(self.reasons) < self._max_reasons:
+            self.reasons.append(reason)
+        return None

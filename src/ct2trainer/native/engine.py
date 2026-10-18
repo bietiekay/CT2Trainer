@@ -1208,6 +1208,10 @@ class TrainerEngine:
             self.closed = False
             self.lua_sessions: list[tuple[Any, Any]] = []
             self.lua_activations: dict[int, Any] = {}
+            # WP-41: the per-table bootstrap scope (host, broker), present
+            # only while a table-Lua bootstrap executed cleanly for the
+            # current attach; retired on target exit, close and re-attach.
+            self.table_lua_scope = None
             from .lua_host import LuaMemoryPool
             self.lua_memory_pool = LuaMemoryPool()
             self._lua_tick_time = time.monotonic()
@@ -1466,6 +1470,94 @@ class TrainerEngine:
             broker.invalidate()
             host.cancel()
         self.lua_sessions.clear()
+
+    def _retire_table_lua_scope(self) -> None:
+        """WP-41: drop the bootstrap scope (idempotent).
+
+        Cancels the host (idempotent) and retires its broker generation, so
+        a re-attach starts from a fresh scope; safe to call after
+        ``_cancel_lua_sessions`` already retired every session.
+        """
+        scope = self.table_lua_scope
+        if scope is None:
+            return
+        host, broker = scope
+        broker.invalidate()
+        host.cancel()
+        self.lua_sessions = [(item_host, item_broker)
+                             for item_host, item_broker in self.lua_sessions
+                             if item_host is not host]
+        self.table_lua_scope = None
+
+    def _run_table_lua_bootstrap(self) -> None:
+        """WP-41: execute the table Lua exactly once per confirmed attach.
+
+        Runs the combined table source in a dedicated read-only scope.
+        Refused API calls are recorded with their exact named reason (the
+        call is answered with nil so the read-only remainder of the source
+        still runs); a genuine execution failure stops the run and appends
+        the top-level failure reason.  The outcome fills
+        ``plan["table_lua"]``: a clean run persists the scope for the
+        table's lifetime, a refused or failed run destroys it and marks
+        the activation as not executed.  Fail-soft: the outcome never
+        blocks the attach.
+        """
+        from .lua_bootstrap import (MAX_TABLE_LUA_REASONS,
+                                    TABLE_LUA_TOP_LEVEL_FAILURE,
+                                    record_table_lua_references,
+                                    table_top_level_globals,
+                                    validate_table_lua_meta)
+        from .lua_host import TableLuaBroker, LuaHost
+        bootstrap = self.plan.get('lua_bootstrap')
+        if bootstrap is None:
+            return
+        source = bootstrap['source']
+        meta = self.plan.get('table_lua')
+        if meta is None:
+            # Legacy plan without bootstrap metadata: derive the static
+            # inactive-record count with the compiler's own algorithm.
+            table_globals = table_top_level_globals(source)
+            meta = {'executed': False, 'reasons': [],
+                    'record_scripts_inactive': sum(
+                        1 for entry in self.plan['entries']
+                        if 'lua_program' in entry
+                        and record_table_lua_references(
+                            entry['lua_program']['source'], table_globals))}
+            validate_table_lua_meta(meta)
+            self.plan['table_lua'] = meta
+        else:
+            validate_table_lua_meta(meta)
+        self._retire_table_lua_scope()
+        meta['executed'] = False
+        meta['reasons'] = []
+        broker = TableLuaBroker(self)
+        host = LuaHost(broker, memory_pool=self.lua_memory_pool)
+        self.lua_sessions.append((host, broker))
+        self.table_lua_scope = (host, broker)
+        failure = None
+        try:
+            host.execute(source)
+        except Exception as exc:  # fail-soft: record, never block the attach
+            failure = str(exc)
+        reasons = list(broker.reasons)
+        if failure is not None:
+            # Recorded refusals never raise (they are answered with nil), so
+            # a top-level failure is always a distinct runtime error. The
+            # bounded list drops the failure reason only when the refusal
+            # bound is already saturated; the full detail stays in the
+            # table-lua-refused debug event.
+            if len(reasons) < MAX_TABLE_LUA_REASONS:
+                reasons.append(TABLE_LUA_TOP_LEVEL_FAILURE + failure)
+        meta['reasons'] = reasons
+        meta['executed'] = failure is None and not reasons
+        if meta['executed']:
+            self.debug_log.log('table-lua-executed',
+                               record_scripts_inactive=meta['record_scripts_inactive'])
+        else:
+            self.debug_log.log('table-lua-refused', error=failure,
+                               reasons=reasons,
+                               record_scripts_inactive=meta['record_scripts_inactive'])
+            self._retire_table_lua_scope()
 
     def _release_call_broker(self) -> None:
         """Retire the session-owned call-broker binding (target exit or close).
@@ -1807,6 +1899,7 @@ class TrainerEngine:
                                        pid=getattr(self.memory, "pid", None),
                                        process_name=self.plan["process_name"])
                     self._cancel_lua_sessions()
+                    self._retire_table_lua_scope()
                     for scope in self.lua_activations.values():
                         scope.finish_after_exit()
                     self.lua_activations.clear()
@@ -1941,6 +2034,10 @@ class TrainerEngine:
                                pointer_size=getattr(memory, "pointer_size", None),
                                creation_time=getattr(memory, "creation_time", None))
             self._last_attach_failure = None
+            # WP-41: the per-table Lua bootstrap runs exactly once per
+            # confirmed attach, before any saved wish restore, so record
+            # activations already see the final plan["table_lua"] state.
+            self._run_table_lua_bootstrap()
             if self.one_shot is not None:
                 self._one_shot_generation += 1
                 wishes = self.one_shot.attach(self._one_shot_generation)
@@ -4309,6 +4406,7 @@ class TrainerEngine:
                 raise StateError(self.error or "An action is still in progress")
             self.store.guard()
             self._cancel_lua_sessions()
+            self._retire_table_lua_scope()
             if self.memory is not None:
                 if self.memory.is_alive():
                     require_target_architecture(self.plan, self.memory)
@@ -4386,6 +4484,7 @@ class TrainerEngine:
         except Exception as exc:
             self.debug_log.error("engine-close-failed", exc)
             self._cancel_lua_sessions()
+            self._retire_table_lua_scope()
             self._release_call_broker()
             self._release_debugger_session()
             self._release_managed_session(False)

@@ -124,7 +124,7 @@ class TableLuaGatherTests(unittest.TestCase):
                          self.MAIN + '\nfunction realHelper() return 11 end')
         validate_plan(plan)
 
-    def test_invalid_tab_content_keeps_a_complete_plan_and_fails_closed_at_activation(self):
+    def test_invalid_tab_content_keeps_complete_plan_and_fails_bootstrap_fail_soft(self):
         invalid_tab = 'function broken( end'
         script = ('[ENABLE]\n{$lua}\nif not syntaxcheck then writeInteger(0x1080,1) end\n{$asm}\n'
                   '[DISABLE]\n{$lua}\nassert(readInteger(0x1080)==1)\n{$asm}\n')
@@ -135,6 +135,10 @@ class TableLuaGatherTests(unittest.TestCase):
         self.assertEqual(len(plan['entries']), 1)
         self.assertTrue(plan['entries'][0]['supported'], plan['entries'][0]['reason'])
         self.assertEqual(plan['lua_bootstrap']['source'], invalid_tab)
+        # WP-41: the plan carries the bootstrap metadata; the record does not
+        # reference a table-level global, so no record script goes inactive.
+        self.assertEqual(plan['table_lua'],
+                         {'executed': False, 'reasons': [], 'record_scripts_inactive': 0})
         validate_plan(plan)
         memory = Memory()
         root = Path(self.directory.name)
@@ -145,13 +149,23 @@ class TableLuaGatherTests(unittest.TestCase):
         self.memory = memory
         self.engines.append(engine)
         engine.poll()
-        with self.assertRaises(NativeRuntimeError):
-            engine.toggle(1, True)
+        # WP-41: the broken source fails the once-per-load bootstrap fail-soft
+        # with the top-level-failure reason, and the scope is destroyed.
+        self.assertFalse(plan['table_lua']['executed'])
+        self.assertEqual(len(plan['table_lua']['reasons']), 1)
+        self.assertTrue(
+            plan['table_lua']['reasons'][0].startswith('Table Lua top-level execution failed:'),
+            plan['table_lua']['reasons'][0])
+        self.assertIsNone(engine.table_lua_scope)
+        # The record does not reference a table-level global, so the failed
+        # bootstrap leaves it unaffected: it still activates.
+        self.assertTrue(engine.toggle(1, True))
+        self.assertEqual(memory.read(0x1080, 4), bytes.fromhex('01000000'))
+        self.assertIn(1, engine.applied)
+        self.assertFalse(engine.toggle(1, False))
         self.assertEqual(memory.read(0x1080, 4), bytes(4))
-        self.assertFalse(engine.applied)
-        self.assertFalse(engine.desired)
-        self.assertFalse(engine.lua_activations)
-        self.assertFalse(memory.writes)
+        self.assertNotIn(1, engine.applied)
+        self.assertFalse(engine.blocked)
 
     def test_table_lua_warning_still_visible_with_named_tabs(self):
         plan = self.compile(
@@ -197,7 +211,11 @@ class TableLuaTabReplayTests(unittest.TestCase):
 
     def test_record_lua_activation_replays_named_tab_helper_end_to_end(self):
         engine = self.engine()
-        # No load-time execution: attaching does not write from the tab.
+        # WP-41: the pure table source executes once at load in its own
+        # bootstrap scope, so attaching still writes nothing from the tab.
+        self.assertEqual(engine.plan['table_lua'],
+                         {'executed': True, 'reasons': [], 'record_scripts_inactive': 1})
+        self.assertIsNotNone(engine.table_lua_scope)
         self.assertEqual(self.memory.read(0x1080, 4), bytes(4))
         self.assertTrue(engine.toggle(1, True))
         self.assertIn(1, engine.lua_activations)
@@ -209,6 +227,8 @@ class TableLuaTabReplayTests(unittest.TestCase):
     def test_combined_main_body_and_tab_helpers_both_replay(self):
         self.lua_script = 'function mainHelper() return 7 end' + '\n' + self.TAB
         engine = self.engine()
+        self.assertEqual(engine.plan['table_lua'],
+                         {'executed': True, 'reasons': [], 'record_scripts_inactive': 1})
         self.assertTrue(engine.toggle(1, True))
         self.assertEqual(self.memory.read(0x1080, 4), (42).to_bytes(4, 'little'))
         self.assertEqual(engine.lua_activations[1].host.execute('return mainHelper()'), 7)

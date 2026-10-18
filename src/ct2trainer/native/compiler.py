@@ -1211,6 +1211,23 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
         plan["debug_log"] = True
     if bootstrap is not None:
         plan['lua_bootstrap'] = bootstrap
+        # WP-41: static per-table bootstrap metadata.  Plan time records the
+        # refusal-free default; the engine fills executed/reasons on each
+        # confirmed attach.  record_scripts_inactive counts supported script
+        # records whose embedded Lua references a table top-level global,
+        # regardless of selection (the banner denominator is the plan, not
+        # the saved wishes).
+        from .lua_bootstrap import record_table_lua_references, table_top_level_globals
+        table_globals = table_top_level_globals(bootstrap['source'])
+        plan['table_lua'] = {
+            'executed': False,
+            'reasons': [],
+            'record_scripts_inactive': sum(
+                1 for entry in entries
+                if 'lua_program' in entry
+                and record_table_lua_references(entry['lua_program']['source'],
+                                                table_globals)),
+        }
     if parent_relations:
         plan["parent_relations"] = {str(parent_id): {str(child_id): flag
                                                      for child_id, flag in children.items()}
@@ -1231,6 +1248,11 @@ def validate_plan(plan: dict) -> None:
     if 'lua_bootstrap' in plan:
         from .lua_bootstrap import validate_lua_bootstrap
         validate_lua_bootstrap(plan['lua_bootstrap'])
+    if 'table_lua' in plan:
+        from .lua_bootstrap import validate_table_lua_meta
+        validate_table_lua_meta(plan['table_lua'])
+        if 'lua_bootstrap' not in plan:
+            raise NativeCompileError("Plan table-Lua metadata requires the table bootstrap source.")
     for name, size in (("table_sha256", 64), ("trainer_id", 16)):
         if not isinstance(plan.get(name), str) or re.fullmatch("[0-9a-f]{" + str(size) + "}", plan[name]) is None:
             raise NativeCompileError(f"Invalid native plan {name}.")
@@ -1475,6 +1497,25 @@ def validate_plan(plan: dict) -> None:
                 # demoted placeholder; the canonical shapes above already
                 # matched, so everything left is forged metadata.
                 raise NativeCompileError("Value-type placeholder headings require canonical value metadata.")
+        if 'table_lua' in plan and 'lua_bootstrap' in plan:
+            # WP-41: the static inactive-record count must re-derive from the
+            # entries' own embedded sources (same compiler algorithm as the
+            # plan-time emission), so a forged count is refused by both gates.
+            from .lua_bootstrap import (record_table_lua_references,
+                                        table_top_level_globals)
+            try:
+                table_globals = table_top_level_globals(plan['lua_bootstrap']['source'])
+                expected_inactive = sum(
+                    1 for entry in entries
+                    if isinstance(entry, dict)
+                    and isinstance(entry.get('lua_program'), dict)
+                    and record_table_lua_references(
+                        entry['lua_program'].get('source', ''), table_globals))
+            except ValueError as exc:
+                raise NativeCompileError(str(exc)) from exc
+            if plan['table_lua']['record_scripts_inactive'] != expected_inactive:
+                raise NativeCompileError(
+                    "Plan table-Lua inactive record count does not match its entries.")
         for entry in entries:
             parent = entry.get("parent_id")
             if parent is not None and (type(parent) is not int or parent not in ids or parent == entry["id"]):
