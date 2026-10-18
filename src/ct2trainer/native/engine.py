@@ -246,6 +246,14 @@ def validate_plan(plan: dict) -> None:
     entries = plan.get("entries")
     if not isinstance(entries, list) or not entries or len(entries) > 20000:
         raise NativeRuntimeError("Invalid native entry list")
+    # WP-38: plan-level ancestor walks (dynamic address provider binding)
+    # need the full ID map before the per-entry pass; malformed entries
+    # simply stay out of the map and are refused by the checks below.
+    by_id = {}
+    for entry in entries:
+        if (isinstance(entry, dict) and type(entry.get("id")) is int
+                and entry["id"] >= 0 and entry["id"] not in by_id):
+            by_id[entry["id"]] = entry
     seen = set()
     for entry in entries:
         if not isinstance(entry, dict) or type(entry.get("id")) is not int or entry["id"] < 0 or entry["id"] in seen:
@@ -269,6 +277,27 @@ def validate_plan(plan: dict) -> None:
             try:
                 for value in values:
                     validate_symbol(value)
+            except AAError as exc:
+                raise NativeRuntimeError(str(exc)) from exc
+        # WP-38: the additive address_provider field is shape-checked here
+        # (it must ride on a supported addressless heading); the provider
+        # cross-checks run in the plan-wide pass below where the full ID
+        # map is available.
+        marker = entry.get("address_provider")
+        if marker is not None:
+            from .compiler import _is_addressless_placeholder
+            if (not isinstance(marker, dict) or set(marker) != {"provider_id", "symbol"}
+                    or type(marker.get("provider_id")) is not int
+                    or marker.get("provider_id", -1) < 0
+                    or not isinstance(marker.get("symbol"), str)):
+                raise NativeRuntimeError("Invalid dynamic address provider metadata.")
+            if (entry["kind"] != "heading" or not entry["supported"]
+                    or entry.get("address") != "" or entry.get("pointer_offsets") != []
+                    or _is_addressless_placeholder(entry)):
+                raise NativeRuntimeError(
+                    "Dynamic address provider requires a supported addressless heading.")
+            try:
+                validate_symbol(marker["symbol"])
             except AAError as exc:
                 raise NativeRuntimeError(str(exc)) from exc
         if 'lua_program' in entry and (entry['kind'] != 'script' or not entry['supported']):
@@ -417,9 +446,14 @@ def validate_plan(plan: dict) -> None:
             try:
                 if entry.get('address_profile') == 'expression/v1':
                     from .address_expression import parse_expression, expression_symbols as expression_refs
+                    from .compiler import _dynamic_provider_binding
                     parse_expression(entry['address'])
                     if entry['address'].lstrip().startswith(('+','-')):
-                        raise NativeRuntimeError('Flattened address profiles require resolved inherited bases')
+                        # WP-38: relative expression addresses are valid only
+                        # when the plan-level ancestor walk binds the dynamic
+                        # address provider of the nearest marked heading.
+                        if _dynamic_provider_binding(by_id, entry) is None:
+                            raise NativeRuntimeError('Flattened address profiles require resolved inherited bases')
                     if entry.get('pointer_offsets') != [] or not isinstance(entry.get('source_address'),str):
                         raise NativeRuntimeError('Flattened address profiles require original source addresses and empty offsets')
                 elif 'address_profile' in entry:
@@ -462,12 +496,39 @@ def validate_plan(plan: dict) -> None:
                 writable += 1
             if dropdown["read_only"] and writable == 0:
                 raise NativeRuntimeError("Read-only dropdown needs concrete choices")
-    by_id = {entry["id"]: entry for entry in entries}
     providers: dict[str, int] = {}
     for entry in entries:
         parent = entry.get("parent_id")
         if parent is not None and (type(parent) is not int or parent not in by_id or parent == entry["id"]):
             raise NativeRuntimeError("Invalid parent identity")
+        # WP-38: the address_provider field must name a supported addressless
+        # script that provides the symbol, and that provider must not sit
+        # below the heading it serves (provider-to-base cycle).  The
+        # relative-address allowance for provider-bound values was checked
+        # in the per-entry address validation above.
+        marker = entry.get("address_provider")
+        if marker is not None:
+            provider = by_id.get(marker["provider_id"])
+            if provider is None:
+                raise NativeRuntimeError("Dynamic address provider references an unknown record.")
+            if (provider is entry or provider["kind"] != "script"
+                    or not provider["supported"] or provider.get("address")
+                    or provider.get("pointer_offsets")):
+                raise NativeRuntimeError(
+                    "Dynamic address provider must name a supported addressless script record.")
+            if marker["symbol"].casefold() not in {name.casefold() for name in provider.get("provides", [])}:
+                raise NativeRuntimeError("Dynamic address provider does not provide the named symbol.")
+            seen = set()
+            current = provider
+            while current.get("parent_id") is not None:
+                parent_id = current["parent_id"]
+                if parent_id == entry["id"]:
+                    raise NativeRuntimeError(
+                        "Dynamic address provider must not be a descendant of the heading it serves.")
+                if parent_id not in by_id or parent_id in seen or len(seen) >= 64:
+                    break
+                seen.add(parent_id)
+                current = by_id[parent_id]
         dropdown = entry.get("dropdown")
         if isinstance(dropdown, dict):
             link_target = dropdown.get("link_target_id")
@@ -3534,6 +3595,25 @@ class TrainerEngine:
     def _value_address(self, entry: dict) -> int:
         if entry.get('address_profile') == 'expression/v1':
             from .address_expression import resolve_expression
+            address = entry['address']
+            if address.lstrip().startswith(('+','-')):
+                # WP-38: a relative expression address inherits its base from
+                # the dynamic address provider named by the nearest marked
+                # heading; the live base is read fresh from the runtime symbol
+                # table at every activation, never cached from attach time.
+                from .compiler import _dynamic_provider_binding
+                binding = _dynamic_provider_binding(self.entries, entry)
+                if binding is None:
+                    raise NativeRuntimeError('Flattened address profiles require resolved inherited bases')
+                provider_id, symbol = binding
+                symbol_key = symbol.casefold()
+                if (symbol_key not in self.symbols
+                        or not self._parent_effect_live(provider_id)):
+                    raise NativeRuntimeError(f"Address provider {provider_id} is not active.")
+                return resolve_expression(address, self.memory, self.symbols,
+                                          parent=self.symbols[symbol_key],
+                                          process_name=self.plan['process_name'],
+                                          pointer_size=self.memory.pointer_size)
             return resolve_expression(entry['address'],self.memory,self.symbols,
                                       process_name=self.plan['process_name'],pointer_size=self.memory.pointer_size)
         return self.memory.resolve_pointer(entry["address"], entry.get("pointer_offsets", []), self.symbols)

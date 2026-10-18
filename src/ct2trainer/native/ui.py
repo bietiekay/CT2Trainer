@@ -18,6 +18,7 @@ from .window_icon import window_icon_path
 from .ui_layout import (
     BREADCRUMB_ROW_HEIGHT,
     MIN_WINDOW_HEIGHT_WIDE,
+    address_provider_marker,
     activation_set_summary,
     breadcrumb_labels,
     cards_area_height,
@@ -181,6 +182,8 @@ class TrainerWindow:
         staged = entry.get("staged")
         staged_line = (("\nStaged: unlocks when active: " + ", ".join(staged.get("provider_labels", ())))
                        if staged else "")
+        provider_marker = address_provider_marker(entry)
+        provider_line = ("\n" + provider_marker) if provider_marker else ""
         set_summary = activation_set_summary(entry, self.engine.entries)
         set_line = ("\n" + set_summary + " (source: %s)"
                     % entry["activation_sets"].get("source", "unknown")) if set_summary else ""
@@ -189,7 +192,7 @@ class TrainerWindow:
             hotkey_binding_line(text, registered) for text, registered in hotkeys)) if hotkeys else ""
         messagebox.showinfo("Entry information", f"{entry['label']}\nID: {entry['id']}\nPath: {path}\n" +
             f"Type: {entry.get('variable_type', entry['kind'])}\n" +
-            (entry.get("reason") or "Supported by the bounded native engine") + staged_line + set_line + hotkey_line + "\n" +
+            (entry.get("reason") or "Supported by the bounded native engine") + staged_line + provider_line + set_line + hotkey_line + "\n" +
             self.engine.entry_errors.get(entry["id"], "") +
             "\nRequired symbols: " + ", ".join(entry.get("requires", [])), parent=self.root)
 
@@ -362,9 +365,15 @@ class TrainerWindow:
                              lambda e=entry: self.action(lambda e=e: self.open_group(e))
                              ).pack(fill="x", pady=(4, 0))
                 tk.Label(card, text=f"{children} entries", anchor="w", bg=BG_CARD, fg=FG_DIM).pack(fill="x")
+                provider_marker = address_provider_marker(entry)
+                if provider_marker:
+                    tk.Label(card, text=provider_marker, anchor="w", bg=BG_CARD, fg=FG_DIM).pack(fill="x")
                 continue
             if not entry["selected"] or not entry["supported"] or entry["kind"] in {"heading", "blocked"}:
                 reason = "Not included in this trainer" if not entry["selected"] else entry.get("reason") or "Navigation heading"
+                provider_marker = address_provider_marker(entry)
+                if provider_marker:
+                    reason = reason + " · " + provider_marker
                 visible_reason = reason[:140] + ("… (Info)" if len(reason) > 140 else "")
                 tk.Label(card, text=visible_reason, anchor="w", justify="left", bg=BG_CARD, fg=FG_DIM, wraplength=max(280, self.root.winfo_width() - 60)).pack(fill="x")
                 continue

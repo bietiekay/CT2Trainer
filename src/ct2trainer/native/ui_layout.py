@@ -248,6 +248,21 @@ def staged_provider_labels(entry) -> list:
     return list(staged.get("provider_labels", ()))
 
 
+def address_provider_marker(entry) -> str:
+    """Trainer-UI marker for a heading whose relative children inherit a
+    runtime-computed base (WP-38 dynamic address provider).
+
+    Consumes only the additive ``address_provider`` plan field, so the UI
+    carries no parallel metadata; the provider record itself keeps its
+    ordinary script card.  Returns the contract phrase when the heading
+    carries the field, ``''`` otherwise.
+    """
+    marker = entry.get("address_provider")
+    if isinstance(marker, dict):
+        return "Address provided at runtime"
+    return ""
+
+
 def activation_set_record_ids(entry) -> tuple:
     """(enable_ids, disable_ids) of a master-toggle activation set, or ([], [])."""
     sets = entry.get("activation_sets") or {}
