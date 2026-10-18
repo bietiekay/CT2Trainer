@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-21 (WP-38 / GC-B6 - runtime dynamic address provider).
+     Module ct2synth21.exe.  The Lua provider registers exactly one symbol
+     on enable and unregisters it on disable; the nearest heading carries
+     the address_provider binding and the relative children (+10, +14, +18)
+     adopt the runtime-resolved base; the static sibling pins the module
+     token with a module-relative address.  Pinned 2026-10-18 in the W3
+     integration on base d15268a. -->
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"Dynamic base provider"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if not syntaxcheck then
+registerSymbol('SynthDynBase21', readQword('0x1008'))
+end
+{$asm}
+[DISABLE]
+{$lua}
+unregisterSymbol('SynthDynBase21')
+{$asm}</AssemblerScript>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>2</ID>
+          <Description>"Provider group"</Description>
+          <GroupHeader>1</GroupHeader>
+          <CheatEntries>
+            <CheatEntry>
+              <ID>3</ID>
+              <Description>"dynamic child one"</Description>
+              <VariableType>4 Bytes</VariableType>
+              <Address>+10</Address>
+              <Value>0</Value>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>4</ID>
+              <Description>"dynamic child two"</Description>
+              <VariableType>4 Bytes</VariableType>
+              <Address>+14</Address>
+              <Value>0</Value>
+            </CheatEntry>
+            <CheatEntry>
+              <ID>5</ID>
+              <Description>"dynamic child three"</Description>
+              <VariableType>Byte</VariableType>
+              <Address>+18</Address>
+              <Value>0</Value>
+            </CheatEntry>
+          </CheatEntries>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>6</ID>
+      <Description>"static sibling"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth21.exe+2000</Address>
+      <Value>0</Value>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

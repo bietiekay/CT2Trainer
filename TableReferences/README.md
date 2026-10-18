@@ -1,6 +1,6 @@
 # Synthetic clean-room corpus (TableReferences)
 
-This directory contains the 21 pinned case tables used by the corpus
+This directory contains the 22 pinned case tables used by the corpus
 denominator tool (`tools/corpus_denominator/`). All files are
 independently authored, synthetic `.CT` tables; no third-party game table
 content is part of this repository. They exercise the same 39 gap classes
@@ -35,6 +35,7 @@ case number.
 | `case-18.ct` | Synthetic AA label & directive pack (WP-28/29/31/35/36: positional `return:` hooks over two AOB scans with a value consumer on the registered scan symbol, alloc-only init provider + pointer consumer, 2-arg `dealloc`, multi-token `registersymbol`, `registerlabel`, `fullAccess` no-op, `/* */` block comment in the data dialect, operand-less `dq` reservation, process-wide `aobscan` + `aobscanregion`, `createthread`/`threadwait` gate, 3-arg `$process` `globalalloc` + consumer; the globalalloc DISABLE reinitialization record and the label-inside-global-initializer record stay blocked with the exact W2-C named keep-block reasons) | `ct2synth18.exe` | `e3405ebcf7fa566a101ad424c5318348c89e5e020636d8f2533d125c89f7e2f6` |
 | `case-19.ct` | Synthetic duplicate-ID robustness (Octopath/HellPie-style duplicate CheatEntry IDs; keep-first, dropped duplicates stay non-addressable, unique child of a dropped duplicate group survives re-parenting; WP-25) | `ct2synth19.exe` | `80690e8265e51cfe031ea02dbdd7bf2aeae898da034931f037044cbc930a3f7a` |
 | `case-20.ct` | Synthetic Lua-directive & phase-marker derivative (WP-26: no-op `{$...}` directives, precise unknown-directive error, structural in-block `[ENABLE]`/`[DISABLE]` boundaries with shared preamble, redundant `{$asm}` no-op, contentless `[DISABLE]` one-shot, duplicate marker stays fail-closed) | `ct2synth20.exe` | `43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c` |
+| `case-21.ct` | Synthetic runtime dynamic address provider (WP-38 / GC-B6: Lua provider registers exactly one symbol on enable and unregisters it on disable; the nearest heading carries the `address_provider` binding; three relative children `+10`/`+14`/`+18` adopt the runtime-resolved base as `expression/v1` values; the static module-relative sibling pins the module token) | `ct2synth21.exe` | `1f4ee77ea9b1e3d06ace85551fdbfd7e9662895485e5ea43dbd18559d3c5acbf` |
 | `case-23.ct` | Synthetic record-hotkey derivative (WP-40: F1 (VK 112) activation hotkey on the alloc-only anchor script, F2 (VK 113) value operation on the child 4-byte row, first-wins F1 conflict pair on the second script record) | `ct2synth23.exe` | `e3568de1225e5d84d8b468b0daaad64153c70c034a550754eb022caaa001dab3` |
 
 Game names appear only as documentation-level provenance of the synthetic

@@ -25,18 +25,18 @@
    "custom_value": 4,
    "navigation": 2,
    "one_shot": 1723,
-   "persistent_script": 448,
+   "persistent_script": 449,
    "string_write": 732,
-   "value_freeze": 3176
+   "value_freeze": 3180
   },
   "confirmed_game_effect_actions": 0,
   "confirmed_percent": 0.0,
-  "expected_actions": 6083,
+  "expected_actions": 6088,
   "goal_90_percent": "NOT REACHED",
   "group_toggle_actions": 3,
-  "groups_total": 1287,
+  "groups_total": 1288,
   "missing_gates": [
-   "Real game installs/builds for the 21 pinned tables (user question unanswered)",
+   "Real game installs/builds for the 22 pinned tables (user question unanswered)",
    "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
    "VM/Clean-PC gate without CE/Python",
    "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -46,12 +46,12 @@
   ],
   "navigation_excluded": 2,
   "record_types": {
-   "aa_script": 2171,
+   "aa_script": 2172,
    "custom": 4,
    "string": 732,
-   "value": 3178
+   "value": 3182
   },
-  "records_total": 6085,
+  "records_total": 6090,
   "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
@@ -61,11 +61,11 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5510,
-   "statically_assumed": 533,
+   "locked": 5511,
+   "statically_assumed": 537,
    "unknown": 42
   },
-  "unique_tables": 21
+  "unique_tables": 22
  },
  "gap_labels": {
   "aa_conditional_block": {
@@ -225,7 +225,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run w3-case23-20261018012531Z",
+ "generated": "run w3b-case21-20261018023823Z",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -154709,6 +154709,203 @@
    },
    "counts": {
     "categories": {
+     "persistent_script": 1,
+     "value_freeze": 4
+    },
+    "entries_total": 6,
+    "expected_actions": 5,
+    "gap_counts": {
+     "lua_host_profile": 1,
+     "lua_symbol_api": 1
+    },
+    "group_toggle_actions": 0,
+    "groups": 1,
+    "navigation_excluded": 0,
+    "record_types": {
+     "aa_script": 1,
+     "value": 4
+    },
+    "records": 5,
+    "status_counts": {
+     "locked": 1,
+     "statically_assumed": 4
+    }
+   },
+   "duplicate_ids": {},
+   "format_version": "45",
+   "groups": [
+    {
+     "depth": 1,
+     "descendant_records": 3,
+     "group_action": false,
+     "has_checkbox": true,
+     "name": "Provider group",
+     "on_effect": false,
+     "path": "Dynamic base provider / Provider group"
+    }
+   ],
+   "main_initialization": {
+    "gaps": [
+     "lua_host_profile",
+     "lua_symbol_api"
+    ],
+    "id": 1,
+    "name": "Dynamic base provider",
+    "note": "first depth-0 script record",
+    "source": "record",
+    "status": "locked",
+    "type": "aa_script"
+   },
+   "path": "case-21.ct",
+   "paths": [
+    "case-21.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_host_profile",
+        "lua_symbol_api"
+       ],
+       "id": 1,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "Dynamic base provider",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label); with embedded Lua (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 6,
+       "lifetime": "read_write_freezable_value",
+       "name": "static sibling",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "4 Bytes value in ct2synth21.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth21.exe",
+       "type": "value"
+      }
+     ]
+    },
+    {
+     "group": "Provider group",
+     "records": [
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 2,
+       "gaps": [],
+       "id": 3,
+       "lifetime": "read_write_freezable_value",
+       "name": "dynamic child one",
+       "parent": "Provider group",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 2,
+       "gaps": [],
+       "id": 4,
+       "lifetime": "read_write_freezable_value",
+       "name": "dynamic child two",
+       "parent": "Provider group",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "relative",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 2,
+       "gaps": [],
+       "id": 5,
+       "lifetime": "read_write_freezable_value",
+       "name": "dynamic child three",
+       "parent": "Provider group",
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "Byte value (relative to parent base)",
+       "status": "statically_assumed",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    }
+   ],
+   "sha256": "1f4ee77ea9b1e3d06ace85551fdbfd7e9662895485e5ea43dbd18559d3c5acbf",
+   "size_bytes": 2268,
+   "table": "case-21.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 1,
+     "gap": "lua_host_profile",
+     "label": "Lua host profile (bounded Lua host profile)",
+     "requirement": "N-01 / N-19"
+    },
+    {
+     "affected_records": 1,
+     "gap": "lua_symbol_api",
+     "label": "Lua symbol API",
+     "requirement": "N-07 / N-19"
+    }
+   ]
+  },
+  {
+   "architecture": {
+    "signals": [],
+    "value": "unknown"
+   },
+   "counts": {
+    "categories": {
      "persistent_script": 2,
      "value_freeze": 1
     },
@@ -154852,35 +155049,35 @@
    ]
   }
  ],
- "run_id": "w3-case23-20261018012531Z",
+ "run_id": "w3b-case21-20261018023823Z",
  "top_gaps_pinned": [
   {
    "affected_records": 3385,
    "gap": "cross_record_symbol",
    "label": "Cross-record symbol resolution",
    "requirement": "N-07",
-   "share_of_expected_actions_percent": 55.65
+   "share_of_expected_actions_percent": 55.6
   },
   {
-   "affected_records": 1910,
+   "affected_records": 1911,
    "gap": "lua_host_profile",
    "label": "Lua host profile (bounded Lua host profile)",
    "requirement": "N-01 / N-19",
-   "share_of_expected_actions_percent": 31.4
+   "share_of_expected_actions_percent": 31.39
   },
   {
    "affected_records": 1723,
    "gap": "one_shot_save_contract",
    "label": "One-shot without ON/OFF save contract",
    "requirement": "state contract (AP-04)",
-   "share_of_expected_actions_percent": 28.32
+   "share_of_expected_actions_percent": 28.3
   },
   {
-   "affected_records": 214,
+   "affected_records": 215,
    "gap": "lua_symbol_api",
    "label": "Lua symbol API",
    "requirement": "N-07 / N-19",
-   "share_of_expected_actions_percent": 3.52
+   "share_of_expected_actions_percent": 3.53
   },
   {
    "affected_records": 36,
