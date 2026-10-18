@@ -27,8 +27,8 @@ from .aa_blocks import BlockStructureError, extract_label_definitions
 from .address_expression import (AddressExpressionError,
                                 expression_symbols as advanced_expression_symbols,
                                 parse_expression)
-from .lua_program import (LuaProgramError, has_lua_sections, prepare_lua_program,
-                          validate_lua_program)
+from .lua_program import (LuaProgramError, has_lua_sections, lua_symbol_provides,
+                          prepare_lua_program, validate_lua_program)
 from .value_links import RecursiveSetValueError, recursive_write_closure
 from .value_types import (ValueTypeError, parse_profile_value,
                           prepare_value_profile, validate_value_profile)
@@ -41,6 +41,21 @@ _PROFILE_VALUE_TYPES = {"Array of byte", "Binary", "String"}
 
 _ADDRESSLESS_PLACEHOLDER_REASON = (
     "Addressless value record is a non-actionable table placeholder.")
+
+# WP-37: canonical handover reason strings.  The named release/wildcard
+# reasons are raised by the AA and program dialects; the two generic
+# cleanup reasons below are the wave-A error texts that wave B1 re-derives
+# with the external-ownership context.
+_EXTERNAL_RELEASE_REASON = (
+    "Program may not unregister or deallocate the externally owned symbol")
+_WILDCARD_CLEANUP_REASON = (
+    "Program cannot combine wildcard cleanup with externally owned symbol")
+_UNREGISTER_EXACT_REASON = (
+    "Exactly the registered enable symbols must be unregistered on disable.")
+_CLEANUP_OWNED_REASON = (
+    "Cleanup may only release symbols/allocations owned by this program.")
+_WILDCARD_CLEANUP_SOURCE = re.compile(
+    r"\b(?:unregistersymbol|dealloc)\s*\(\s*\*\s*\)", re.IGNORECASE)
 
 
 def _is_addressless_placeholder(entry: dict) -> bool:
@@ -473,8 +488,15 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None) -> None
                     if candidate not in chosen:
                         _block(candidate,f"Unselected symbol provider conflicts with the selected shared global: {symbol}.")
                 continue
-            for entry in candidates:
-                _block(entry, f"Symbol provider is ambiguous: {symbol}.")
+            # WP-37: deterministic keep-first among supported providers
+            # (document order, tiebreak entry ID) — the same policy as the
+            # WP-25 duplicate-ID keep-first.  The first supported candidate
+            # stays the provider; every later duplicate is blocked with the
+            # named reason and dependents resolve against the kept provider.
+            kept = candidates[0]
+            for entry in candidates[1:]:
+                _block(entry, f"Symbol provider duplicate: {symbol} (kept provider {kept['id']}); "
+                              f"a later registration would shadow the kept one at runtime.")
     # WP-28 two-stage label resolution: prepare_program keeps a program's
     # bare positional labels local (they are the program's own definitions),
     # but a table-wide registered symbol of the same name wins over the
@@ -651,6 +673,7 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     from .nth_aob import prepare_helper_contract
     nth_helper=prepare_helper_contract(bootstrap) if bootstrap is not None else None
     entries: list[dict] = []
+    labels_by_id: dict[int, dict] = {}
     sources = {source.id: source for source in table.entries}
     for source in table.entries:
         entry = {"id": source.id, "label": source.label, "path": source.path,
@@ -801,6 +824,10 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                             filtered = {key: value for key, value in table_labels.items() if key not in own_keys}
                             if filtered:
                                 labels_arg = {value[0]: value[1] for value in filtered.values()}
+                    # WP-37: keep the exact label context of this attempt so
+                    # the named-refusal re-derivation below reproduces the
+                    # identical prepare call.
+                    labels_by_id[source.id] = labels_arg
                     try:
                         program = prepare_program(scripts[source.id], process_name, bitness=bitness,
                                                   labels=labels_arg)
@@ -870,6 +897,118 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
         # instead of aborting the whole table (WP-20).
         except (AAError, LuaProgramError, ValueTypeError, AddressExpressionError) as exc:
             _block(entry, str(exc))
+    # WP-37: Lua-owned symbol handover contract.  A symbol is *externally
+    # owned* when exactly one supported record provides it through a
+    # handover-capable mechanism: (a) embedded record Lua that proves a
+    # registerSymbol/unregisterSymbol pair (WP-14 C1 extraction), and/or
+    # (b) an allocation-only program (WP-29 profile) that registers its
+    # allocation.  Consumers may require such symbols without registering
+    # them themselves; the owning record becomes their activation
+    # dependency and releases the symbol exactly once on its own
+    # deactivation.  Contested symbols (two or more raw providers) stay out
+    # of the map and keep the ordinary keep-first provider rule below.
+    # Table-level Lua is scanned with the same extractor but can never
+    # become a map value: it has no owning record to name as releaser, so
+    # any symbol it proves to register also stays out of the published map.
+    raw_providers: dict[str, list[int]] = {}
+    for entry in entries:
+        if not entry["supported"] or entry["kind"] != "script":
+            continue
+        record_text = scripts[entry["id"]]
+        if "lua_program" in entry:
+            try:
+                lua_symbols = lua_symbol_provides(record_text)
+            except LuaProgramError:
+                lua_symbols = []
+            for symbol in lua_symbols:
+                raw_providers.setdefault(symbol.casefold(), []).append(entry["id"])
+            static = entry["lua_program"].get("static_program")
+            if isinstance(static, dict) and static.get("allocation_only"):
+                for symbol in static["provides"]:
+                    raw_providers.setdefault(symbol.casefold(), []).append(entry["id"])
+        elif "program" in entry and entry["program"].get("allocation_only"):
+            for symbol in entry["program"]["provides"]:
+                raw_providers.setdefault(symbol.casefold(), []).append(entry["id"])
+    table_lua_symbols: set[str] = set()
+    if bootstrap is not None:
+        try:
+            table_lua_symbols = {symbol.casefold()
+                                 for symbol in lua_symbol_provides(_table_lua_source(root))}
+        except LuaProgramError:
+            table_lua_symbols = set()
+    external_context = frozenset(symbol for symbol, owners in raw_providers.items()
+                                 if len(owners) == 1 and symbol not in table_lua_symbols)
+    # Wave B1: re-derive the two generic cleanup refusals for blocked
+    # records with the external-ownership context so the named handover
+    # reasons surface; only a re-derivation that yields a WP-37 named
+    # reason replaces the stored reason.
+    from .aa_program import prepare_program
+    from .global_alloc import has_global_alloc
+    for entry in entries:
+        if entry["supported"]:
+            continue
+        reason = entry.get("reason", "")
+        if not (reason == _UNREGISTER_EXACT_REASON
+                or reason.endswith(_CLEANUP_OWNED_REASON)):
+            continue
+        text = scripts.get(entry["id"])
+        if text is None:
+            continue
+        new_reason = None
+        try:
+            if has_lua_sections(text):
+                prepare_lua_program(text, process_name, bitness=bitness,
+                                    nth_aob_helper=nth_helper,
+                                    external_owned=external_context)
+            elif not has_global_alloc(text):
+                try:
+                    compile_script(text, external_owned=external_context)
+                except AAError as bounded_error:
+                    one_shot = None
+                    try:
+                        one_shot = compile_one_shot(text)
+                    except AAError:
+                        pass
+                    if one_shot is None:
+                        try:
+                            prepare_program(text, process_name, bitness=bitness,
+                                            labels=labels_by_id.get(entry["id"]),
+                                            external_owned=external_context)
+                        except AAError as program_error:
+                            new_reason = (str(bounded_error) + " Native assembly: "
+                                          + str(program_error))
+        except (AAError, LuaProgramError) as exc:
+            new_reason = str(exc)
+        if new_reason is not None and (_EXTERNAL_RELEASE_REASON in new_reason
+                                       or _WILDCARD_CLEANUP_REASON in new_reason):
+            entry["reason"] = new_reason
+    # Wave B2: wildcard boundary.  A wildcard cleanup op expands only to
+    # the program's own phase-owned names, so a program that also requires
+    # an externally owned symbol is refused statically; the authoritative
+    # decision is the guarded re-prepare with the external context.
+    for entry in entries:
+        if not entry["supported"] or entry["kind"] != "script" or "global_program" in entry:
+            continue
+        if "program" in entry:
+            static_source = entry["program"]["source"]
+        elif "lua_program" in entry and isinstance(entry["lua_program"].get("static_program"), dict):
+            static_source = entry["lua_program"]["static_program"]["source"]
+        else:
+            continue
+        if _WILDCARD_CLEANUP_SOURCE.search(static_source) is None:
+            continue
+        try:
+            if "lua_program" in entry:
+                prepare_lua_program(scripts[entry["id"]], process_name, bitness=bitness,
+                                    nth_aob_helper=nth_helper,
+                                    external_owned=external_context)
+            else:
+                prepare_program(scripts[entry["id"]], process_name, bitness=bitness,
+                                labels=labels_by_id.get(entry["id"]),
+                                external_owned=external_context)
+        except (AAError, LuaProgramError) as exc:
+            if _WILDCARD_CLEANUP_REASON in str(exc):
+                _block(entry, str(exc))
     async_ids = {source.id for source in table.entries
                  if source.kind == "script" and source.async_script}
     _dependencies(entries,selected)
@@ -887,6 +1026,18 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                 "pending until the effect is confirmed."
             )
     by_id = {entry["id"]: entry for entry in entries}
+    # WP-37: publish the external-ownership map.  A symbol enters only when
+    # exactly one raw provider exists, that record survived keep-first,
+    # wave B and the staged cascade, and the table Lua does not also
+    # register it; contested or table-Lua-claimed symbols stay private to
+    # the ordinary dependency machinery.
+    external_owned_providers: dict[str, int] = {}
+    for symbol, owners in raw_providers.items():
+        if len(owners) != 1 or symbol in table_lua_symbols:
+            continue
+        owner_id = owners[0]
+        if by_id[owner_id]["supported"]:
+            external_owned_providers[symbol] = owner_id
     pending = list(selected)
     while pending:
         current = by_id[pending.pop()]
@@ -1017,6 +1168,9 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
         plan["parent_relations"] = {str(parent_id): {str(child_id): flag
                                                      for child_id, flag in children.items()}
                                     for parent_id, children in sorted(parent_relations.items())}
+    if external_owned_providers:
+        plan["external_owned_providers"] = {symbol: external_owned_providers[symbol]
+                                            for symbol in sorted(external_owned_providers)}
     validate_plan(plan)
     return plan
 
@@ -1297,6 +1451,25 @@ def validate_plan(plan: dict) -> None:
             # supported headings and the derived subtree relations must
             # re-derive byte-exactly from the entries' own parent links.
             by_id = {entry["id"]: entry for entry in entries}
+            # WP-37: the external-ownership map is optional on schema 2; when
+            # present, every key/value pair must name a real, supported
+            # script record that actually provides that symbol.
+            external_owned = plan.get("external_owned_providers")
+            if external_owned is not None:
+                if plan["schema"] != 2:
+                    raise NativeCompileError("external_owned_providers requires schema 2")
+                if not isinstance(external_owned, dict):
+                    raise NativeCompileError("external_owned_providers must be a symbol-to-provider map")
+                for symbol, owner_id in external_owned.items():
+                    if not isinstance(symbol, str) or not symbol:
+                        raise NativeCompileError("external_owned_providers keys must be symbol names")
+                    if type(owner_id) is not int or owner_id not in by_id:
+                        raise NativeCompileError("external_owned_providers must reference known provider IDs")
+                    owner = by_id[owner_id]
+                    if not owner["supported"] or owner["kind"] != "script":
+                        raise NativeCompileError("external_owned_providers must name supported script records")
+                    if symbol.casefold() not in {name.casefold() for name in owner.get("provides", [])}:
+                        raise NativeCompileError("external_owned_providers entries must match the provider's symbols")
             children_by_parent = {}
             for entry in entries:
                 if entry.get("parent_id") is not None:

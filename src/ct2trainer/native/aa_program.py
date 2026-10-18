@@ -775,7 +775,7 @@ def _inline_nested_invocations(pruned, nested, labels, define_lines: set) -> dic
 
 
 def prepare_program(source: str, process_name: str | None = None, *, bitness: int = 64,
-                    labels: dict | None = None) -> dict:
+                    labels: dict | None = None, external_owned: frozenset[str] = frozenset()) -> dict:
     if type(bitness) is not int or bitness not in {32, 64}:
         raise ProgramError("Only 32/64-bit programs are supported.")
     if process_name is not None:
@@ -1040,15 +1040,32 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         if key not in locals_:
             # Registering a dependency does not confer ownership over it.
             raise ProgramError(f"Cannot register a symbol not owned by this program: {symbol}.")
+    # WP-37 wildcard boundary: ``unregistersymbol('*')`` / ``dealloc('*')``
+    # expand only to this program's own phase-owned names and never touch
+    # externally owned symbols; the static guard below refuses the wildcard
+    # combination when the program requires an externally owned symbol.
+    wildcard_cleanup = False
     for node in sections["disable"]:
         if node["op"] in {"alloc", "globalalloc", "register", "scan", "scan_region", "scan_process"}:
             raise ProgramError("Disable may not allocate, scan or register new symbols.")
         if node["op"] in {"unregister", "dealloc"}:
             owned = provides if node["op"] == "unregister" else {name.casefold(): name for name in allocations}
             if node["symbols"] == ["*"]:
+                wildcard_cleanup = True
                 node["symbols"] = list(owned.values())
-            elif any(symbol.casefold() not in owned for symbol in node["symbols"]):
-                raise ProgramError("Cleanup may only release symbols/allocations owned by this program.")
+            else:
+                foreign = sorted(
+                    (symbol for symbol in node["symbols"] if symbol.casefold() not in owned),
+                    key=str.casefold,
+                )
+                external = [symbol for symbol in foreign if symbol.casefold() in external_owned]
+                if external:
+                    # WP-37: the symbol is owned by another record's Lua or
+                    # allocation-only program; only the owning record releases it.
+                    raise ProgramError(
+                        f"Program may not unregister or deallocate the externally owned symbol {external[0]}.")
+                if foreign:
+                    raise ProgramError("Cleanup may only release symbols/allocations owned by this program.")
     if sum(node["op"] == "scan_process" for node in sections["enable"]) > MAX_PROCESS_SCANS:
         raise ProgramError("Program exceeds its 16 complete process-scan bound.")
     managed = {}
@@ -1066,6 +1083,18 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         for symbol in _node_refs(node):
             if symbol.casefold() not in locals_:
                 required.setdefault(symbol.casefold(), symbol)
+    if wildcard_cleanup and external_owned:
+        # WP-37: the wildcard sweep above expanded to this program's own
+        # phase-owned names only; combining it with a required externally
+        # owned symbol is refused statically because the sweep could shadow
+        # the owning record's release of that symbol.
+        external_required = sorted(
+            (spelling for key, spelling in required.items() if key in external_owned),
+            key=str.casefold)
+        if external_required:
+            raise ProgramError(
+                "Program cannot combine wildcard cleanup with externally owned symbol "
+                + external_required[0] + ".")
     capabilities = sorted({node["op"] for nodes in sections.values() for node in nodes})
     if len(allocations) > 128:
         raise ProgramError("Program contains more than 128 allocations.")

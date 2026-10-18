@@ -437,7 +437,15 @@ def validate_one_shot_guards(enable: list[dict]) -> None:
     _guarded_writes(enable, {})
 
 
-def compile_script(script: str) -> dict:
+def compile_script(script: str, external_owned: frozenset[str] = frozenset()) -> dict:
+    """Compile a data-dialect AA script into enable/disable operation lists.
+
+    ``external_owned`` carries the casefolded names of externally owned
+    symbols (WP-37: registered by another record's Lua or allocation-only
+    program).  A disable phase releasing one of those names is refused with
+    the named handover reason instead of the generic cleanup-ownership
+    refusal, because the owning record releases it on deactivation.
+    """
     if not isinstance(script, str) or len(script.encode("utf-8")) > MAX_SCRIPT_BYTES:
         raise AAError("AA script exceeds 1 MiB.")
     clean = _without_comments(script)
@@ -468,6 +476,17 @@ def compile_script(script: str) -> dict:
     names.update(disable_names)
     unregister = {operation["symbol"].casefold() for operation in disable if operation["op"] == "unregister"}
     if provides != unregister:
+        foreign = sorted(
+            (operation["symbol"] for operation in disable if operation["op"] == "unregister"
+             and operation["symbol"].casefold() in external_owned
+             and operation["symbol"].casefold() not in provides),
+            key=str.casefold,
+        )
+        if foreign:
+            # WP-37: releasing a symbol owned by another record races its
+            # deactivation path, so the named handover refusal is reported.
+            raise AAError(
+                f"Program may not unregister or deallocate the externally owned symbol {foreign[0]}.")
         raise AAError("Exactly the registered enable symbols must be unregistered on disable.")
     if any(operation["op"] == "scan" for operation in disable):
         raise AAError("Disable must reuse the original resolved symbols; rescanning is unsupported.")

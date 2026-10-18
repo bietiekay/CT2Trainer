@@ -459,6 +459,25 @@ def validate_plan(plan: dict) -> None:
             if dropdown["read_only"] and writable == 0:
                 raise NativeRuntimeError("Read-only dropdown needs concrete choices")
     by_id = {entry["id"]: entry for entry in entries}
+    # WP-37: mirror the compiler gate — the external-ownership map is
+    # optional on schema 2 and must name supported script providers that
+    # actually carry the symbol before any runtime use.
+    external_owned = plan.get("external_owned_providers")
+    if external_owned is not None:
+        if plan["schema"] != 2:
+            raise NativeRuntimeError("external_owned_providers requires schema 2")
+        if not isinstance(external_owned, dict):
+            raise NativeRuntimeError("external_owned_providers must be a symbol-to-provider map")
+        for symbol, owner_id in external_owned.items():
+            if not isinstance(symbol, str) or not symbol:
+                raise NativeRuntimeError("external_owned_providers keys must be symbol names")
+            if type(owner_id) is not int or owner_id not in by_id:
+                raise NativeRuntimeError("external_owned_providers must reference known provider IDs")
+            owner = by_id[owner_id]
+            if not owner["supported"] or owner["kind"] != "script":
+                raise NativeRuntimeError("external_owned_providers must name supported script records")
+            if symbol.casefold() not in {name.casefold() for name in owner.get("provides", [])}:
+                raise NativeRuntimeError("external_owned_providers entries must match the provider's symbols")
     providers: dict[str, int] = {}
     for entry in entries:
         parent = entry.get("parent_id")

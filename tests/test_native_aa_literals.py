@@ -99,7 +99,7 @@ class LiteralOnlyTests(unittest.TestCase):
         self.assertFalse(memory.writes)
 
     def test_NASM_iced_both_architectures_decode_82_plus21_without_API_surface(self):
-        self.assertEqual(set(inspect.signature(aa.prepare_program).parameters),{'source','process_name','bitness','labels'})
+        self.assertEqual(set(inspect.signature(aa.prepare_program).parameters),{'source','process_name','bitness','labels','external_owned'})
         for bits,register in ((32,'eax'),(64,'rax')):
             profile=aa.prepare_program(source("push 'R'\npop "+register+'\nadd eax,#21'),bitness=bits)
             result=link(profile,Memory(bits))
