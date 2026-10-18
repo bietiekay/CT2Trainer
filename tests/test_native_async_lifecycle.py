@@ -40,10 +40,10 @@ LOCATOR_SCRIPT = ("[ENABLE]\naobscanmodule(Anchor,Target.exe,54 46)\n"
                   "registersymbol(Anchor)\n[DISABLE]\nunregistersymbol(Anchor)")
 CONSUMER_SCRIPT = ("[ENABLE]\nassert(Anchor,00)\nAnchor+1:\ndb 01\n"
                    "[DISABLE]\nassert(Anchor,00)\nAnchor+1:\ndb 00")
-# WP-29: an ENABLE that carries only alloc/registersymbol is now a supported
-# allocation-only init profile, so the canonical blocked fixture is the
-# genuinely empty ENABLE.
-BLOCKED_SCRIPT = "[ENABLE]\n[DISABLE]\n"
+# WP-44: a genuinely empty ENABLE/DISABLE pair is now demoted to a supported
+# inert heading, so the canonical blocked fixture is a script both dialects
+# refuse for a non-no-action reason.
+BLOCKED_SCRIPT = "[ENABLE]\ncreatethread(1)\n[DISABLE]\n"
 ONESHOT_SCRIPT = "[ENABLE]\nassert(Target.exe+10,00)\nTarget.exe+10:\ndb 01"
 
 
@@ -122,7 +122,7 @@ class AsyncCompilerAcceptanceTests(_AsyncCompilerBase):
         plan = self.compile(script_record(0, BLOCKED_SCRIPT, attributes='Async="1"'))
         entry = self.entry(plan)
         self.assertFalse(entry["supported"])
-        self.assertIn("no executable patch or data", entry["reason"])
+        self.assertIn("createthread", entry["reason"])
         self.assertNotIn("async", entry)
         self.assertNotIn("Async activation", entry["reason"])
         validate_plan(plan)

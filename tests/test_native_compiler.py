@@ -112,12 +112,24 @@ class NativeCompilerTests(unittest.TestCase):
         self.assertTrue(all("cycle" in entry["reason"] for entry in plan["entries"]))
 
     def test_unsupported_script_never_returns_partial_operations(self):
-        # WP-29: an allocation-only ENABLE is now a supported init profile, so
-        # the genuinely empty ENABLE is the canonical unsupported-script case.
-        plan = self.compile(script_record(1, "[ENABLE]\n[DISABLE]\n"))
-        self.assertEqual(plan["entries"][0]["kind"], "blocked")
-        self.assertIn("no executable patch or data", plan["entries"][0]["reason"])
-        self.assertNotIn("enable", plan["entries"][0])
+        # WP-44: a script without registered symbols and without a guarded
+        # byte-patch in either dialect is demoted to a supported inert
+        # heading; a genuinely refused script stays blocked.  Neither shape
+        # ever carries partial operations.
+        plan = self.compile(script_record(0, "[ENABLE]\n[DISABLE]\n")
+                            + script_record(1, "[ENABLE]\ncreatethread(1)\n[DISABLE]\n"))
+        inert = plan["entries"][0]
+        self.assertTrue(inert["supported"])
+        self.assertEqual(inert["kind"], "heading")
+        self.assertIn("Inert script", inert["reason"])
+        self.assertNotIn("enable", inert)
+        self.assertNotIn("disable", inert)
+        refused = plan["entries"][1]
+        self.assertFalse(refused["supported"])
+        self.assertEqual(refused["kind"], "blocked")
+        self.assertIn("createthread", refused["reason"])
+        self.assertNotIn("enable", refused)
+        self.assertNotIn("disable", refused)
 
     def test_table_lua_is_not_executed_or_used_as_symbol_provider(self):
         plan = self.compile(value_record(0, "CreatedByLua"), sections='<LuaScript>raise_error_if_executed()</LuaScript>')

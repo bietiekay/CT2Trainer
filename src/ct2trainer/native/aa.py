@@ -187,13 +187,54 @@ def _exact_bytes(text: str) -> str:
     return pattern.replace(" ", "").lower()
 
 
+def _data_tokens(text: str) -> list[str]:
+    """Split a data-directive value list on whitespace/commas, keeping
+    quoted strings (both quote styles, WP-43) intact as single tokens so
+    string literals may contain spaces."""
+    tokens: list[str] = []
+    current = ""
+    quote = None
+    for char in text:
+        if quote is None:
+            if char in {'"', "'"}:
+                quote = char
+                current = char
+            elif char in " \t,":
+                if current:
+                    tokens.append(current)
+                    current = ""
+            else:
+                current += char
+        else:
+            current += char
+            if char == quote:
+                tokens.append(current)
+                current = ""
+                quote = None
+    if quote is not None:
+        raise AAError("Unterminated quoted data literal.")
+    if current:
+        tokens.append(current)
+    return tokens
+
+
 def _data_bytes(directive: str, text: str) -> str:
     width = {"db": 1, "dw": 2, "dd": 4, "dq": 8}[directive]
-    tokens = text.replace(",", " ").split()
+    tokens = _data_tokens(text)
     if not tokens or len(tokens) * width > MAX_PATCH_BYTES:
         raise AAError("Data directive must contain bounded integer literals.")
     data = bytearray()
     for token in tokens:
+        if token.startswith('"') or token.startswith("'"):
+            # WP-43: quoted ASCII string literals (both quote styles) are
+            # accepted exactly where integer literals are; only db may carry
+            # them, and backslash escapes are refused fail-closed.
+            if directive != "db" or any(ord(char) > 127 for char in token[1:-1]):
+                raise AAError("Only db supports ASCII string constants.")
+            if "\\" in token[1:-1]:
+                raise AAError("Quoted data literals must not contain backslash escapes.")
+            data.extend(token[1:-1].encode("ascii"))
+            continue
         if len(token) > 32 or re.fullmatch(r"-?(?:(?:0x|\$)?[0-9A-Fa-f]+|#[0-9]+)", token) is None:
             raise AAError(f"Unsupported {directive} integer literal: {token!r}.")
         sign = -1 if token.startswith("-") else 1
@@ -463,14 +504,24 @@ def compile_script(script: str, external_owned: frozenset[str] = frozenset()) ->
                 raise AAError("Require exactly one ENABLE section followed by one DISABLE section.")
             seen.add(phase)
         else:
-            if phase == "common" and re.fullmatch(r"(?:define|label)\s*\(.*\)", line, re.IGNORECASE) is None:
-                raise AAError("Only define/label declarations are allowed before ENABLE.")
+            if phase == "common" and re.fullmatch(r"(?:define|label|registersymbol|registerlabel)\s*\(.*\)", line, re.IGNORECASE) is None:
+                raise AAError("Only define, label and register declarations are allowed before ENABLE.")
             phases[phase].append(line)
     if seen != {"enable", "disable"}:
         raise AAError("Both ENABLE and DISABLE sections are required.")
-    enable, requires, provides, names = _section(phases["common"] + phases["enable"], set())
+    # WP-44: pre-ENABLE register declarations register at activation and are
+    # released by the disable phase, so they join the ENABLE section only;
+    # define/label declarations stay shared by both phases.
+    common_declarations = []
+    common_registers = []
+    for line in phases["common"]:
+        if re.fullmatch(r"(?:registersymbol|registerlabel)\s*\(.*\)", line, re.IGNORECASE):
+            common_registers.append(line)
+        else:
+            common_declarations.append(line)
+    enable, requires, provides, names = _section(common_declarations + common_registers + phases["enable"], set())
     local = {operation["symbol"].casefold() for operation in enable if operation["op"] in {"scan", "define"}}
-    disable, disable_requires, _, disable_names = _section(phases["common"] + phases["disable"], local)
+    disable, disable_requires, _, disable_names = _section(common_declarations + phases["disable"], local)
     # Disable-only requirements still need a known external provider.
     requires |= disable_requires - local
     names.update(disable_names)
