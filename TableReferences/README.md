@@ -1,6 +1,6 @@
 # Synthetic clean-room corpus (TableReferences)
 
-This directory contains the 22 pinned case tables used by the corpus
+This directory contains the 23 pinned case tables used by the corpus
 denominator tool (`tools/corpus_denominator/`). All files are
 independently authored, synthetic `.CT` tables; no third-party game table
 content is part of this repository. They exercise the same 39 gap classes
@@ -36,6 +36,7 @@ case number.
 | `case-19.ct` | Synthetic duplicate-ID robustness (Octopath/HellPie-style duplicate CheatEntry IDs; keep-first, dropped duplicates stay non-addressable, unique child of a dropped duplicate group survives re-parenting; WP-25) | `ct2synth19.exe` | `80690e8265e51cfe031ea02dbdd7bf2aeae898da034931f037044cbc930a3f7a` |
 | `case-20.ct` | Synthetic Lua-directive & phase-marker derivative (WP-26: no-op `{$...}` directives, precise unknown-directive error, structural in-block `[ENABLE]`/`[DISABLE]` boundaries with shared preamble, redundant `{$asm}` no-op, contentless `[DISABLE]` one-shot, duplicate marker stays fail-closed) | `ct2synth20.exe` | `43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c` |
 | `case-21.ct` | Synthetic runtime dynamic address provider (WP-38 / GC-B6: Lua provider registers exactly one symbol on enable and unregisters it on disable; the nearest heading carries the `address_provider` binding; three relative children `+10`/`+14`/`+18` adopt the runtime-resolved base as `expression/v1` values; the static module-relative sibling pins the module token) | `ct2synth21.exe` | `1f4ee77ea9b1e3d06ace85551fdbfd7e9662895485e5ea43dbd18559d3c5acbf` |
+| `case-22.ct` | Synthetic table-Lua bootstrap (WP-41, phase 1: read-only table LuaScript with the main body defining top-level globals `synthBase22` (read from `0x1008`) and the helper function `synthStep22`, plus the named script tab `SynthTab22` adding the constant global `synthLimit22` in document order; two record scripts reference the table globals and count as inactive at plan time, one record script is independent of the table source, one static module-relative value sibling) | `ct2synth22.exe` | `0f90e1bf8699469113b85fd812a4eb317d884eee905456e2c7afd37b4f0ce528` |
 | `case-23.ct` | Synthetic record-hotkey derivative (WP-40: F1 (VK 112) activation hotkey on the alloc-only anchor script, F2 (VK 113) value operation on the child 4-byte row, first-wins F1 conflict pair on the second script record) | `ct2synth23.exe` | `e3568de1225e5d84d8b468b0daaad64153c70c034a550754eb022caaa001dab3` |
 
 Game names appear only as documentation-level provenance of the synthetic

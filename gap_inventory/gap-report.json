@@ -25,18 +25,18 @@
    "custom_value": 4,
    "navigation": 2,
    "one_shot": 1723,
-   "persistent_script": 449,
+   "persistent_script": 452,
    "string_write": 732,
-   "value_freeze": 3180
+   "value_freeze": 3181
   },
   "confirmed_game_effect_actions": 0,
   "confirmed_percent": 0.0,
-  "expected_actions": 6088,
+  "expected_actions": 6092,
   "goal_90_percent": "NOT REACHED",
   "group_toggle_actions": 3,
   "groups_total": 1288,
   "missing_gates": [
-   "Real game installs/builds for the 22 pinned tables (user question unanswered)",
+   "Real game installs/builds for the 23 pinned tables (user question unanswered)",
    "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
    "VM/Clean-PC gate without CE/Python",
    "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -46,12 +46,12 @@
   ],
   "navigation_excluded": 2,
   "record_types": {
-   "aa_script": 2172,
+   "aa_script": 2175,
    "custom": 4,
    "string": 732,
-   "value": 3182
+   "value": 3183
   },
-  "records_total": 6090,
+  "records_total": 6094,
   "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
@@ -61,11 +61,11 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5511,
-   "statically_assumed": 537,
+   "locked": 5514,
+   "statically_assumed": 538,
    "unknown": 42
   },
-  "unique_tables": 22
+  "unique_tables": 23
  },
  "gap_labels": {
   "aa_conditional_block": {
@@ -225,7 +225,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run w3b-case21-20261018023823Z",
+ "generated": "run w3d-case22-20261018040510Z",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -154906,6 +154906,161 @@
    },
    "counts": {
     "categories": {
+     "persistent_script": 3,
+     "value_freeze": 1
+    },
+    "entries_total": 4,
+    "expected_actions": 4,
+    "gap_counts": {
+     "lua_host_profile": 3
+    },
+    "group_toggle_actions": 0,
+    "groups": 0,
+    "navigation_excluded": 0,
+    "record_types": {
+     "aa_script": 3,
+     "value": 1
+    },
+    "records": 4,
+    "status_counts": {
+     "locked": 3,
+     "statically_assumed": 1
+    }
+   },
+   "duplicate_ids": {},
+   "format_version": "45",
+   "groups": [],
+   "main_initialization": {
+    "gaps": [
+     "table_lua_lifecycle"
+    ],
+    "note": "Table Lua loads on import (statistical, without execution)",
+    "source": "table_lua",
+    "status": "locked"
+   },
+   "path": "case-22.ct",
+   "paths": [
+    "case-22.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_host_profile"
+       ],
+       "id": 1,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "table global direct",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label); with embedded Lua (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_host_profile"
+       ],
+       "id": 2,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "table global via helper and tab constant",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label); with embedded Lua (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_host_profile"
+       ],
+       "id": 3,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "independent record script",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label); with embedded Lua (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "module",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 4,
+       "lifetime": "read_write_freezable_value",
+       "name": "static sibling value",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "module_binding"
+       ],
+       "semantics": "4 Bytes value in ct2synth22.exe (module bound)",
+       "status": "statically_assumed",
+       "target_build": "module_binding:ct2synth22.exe",
+       "type": "value"
+      }
+     ]
+    }
+   ],
+   "sha256": "0f90e1bf8699469113b85fd812a4eb317d884eee905456e2c7afd37b4f0ce528",
+   "size_bytes": 2653,
+   "table": "case-22.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": true,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 3,
+     "gap": "lua_host_profile",
+     "label": "Lua host profile (bounded Lua host profile)",
+     "requirement": "N-01 / N-19"
+    }
+   ]
+  },
+  {
+   "architecture": {
+    "signals": [],
+    "value": "unknown"
+   },
+   "counts": {
+    "categories": {
      "persistent_script": 2,
      "value_freeze": 1
     },
@@ -155049,28 +155204,28 @@
    ]
   }
  ],
- "run_id": "w3b-case21-20261018023823Z",
+ "run_id": "w3d-case22-20261018040510Z",
  "top_gaps_pinned": [
   {
    "affected_records": 3385,
    "gap": "cross_record_symbol",
    "label": "Cross-record symbol resolution",
    "requirement": "N-07",
-   "share_of_expected_actions_percent": 55.6
+   "share_of_expected_actions_percent": 55.56
   },
   {
-   "affected_records": 1911,
+   "affected_records": 1914,
    "gap": "lua_host_profile",
    "label": "Lua host profile (bounded Lua host profile)",
    "requirement": "N-01 / N-19",
-   "share_of_expected_actions_percent": 31.39
+   "share_of_expected_actions_percent": 31.42
   },
   {
    "affected_records": 1723,
    "gap": "one_shot_save_contract",
    "label": "One-shot without ON/OFF save contract",
    "requirement": "state contract (AP-04)",
-   "share_of_expected_actions_percent": 28.3
+   "share_of_expected_actions_percent": 28.28
   },
   {
    "affected_records": 215,

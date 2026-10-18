@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-22 (WP-41 - table-Lua bootstrap, phase 1).
+     Module ct2synth22.exe.  The table-level LuaScript is read-only: the
+     main body defines the top-level globals synthBase22 (read from 0x1008)
+     and the helper function synthStep22, and the named script tab
+     SynthTab22 adds the constant global synthLimit22 in document order.
+     Two record scripts reference table-level globals (synthBase22 directly,
+     synthStep22/synthLimit22 via the helper) and therefore count as
+     record_scripts_inactive at plan time; one record script is independent
+     of the table source; one plain value record pins the module token.
+     Pinned 2026-10-18 in the W3 integration on base d15268a. -->
+<CheatTable CheatEngineTableVersion="45">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>1</ID>
+      <Description>"table global direct"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if not syntaxcheck then
+writeInteger(synthBase22 + 10, 7)
+end
+{$asm}
+[DISABLE]
+{$lua}
+if not syntaxcheck then
+writeInteger(synthBase22 + 10, 0)
+end
+{$asm}</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>2</ID>
+      <Description>"table global via helper and tab constant"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if not syntaxcheck then
+writeInteger(synthStep22(14), synthLimit22)
+end
+{$asm}
+[DISABLE]
+{$lua}
+if not syntaxcheck then
+writeInteger(synthStep22(14), 0)
+end
+{$asm}</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>3</ID>
+      <Description>"independent record script"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+if not syntaxcheck then
+writeInteger(0x1200, 9)
+end
+{$asm}
+[DISABLE]
+{$lua}
+if not syntaxcheck then
+writeInteger(0x1200, 0)
+end
+{$asm}</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>4</ID>
+      <Description>"static sibling value"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>ct2synth22.exe+2000</Address>
+      <Value>0</Value>
+    </CheatEntry>
+  </CheatEntries>
+  <LuaScript>
+-- CT2Trainer clean-room corpus: synthetic table-Lua bootstrap (case-22).
+
+synthBase22 = readQword('0x1008')
+
+function synthStep22(n)
+  return synthBase22 + n
+end
+    <SynthTab22>
+-- second script tab, combined after the main body in document order.
+
+synthLimit22 = 3
+    </SynthTab22>
+  </LuaScript>
+  <UserdefinedSymbols/>
+</CheatTable>

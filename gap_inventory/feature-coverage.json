@@ -1,7 +1,7 @@
 {
  "ap11_exclusions": [
   {
-   "gate": "Real game installs/builds for the 22 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 23 pinned tables (user question unanswered)",
    "reason": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists."
   },
   {
@@ -21,21 +21,21 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 22,
+    "actual": 23,
     "check": "pinned_table_count",
-    "expected": 22,
+    "expected": 23,
     "ok": true
    },
    {
-    "actual": 6088,
+    "actual": 6092,
     "check": "expected_actions",
-    "expected": 6088,
+    "expected": 6092,
     "ok": true
    },
    {
-    "actual": 6090,
+    "actual": 6094,
     "check": "category_counts_sum",
-    "expected": 6090,
+    "expected": 6094,
     "ok": true
    },
    {
@@ -47,7 +47,7 @@
    {
     "actual": [
      3385,
-     1911,
+     1914,
      1723,
      215,
      36,
@@ -60,7 +60,7 @@
     "check": "top_gaps_pinned_match",
     "expected": [
      3385,
-     1911,
+     1914,
      1723,
      215,
      36,
@@ -248,6 +248,7 @@
    },
    {
     "actual": [
+     "0f90e1bf8699469113b85fd812a4eb317d884eee905456e2c7afd37b4f0ce528",
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
      "1f4ee77ea9b1e3d06ace85551fdbfd7e9662895485e5ea43dbd18559d3c5acbf",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
@@ -273,6 +274,7 @@
     ],
     "check": "pinned_shas_in_inventory",
     "expected": [
+     "0f90e1bf8699469113b85fd812a4eb317d884eee905456e2c7afd37b4f0ce528",
      "1aa44cd499c1ec7bc3e377933e7ccd482a33a1e485d8eccf90316ef820e6cad2",
      "1f4ee77ea9b1e3d06ace85551fdbfd7e9662895485e5ea43dbd18559d3c5acbf",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
@@ -313,9 +315,9 @@
  "coverage": {
   "action_weighted_coverage_percent": 100.0,
   "actions_weight_ap11_excluded": 0,
-  "actions_weight_covered": 7413,
-  "actions_weight_in_scope": 7413,
-  "actions_weight_total": 7413,
+  "actions_weight_covered": 7416,
+  "actions_weight_in_scope": 7416,
+  "actions_weight_total": 7416,
   "feature_weighted_coverage_percent": 100.0,
   "features_covered": 42,
   "features_excluded_ap11": 4,
@@ -545,9 +547,9 @@
    "affected_records": null,
    "ap11_excluded": true,
    "evidence": [],
-   "gate": "Real game installs/builds for the 22 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 23 pinned tables (user question unanswered)",
    "kind": "missing_gate",
-   "label": "Real game installs/builds for the 22 pinned tables (user question unanswered)",
+   "label": "Real game installs/builds for the 23 pinned tables (user question unanswered)",
    "modules": [],
    "note": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists.",
    "requirement": "AP-11 game gate",
@@ -680,7 +682,7 @@
     "src/ct2trainer/native/compiler.py",
     "src/ct2trainer/table.py"
    ],
-   "note": "Demonstrated for all 22 pinned tables: every source record is preserved (no silent drops), and each table-level construct — Forms, the table-Lua lifecycle, Custom types and embedded Assets — is handled or surfaced fail-closed (ignored_sections / lua_bootstrap / blocked-with-reason). A synthetic embedded-Files case proves the Assets path.",
+   "note": "Demonstrated for all 23 pinned tables: every source record is preserved (no silent drops), and each table-level construct — Forms, the table-Lua lifecycle, Custom types and embedded Assets — is handled or surfaced fail-closed (ignored_sections / lua_bootstrap / blocked-with-reason). A synthetic embedded-Files case proves the Assets path.",
    "requirement": "AP-10 missing gate (in-scope)",
    "status": "covered"
   },
@@ -812,7 +814,7 @@
    "status": "covered"
   },
   "lua_host_profile": {
-   "affected_records": 1911,
+   "affected_records": 1914,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_lua.py",
@@ -1170,15 +1172,15 @@
    "status": "covered"
   }
  },
- "generated": "run w3b-case21-20261018023823Z",
+ "generated": "run w3d-case22-20261018040510Z",
  "lane": "AP-10 feature matrix and coverage metric (read-only, static)",
- "run_id": "w3b-case21-20261018023823Z",
+ "run_id": "w3d-case22-20261018040510Z",
  "schema": "corpus-feature-matrix/v1",
  "source": {
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "46510af65235ce33112a2c73cdaa398d03404fde79aebaf3f7f10d04f5e719ee",
+  "gap_report_sha256": "bbd0108f7345f56ab5404d9c48d32448c828b37725e41cb75a462207650828bb",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "c14a7a1d081be1461dca0e1ee9bf8203783e870dd145cf6cc6a8cc66324ce4c9"
+  "inventory_sha256": "47704fdaeea0a4be53bba078b99e4bae6c5ac9bb97c1b173e653899b6aaa8c56"
  },
  "top10_priority": []
 }
