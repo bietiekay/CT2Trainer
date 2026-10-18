@@ -586,6 +586,12 @@ def validate_plan(plan: dict) -> None:
                 if len(candidates)>1:
                     raise NativeRuntimeError('An external global consumer requires one unambiguous selected declarer')
     visiting, completed = set(), set()
+    # WP-46 (part 1): table-level <UserdefinedSymbols> provide required
+    # symbols without owning a record.  The engine seeds them into the
+    # runtime symbol table at init, so they count as available providers
+    # here (the strict map checks already ran in the compiler validator
+    # this function delegates to first).
+    uds_available = {name.casefold() for name in (plan.get("user_defined_symbols") or {})}
 
     def visit(identifier: int) -> None:
         if identifier in visiting:
@@ -599,6 +605,8 @@ def validate_plan(plan: dict) -> None:
         for name in entry.get("requires", []):
             provider = providers.get(name.casefold())
             if provider is None:
+                if name.casefold() in uds_available:
+                    continue
                 raise NativeRuntimeError(f"Selected entry requires an unavailable symbol: {name}")
             visit(provider)
         visiting.remove(identifier)
@@ -1219,6 +1227,16 @@ class TrainerEngine:
             self.applied: dict[int, list[_Patch]] = {}
             self.local_symbols: dict[int, dict[str, int]] = {}
             self.symbols: dict[str, int] = {}
+            # WP-46 (part 1): seed the runtime symbol table with the
+            # table-level <UserdefinedSymbols> static definitions (plan
+            # field, casefolded keys).  Without this seed, records whose
+            # only provider is a UDS symbol would fail link/activation
+            # resolution (fail-closed).  Record-registered symbols
+            # overwrite these seeds at runtime registration
+            # (self.symbols.update), matching CE's resolution order:
+            # program registrations beat the userdefined symbol table.
+            for symbol, address in (plan.get("user_defined_symbols") or {}).items():
+                self.symbols[symbol.casefold()] = address
             self.frozen: dict[int, tuple[int, bytes]] = {}
             self.memory: Any = None
             self.status = "Waiting for " + plan["process_name"]

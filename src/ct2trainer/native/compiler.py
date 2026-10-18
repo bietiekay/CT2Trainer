@@ -17,7 +17,7 @@ import struct
 import xml.etree.ElementTree as ET
 
 from ..table import (MAX_ENTRIES, MAX_TABLE_BYTES, MAX_HOTKEYS_PER_RECORD,
-                     SIMPLE_VALUE_TYPES, Entry,
+                     MAX_UDS_ENTRIES, SIMPLE_VALUE_TYPES, Entry,
                      numeric_literal_safe, read_table)
 from .hotkey_model import (ACTIVATION_HOTKEY_ACTIONS, VALUE_HOTKEY_ACTIONS,
                            format_hotkey_keys)
@@ -475,8 +475,20 @@ def _native_literal_safe(value: str, value_type: str, hexadecimal: bool,
     return (-(1 << (bits - 1)) if native_signed else 0) <= number <= (1 << (bits - int(native_signed))) - 1
 
 
-def _dependencies(entries: list[dict], selected: set[int] | None = None) -> None:
-    """Reject missing/ambiguous symbol providers and their dependent records."""
+def _dependencies(entries: list[dict], selected: set[int] | None = None,
+                  uds_symbols: dict[str, int] | None = None) -> None:
+    """Reject missing/ambiguous symbol providers and their dependent records.
+
+    ``uds_symbols`` (WP-46, part 1) maps casefolded table-level
+    <UserdefinedSymbols> names to their static addresses.  A user-defined
+    symbol provides a requirement only when no supported record provides
+    it: the fallback fires exclusively in the zero-candidate branch below,
+    so the supported-provider rules (including the WP-37 keep-first
+    duplicate policy) are untouched.  Records resolved this way gain no
+    dependency_ids, so they cannot cascade from a later provider block;
+    the static address itself is resolved at link/activation time from the
+    runtime symbol table that the engine seeds from the plan field.
+    """
     providers: dict[str, list[dict]] = {}
     for entry in entries:
         if entry["supported"] and entry["kind"] == "script":
@@ -538,6 +550,15 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None) -> None
                 candidates = [candidate for candidate in providers.get(symbol.casefold(), [])
                               if candidate["supported"]]
                 if len(candidates) != 1:
+                    if (len(candidates) == 0 and uds_symbols
+                            and symbol.casefold() in uds_symbols):
+                        # WP-46 (part 1): no supported record provides this
+                        # symbol, so the table-level user-defined symbol
+                        # covers the requirement; no record dependency
+                        # arises and the record stays supported.  The
+                        # static address is seeded into the runtime symbol
+                        # table by the engine from the plan field.
+                        continue
                     _block(entry, f"Required symbol has no unique supported provider: {symbol}.")
                     changed = True
                     break
@@ -1168,7 +1189,13 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                 _block(entry, str(exc))
     async_ids = {source.id for source in table.entries
                  if source.kind == "script" and source.async_script}
-    _dependencies(entries,selected)
+    # WP-46 (part 1): table-level <UserdefinedSymbols> act as static symbol
+    # definitions for every record; they provide a symbol only when no
+    # supported record provides it (zero-candidate fallback inside
+    # _dependencies), so record providers always win.
+    uds_symbols = {symbol.name.casefold(): symbol.address
+                   for symbol in table.user_defined_symbols}
+    _dependencies(entries, selected, uds_symbols)
     # WP-38: adopt proven runtime bases for blocked relative values before
     # the selection closure and the staged/recursive post-passes see the
     # final supported state (the recompiled values carry no symbol
@@ -1297,7 +1324,7 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     if table.has_table_lua:
         warnings.append("Table Lua is not executed on load. Read-only helpers replay in each Lua activation; top-level writes, callbacks and unsupported APIs block activation.")
     for section in table.sections:
-        if section.name not in {"CheatEntries", "LuaScript"}:
+        if section.name not in {"CheatEntries", "LuaScript", "UserdefinedSymbols"}:
             omitted.append(section.name)
     if omitted:
         warnings.append("Table-level sections not interpreted: " + ", ".join(sorted(set(omitted))) + ".")
@@ -1386,6 +1413,19 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     if external_owned_providers:
         plan["external_owned_providers"] = {symbol: external_owned_providers[symbol]
                                             for symbol in sorted(external_owned_providers)}
+    # WP-46 (part 1): table-level static symbol definitions from
+    # <UserdefinedSymbols>.  Emitted only when non-empty (byte-stable plans
+    # otherwise, WP-40 convention).  A symbol enters only when no supported
+    # script record provides it — record providers always win — so the
+    # engine seeds the runtime symbol table with exactly this residual map.
+    supported_provides = {symbol.casefold()
+                          for entry in entries
+                          if entry["supported"] and entry["kind"] == "script"
+                          for symbol in entry["provides"]}
+    uds_plan = {key: uds_symbols[key] for key in sorted(uds_symbols)
+                if key not in supported_provides}
+    if uds_plan:
+        plan["user_defined_symbols"] = uds_plan
     validate_plan(plan)
     return plan
 
@@ -1880,6 +1920,39 @@ def validate_plan(plan: dict) -> None:
                     normalized[int(parent_key)][int(child_key)] = flag
             if normalized != expected_relations:
                 raise NativeCompileError("parent_relations do not re-derive from the plan entries.")
+        # WP-46 (part 1): the table-level user-defined symbol map is
+        # strict-validated like every other additive plan field: a bounded
+        # casefold-unique mapping of valid symbol names to 64-bit unsigned
+        # addresses, with no overlap against the symbols a supported script
+        # record actually provides (a forged map that would shadow a record
+        # provider at runtime is refused).
+        uds_map = plan.get("user_defined_symbols")
+        if uds_map is not None:
+            if plan["schema"] != 2:
+                raise NativeCompileError("user_defined_symbols requires schema 2")
+            if not isinstance(uds_map, dict) or len(uds_map) > MAX_UDS_ENTRIES:
+                raise NativeCompileError("user_defined_symbols must be a bounded symbol map.")
+            uds_keys: set[str] = set()
+            for key, value in uds_map.items():
+                if not isinstance(key, str) or not key:
+                    raise NativeCompileError("user_defined_symbols keys must be symbol names.")
+                try:
+                    validate_symbol(key)
+                except AAError as exc:
+                    raise NativeCompileError(str(exc)) from exc
+                folded = key.casefold()
+                if folded in uds_keys:
+                    raise NativeCompileError("Duplicate user-defined symbol name.")
+                uds_keys.add(folded)
+                if type(value) is not int or not (0 <= value <= 0xFFFFFFFFFFFFFFFF):
+                    raise NativeCompileError("user_defined_symbols values must be 64-bit unsigned integers.")
+            record_provides = {symbol.casefold()
+                               for entry in entries
+                               if entry.get("supported") and entry.get("kind") == "script"
+                               for symbol in entry.get("provides", [])}
+            if uds_keys & record_provides:
+                raise NativeCompileError(
+                    "user_defined_symbols may not shadow a record-provided symbol.")
         identity_fields = {"engine": "ct2trainer", "schema": plan["schema"],
                            "table_sha256": plan["table_sha256"],
                            "process_name": plan["process_name"].casefold(), "selected_ids": selected}
