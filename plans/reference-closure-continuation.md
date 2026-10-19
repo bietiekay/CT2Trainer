@@ -480,6 +480,314 @@ stay inactive"). Case: `case-22`.
   entry. When `case-19` is added to the pinned corpus, the gate:1 count
   assertion is updated by the root (unique-ID count for case-19).
 
+- **WP-46 part 2 — one-shot provider handover + extended literal registerSymbol extraction (designed 2026-10-19; case-28):**
+  1. *Extended extraction (`lua_symbol_providers.py`).* (a) The CE helper form
+     `Register.symbol('name', …)` (case-insensitive, dotted form) counts as
+     registration evidence alongside `registerSymbol('name', …)` — observed in
+     the Octopath2 table (`Register.symbol('UE_version', Recorder.getStaticAddress(addr))`).
+     (b) `unregisterSymbol('name')` accepts one optional trailing argument
+     (e.g. `unregisterSymbol('name', false)`); the lookbehind guard that keeps
+     `unregisterSymbol(` out of the register pattern is preserved. (c) All else
+     unchanged: literal names only, name grammar
+     `[A-Za-z_][A-Za-z0-9_]*`, comment stripping, `MAX_PROVIDERS = 64` bound
+     with whole-extraction-empty behavior (never truncate).
+  2. *One-shot adoption.* For records classified one-shot (missing/empty
+     `[DISABLE]` — the existing one-shot classification), ENABLE-phase literal
+     registration evidence is adopted into `provides` WITHOUT a matching
+     unregister. Non-one-shot records keep the strict register ∩ unregister
+     rule: register-only evidence stays unproven (fail-closed, unchanged).
+  3. *Plan surface.* Adopted symbols merge into `entry["provides"]` as today
+     (casefold-sorted). One-shot handover owners enter the existing
+     `external_owned_providers` adoption rule unchanged (exactly one supported
+     provider; contested symbols stay out of the map; table-Lua-claimed symbols
+     stay excluded). No new plan field: the owner's one-shot nature rides on
+     the owner entry's existing `one_shot` flag, which both gates re-derive
+     from source.
+  4. *Validator re-derivation.* The registered == unregistered == provides
+     check (compiler `validate_plan`, "Script symbol dependency/registration
+     metadata does not match its operations") branches on the owner entry's
+     one-shot classification: non-one-shot → registered ∩ unregistered ==
+     provides; one-shot → registered == provides (unregister side empty).
+     Forged provides are refused by both gates as today.
+  5. *Runtime handover (release-on-detach).* The owner's Lua registers the
+     symbol at activation through the existing runtime path (collision
+     refusal "Symbol is already owned or the activation limit is reached"
+     preserved). Release happens exactly once at owner-scope retirement
+     (scope close on deactivation / target exit / trainer close) — not at a
+     record deactivation, since one-shot records have no disable phase —
+     extending the WP-37 exactly-once-release invariant to one-shot owners.
+     Consumers keep their `dependency_ids` to the owner and the existing
+     provider-liveness blocking.
+  6. *Scope limits / expected unblock.* Contested symbols keep the existing
+     named duplicate block; table-Lua-claimed symbols stay excluded from
+     handover; non-one-shot register-only stays unproven. Targets: the
+     P3Reload one-shot provider shape (~124 consumer cascade), AtomicHeart
+     `BaseAddress` ×15, DS2 `g_GameModule` ×10 (3-arg `registerSymbol`).
+     Measured by the blocked-catalog re-run after merge.
+- **WP-49 — self-provision exclusion in symbol dependency resolution (designed 2026-10-19; case-30):**
+  1. *Failure shape (GC-E7; verified in `compiler.py:_dependencies` and
+     AtomicHeart 239469/239470 in the reference corpus).* Record X registers
+     symbol S (`registersymbol`) and defines S as its own positional label in
+     its own program (separate from its alloc name, as in
+     `Character_Pointer: dq 0`). When another supported record Y also
+     provides S, the WP-28 label re-declaration pass re-declares X's
+     positional label as an external requirement (S joins X's `requires`);
+     keep-first (WP-37/45) then blocks Y as the duplicate. In the fixed-point
+     pass X's only supported candidate for S is X itself → self
+     `dependency_id` → the DFS marks the cycle → X is blocked with the exact
+     "Symbol dependency cycle is unsupported." (the 3 named records:
+     AtomicHeart / Scorn / HellPie — one such pointer-script provider per
+     table). Every record depending on X cascades with "Required symbol
+     provider is blocked." — the 799-record cluster (AtomicHeart 267 /
+     Scorn 266 / HellPie 266, incl. `Esau_base` ×600 via id=239474). CE
+     resolves symbol dependencies lazily at patch time, so a record's own
+     registration satisfies its own reference; the one-pass plan must model
+     this statically.
+  2. *Self-provision rule.* When resolving an entry's requires, the entry
+     itself is excluded from the candidate providers for symbols it provides;
+     its own reference to such a symbol is satisfied by its own registration
+     — no dependency edge is emitted and the record stays supported
+     regardless of other providers. Other entries resolve the symbol through
+     the unchanged keep-first unique-supported-provider rule (with the same
+     self-exclusion: an entry never depends on itself).
+  3. *True cross-record cycles stay fail-closed.* Cycles between distinct
+     records (mutual or longer) remain blocked with the exact existing reason
+     "Symbol dependency cycle is unsupported." (64-level depth bound
+     unchanged). Rationale: a one-pass plan cannot prove an activation order
+     for mutually dependent providers; CE's lazy resolution is a documented
+     deviation.
+  4. *Engine mirror.* The availability DFS (engine `validate_plan`,
+     "Selected entry requires an unavailable symbol") and the selected
+     keep-first provider pass apply the same self-provision exclusion, so a
+     self-providing selected entry is not refused.
+  5. *Validation.* The `dependency_ids` shape/consistency checks and the
+     staged-metadata re-derivation accept the self-edge exclusion; a forged
+     self-edge in `dependency_ids` is still refused.
+  6. *Tests.* case-30 shape (records 70-74): the kept self-providing record
+     (own positional label + `registersymbol`, plus a keep-loser duplicate
+     provider) stays supported with no self-edge; its consumer gains
+     `dependency_ids` to it; the duplicate stays blocked with the exact
+     duplicate reason; the true mutual pair (C requires D's symbol, D
+     requires C's) stays blocked with the exact cycle reason; both plan
+     gates refuse forged dependency metadata (a self-edge in
+     `dependency_ids` is still refused).
+  7. *Expected unblock.* The GC-E7 cluster to the extent it stems from
+     self-provision; the residual is measured by the post-merge catalog
+     re-run (do not assume the full 799 clears).
+- **WP-50 — dynamic script-parent address providers (designed 2026-10-19; case-30):**
+  1. *Target shape (Octopath2-style, verified in the reference corpus).* An
+     addressless record T (group heading with empty `<Address/>`, e.g.
+     `moHideChildren` group "Pointer->Selected Player Data" id=23492, or an
+     addressless script) carries relative children (`+220`, …). A sibling
+     supported script record S (id=10050 "Playable Character Data Editor")
+     computes the base at runtime (loop over a live list, possibly a
+     `createTimer`) and writes it into T's address from its record Lua:
+     `AddressList['<label>'].address = <expr>` — possibly via a locally bound
+     constant-index array (`local mr = {AddressList['<label>'],
+     AddressList['<label2>']}; … mr[2].address = addr;`) — with `…address =
+     nil` in `[DISABLE]`. No symbol is registered: the base is a
+     record-address write, not a symbol.
+  2. *Bounded static extraction.* A new pure-text analysis beside
+     `lua_symbol_provides` (lua_program.py), limited to the two idioms above:
+     (a) direct `AddressList['<label>'].address = <expr>`; (b) `local <name>
+     = { AddressList['<label>'], … }` (constant elements only) followed by
+     `<name>[K].address = <expr>` with a constant 1-based integer K.
+     `<label>` resolves to exactly one entry ID via exact description lookup
+     (case-sensitive, XML-unescaped); ambiguous or missing label → no marker
+     (the record keeps today's behavior). A `= nil` DISABLE counterpart for
+     the same target is expected but its absence does not invalidate the
+     marker (clearing also happens at scope retirement).
+  3. *Plan model (additive, schema 2, no bump).* The existing
+     `address_provider` marker is generalized to the target entry T:
+     `{"provider_id": <int>, "symbol": <str|null>}`. `symbol == null` ⇔ WP-50
+     direct address-write provider; a string symbol keeps today's WP-38
+     semantics byte-identically. T must be a supported addressless heading or
+     script entry (`address == ""`, `pointer_offsets == []`, not an
+     addressless placeholder); S must be a supported script entry whose
+     extraction names T; neither T nor S may be a descendant of the other
+     (both directions).
+  4. *Runtime mechanism.* New engine state `dynamic_addresses: dict[int, int]`
+     (target ID → live base). The broker's record lookups
+     (`addresslist.getMemoryRecordByID` / `getMemoryRecordByDescription`, and
+     table-provided name lookups wrapping them) return an engine-managed
+     record proxy instead of the bare entry ID: read accessors
+     `ID`/`Description`/`Address` (both spellings, matching the CE field
+     names) plus an `address` setter that (i) validates an int in address
+     range, (ii) checks the (provider record, target ID) pair against the
+     plan `address_provider` contract — only S's own live activation may
+     write T; any other writer or out-of-contract target is refused with the
+     named "Dynamic address write outside the planned provider contract.",
+     (iii) stores `dynamic_addresses[T] = value`. `address = nil` from the
+     same pair clears the entry. The proxy upgrade is documented in the plan
+     note; the 27 pinned tables' differential compile must stay
+     byte-identical (no pinned table triggers the marker, so plans are
+     unchanged).
+  5. *Child resolution.* Relative children of T resolve their base fresh from
+     `dynamic_addresses[T]` on every access (never persisted in the plan, no
+     cached base across activations — same contract as WP-38). While unset or
+     S not live (`_parent_effect_live` false) the existing exact refusal
+     "Address provider {provider_id} is not active." applies (provider_id =
+     S). Children keep `requires: []` / `dependency_ids: []` — S is not
+     auto-enabled; the user enables S and the children follow, exactly as
+     WP-38.
+  6. *Clearing and teardown.* S's deactivation, target exit, or trainer close
+     clears `dynamic_addresses` for S's targets (analogous to symbol
+     release; existing consumer-ordering guards apply); children are refused
+     with the same named reason afterwards. Re-activation re-resolves live —
+     timer-driven base changes between activations are followed (fresh read,
+     no cache).
+  7. *Validation.* Both gates: marker shape; `symbol: null` requires a
+     supported script provider with the static dynamic-address extraction
+     naming the target; forged markers (no extraction, wrong target, target
+     not addressless, cyclic pair) are refused with named reasons.
+  8. *Scope limits (documented).* Only the two static idioms are admitted;
+     compatibility with real table helper layers (Octopath2's encoded
+     `Starter.lua`/`Recorder.lua`; `AddressList` is table-defined, not CE
+     core) is verified under AP-11 on the real target; label mapping is
+     exact-description lookup only.
+  9. *Expected unblock.* GC-E8 — current exact plan-level refusal "Relative
+     address has no address-bearing ancestor." (330: Octopath2 327, HFW 1,
+     AtomicHeart 1, DS2 1) to the extent the shapes match the idioms;
+     measured by the post-merge catalog re-run.
+- **WP-53 — OS hotkey capture + group-heading hotkeys (designed 2026-10-19; case-29):**
+  1. *Capture route (Windows, new module `hotkey_bridge.py`).* A hidden
+     message-only Win32 window (ctypes `CreateWindowExW` + private WNDPROC
+     class) is created at trainer start. Each unique registered combination
+     is registered via `RegisterHotKey(hwnd, id, mods, vk)`; `WM_HOTKEY`
+     maps the ID → `HotKeySpec` and enqueues it on a thread-safe queue. The
+     existing 250 ms poll loop drains the queue and calls
+     `engine.dispatch_hotkey(spec)` — all WP-40 model gates are unchanged
+     (focus gate = target attached; first-wins dedupe; tone policy;
+     `suppressed-*` statuses). `RegisterHotKey` failure
+     (E_ACCESS_DENIED/E_INVALID_PARAMETER) surfaces through the existing
+     `hotkey_warnings` list with a named reason ("OS hotkey registration
+     failed for <key text>: <reason>."); the binding stays visible and
+     programmatic dispatch keeps working. All registrations are released on
+     trainer close (no OS leak).
+  2. *Platform gate.* `hotkey_bridge_available()` is true on Windows only;
+     elsewhere the module is a no-op and dispatch stays programmatic-only
+     (non-Windows dev and Deck runs keep working; the real-OS route stays
+     AP-11 evidence).
+  3. *Group-heading hotkeys.* Extend `_hotkey_toggleable` to accept all
+     supported group headings (today: scripts + flagged headings only). CE
+     7.5 behavior reference (read-only): a group's Activate hotkey toggles
+     the group's own active state; child propagation happens only with
+     `moActivateChildrenAsWell`/`moDeactivateChildrenAsWell` (legacy
+     `moBindActivation` loads as both). CT2Trainer terms: a flagged heading
+     (existing `parent_activation`) runs the existing parent-activation
+     cascade over the subtree; a plain `moHideChildren` group (e.g. Ace7
+     id=8848, Alt+Insert, no cascade flags) toggles the group's own state
+     only — no child propagation (CE parity). The named refusal "… not
+     registered: record has no activation action." stays for blocked /
+     non-toggleable rows.
+  4. *Liveness and dedupe.* Group-heading bindings register when the session
+     is attached (CE registers group hotkeys at table load; no
+     child-liveness requirement); they join the same first-wins namespace as
+     record bindings with the existing exact conflict warning.
+  5. *Tests.* Dedicated `test_native_os_hotkeys.py`: fake-bridge spec
+     injection → `dispatch_hotkey` with focus/dedupe/heading semantics; the
+     ID→spec mapping and the failure-warning path unit-tested without a real
+     window (the real `RegisterHotKey` route stays AP-11); case-29 shape:
+     plain `moHideChildren` group hotkey toggles the group state without
+     children; flagged group propagates through the existing cascade.
+- **WP-54 — table-Lua phase 2: persistent scheduler + table-scoped symbols (designed 2026-10-19; case-29/30):**
+  1. *Persistent `createTimer` (a).* Keep current behavior contractual:
+     table-Lua `createTimer` at bootstrap creates a live timer in the table
+     scope, ticked by the existing poll loop for the table's lifetime,
+     destroyed at scope retirement. The dependent-record replay problem is
+     fixed by making the table-source replay into record scopes
+     *scheduler-free*: during `install_helpers` replay, `createTimer`/
+     `createThread` calls in the table source bind to inert stubs (property
+     assignment accepted, `destroy()` no-op, callbacks never fire), so the
+     table globals establish while real timers live only in the table scope.
+     Replay still refuses target-memory mutation as today (named reasons
+     unchanged); record Lua's own scheduler stays real.
+  2. *Table-scoped symbol registration (b).* `registerSymbol`/
+     `unregisterSymbol` are admitted in the table scope, owned by the table
+     scope (new owner class, distinct from record scopes). Static extraction:
+     the existing literal-pair extractor applied to the combined table source
+     yields a new plan field `table_lua_symbols` (casefold-sorted list;
+     additive schema 2; re-derived from `plan["lua_bootstrap"]["source"]` by
+     BOTH gates; forged lists refused). Residual rule (same as UDS):
+     `table_lua_symbols = extracted pairs − {symbols provided by supported
+     script records}` — record providers always win, so the bootstrap skips
+     symbols a supported record owns (no runtime collision); under partial
+     selection the table symbol registers anyway and consumers without a
+     selected record provider resolve through it. Unexpected runtime
+     collision → named "Table Lua symbol registration conflict: <name>."
+     recorded in `table_lua.reasons` (fail-soft per WP-41).
+  3. *Consumer resolution.* A record requiring a `table_lua_symbols` name
+     with no supported record provider resolves through the table symbol
+     like the UDS fallback (no `dependency_ids` — the table scope is live
+     for the whole attach; the bootstrap precedes wish restore).
+  4. *Teardown order (c).* Invert today's table-first retirement: record
+     scopes retire leaves-first as today, then the table scope retires
+     (table symbol release + table timer cancellation). Invariant: a table
+     symbol is released exactly once, only after all record consumers are
+     retired; pinned by an event-trace test (WP-37 style).
+  5. *UDS reseed fix (d).* Move the `user_defined_symbols` runtime seed from
+     `__init__`-only to every confirmed attach (after the target-exit symbols
+     clear, before wish restore), so UDS-backed records survive re-attach
+     within one trainer session; covered by a re-attach test. (Verified gap:
+     engine.py seeds only at init, `self.symbols.clear()` at target exit has
+     no reseed path.)
+  6. *`record_scripts_inactive`* semantics unchanged (plan-level count,
+     selection-independent, both gates re-derive).
+  7. *Expected unblock.* GC-E17 (49 tables' dependent records, i.e. the
+     `record_scripts_inactive` population) plus table-scope symbol shapes
+     (GoW `goPlayer` ×28); measured by the post-merge catalog re-run.
+- **WP-57 — placeholder-token AOB + region-symbol disposition (designed 2026-10-19; no new pin in B4, cycle-end case-32 decision by root):**
+  1. *Token contract (from the local Plus-27 evidence,
+     `sinking2-extract-crosscheck.md` §6).* Pattern-side token `s<N>.<M>` = M
+     wildcard bytes at that position (observed: `s1.2` → 2 bytes, `s1.1` → 1
+     byte; every observed pattern occurrence carries the byte-count suffix).
+     Patch-side bare `s<N>` references the bytes captured at that token's
+     position (observed uses: `db 48 8B 9F s1 00 00`, `mov rbx,[rdi+s1]`,
+     `call qword ptr [rax+s1]`, `mov [rcx+s1],edx` — the byte count is taken
+     from the definition, never restated). A token is defined exactly once
+     per pattern; at most 16 tokens per pattern; M ∈ {1, 2}.
+  2. *Scan and capture.* Patterns compile with wildcards at token positions
+     (extend the shared `patterns.py` grammar; `normalize_pattern`
+     canonicalizes `s<N>.<M>` as a marked wildcard span). At scan (all three
+     ops: `aobscan`/`aobscanmodule`/`aobscanregion`) the matched bytes at
+     each token offset are captured and stored per program activation:
+     in-memory for link/stage AND in the hook journal as
+     `captured_placeholders: {token: "hex"}` (persisted next to the block
+     `original`; the journal survives until the exact target exits, as
+     today).
+  3. *Link/patch substitution.* The program-dialect assembler substitutes
+     captured bytes for bare `s<N>` tokens at link time (after scan, before
+     stage). The inverse-link/disable check resolves `s<N>` from the captured
+     values — [DISABLE] sections use the same tokens (Plus-27 evidence) and
+     disable never rescans (existing rule unchanged).
+  4. *Named fail-closed refusals.* "Placeholder token s<N> is not defined in
+     the scan pattern." (patch references an undefined token); "Placeholder
+     token s<N> is defined more than once in the pattern."; "Placeholder
+     token byte count must be 1 or 2."; "More than 16 placeholder tokens in
+     one pattern."; "Placeholder tokens are not supported in assertions or
+     data literals." (assert keeps its exact-bytes capture semantics; the
+     data-literal path is unchanged). Scan miss keeps the existing exact
+     not-found refusal.
+  5. *Region symbols (`RapidFireSearchBegin` class).* No new machinery: a
+     region-boundary symbol with no table provider and no UDS entry keeps
+     the existing exact named refusal "Required symbol has no unique
+     supported provider: <sym>." CE resolves such symbols from its global
+     symbol table / other tables; CT2Trainer does not import cross-table
+     symbols (documented deviation, fail-closed). Great Circle records 33-38
+     (`s1.2` + external `GetCurrency`) stay blocked on the external symbol —
+     correct.
+  6. *Scope.* The classic dialect (`aa.py`) and the program dialect
+     (`aa_program.py`) share the extended grammar via `patterns.py`; the
+     nth-AOB helper and `luaCall` AOB keep their fixed-byte contract
+     (placeholders there → existing refusal).
+  7. *Acceptance.* Dedicated `test_native_placeholder_aob.py` (positive
+     end-to-end: scan with `s1.2`, capture, patch with `db … s1 …`, exact
+     disable-restore roundtrip, journal persistence across re-staging, every
+     refusal above). No new pinned corpus case in B4: the GC-E20 class (26
+     Plus-27 patterns + Great Circle 33-38) is measured by the post-merge
+     catalog re-run; a synthetic pin (case-32) is decided by root at cycle
+     end based on field evidence.
+
 ## 11. Change log
 
 | Date | Change | Evidence / open work |
