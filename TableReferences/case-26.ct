@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-26 (WP-43/44 — AA grammar + table-symbol pack, Requiem style). Module ct2synth26.exe.
+     Single-quoted db literal + single-quoted instruction operand (WP-43, byte-identical to the
+     double-quoted twin), pre-[ENABLE] define + registersymbol (WP-44), 3-arg globalalloc with
+     $process, multi-token registersymbol, unregistersymbol(*) + dealloc(*), pointer-chain label
+     definitions with consumer value rows, and one inert comments-only script (WP-44 demotion).
+     Pinned at the W4 B1 integration. -->
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>20</ID>
+      <Description>"quoted literal cave"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synthQ26, 32)
+registersymbol(synthQ26, synthQ26Str)
+synthQ26:
+mov eax,'ABCD'
+synthQ26Str:
+db 'synthString26'
+[DISABLE]
+unregistersymbol(*)
+dealloc(*)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>21</ID>
+      <Description>"globalalloc chain head"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+globalalloc(synthChain26, 24, $process)
+synthChain26:
+db 0 0 0 0 0 0 0 0
+db 0 0 0 0 0 0 0 0
+db 0 0 0 0
+ct2synth26.exe+3100:
+db CC
+[DISABLE]
+ct2synth26.exe+3100:
+db 90
+dealloc(synthChain26)
+unregistersymbol(synthChain26)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>22</ID>
+      <Description>"pre-enable define register patch"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>define(synthPre26, ct2synth26.exe+3000)
+registersymbol(synthPre26)
+[ENABLE]
+assert(synthPre26, 90)
+synthPre26:
+db 90
+[DISABLE]
+synthPre26:
+db 90
+unregistersymbol(synthPre26)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>23</ID>
+      <Description>"chain consumer float"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synthChain26</Address>
+      <Value>0</Value>
+      <Offsets>
+        <Offset>8</Offset>
+        <Offset>16</Offset>
+      </Offsets>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>24</ID>
+      <Description>"pre-symbol consumer int"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synthPre26</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>25</ID>
+      <Description>"documentation only"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{ This record documents the module layout only; no symbols, no patches. }
+[DISABLE]
+</AssemblerScript>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

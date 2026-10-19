@@ -24,19 +24,19 @@
   "category_counts": {
    "custom_value": 4,
    "navigation": 2,
-   "one_shot": 1723,
-   "persistent_script": 458,
+   "one_shot": 1724,
+   "persistent_script": 466,
    "string_write": 732,
-   "value_freeze": 3183
+   "value_freeze": 3193
   },
   "confirmed_game_effect_actions": 0,
   "confirmed_percent": 0.0,
-  "expected_actions": 6100,
+  "expected_actions": 6119,
   "goal_90_percent": "NOT REACHED",
   "group_toggle_actions": 3,
   "groups_total": 1288,
   "missing_gates": [
-   "Real game installs/builds for the 24 pinned tables (user question unanswered)",
+   "Real game installs/builds for the 27 pinned tables (user question unanswered)",
    "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
    "VM/Clean-PC gate without CE/Python",
    "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -46,12 +46,12 @@
   ],
   "navigation_excluded": 2,
   "record_types": {
-   "aa_script": 2181,
+   "aa_script": 2190,
    "custom": 4,
    "string": 732,
-   "value": 3185
+   "value": 3195
   },
-  "records_total": 6102,
+  "records_total": 6121,
   "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
@@ -61,11 +61,11 @@
    "unknown": "stays unknown; no reinterpretation as success cheats"
   },
   "status_counts": {
-   "locked": 5521,
-   "statically_assumed": 539,
+   "locked": 5539,
+   "statically_assumed": 540,
    "unknown": 42
   },
-  "unique_tables": 24
+  "unique_tables": 27
  },
  "gap_labels": {
   "aa_conditional_block": {
@@ -225,7 +225,7 @@
    "requirement": "N-05"
   }
  },
- "generated": "run w3e-case24-20261018051230",
+ "generated": "run w4-case31-20261019061339",
  "lane": "AP-10 static gap report (read-only, no script execution)",
  "pinned_tables": [
   {
@@ -155466,37 +155466,737 @@
      "requirement": "N-07"
     }
    ]
+  },
+  {
+   "architecture": {
+    "signals": [
+     "instr32:1 lines (not an architecture signal)"
+    ],
+    "value": "unknown"
+   },
+   "counts": {
+    "categories": {
+     "one_shot": 1,
+     "persistent_script": 3,
+     "value_freeze": 2
+    },
+    "entries_total": 6,
+    "expected_actions": 6,
+    "gap_counts": {
+     "aa_globalalloc_general": 1,
+     "cross_record_symbol": 2,
+     "lua_symbol_api": 3,
+     "one_shot_save_contract": 1
+    },
+    "group_toggle_actions": 0,
+    "groups": 0,
+    "navigation_excluded": 0,
+    "record_types": {
+     "aa_script": 4,
+     "value": 2
+    },
+    "records": 6,
+    "status_counts": {
+     "locked": 6
+    }
+   },
+   "duplicate_ids": {},
+   "format_version": "46",
+   "groups": [],
+   "main_initialization": {
+    "gaps": [
+     "lua_symbol_api"
+    ],
+    "id": 20,
+    "name": "quoted literal cave",
+    "note": "first depth-0 script record",
+    "source": "record",
+    "status": "locked",
+    "type": "aa_script"
+   },
+   "path": "case-26.ct",
+   "paths": [
+    "case-26.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": null,
+       "architecture": "x86",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 20,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "quoted literal cave",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "aa_globalalloc_general",
+        "lua_symbol_api"
+       ],
+       "id": 21,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "globalalloc chain head",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aa_globalalloc",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 22,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "pre-enable define register patch",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label); target ct2synth26.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth26.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 23,
+       "lifetime": "read_write_freezable_value",
+       "name": "chain consumer float",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_chain"
+       ],
+       "semantics": "Float value with 2 pointer offsets (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      },
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 24,
+       "lifetime": "read_write_freezable_value",
+       "name": "pre-symbol consumer int",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "one_shot",
+       "depth": 0,
+       "gaps": [
+        "one_shot_save_contract"
+       ],
+       "id": 25,
+       "lifetime": "one_shot_without_off_contract",
+       "name": "documentation only",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "One-shot action: empty/missing DISABLE section, no OFF contract",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      }
+     ]
+    }
+   ],
+   "sha256": "034b1d89e1da45dd05818b55bbbe8bb0db8e920cb6171aaa6304df3cd9a2fb5d",
+   "size_bytes": 2843,
+   "table": "case-26.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 3,
+     "gap": "lua_symbol_api",
+     "label": "Lua symbol API",
+     "requirement": "N-07 / N-19"
+    },
+    {
+     "affected_records": 2,
+     "gap": "cross_record_symbol",
+     "label": "Cross-record symbol resolution",
+     "requirement": "N-07"
+    },
+    {
+     "affected_records": 1,
+     "gap": "aa_globalalloc_general",
+     "label": "Globalalloc beyond the literal path",
+     "requirement": "AP-08 (Global)"
+    },
+    {
+     "affected_records": 1,
+     "gap": "one_shot_save_contract",
+     "label": "One-shot without ON/OFF save contract",
+     "requirement": "state contract (AP-04)"
+    }
+   ]
+  },
+  {
+   "architecture": {
+    "signals": [],
+    "value": "unknown"
+   },
+   "counts": {
+    "categories": {
+     "persistent_script": 3,
+     "value_freeze": 6
+    },
+    "entries_total": 9,
+    "expected_actions": 9,
+    "gap_counts": {
+     "cross_record_symbol": 5,
+     "dropdown_link": 1,
+     "lua_symbol_api": 3
+    },
+    "group_toggle_actions": 0,
+    "groups": 0,
+    "navigation_excluded": 0,
+    "record_types": {
+     "aa_script": 3,
+     "value": 6
+    },
+    "records": 9,
+    "status_counts": {
+     "locked": 9
+    }
+   },
+   "duplicate_ids": {},
+   "format_version": "46",
+   "groups": [],
+   "main_initialization": {
+    "gaps": [
+     "lua_symbol_api"
+    ],
+    "id": 31,
+    "name": "script-wins provider",
+    "note": "first depth-0 script record",
+    "source": "record",
+    "status": "locked",
+    "type": "aa_script"
+   },
+   "path": "case-27.ct",
+   "paths": [
+    "case-27.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 30,
+       "lifetime": "read_write_freezable_value",
+       "name": "UDS consumer float",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "Float value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 31,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "script-wins provider",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "cave_alloc",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 32,
+       "lifetime": "read_write_freezable_value",
+       "name": "shared symbol consumer",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite"
+       ],
+       "semantics": "4 Bytes value (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 40,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "alt provider A",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 41,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "alt provider B",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch (static address/label) (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 42,
+       "lifetime": "read_write_freezable_value",
+       "name": "alt consumer",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols synthAlt27",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      },
+      {
+       "address_kind": "symbol",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 43,
+       "lifetime": "read_write_freezable_value",
+       "name": "decimal offset chain",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_chain"
+       ],
+       "semantics": "4 Bytes value with 2 pointer offsets (cross-record symbol)",
+       "status": "locked",
+       "target_build": "table_symbols",
+       "type": "value"
+      },
+      {
+       "address_kind": "fixed",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "dropdown_link"
+       ],
+       "id": 44,
+       "lifetime": "read_write_freezable_value",
+       "name": "dangling link value",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "direct_address"
+       ],
+       "semantics": "4 Bytes value (fixed address, build-bound)",
+       "status": "locked",
+       "target_build": "build_bound_fixed_address",
+       "type": "value"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 45,
+       "lifetime": "read_write_freezable_value",
+       "name": "five deref chain",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols synthUdsBase27",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    }
+   ],
+   "sha256": "2695fb5735c61f817358bf94ce1c893f30efd7342f9e8d44de979e1e5e3f0bb7",
+   "size_bytes": 3918,
+   "table": "case-27.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 5,
+     "gap": "cross_record_symbol",
+     "label": "Cross-record symbol resolution",
+     "requirement": "N-07"
+    },
+    {
+     "affected_records": 3,
+     "gap": "lua_symbol_api",
+     "label": "Lua symbol API",
+     "requirement": "N-07 / N-19"
+    },
+    {
+     "affected_records": 1,
+     "gap": "dropdown_link",
+     "label": "Dropdown link to foreign records",
+     "requirement": "N-18"
+    }
+   ]
+  },
+  {
+   "architecture": {
+    "signals": [],
+    "value": "unknown"
+   },
+   "counts": {
+    "categories": {
+     "persistent_script": 2,
+     "value_freeze": 2
+    },
+    "entries_total": 4,
+    "expected_actions": 4,
+    "gap_counts": {
+     "cross_record_symbol": 1,
+     "lua_host_profile": 1,
+     "lua_process_api": 1,
+     "lua_symbol_api": 1
+    },
+    "group_toggle_actions": 0,
+    "groups": 0,
+    "navigation_excluded": 0,
+    "record_types": {
+     "aa_script": 2,
+     "value": 2
+    },
+    "records": 4,
+    "status_counts": {
+     "locked": 3,
+     "statically_assumed": 1
+    }
+   },
+   "duplicate_ids": {},
+   "format_version": "46",
+   "groups": [],
+   "main_initialization": {
+    "gaps": [
+     "lua_symbol_api"
+    ],
+    "id": 60,
+    "name": "aob first match",
+    "note": "first depth-0 script record",
+    "source": "record",
+    "status": "locked",
+    "type": "aa_script"
+   },
+   "path": "case-31.ct",
+   "paths": [
+    "case-31.ct"
+   ],
+   "records_by_group": [
+    {
+     "group": "(direct: root)",
+     "records": [
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_symbol_api"
+       ],
+       "id": 60,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "aob first match",
+       "parent": null,
+       "providers": [
+        "aa_grammar",
+        "aob_scan_module",
+        "aa_symbol_registration"
+       ],
+       "semantics": "AA patch with 1 AOB scan(s); target ct2synth31.exe (syntax assumption)",
+       "status": "locked",
+       "target_build": "module_binding:ct2synth31.exe",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": null,
+       "architecture": "unknown",
+       "async": false,
+       "category": "persistent_script",
+       "depth": 0,
+       "gaps": [
+        "lua_host_profile",
+        "lua_process_api"
+       ],
+       "id": 61,
+       "lifetime": "held_until_disable_or_target_exit",
+       "name": "record lua ce globals",
+       "parent": null,
+       "providers": [
+        "aa_grammar"
+       ],
+       "semantics": "AA patch (static address/label); with embedded Lua (syntax assumption)",
+       "status": "locked",
+       "target_build": "unresolved",
+       "type": "aa_script"
+      },
+      {
+       "address_kind": "fixed",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [],
+       "id": 62,
+       "lifetime": "read_write_freezable_value",
+       "name": "pointer value child",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_chain",
+        "direct_address"
+       ],
+       "semantics": "4 Bytes value with 2 pointer offsets (fixed address, build-bound)",
+       "status": "statically_assumed",
+       "target_build": "build_bound_fixed_address",
+       "type": "value"
+      },
+      {
+       "address_kind": "expression",
+       "architecture": "unknown",
+       "async": null,
+       "category": "value_freeze",
+       "depth": 0,
+       "gaps": [
+        "cross_record_symbol"
+       ],
+       "id": 63,
+       "lifetime": "read_write_freezable_value",
+       "name": "aob consumer",
+       "parent": null,
+       "providers": [
+        "typed_value_readwrite",
+        "pointer_expression"
+       ],
+       "semantics": "4 Bytes value (pointer expression); requires symbols synthAob31",
+       "status": "locked",
+       "target_build": "process_relative",
+       "type": "value"
+      }
+     ]
+    }
+   ],
+   "sha256": "1ab46a835ba1c8b016ff05e85aaab9678ed6f25c4bf7d96fe7ba38632435fcb0",
+   "size_bytes": 2861,
+   "table": "case-31.ct",
+   "table_flags": {
+    "cheat_codes": false,
+    "custom_types_section": false,
+    "embedded_files": false,
+    "forms": false,
+    "forms_count": 0,
+    "structures": false,
+    "table_lua": false,
+    "user_defined_symbols": 0
+   },
+   "top_gaps": [
+    {
+     "affected_records": 1,
+     "gap": "lua_symbol_api",
+     "label": "Lua symbol API",
+     "requirement": "N-07 / N-19"
+    },
+    {
+     "affected_records": 1,
+     "gap": "lua_host_profile",
+     "label": "Lua host profile (bounded Lua host profile)",
+     "requirement": "N-01 / N-19"
+    },
+    {
+     "affected_records": 1,
+     "gap": "lua_process_api",
+     "label": "Lua process API",
+     "requirement": "N-15 / AP-06"
+    },
+    {
+     "affected_records": 1,
+     "gap": "cross_record_symbol",
+     "label": "Cross-record symbol resolution",
+     "requirement": "N-07"
+    }
+   ]
   }
  ],
- "run_id": "w3e-case24-20261018051230",
+ "run_id": "w4-case31-20261019061339",
  "top_gaps_pinned": [
   {
-   "affected_records": 3387,
+   "affected_records": 3395,
    "gap": "cross_record_symbol",
    "label": "Cross-record symbol resolution",
    "requirement": "N-07",
-   "share_of_expected_actions_percent": 55.52
+   "share_of_expected_actions_percent": 55.48
   },
   {
-   "affected_records": 1917,
+   "affected_records": 1918,
    "gap": "lua_host_profile",
    "label": "Lua host profile (bounded Lua host profile)",
    "requirement": "N-01 / N-19",
-   "share_of_expected_actions_percent": 31.43
+   "share_of_expected_actions_percent": 31.34
   },
   {
-   "affected_records": 1723,
+   "affected_records": 1724,
    "gap": "one_shot_save_contract",
    "label": "One-shot without ON/OFF save contract",
    "requirement": "state contract (AP-04)",
-   "share_of_expected_actions_percent": 28.25
+   "share_of_expected_actions_percent": 28.17
   },
   {
-   "affected_records": 220,
+   "affected_records": 227,
    "gap": "lua_symbol_api",
    "label": "Lua symbol API",
    "requirement": "N-07 / N-19",
-   "share_of_expected_actions_percent": 3.61
+   "share_of_expected_actions_percent": 3.71
   },
   {
    "affected_records": 36,
@@ -155520,11 +156220,11 @@
    "share_of_expected_actions_percent": 0.39
   },
   {
-   "affected_records": 15,
+   "affected_records": 16,
    "gap": "dropdown_link",
    "label": "Dropdown link to foreign records",
    "requirement": "N-18",
-   "share_of_expected_actions_percent": 0.25
+   "share_of_expected_actions_percent": 0.26
   },
   {
    "affected_records": 11,
@@ -155534,11 +156234,11 @@
    "share_of_expected_actions_percent": 0.18
   },
   {
-   "affected_records": 8,
+   "affected_records": 9,
    "gap": "aa_globalalloc_general",
    "label": "Globalalloc beyond the literal path",
    "requirement": "AP-08 (Global)",
-   "share_of_expected_actions_percent": 0.13
+   "share_of_expected_actions_percent": 0.15
   }
  ]
 }

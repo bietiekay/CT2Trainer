@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-27 (WP-45/46 — provider/UDS pack, Innocence style). Module ct2synth27.exe.
+     Table-level <UserdefinedSymbols> (WP-46 part 1): a UDS-only-provided base consumed by a value
+     record (previously UDS-only blocked), and a symbol provided by BOTH a UDS entry and a script
+     record where the record provider wins (no UDS residual in the plan field).
+     WP-45 (lane w4-d): alternative provider pair for one symbol (selection-aware keep-first
+     dedupe: the default compile keeps provider 40, provider 41 stays blocked by the named
+     duplicate reason, the consumer binds to the kept provider); decimal/signed <Offset> slots
+     (the # decimal convention per CE ConvertHexStrToRealStr); a dangling DropDownListLink
+     demoted to an empty plain dropdown with a named plan warning; a 5-deref address chain
+     admitted by the raised indirection bound (2 -> 6). -->
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>30</ID>
+      <Description>"UDS consumer float"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>synthUdsBase27</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>31</ID>
+      <Description>"script-wins provider"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(synthShared27, 16)
+registersymbol(synthShared27)
+ct2synth27.exe+4000:
+db CC
+[DISABLE]
+ct2synth27.exe+4000:
+db 90
+unregistersymbol(synthShared27)
+dealloc(synthShared27)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>32</ID>
+      <Description>"shared symbol consumer"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synthShared27</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>40</ID>
+      <Description>"alt provider A"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+define(synthAlt27,1000)
+registersymbol(synthAlt27)
+[DISABLE]
+unregistersymbol(synthAlt27)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>41</ID>
+      <Description>"alt provider B"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+define(synthAlt27,1004)
+registersymbol(synthAlt27)
+[DISABLE]
+unregistersymbol(synthAlt27)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>42</ID>
+      <Description>"alt consumer"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synthAlt27+4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>43</ID>
+      <Description>"decimal offset chain"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synthUdsBase27</Address>
+      <Offsets>
+        <Offset>#200+#40</Offset>
+        <Offset>#-16</Offset>
+      </Offsets>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>44</ID>
+      <Description>"dangling link value"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>15000</Address>
+      <DropDownListLink>SynthGhostList27</DropDownListLink>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>45</ID>
+      <Description>"five deref chain"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>[[[[[synthUdsBase27]]]]]</Address>
+      <Value>0</Value>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols>
+    <SymbolEntry><Name>synthUdsBase27</Name><Address>0x140000000</Address></SymbolEntry>
+    <SymbolEntry><Name>synthShared27</Name><Address>0x140001000</Address></SymbolEntry>
+  </UserdefinedSymbols>
+</CheatTable>

@@ -212,8 +212,8 @@ class CorpusLinkDiagnosticShapeTests(unittest.TestCase):
                 "The synthetic clean-room corpus is intentionally excluded "
                 "from the Native source distribution.")
         paths = sorted(corpus.glob("*.ct"))
-        self.assertEqual(len(paths), 24, "The repository compatibility corpus "
-                                         "must retain all 24 case tables.")
+        self.assertEqual(len(paths), 27, "The repository compatibility corpus "
+                                         "must retain all 27 case tables.")
         missing = ambiguous = 0
         demotions = []
         for path in paths:
@@ -234,18 +234,26 @@ class CorpusLinkDiagnosticShapeTests(unittest.TestCase):
                 demotions.extend(warning for warning in plan["warnings"]
                                  if warning.endswith("The linked dropdown is demoted to an empty list."))
         # WP-45 (GC-E9): no record is blocked on a missing link target
-        # anymore; the pinned corpus's single dangling target (case-16
-        # part 2, record 14, "no such list") now demotes to a supported
-        # record with an empty plain dropdown and exactly one warning.
+        # anymore; the pinned corpus's two dangling targets (case-16 part 2,
+        # record 14, "no such list"; case-27 record 44, "SynthGhostList27")
+        # now demote to supported records with empty plain dropdowns and
+        # exactly one warning each.
         self.assertEqual((missing, ambiguous), (0, 0))
         self.assertEqual(demotions, [
             "Record 14 ('dangling link (stays blocked)'): Dropdown link target is missing: "
-            "'no such list' matches no record label. The linked dropdown is demoted to an empty list."])
+            "'no such list' matches no record label. The linked dropdown is demoted to an empty list.",
+            "Record 44 ('dangling link value'): Dropdown link target is missing: "
+            "'SynthGhostList27' matches no record label. The linked dropdown is demoted to an empty list."])
         case16 = compile_table(paths[15], "Target.exe")
         record14 = next(entry for entry in case16["entries"] if entry["id"] == 14)
         self.assertTrue(record14["supported"], record14["reason"])
         self.assertEqual(record14["dropdown"], {"choices": [], "read_only": False})
         self.assertNotIn("link_target_id", record14["dropdown"])
+        case27 = compile_table(paths[25], "Target.exe")
+        record44 = next(entry for entry in case27["entries"] if entry["id"] == 44)
+        self.assertTrue(record44["supported"], record44["reason"])
+        self.assertEqual(record44["dropdown"], {"choices": [], "read_only": False})
+        self.assertNotIn("link_target_id", record44["dropdown"])
 
 
 class LinkedDropdownEngineTests(unittest.TestCase):

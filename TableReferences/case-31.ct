@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-31 (WP-55/56 — Sinking City 2 field shapes, anonymized). Module ct2synth31.exe.
+     Multi-match AOB record (WP-55: the native scan adopts the first/lowest occurrence instead of
+     refusing; match count/offsets land in multi-match-only debug log lines, single-match lines
+     keep the 0.14 shape); record-Lua CE-global stubs (WP-56: OpenProcess identity no-op,
+     ShellExecute safe no-op, inert getMainForm/createMenuItem/addCompactMenu menu surface in
+     both CE first-letter spellings); empty self-closing <UserdefinedSymbols/> tag (WP-46 part 1:
+     no warning, no uninterpreted section); pointer value child with hex <Offset> slots. -->
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>60</ID>
+      <Description>"aob first match"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+aobscanmodule(synthAob31, ct2synth31.exe, 48 8B 05 ?? ?? ?? ?? 48 85 C0 74)
+registersymbol(synthAob31)
+synthAob31+10:
+ db 90
+[DISABLE]
+synthAob31+10:
+ db 74
+unregistersymbol(synthAob31)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>61</ID>
+      <Description>"record lua ce globals"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+function synth31Toggle(sender, force)
+  local state = not(synth31item.Caption == 'Compact View Mode')
+  if force ~= nil then state = not force end
+  synth31item.Caption = state and 'Compact View Mode' or 'Full View Mode'
+  getMainForm().Splitter1.Visible = state
+end
+function addCompactMenu()
+  if synth31menualreadyexists then return end
+  local parent = getMainForm().Menu.Items
+  synth31item = createMenuItem(parent)
+  parent.add(synth31item)
+  synth31item.Caption = 'Compact View Mode'
+  synth31item.OnClick = synth31Toggle
+  synth31menualreadyexists = 'yes'
+end
+if OpenProcess('ct2synth31.exe') then
+  ShellExecute('https://ko-fi.com/synth31')
+  addCompactMenu()
+end
+synth31Toggle(nil, true)
+return synth31item.Caption
+{$asm}
+[DISABLE]
+{$lua}
+synth31Toggle(nil, false)
+return synth31item.Caption
+{$asm}</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>62</ID>
+      <Description>"pointer value child"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>16000</Address>
+      <Offsets>
+        <Offset>10</Offset>
+        <Offset>8</Offset>
+      </Offsets>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>63</ID>
+      <Description>"aob consumer"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>synthAob31+8</Address>
+      <Value>0</Value>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols/>
+</CheatTable>

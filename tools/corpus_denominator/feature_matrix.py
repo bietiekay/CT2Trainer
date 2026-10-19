@@ -110,7 +110,7 @@ GATE_FEATURES = {
         "evidence": ("tests/test_native_table_completeness.py",),
         "modules": ("src/ct2trainer/native/compiler.py",
                     "src/ct2trainer/table.py"),
-        "note": "Demonstrated for all 24 pinned tables: every source "
+        "note": "Demonstrated for all 27 pinned tables: every source "
                 "record is preserved (no silent drops), and each table-level "
                 "construct — Forms, the table-Lua lifecycle, Custom types and "
                 "embedded Assets — is handled or surfaced fail-closed "

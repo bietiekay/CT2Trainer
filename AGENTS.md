@@ -5,12 +5,15 @@
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-18, 0.14 released with the 0.15 prefix-cut
-field fix shipped on top (`d15268a`); Wave 3 of the reference-corpus
-closure cycle complete on working branch `native-0.15` with all five
-work packages (WP-37/38/39/40/41) merged; 0.9.0-rc2 was the last
-user-tested release; working branch `native-0.15` tracks the
-milestone):** the
+**CT2Trainer (status 2026-10-19, 0.15 released with the 0.15 prefix-cut
+field fix shipped on top (`d15268a`) and the part-3 fast-path fix on
+`main` (`d068c44`); Wave 4 of the reference-corpus closure cycle
+complete — all six lanes (WP-43/44/45/47/48/51/52/55/56) merged into
+`main` @ `0c9879e`, cases 26/27/31 pinned (27 pinned corpus tables,
+6,119 AP-11 actions, weights 7,446/7,446 over run
+`w4-case31-20261019061339`); 0.9.0-rc2 was the last user-tested
+release; `main` tracks the milestone until the 0.16 release build):**
+the
 repository is a
 self-contained, clean-room development base for an independently designed,
 source/binary-redistributable converter and trainer with **no CE
@@ -43,9 +46,10 @@ feature is re-implemented clean-room, and public API/format contracts may
 be derived. All other CE implementation sources remain off-limits.
 
 **Feature-matrix goal:** 100% coverage without AP-11. 42/42 in-scope
-features covered (100% feature-weighted; 7426/7426
+features covered (100% feature-weighted; 7446/7446
 action-weighted; `gap_inventory/feature-coverage.json`, run
-`w3e-case24-20261018051230`; the 2026-10-18 7416/7416 over
+`w4-case31-20261019061339`; the 2026-10-18 7426/7426 over
+`w3e-case24-20261018051230`, the 2026-10-18 7416/7416 over
 `w3d-case22-20261018040510`, the 2026-10-18 7413/7413 over
 `w3b-case21-20261018023823Z`, the 2026-10-18 7411/7411 over
 `w3-case23-20261018012531Z`, the 2026-10-16 7408/7408 over
@@ -61,7 +65,7 @@ action-weighted; `gap_inventory/feature-coverage.json`, run
 100% goal are reached and closed. All three gate features are closed with **real,
 tested** evidence (2026-10-10):
 
-1. `gate:1` – per-table completeness for all 24 pinned tables
+1. `gate:1` – per-table completeness for all 27 pinned tables
    (Forms, Lua lifecycle, Custom Types, Assets):
    `tests/test_native_table_completeness.py` (every source record
    preserved; each table-level construct handled or surfaced fail-closed;
@@ -80,13 +84,14 @@ tested** evidence (2026-10-10):
 
 Gate flips happen only with **real, tested** evidence; gate action weights
 remain 0 (completeness/proof features, not record actions). The AP-11
-campaign (6100 expected actions, 0 confirmed so far) remains a
+campaign (6119 expected actions, 0 confirmed so far) remains a
 **separate end goal** and is excluded from the 100% feature metric.
 
 **Corpus:** `TableReferences/` is the synthetic clean-room corpus
 (`case-01.ct` … `case-14.ct`, `case-15.ct`, `case-16.ct`,
 `case-17.ct`, `case-18.ct`, `case-19.ct`, `case-20.ct`,
-`case-21.ct`, `case-22.ct`, `case-23.ct`, `case-24.ct`; case-to-origin
+`case-21.ct`, `case-22.ct`, `case-23.ct`, `case-24.ct`,
+`case-26.ct`, `case-27.ct`, `case-31.ct`; case-to-origin
 mapping in `TableReferences/README.md`). `case-14.ct` is the WP-14
 PRAGMATA behaviour derivative (staged capabilities, signed offsets,
 activation sets). It is strictly read-only input; distributed releases

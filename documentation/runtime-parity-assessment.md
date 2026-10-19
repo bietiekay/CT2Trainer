@@ -38,8 +38,10 @@ the census below was root-caused by targeted provider lookups.
 
 **Headline:** 117,308 plan entries → **112,581 supported** (96.0 %),
 **4,727 blocked** (4.0 %), 12,908 headings. The canonical catalog
-(GOAL-2 measurement, auto process-detection) stands at 7,577 /
-117,624 with one whole-table error (SuperMeatBoy legacy binary); the
+(GOAL-2 measurement, auto process-detection) stood at 7,577 /
+117,624 with one whole-table error (SuperMeatBoy legacy binary) at
+this assessment's cut (2026-10-18; the post-W4 re-run of 2026-10-19
+measures 3,632 / 117,624); the
 two views differ only in process resolution of the 31 tables CE
 stores without a unique EXE name. The canonical catalog remains the
 authoritative closure metric; this census is the feature-planning
