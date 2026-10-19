@@ -225,10 +225,15 @@ class ModuleScanTests(unittest.TestCase):
                     memory.scan_module("game.exe", "41 42 43")
                 self.assertEqual([call.args[0] for call in memory.read.call_args_list], [0x1000, 0x1005])
 
-    def test_scan_rejects_ambiguous_and_changed_modules(self):
+    def test_scan_multi_match_picks_lowest_and_rejects_changed_modules(self):
+        # WP-55 (CE 7.5 parity): a multi-match module scan resolves to the
+        # lowest address and records the full match evidence; a module that
+        # moves during the scan still fails closed.
         memory = self.scanner([_region(0x1000, 8)], {0x1000: b"ABxxAByy"})
-        with self.assertRaisesRegex(ProcessMemoryError, "ambiguous"):
-            memory.scan_module("game.exe", "41 42")
+        self.assertEqual(memory.scan_module("game.exe", "41 42"), 0x1000)
+        self.assertEqual(memory.last_scan_diagnostics,
+                         {"match_count": 2, "match_addresses": [0x1000, 0x1004],
+                          "module": "game.exe", "module_base": 0x1000})
         memory = self.scanner([_region(0x1000, 8)], {0x1000: b"ABxxxxxx"})
         memory.module.side_effect = [(0x1000, 8), (0x2000, 8)]
         with self.assertRaisesRegex(ProcessMemoryError, "changed"):
@@ -253,9 +258,11 @@ class ModuleScanTests(unittest.TestCase):
         miss = self.scanner([_region(0x1000, 8)], {0x1000: b"xxxxxxxx"})
         with self.assertRaises(ScanMiss):
             miss.scan_module("game.exe", "41 42 43")
-        ambiguous = self.scanner([_region(0x1000, 8)], {0x1000: b"ABxxAByy"})
-        with self.assertRaises(ScanMiss):
-            ambiguous.scan_module("game.exe", "41 42")
+        # WP-55: a multi-match scan is no longer a failure; it resolves to
+        # the lowest address (the zero-match and change-during-scan cases
+        # above keep their exact ScanMiss messages).
+        first_match = self.scanner([_region(0x1000, 8)], {0x1000: b"ABxxAByy"})
+        self.assertEqual(first_match.scan_module("game.exe", "41 42"), 0x1000)
         changed = self.scanner([_region(0x1000, 8)], {0x1000: b"ABxxAByy"})
         changed.module.side_effect = [(0x1000, 8), (0x2000, 8)]
         with self.assertRaises(ScanMiss):

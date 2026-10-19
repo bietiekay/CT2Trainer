@@ -2013,7 +2013,23 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
     if not sections:
         if phase == "enable" and not program.get("allocation_only"):
             raise ProgramError("Program has no patch sections.")
-        return {"blocks": [], "literal_data_ranges": [], "symbols": dict(resolved), "exports": {}, "requires": program["requires"], "guards": preflight["guards"], "allocation_requests": [], "deallocations": [symbol for node in nodes if node["op"] == "dealloc" for symbol in node["symbols"]], "unregister": [symbol for node in nodes if node["op"] == "unregister" for symbol in node["symbols"]], "nasm_source": "", "requires_coordinator": False}
+        # Allocation-only enable publishes the registered allocation symbols
+        # without any patch block: the same exports mapping the normal path
+        # emits from linked symbols (original spelling -> address).
+        exports = {}
+        if phase == "enable":
+            for symbol in program["provides"]:
+                key = symbol.casefold()
+                if key in resolved:
+                    exports[symbol] = resolved[key]
+                elif key in allocations and allocations[key] is not None:
+                    address = allocations[key]["address"] if isinstance(allocations[key], Mapping) else allocations[key]
+                    if type(address) is not int or not 0 < address <= 0xFFFFFFFFFFFFFFFF:
+                        raise ProgramError("Allocation export address is unresolvable: " + symbol)
+                    exports[symbol] = address
+                else:
+                    raise ProgramError("Program exports an unresolvable symbol: " + symbol)
+        return {"blocks": [], "literal_data_ranges": [], "symbols": dict(resolved), "exports": exports, "requires": program["requires"], "guards": preflight["guards"], "allocation_requests": [], "deallocations": [symbol for node in nodes if node["op"] == "dealloc" for symbol in node["symbols"]], "unregister": [symbol for node in nodes if node["op"] == "unregister" for symbol in node["symbols"]], "nasm_source": "", "requires_coordinator": False}
     if phase == "enable" and set(declared) - located:
         raise ProgramError("Declared labels have no position: " + ", ".join(sorted(set(declared) - located)))
     assembler = NasmAssembler() if assembler is None else assembler

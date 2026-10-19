@@ -92,13 +92,18 @@ class ProcessScanTests(unittest.TestCase):
                 memory.scan_process('414243')
             self.assertNotIn((0x1001, 1), memory.read_calls)
 
-    def test_multiple_matches_and_every_quota_refuse_instead_of_first_match(self):
+    def test_multi_match_returns_lowest_address_and_quotas_still_refuse(self):
+        # WP-55 (CE 7.5 parity): a multi-match process scan selects the
+        # lowest address; the full match evidence is recorded in the
+        # diagnostics.  The quotas below still refuse before any address.
         memory, _, _ = _scan_memory([(0x1000, b'ABxxAB', 0x04, MEM_COMMIT)])
-        with self.assertRaisesRegex(ProcessMemoryError, 'ambiguous'):
-            memory.scan_process('4142')
+        self.assertEqual(memory.scan_process('4142'), 0x1000)
+        self.assertEqual(memory.last_scan_diagnostics,
+                         {'match_count': 2, 'match_addresses': [0x1000, 0x1004]})
         memory, _, _ = _scan_memory([(0x1000, b'ABxxABxxAB', 0x04, MEM_COMMIT)])
-        with self.assertRaisesRegex(ProcessMemoryError, 'result bound'):
-            memory.scan_process('4142')
+        with patch('ct2trainer.native.memory.MAX_SCAN_RESULTS', 2):
+            with self.assertRaisesRegex(ProcessMemoryError, 'result bound'):
+                memory.scan_process('4142')
         # The initial match does not permit a successful truncated search.
         for name, value, message in (('MAX_PROCESS_SCAN_BYTES', 4, 'byte-read'),
                                      ('MAX_PROCESS_SCAN_REGIONS', 2, 'region/time'),

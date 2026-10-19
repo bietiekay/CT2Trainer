@@ -62,8 +62,10 @@ class ScanMiss(ProcessMemoryError):
 
     The target process itself remains healthy; only the requested pattern or
     module does not match the current image (stale table, renamed module,
-    ambiguous pattern, or a scan quota was reached).  The engine treats this
-    as a per-record failure so the rest of the trainer stays usable.
+    zero matches, or a scan quota was reached).  Multi-match patterns are
+    not a failure: they resolve to the lowest address (CE parity) and the
+    full match evidence lands in last_scan_diagnostics.  The engine treats a
+    ScanMiss as a per-record failure so the rest of the trainer stays usable.
     """
 
 
@@ -868,16 +870,21 @@ class ProcessMemory:
                         found = start + candidate
                         if base <= found and found + pattern_size <= end:
                             matches.add(found)
-                            if len(matches) > 1:
-                                raise ScanMiss("The module byte pattern is ambiguous (multiple matches).")
                     tail = data[-(pattern_size - 1):] if pattern_size > 1 else b""
                     cursor += length
             broker_checkpoint()
             if self.module(name) != (base, size):
                 raise ScanMiss("The module changed while scanning.")
-            if len(matches) != 1:
+            addresses = sorted(matches)
+            self.last_scan_diagnostics = {
+                "match_count": len(addresses),
+                "match_addresses": addresses[:MAX_SCAN_RESULTS],
+                "module": name,
+                "module_base": base,
+            }
+            if not addresses:
                 raise ScanMiss("The module byte pattern was not found in readable committed memory.")
-            return matches.pop()
+            return addresses[0]
 
     def scan_matches(self, pattern: str, start: int = 0, end: int | None = None,
                      protection: str = "", alignment_type: int = 0,
@@ -1003,19 +1010,23 @@ class ProcessMemory:
             return sorted(matches)
 
     def _unique_scan(self, pattern, start=0, end=None, *, checkpoint=None):
-        """One complete bounded result; quotas and uncertainty never pick first."""
+        """One complete bounded scan; multi-match selects the lowest address."""
         with self._lock:
             identity = self.identity
             width = self.pointer_size
-            matches = self.scan_matches(pattern, start, end, max_results=2, checkpoint=checkpoint)
+            matches = self.scan_matches(pattern, start, end, max_results=MAX_SCAN_RESULTS,
+                                        checkpoint=checkpoint)
             self._require_alive()
             if self.identity != identity or self.pointer_size != width:
                 raise ProcessMemoryError("Bound target identity/architecture changed during AOB scan.")
-            if not matches:
+            addresses = sorted(matches)
+            self.last_scan_diagnostics = {
+                "match_count": len(addresses),
+                "match_addresses": addresses[:MAX_SCAN_RESULTS],
+            }
+            if not addresses:
                 raise ScanMiss("The byte pattern was not found in readable committed memory.")
-            if len(matches) != 1:
-                raise ScanMiss("The byte pattern is ambiguous (multiple matches).")
-            return matches[0]
+            return addresses[0]
 
     def scan_process(self, pattern: str, *, checkpoint=None) -> int:
         """Scan every eligible user page, including memory outside loaded modules."""

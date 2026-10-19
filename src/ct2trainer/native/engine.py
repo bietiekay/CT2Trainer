@@ -2209,6 +2209,13 @@ class TrainerEngine:
                                 "module": module,
                                 "pattern": op["pattern"], "address": hex(address),
                                 "section": section}
+                # Multi-match module scans resolve to the lowest address (CE
+                # parity): record the full match evidence; single-match scans
+                # keep the 0.14 log shape byte-identical.
+                diagnostics = getattr(self.memory, "last_scan_diagnostics", None)
+                if isinstance(diagnostics, dict) and diagnostics.get("match_count", 0) > 1:
+                    scan_details["match_count"] = diagnostics["match_count"]
+                    scan_details["match_offsets"] = [hex(offset) for offset in diagnostics.get("match_addresses", [])]
                 if self.debug_log.enabled:
                     try:
                         base, size = self.memory.module(module)
@@ -3406,6 +3413,14 @@ class TrainerEngine:
                 self.debug_log.error("scan-failed", error, **details)
                 return
             details["address"] = hex(address)
+            # Multi-match scans resolve to the lowest address (CE parity):
+            # record the full match evidence so a stale pattern with several
+            # occurrences is diagnosable from the log.  Single-match scans
+            # keep the 0.14 log shape byte-identical.
+            diagnostics = getattr(link_memory, "last_scan_diagnostics", None)
+            if isinstance(diagnostics, dict) and diagnostics.get("match_count", 0) > 1:
+                details["match_count"] = diagnostics["match_count"]
+                details["match_offsets"] = [hex(offset) for offset in diagnostics.get("match_addresses", [])]
             if self.debug_log.enabled:
                 try:
                     base, size = link_memory.module(module)
@@ -3467,37 +3482,58 @@ class TrainerEngine:
                 for scope in self.lua_activations.values():
                     if scope.overlaps(start, size):
                         raise NativeRuntimeError('An assembler patch overlaps a Lua-owned mutation')
-            manager.stage(linked['blocks'],linked['exports'], _external_literal_permits=linked.pop('_external_literal_permits', ()))
-            # Disable text is checked against the owned original entries before publication.
-            # One-shot programs have no disable phase by contract; their close-time
-            # restore is derived from the applied journal instead.
-            if not program.get('one_shot'):
-                inverse=link_program(program,link_memory,linked['symbols'],manager.allocation_map(),phase='disable',owned_data_ranges=owned_data_ranges,
-                                     owned_executable_data_ranges=executable_data, disassembler=disassembler,
-                                     thread_model=thread_model, protection_model=protection_model,
-                                     export_model=export_model, execute_side_effects=True)
-                restored=sorted((b['address'],bytes.fromhex(b['bytes'])) for b in inverse['blocks'] if not b['is_allocation'])
-                expected=sorted((b['address'],bytes.fromhex(b['original'])) for b in live)
-                if staged_restore:
-                    # Staged global_to_target copies restore their own live
-                    # entries at disable time; the consumer source carries no
-                    # db restore for them. Every staged range must match a live
-                    # entry exactly, and every such entry is exempt from the
-                    # consumer-side restore comparison.
-                    staged=set(staged_restore)
-                    remaining=[]
-                    for address,original in expected:
-                        pair=(address,len(original))
-                        if pair in staged:
-                            staged.discard(pair)
-                        else:
-                            remaining.append((address,original))
-                    expected=sorted(remaining)
-                    if staged:
-                        raise NativeRuntimeError('Staged global restoration does not cover a live entry: '+', '.join(hex(a) for a,_ in sorted(staged)))
-                if restored!=expected:
-                    raise NativeRuntimeError('Assembler disable must restore the captured original entry bytes')
-            manager.publish()
+            allocation_only = bool(program.get('allocation_only')) and all(
+                block['is_allocation'] for block in linked['blocks'])
+            if allocation_only:
+                # Allocation-only plans own no live entry: there is nothing to
+                # stage, so the hook-layer nonempty-block guard stays untouched
+                # and the manager commits the allocation (protection + journal)
+                # and publishes the registered symbols directly.  The disable
+                # text is still checked against the owned original entries
+                # before publication (trivially [] == [] for a pure
+                # allocation-only plan).
+                if not program.get('one_shot'):
+                    inverse=link_program(program,link_memory,linked['symbols'],manager.allocation_map(),phase='disable',owned_data_ranges=owned_data_ranges,
+                                         owned_executable_data_ranges=executable_data, disassembler=disassembler,
+                                         thread_model=thread_model, protection_model=protection_model,
+                                         export_model=export_model, execute_side_effects=True)
+                    restored=sorted((b['address'],bytes.fromhex(b['bytes'])) for b in inverse['blocks'] if not b['is_allocation'])
+                    expected=sorted((b['address'],bytes.fromhex(b['original'])) for b in live)
+                    if restored!=expected:
+                        raise NativeRuntimeError('Assembler disable must restore the captured original entry bytes')
+                manager.commit(linked['exports'])
+            else:
+                manager.stage(linked['blocks'],linked['exports'], _external_literal_permits=linked.pop('_external_literal_permits', ()))
+                # Disable text is checked against the owned original entries before publication.
+                # One-shot programs have no disable phase by contract; their close-time
+                # restore is derived from the applied journal instead.
+                if not program.get('one_shot'):
+                    inverse=link_program(program,link_memory,linked['symbols'],manager.allocation_map(),phase='disable',owned_data_ranges=owned_data_ranges,
+                                         owned_executable_data_ranges=executable_data, disassembler=disassembler,
+                                         thread_model=thread_model, protection_model=protection_model,
+                                         export_model=export_model, execute_side_effects=True)
+                    restored=sorted((b['address'],bytes.fromhex(b['bytes'])) for b in inverse['blocks'] if not b['is_allocation'])
+                    expected=sorted((b['address'],bytes.fromhex(b['original'])) for b in live)
+                    if staged_restore:
+                        # Staged global_to_target copies restore their own live
+                        # entries at disable time; the consumer source carries no
+                        # db restore for them. Every staged range must match a live
+                        # entry exactly, and every such entry is exempt from the
+                        # consumer-side restore comparison.
+                        staged=set(staged_restore)
+                        remaining=[]
+                        for address,original in expected:
+                            pair=(address,len(original))
+                            if pair in staged:
+                                staged.discard(pair)
+                            else:
+                                remaining.append((address,original))
+                        expected=sorted(remaining)
+                        if staged:
+                            raise NativeRuntimeError('Staged global restoration does not cover a live entry: '+', '.join(hex(a) for a,_ in sorted(staged)))
+                    if restored!=expected:
+                        raise NativeRuntimeError('Assembler disable must restore the captured original entry bytes')
+                manager.publish()
             return manager, linked, live
         except Exception as exc:
             if manager.uncertain or isinstance(exc,HookUncertain):
@@ -3961,6 +3997,24 @@ class TrainerEngine:
         for scope in self.lua_activations.values():
             if scope.overlaps(address, size):
                 raise NativeRuntimeError('This value overlaps a Lua-owned mutation')
+        self._declare_value_data(address, size)
+
+    def _declare_value_data(self, address: int, size: int) -> None:
+        """Record a value write range inside an owned provider allocation.
+
+        Value records that resolve into a provider's owned writable
+        allocation are declared data, not foreign mutation: the owning
+        manager records the exact span so its executable-allocation
+        integrity guard skips it, the same contract as source literal
+        spans (allocation-only providers exist precisely to host consumer
+        values).  Addresses outside owned allocations are no-ops.
+        """
+        managers = list(self.hooks.values())
+        for scope in self.lua_activations.values():
+            managers.extend(scope.managers())
+        for manager in managers:
+            if manager.declare_value_data(address, size):
+                return
 
     def _require_staged_live(self, entry: dict) -> None:
         """WP-14 (C1): refuse value access on a staged record while pending.
