@@ -309,11 +309,41 @@ local functions={
   'getAddressOfSymbolSafe','getProcHandle','getOpenProcessID','isKeyPressed',
   'getXBox360ControllerState','showMessage','print','executeCodeEx',
   'speedhack_setSpeed','speedhack_getSpeed','attachProcess','detachProcess',
-  'LaunchMonoDataCollector','mono_enumDomains','mono_findMethod','mono_invoke_method'
+  'LaunchMonoDataCollector','mono_enumDomains','mono_findMethod','mono_invoke_method',
+  'openProcess','shellExecute'
 }
 for _, name in ipairs(functions) do
   _G[name]=function(...) return call(name,...) end
 end
+-- WP-56: CE registers every Lua API under both first-letter spellings (its
+-- overridden register call adds the name and the name with the first letter
+-- flipped), so record scripts use either spelling.
+_G.OpenProcess=function(...) return call('openProcess',...) end
+_G.ShellExecute=function(...) return call('shellExecute',...) end
+-- WP-56: inert CE menu surface.  The native trainer owns its own UI, so
+-- record scripts that build or toggle menu entries (compact-view toggles,
+-- support links) run to completion against no-op proxies: property reads
+-- fall back to inert sub-objects, property writes are stored (so caption-
+-- based toggle logic reads back the values it set) and method calls are
+-- accepted and discarded.  Nothing here touches the target or the engine.
+local function inert_menu_object()
+  local data={}
+  return setmetatable({}, {
+    __index=function(_,key)
+      if data[key]~=nil then return data[key] end
+      return inert_menu_object()
+    end,
+    __newindex=function(_,key,value) data[key]=value end,
+    __call=function() return inert_menu_object() end,
+    __metatable='CT2Trainer inert menu object'
+  })
+end
+function getMainForm() return inert_menu_object() end
+function createMenuItem(...) return inert_menu_object() end
+function addCompactMenu(...) return inert_menu_object() end
+function GetMainForm() return inert_menu_object() end
+function CreateMenuItem(...) return inert_menu_object() end
+function AddCompactMenu(...) return inert_menu_object() end
 function readBytes(address,count,asTable)
   local bytes=call('readBytes',address,count)
   if asTable then return bytes end
@@ -524,7 +554,16 @@ local function run(source,ischeck,recordid)
   local result=pack(rawpcall(chunk))
   sethook()
   checking=false; syntaxcheck=false; current_record_id=nil; memrec=nil
-  if not result[1] then error(tostring(result[2]),0) end
+  if not result[1] then
+    -- WP-56: an attempt to call an undefined CE global gets the exact named
+    -- refusal instead of the raw Lua nil-call text, so blocked records
+    -- carry the actionable API name.  Plain nil reads of script state
+    -- variables (which never call) are untouched.
+    local message=tostring(result[2])
+    local api=message:match("attempt to call a nil value %(global '([^']+)'%)")
+    if api then error('Unsupported CE Lua API: '..api,0) end
+    error(message,0)
+  end
   return unpack(result,2,result.n)
 end
 local function pulse(milliseconds)
@@ -554,6 +593,9 @@ class _ReadOnlyBroker:
         'addresslist.Count', 'addresslist.at', 'addresslist.getMemoryRecordByID',
         'addresslist.getMemoryRecordByDescription', 'record.get',
         'isKeyPressed', 'getXBox360ControllerState', 'speedhack_getSpeed',
+        # WP-56: the record-Lua CE stubs are pure (identity check / no-op),
+        # so they are safe to execute during syntax checking as well.
+        'openProcess', 'shellExecute',
     }
 
     def __init__(self, parent: 'LuaHost', *, allow_assembler: bool = True):
@@ -1409,6 +1451,30 @@ class EngineLuaBroker:
             if syntaxcheck:
                 raise LuaHostError('Speed control requires a live activation')
             return clock.set_speed(arguments[0])
+        if name == 'openProcess':
+            # WP-56 (Sinking City 2, attach record id 200): the native trainer
+            # is attached to the target before record Lua ever runs, so the
+            # CE OpenProcess call is a truthy no-op that verifies the
+            # requested process identity (case-insensitive, matching CE's
+            # process-name lookup semantics).  A mismatch is a named refusal
+            # — the record script names a different target than the plan.
+            if len(arguments) != 1 or type(arguments[0]) is not str or not arguments[0]:
+                raise LuaHostError('openProcess requires one non-empty process name')
+            if arguments[0].casefold() != e.plan['process_name'].casefold():
+                raise LuaHostError(
+                    'openProcess target does not match the attached process: '
+                    + arguments[0])
+            return True
+        if name == 'shellExecute':
+            # WP-56 (Sinking City 2, support-link record id 231): CE
+            # ShellExecute would launch an external URL or file.  The native
+            # trainer performs no external launch: the call is a safe no-op
+            # so the record's script completes without side effects.
+            if len(arguments) > 4:
+                raise LuaHostError('shellExecute takes at most four arguments')
+            if len(arguments) == 0 or type(arguments[0]) is not str or not arguments[0]:
+                raise LuaHostError('shellExecute requires a non-empty command')
+            return None
         raise LuaHostError('Unsupported CE Lua API: '+name)
 
     def _mutate(self, address: int, data: bytes, syntaxcheck: bool) -> bool:

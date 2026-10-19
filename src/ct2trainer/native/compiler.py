@@ -80,6 +80,17 @@ class NativeCompileError(ValueError):
     """Invalid compiler inputs or a malformed serialized plan."""
 
 
+class DropdownLinkMissingError(AAError):
+    """A dropdown link target matched no record label (WP-45, GC-E9).
+
+    Unlike a generic AAError this refusal demotes the linked dropdown to an
+    empty plain list (CE shows an empty list) instead of blocking the
+    record: the value record itself stays supported and actionable, with a
+    named plan warning.  Ambiguous and chained link refusals stay hard
+    AAErrors (byte-stable).
+    """
+
+
 def validate_process_name(name: str) -> str:
     if (not isinstance(name, str) or name != name.strip() or not name
             or len(name) > 255 or name in {".exe", "..exe"}
@@ -102,8 +113,9 @@ def _block(entry: dict, reason: str) -> None:
 
 
 _OFFSET_SLOT_GRAMMAR = re.compile(
-    r"^[+-]?(?:0x)?[0-9A-Fa-f]+(?:\s*[-+*]\s*(?:0x)?[0-9A-Fa-f]+)*$")
-_OFFSET_SLOT_TOKEN = re.compile(r"[-+*]|(?:0x)?[0-9A-Fa-f]+")
+    r"^[+-]?(?:(?:0x)?[0-9A-Fa-f]+|#[+-]?[0-9]+)"
+    r"(?:\s*[-+*]\s*(?:(?:0x)?[0-9A-Fa-f]+|#[+-]?[0-9]+))*$")
+_OFFSET_SLOT_TOKEN = re.compile(r"[-+*]|(?:0x)?[0-9A-Fa-f]+|#[+-]?[0-9]+")
 _OFFSET_ANNOTATION = re.compile(r"\([^()]*\)")
 
 
@@ -113,7 +125,9 @@ def _parse_offset_slot(text: str) -> int:
     The reference corpus uses constant hexadecimal arithmetic in pointer-
     chase slots ("13A8+118", "A0+4*4", "1594+8+118") and annotated hex
     ("20 (Offset of the name pointer)").  The bounded grammar is: hex
-    literals (optionally 0x-prefixed) combined with '+', '-' and '*'
+    literals (optionally 0x-prefixed) and decimal literals
+    ('#'-prefixed, with the sign before or after the '#', per the CE
+    ConvertHexStrToRealStr convention) combined with '+', '-' and '*'
     using the usual precedence, an optional leading sign that binds to
     the first term, plus optional balanced, non-nested parenthesized
     annotation text that is stripped before evaluation.  WP-14 (C4)
@@ -152,24 +166,29 @@ def _parse_offset_slot(text: str) -> int:
         body = body[1:]
     tokens = _OFFSET_SLOT_TOKEN.findall(body)
 
-    def hex_value(token: str) -> int:
-        number = int(token.removeprefix("0x").removeprefix("0X"), 16)
-        if number > 0x7FFFFFFFFFFFFFFF:
+    def slot_value(token: str) -> int:
+        if token.startswith("#"):
+            # CE offset convention (ConvertHexStrToRealStr): a '#' prefix
+            # marks decimal; the sign may sit before or after the '#'.
+            number = int(token[1:], 10)
+        else:
+            number = int(token.removeprefix("0x").removeprefix("0X"), 16)
+        if abs(number) > 0x7FFFFFFFFFFFFFFF:
             raise AAError("Pointer offset exceeds signed 64 bits.")
         return number
 
     total = 0
-    current = first_sign * hex_value(tokens[0])
+    current = first_sign * slot_value(tokens[0])
     for index in range(1, len(tokens), 2):
         operator, term = tokens[index], tokens[index + 1]
         if operator == "*":
-            current *= hex_value(term)
+            current *= slot_value(term)
         elif operator == "+":
             total += current
-            current = hex_value(term)
+            current = slot_value(term)
         else:  # "-"
             total += current
-            current = -hex_value(term)
+            current = -slot_value(term)
     total += current
     if abs(total) > 0x7FFFFFFFFFFFFFFF:
         raise AAError("Pointer offset exceeds signed 64 bits.")
@@ -235,7 +254,7 @@ def _dropdown(entry: Entry, entries: tuple[Entry, ...], value_profile: dict | No
         matches = [candidate for candidate in entries
                    if candidate.label.casefold() == entry.dropdown_link.casefold()]
         if not matches:
-            raise AAError("Dropdown link target is missing: '" + entry.dropdown_link
+            raise DropdownLinkMissingError("Dropdown link target is missing: '" + entry.dropdown_link
                           + "' matches no record label.")
         if len(matches) > 1:
             raise AAError("Dropdown link target is ambiguous: '" + entry.dropdown_link
@@ -511,11 +530,22 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
                 continue
             # WP-37: deterministic keep-first among supported providers
             # (document order, tiebreak entry ID) — the same policy as the
-            # WP-25 duplicate-ID keep-first.  The first supported candidate
-            # stays the provider; every later duplicate is blocked with the
-            # named reason and dependents resolve against the kept provider.
-            kept = candidates[0]
-            for entry in candidates[1:]:
+            # WP-25 duplicate-ID keep-first.  The first kept candidate
+            # stays the provider; every later duplicate inside the scope is
+            # blocked with the named reason and dependents resolve against
+            # the kept provider.
+            # WP-45 (GC-E4): keep-first is scoped to the user's selection.
+            # When at least one candidate is selected, the selected
+            # providers form the scope, so an explicit selection can
+            # activate an alternative variant instead of the document-first
+            # one.  With no selected provider the table-wide scope applies
+            # (the default compile selects every record, so default plans
+            # stay byte-stable).  Unselected duplicates stay supported:
+            # the engine activates selected entries only, so the kept
+            # provider cannot shadow them at runtime.
+            scope = chosen if chosen else candidates
+            kept = scope[0]
+            for entry in scope[1:]:
                 _block(entry, f"Symbol provider duplicate: {symbol} (kept provider {kept['id']}); "
                               f"a later registration would shadow the kept one at runtime.")
     # WP-28 two-stage label resolution: prepare_program keeps a program's
@@ -547,10 +577,21 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
                 continue
             entry["dependency_ids"] = []
             for symbol in entry["requires"]:
-                candidates = [candidate for candidate in providers.get(symbol.casefold(), [])
-                              if candidate["supported"]]
-                if len(candidates) != 1:
-                    if (len(candidates) == 0 and uds_symbols
+                supported = [candidate for candidate in providers.get(symbol.casefold(), [])
+                             if candidate["supported"]]
+                # WP-45 (GC-E4): selection-aware provider resolution — a
+                # selected provider wins over the table-wide provider set, so
+                # an explicitly chosen variant serves its dependents.  When no
+                # provider of this symbol is selected, the full supported set
+                # is kept: the selection closure below can still pull in an
+                # initially unselected sole provider (byte-stable default).
+                if selected is not None:
+                    selected_supported = [candidate for candidate in supported
+                                           if candidate["id"] in selected]
+                    if selected_supported:
+                        supported = selected_supported
+                if len(supported) != 1:
+                    if (len(supported) == 0 and uds_symbols
                             and symbol.casefold() in uds_symbols):
                         # WP-46 (part 1): no supported record provides this
                         # symbol, so the table-level user-defined symbol
@@ -562,7 +603,7 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
                     _block(entry, f"Required symbol has no unique supported provider: {symbol}.")
                     changed = True
                     break
-                entry["dependency_ids"].append(candidates[0]["id"])
+                entry["dependency_ids"].append(supported[0]["id"])
         if not changed:
             break
     # Symbol dependencies, not XML parents, determine activation order.
@@ -666,7 +707,7 @@ def _address_provider_qualifies(provider: dict) -> bool:
 
 
 def _adopt_dynamic_address_providers(entries: list[dict], sources: dict[int, Entry],
-                                     nodes: dict) -> None:
+                                     nodes: dict) -> list[str]:
     """Bind blocked relative values to a proven runtime base, in place.
 
     Runs after dependency analysis so the provider's final supported state
@@ -677,10 +718,15 @@ def _adopt_dynamic_address_providers(entries: list[dict], sources: dict[int, Ent
     the heading closest to the value records the provider binding.  The
     provider is never auto-selected or auto-enabled: it keeps its ordinary
     activation path, and the value path gates on its liveness at runtime.
+
+    Returns the named plan warnings produced by adopted records whose
+    linked dropdown target cannot be resolved (WP-45 GC-E9 demotion: the
+    adopted value stays supported with an empty plain dropdown).
     """
     by_id = {entry["id"]: entry for entry in entries}
     all_sources = tuple(sources.values())
     adopted = []
+    adopted_warnings = []
     for entry in entries:
         if (entry["kind"] != "blocked" or entry.get("source_kind") != "value"
                 or entry.get("reason") != "Relative address cannot skip an addressless script/value ancestor."
@@ -708,15 +754,7 @@ def _adopt_dynamic_address_providers(entries: list[dict], sources: dict[int, Ent
         if heading is None or provider is None or not _address_provider_qualifies(provider):
             continue
         source = sources[entry["id"]]
-        entry["kind"] = "value"
-        entry["supported"] = True
-        entry["reason"] = ("Native relative value; the inherited base is resolved "
-                          "at runtime from the dynamic address provider.")
-        entry["address"] = source.address or ""
-        entry["address_profile"] = "expression/v1"
-        entry["pointer_offsets"] = []
-        entry["requires"] = []
-        entry["dependency_ids"] = []
+        profile = None
         if source.variable_type in _PROFILE_VALUE_TYPES:
             properties = {key: nodes[entry["id"]].findtext(key)
                           for key in ("ByteLength", "BitStart", "BitLength",
@@ -728,22 +766,57 @@ def _adopt_dynamic_address_providers(entries: list[dict], sources: dict[int, Ent
                 properties = {key: value for key, value in properties.items()
                               if value is not None}
             profile = prepare_value_profile(source.variable_type, properties)
-            if profile["actionable"]:
-                entry["value_profile"] = profile
-                entry["dropdown"] = (_string_dropdown(source, nodes, profile)
-                                     if source.variable_type == "String"
-                                     else _dropdown(source, all_sources, profile))
+            if not profile["actionable"]:
+                # The per-record path demotes a non-actionable profile to
+                # a navigation placeholder; adoption re-writes actionable
+                # values only, so the record keeps its blocked state.
+                continue
+        entry["kind"] = "value"
+        entry["supported"] = True
+        entry["reason"] = ("Native relative value; the inherited base is resolved "
+                           "at runtime from the dynamic address provider.")
+        entry["address"] = source.address or ""
+        entry["address_profile"] = "expression/v1"
+        entry["pointer_offsets"] = []
+        entry["requires"] = []
+        entry["dependency_ids"] = []
+        if profile is not None:
+            entry["value_profile"] = profile
+        try:
+            entry["dropdown"] = (_string_dropdown(source, nodes, profile)
+                                 if source.variable_type == "String"
+                                 else _dropdown(source, all_sources, profile))
+        except DropdownLinkMissingError as exc:
+            # WP-45 (GC-E9): same demotion as the per-record path -
+            # the adopted value stays supported, the linked dropdown
+            # becomes an empty plain list, and a named warning is
+            # returned to the plan warnings.
+            entry["dropdown"] = {"choices": [], "read_only": False}
+            adopted_warnings.append(
+                f"Record {source.id} ('{source.label}'): {exc} "
+                "The linked dropdown is demoted to an empty list.")
+        except AAError as exc:
+            # Hard refusal with no demotion equivalent (e.g. linked String
+            # dropdowns require a separate literal profile): re-block the
+            # adopted value with the exact per-record refusal.
+            entry["kind"] = "blocked"
+            entry["supported"] = False
+            entry["reason"] = str(exc)
+            entry["dropdown"] = {"choices": [], "read_only": False}
+            entry.pop("value_profile", None)
+            continue
         heading["address_provider"] = {"provider_id": provider["id"],
                                        "symbol": provider["provides"][0]}
         adopted.append(entry["id"])
     if not adopted:
-        return
+        return []
     # The marker is plan metadata of the serving heading; keep the heading's
     # own navigation reason, which already explains its role.
     for entry in entries:
         if (entry["kind"] == "heading" and entry.get("address_provider") is not None
                 and not entry["supported"]):
             entry.pop("address_provider")
+    return adopted_warnings
 
 
 def _table_lua_source(root) -> str:
@@ -843,6 +916,9 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     nth_helper=prepare_helper_contract(bootstrap) if bootstrap is not None else None
     entries: list[dict] = []
     labels_by_id: dict[int, dict] = {}
+    # WP-45 (GC-E9): named plan warnings for dangling dropdown links that
+    # demote to an empty list instead of blocking the record.
+    dropdown_warnings: list[str] = []
     sources = {source.id: source for source in table.entries}
     for source in table.entries:
         entry = {"id": source.id, "label": source.label, "path": source.path,
@@ -1073,6 +1149,15 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
         # AddressExpressionError is a plain ValueError (not an AAError), so it
         # is caught explicitly to keep a malformed expression per-record
         # instead of aborting the whole table (WP-20).
+        except DropdownLinkMissingError as exc:
+            # WP-45 (GC-E9): a dangling DropDownLink demotes the linked
+            # dropdown to an empty plain list (CE shows an empty list and
+            # keeps the record writable); the record itself stays supported
+            # and actionable, with a named plan warning.
+            entry["dropdown"] = {"choices": [], "read_only": False}
+            dropdown_warnings.append(
+                f"Record {source.id} ('{source.label}'): {exc} "
+                "The linked dropdown is demoted to an empty list.")
         except (AAError, LuaProgramError, ValueTypeError, AddressExpressionError) as exc:
             _block(entry, str(exc))
     # WP-37: Lua-owned symbol handover contract.  A symbol is *externally
@@ -1200,7 +1285,7 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     # the selection closure and the staged/recursive post-passes see the
     # final supported state (the recompiled values carry no symbol
     # dependencies, so dependency analysis output stays intact).
-    _adopt_dynamic_address_providers(entries, sources, nodes)
+    dropdown_warnings.extend(_adopt_dynamic_address_providers(entries, sources, nodes))
     # Async records (CT Async="1") keep their regular profile. The lifecycle
     # marker is attached after dependency analysis so only entries that are
     # still supported in their final state carry it; every supported shape
@@ -1328,6 +1413,9 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
             omitted.append(section.name)
     if omitted:
         warnings.append("Table-level sections not interpreted: " + ", ".join(sorted(set(omitted))) + ".")
+    # WP-45 (GC-E9): named warnings for dangling dropdown-link demotions,
+    # in document order (per-record loop, then adoption pass).
+    warnings.extend(dropdown_warnings)
     # WP-40: per-case named warnings for source hotkeys that cannot be
     # registered (the engine keeps the first-wins policy for conflicts at
     # runtime; the plan records every original binding either way).
