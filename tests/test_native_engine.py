@@ -63,12 +63,27 @@ class FakeMemory:
         self.data[offset:offset + len(raw)] = raw
 
     def scan_module(self, name, pattern):
+        # Mirrors the real backend's CE-parity semantics (WP-55): the first
+        # (lowest-address) match wins, the full match evidence is recorded in
+        # last_scan_diagnostics, and only a zero-match is a refusal.
         self.module(name)
         pattern = bytes.fromhex(pattern.replace(" ", ""))
-        first = self.data.find(pattern)
-        if first < 0 or self.data.find(pattern, first + 1) >= 0:
-            raise OSError("Pattern has no unique match")
-        return self.base + first
+        offsets, cursor = [], 0
+        while True:
+            found = self.data.find(pattern, cursor)
+            if found < 0:
+                break
+            offsets.append(found)
+            cursor = found + 1
+        if not offsets:
+            raise OSError("The module byte pattern was not found in readable committed memory.")
+        self.last_scan_diagnostics = {
+            "match_count": len(offsets),
+            "match_addresses": [self.base + offset for offset in offsets],
+            "module": name,
+            "module_base": self.base,
+        }
+        return self.base + offsets[0]
 
     def resolve(self, expression, symbols=None):
         symbols = {key.casefold(): value for key, value in (symbols or {}).items()}
