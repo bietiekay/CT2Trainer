@@ -65,7 +65,7 @@ def _flat_expression_shape(node: dict) -> bool:
 
     The flat data dialect resolves one base atom plus signed hex
     displacements at runtime.  The bounded expression profile may add up
-    to two pointer dereferences and value-identical casts, but no unary
+    to six pointer dereferences and value-identical casts, but no unary
     signs or multiplications/divisions the strict resolver cannot
     evaluate.
     """
@@ -83,7 +83,7 @@ def split_expression(expression: str) -> tuple[str, int]:
     """Return one base atom and a signed hexadecimal displacement.
 
     Cast-only groups strip down to their flat base and tail.  Beyond the
-    flat dialect, bounded expressions with up to two pointer dereferences
+    flat dialect, bounded expressions with up to six pointer dereferences
     are admitted verbatim with a zero displacement; callers route them to
     the expression profile instead of the strict static resolver.
     """
@@ -93,14 +93,14 @@ def split_expression(expression: str) -> tuple[str, int]:
     stripped = _strip_leading_casts(expression)
     match = _EXPRESSION.fullmatch(stripped)
     if match is None:
-        if stripped.count("[") > 2:
+        if stripped.count("[") > 6:
             raise AAError(
                 "Address expression exceeds the bounded indirection depth "
-                f"(2 pointer dereferences): {expression!r}.")
+                f"(6 pointer dereferences): {expression!r}.")
         if stripped != expression:
             expression = stripped
         try:
-            node = parse_expression(expression, max_deref=2)
+            node = parse_expression(expression, max_deref=6)
         except AddressExpressionError as exc:
             raise AAError(str(exc)) from exc
         if not _flat_expression_shape(node):

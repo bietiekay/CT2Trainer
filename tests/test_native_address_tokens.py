@@ -711,18 +711,24 @@ class CastGrammarTests(unittest.TestCase):
                 re.escape("Pointer dereference bound must be a positive integer.")):
             parse_expression("[a]", max_deref=0)
 
-    def test_strict_split_depth_three_uses_neutral_message(self):
+    def test_strict_split_depth_bound_is_six(self):
+        # WP-45 (GC-E10): the strict split bound rose from two to six pointer
+        # dereferences (corpus chains reach 4-5, Borderlands3 max 6); depth
+        # 7 keeps the named depth-limit refusal.
+        self.assertEqual(split_expression("[[[a]]]"), ("[[[a]]]", 0))
+        self.assertEqual(split_expression("[[[[[[a]]]]]]"), ("[[[[[[a]]]]]]", 0))
         with self.assertRaisesRegex(
                 AAError,
                 re.escape("Address expression exceeds the bounded indirection depth "
-                          "(2 pointer dereferences): '[[[a]]]'.")):
-            split_expression("[[[a]]]")
+                          "(6 pointer dereferences): '[[[[[[[a]]]]]]]'.")):
+            split_expression("[[[[[[[a]]]]]]]")
 
 
 class BoundedAddressPlanTests(unittest.TestCase):
     """Compile level: cast/indirection and module-prefixed managed rows take
-    the expression profile; authored depth-3 stays fail-closed with the named
-    depth-limit refusal; forged metadata is refused by both validators."""
+    the expression profile; authored depth-7 stays fail-closed with the named
+    depth-limit refusal (WP-45, GC-E10 bound 2 -> 6; depth 3-6 now compile);
+    forged metadata is refused by both validators."""
 
     CT_BODY = '''<CheatTable CheatEngineTableVersion="45"><CheatEntries>
 <CheatEntry><ID>959</ID><Description>"BaseProvider"</Description><VariableType>Auto Assembler Script</VariableType><AssemblerScript>[ENABLE]
@@ -735,6 +741,7 @@ unregistersymbol(synBase)
 <CheatEntry><ID>961</ID><Description>"Managed3"</Description><VariableType>4 Bytes</VariableType><Address>ct2synth15.SynthClass::SynthMethod</Address></CheatEntry>
 <CheatEntry><ID>962</ID><Description>"Managed3Off"</Description><VariableType>4 Bytes</VariableType><Address>ct2synth15.SynthClass::SynthMethod+78</Address></CheatEntry>
 <CheatEntry><ID>963</ID><Description>"Depth3"</Description><VariableType>4 Bytes</VariableType><Address>[[[synBase]]]</Address></CheatEntry>
+<CheatEntry><ID>964</ID><Description>"Depth7"</Description><VariableType>4 Bytes</VariableType><Address>[[[[[[[synBase]]]]]]]</Address></CheatEntry>
 </CheatEntries></CheatTable>'''
 
     def compile(self, body, process="ct2synth01.exe"):
@@ -760,9 +767,19 @@ unregistersymbol(synBase)
             self.assertEqual(row["address_profile"], "expression/v1")
             self.assertEqual(row["address"], address)
             self.assertEqual(row["requires"], [])
-        blocked = by_id[963]
+        # WP-45 (GC-E10): authored depth-3 now compiles onto the expression
+        # profile like every other bounded indirection shape.
+        depth3 = by_id[963]
+        self.assertTrue(depth3["supported"], depth3["reason"])
+        self.assertEqual(depth3["address_profile"], "expression/v1")
+        self.assertEqual(depth3["address"], "[[[synBase]]]")
+        self.assertEqual(depth3["source_address"], "[[[synBase]]]")
+        self.assertEqual(depth3["pointer_offsets"], [])
+        self.assertEqual(depth3["requires"], ["synBase"])
+        self.assertEqual(depth3["dependency_ids"], [959])
+        blocked = by_id[964]
         self.assertFalse(blocked["supported"])
-        self.assertIn("exceeds the bounded indirection depth (2 pointer dereferences)",
+        self.assertIn("exceeds the bounded indirection depth (6 pointer dereferences)",
                       blocked["reason"])
 
     def test_plan_with_bounded_rows_passes_both_validators(self):
