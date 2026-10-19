@@ -172,14 +172,21 @@ class NativeCompilerTests(unittest.TestCase):
         self.assertEqual(consumer["staged"],
                          {"provider_ids": [0], "provider_labels": [entry["label"]]})
 
-    def test_lua_registration_without_unregister_is_not_a_static_provider(self):
+    def test_lua_registration_without_unregister_is_a_one_shot_provider(self):
+        # WP-46 part 2 (GC-E12): a missing/empty [DISABLE] classifies the
+        # record as one-shot, so the ENABLE registration is adopted without
+        # a matching unregister (the owner scope releases the symbol at
+        # detach).  The strict register ∩ unregister rule still applies to
+        # non-one-shot records — the fail-closed sub-cases are pinned in
+        # tests/test_native_one_shot_lua_providers.py.
         source = "[ENABLE]\n{$lua}\nregisterSymbol('NoRelease',0x1000)\n{$asm}\n[DISABLE]\n{$lua}\n{$asm}"
         plan = self.compile(script_record(0, source) + value_record(1, "NoRelease"))
         entry, consumer = plan["entries"]
         self.assertTrue(entry["supported"], entry["reason"])
-        self.assertEqual(entry["provides"], [])
-        self.assertFalse(consumer["supported"])
-        self.assertIn("NoRelease", consumer["reason"])
+        self.assertTrue(entry["one_shot"])
+        self.assertEqual(entry["provides"], ["NoRelease"])
+        self.assertTrue(consumer["supported"], consumer["reason"])
+        self.assertEqual(consumer["dependency_ids"], [0])
 
     def test_lua_static_dependencies_preserve_selected_provider_closure(self):
         locator = "[ENABLE]\naobscanmodule(Anchor,Target.exe,54 46)\nregistersymbol(Anchor)\n[DISABLE]\nunregistersymbol(Anchor)"

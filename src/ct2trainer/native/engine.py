@@ -433,7 +433,18 @@ def validate_plan(plan: dict) -> None:
                         if phase != "disable":
                             raise NativeRuntimeError("Only disable may unregister symbols")
                         removed.add(operation["symbol"].casefold())
-            if (registered != removed or registered != {name.casefold() for name in entry.get("provides", [])}
+            provides_cf = {name.casefold() for name in entry.get("provides", [])}
+            if entry.get("one_shot"):
+                # WP-46 part 2 (GC-E12): a one-shot record has an empty
+                # disable phase by contract (checked above), so the
+                # unregister side is empty by construction; the
+                # registration evidence alone must equal the claimed
+                # provides (the owner scope releases the symbol at detach).
+                mismatch = registered != provides_cf
+            else:
+                mismatch = (registered != removed
+                            or registered != provides_cf)
+            if (mismatch
                     or required != {name.casefold() for name in entry.get("requires", [])}):
                 raise NativeRuntimeError("Script symbol dependency/registration metadata does not match its operations")
             if not registered and not any(operation["op"] == "write" for operation in entry["enable"]):

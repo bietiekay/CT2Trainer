@@ -714,17 +714,23 @@ def _parse(source: str) -> tuple[list[_Part], str, bool]:
     return parts, static_source, static_body
 
 
-def lua_symbol_provides(source: str) -> list[str]:
+def lua_symbol_provides(source: str, *, one_shot: bool | None = None) -> list[str]:
     """WP-37: the symbol names a record's embedded Lua proves to own.
 
     Pure-text re-derivation of the WP-14 C1 extraction (``registerSymbol`` /
-    ``symbol='...'`` in the ENABLE Lua, ``unregisterSymbol`` in the DISABLE
-    Lua) so the table compiler can separate Lua-owned providers from static
-    AA registrations without re-preparing the record's whole Lua program.
+    ``Register.symbol`` / ``symbol='...'`` in the ENABLE Lua,
+    ``unregisterSymbol`` in the DISABLE Lua) so the table compiler can
+    separate Lua-owned providers from static AA registrations without
+    re-preparing the record's whole Lua program.  ``one_shot`` defaults to
+    the record's own one-shot classification; a caller with a prepared
+    program passes its canonical flag to stay byte-consistent with the
+    entry's ``provides`` (WP-46 part 2).
     """
     parts, _static_source, _static_body = _parse(source)
-    from .lua_symbol_providers import extract_lua_symbol_providers
-    return extract_lua_symbol_providers(parts)
+    from .lua_symbol_providers import extract_lua_symbol_providers, parts_are_one_shot
+    if one_shot is None:
+        one_shot = parts_are_one_shot(parts)
+    return extract_lua_symbol_providers(parts, one_shot=one_shot)
 
 
 def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
@@ -790,10 +796,8 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
             auto_assemble = _auto_assemble_proof(parts, process_name, bitness)
         except AutoAssembleProofError:
             pass
-    one_shot = (all(part.phase != 'disable' or part.kind == 'phase'
-                    or (part.kind == 'lua' and not part.text.strip())
-                    for part in parts)
-                and any(part.phase == 'enable' and part.kind != 'phase' for part in parts))
+    from .lua_symbol_providers import parts_are_one_shot
+    one_shot = parts_are_one_shot(parts)
     if static_program is not None:
         one_shot = one_shot and bool(static_program.get('one_shot', False))
     result = {'schema': SCHEMA, 'source': source,
@@ -807,8 +811,11 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
     # the embedded Lua (registerSymbol / symbol='...' table field) and
     # release them on disable; static proof of that pair makes the record
     # a provider for staged dependency analysis.  Pure text, no execution.
+    # WP-46 part 2 (GC-E12): one-shot records adopt the ENABLE registration
+    # without a matching unregister (the owner scope releases the symbol at
+    # detach); the canonical one_shot flag above drives that branch.
     from .lua_symbol_providers import extract_lua_symbol_providers
-    lua_provides = extract_lua_symbol_providers(parts)
+    lua_provides = extract_lua_symbol_providers(parts, one_shot=one_shot)
     if lua_provides:
         result['provides'] = sorted(set(result['provides']) | set(lua_provides),
                                     key=str.casefold)

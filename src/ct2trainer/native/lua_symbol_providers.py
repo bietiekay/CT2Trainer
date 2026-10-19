@@ -30,6 +30,18 @@ a matching unregister, and an unregister without a matching registration
 all stay unproven: the record then keeps its ordinary (empty) Lua
 provides, so dependent records remain blocked with their named provider
 reason.  The extraction is pure text; no Lua is executed.
+
+WP-46 part 2 (GC-E12) extends the evidence without weakening the rest:
+the CE helper form ``Register.symbol('<name>', ...)`` (case-insensitive
+dotted form) counts as registration evidence alongside
+``registerSymbol``, and ``unregisterSymbol('<name>')`` accepts one
+optional trailing argument (e.g. ``unregisterSymbol('<name>', false)``)
+whose value carries no static meaning.  For records classified one-shot
+(missing or contentless ``[DISABLE]``), the ENABLE-phase registration
+evidence is adopted *without* a matching unregister: the symbol is
+released by the owner scope at detach instead of by a disable phase, so
+requiring the pair would keep every genuine one-shot provider unproven.
+Non-one-shot records keep the strict register ∩ unregister rule.
 """
 
 from __future__ import annotations
@@ -40,15 +52,25 @@ import re
 # than this is treated as unproven (empty result), never truncated.
 MAX_PROVIDERS = 64
 
-# registerSymbol('Name', <anything>) / registerSymbol("Name", <anything>)
-# The lookbehind keeps unregisterSymbol('Name') from matching as a
-# registration (it contains "registerSymbol" as a suffix).
+# registerSymbol('Name', <anything>) / registerSymbol("Name", <anything>),
+# plus the CE helper form Register.symbol('Name', <anything>) — the
+# case-insensitive dotted form counts as the same registration evidence
+# (WP-46 part 2, GC-E12).  The lookbehind keeps unregisterSymbol('Name')
+# from matching as a registration (it contains "registerSymbol" as a
+# suffix); the dotted form keeps its own dotted boundary.
 _REGISTER_CALL = re.compile(
-    r"(?<![A-Za-z0-9_])registerSymbol\s*\(\s*['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]\s*[),]",
+    r"(?<![A-Za-z0-9_.])(?:registerSymbol|Register\.symbol)\s*\(\s*['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]\s*[),]",
     re.IGNORECASE)
-# unregisterSymbol('Name')
+# unregisterSymbol('Name') with one optional trailing argument
+# (WP-46 part 2: the corpus shows unregisterSymbol('Name', false)); the
+# argument is a single bounded scalar (constant, number or short string)
+# whose value carries no static meaning.
+_UNREGISTER_TAIL = (
+    r"(?:true|false|nil|null|[A-Za-z_][A-Za-z0-9_]*|\d+(?:\.\d+)?"
+    r"|['\"][^'\"]{0,64}['\"])")
 _UNREGISTER_CALL = re.compile(
-    r"(?<![A-Za-z0-9_])unregisterSymbol\s*\(\s*['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]\s*\)",
+    r"(?<![A-Za-z0-9_])unregisterSymbol\s*\(\s*['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]"
+    r"\s*(?:,\s*" + _UNREGISTER_TAIL + r")?\s*\)",
     re.IGNORECASE)
 # symbol='Name' table field (the PRAGMATA AOB-table shape)
 _SYMBOL_FIELD = re.compile(
@@ -62,7 +84,21 @@ def _without_comments(text: str) -> str:
     return "\n".join(line.split("--", 1)[0] for line in text.splitlines())
 
 
-def extract_lua_symbol_providers(parts) -> list[str]:
+def parts_are_one_shot(parts) -> bool:
+    """The one-shot classification shared with ``prepare_lua_program``.
+
+    A parsed program is one-shot when its DISABLE phase carries no content
+    (no AA part, no non-empty Lua part) while at least one ENABLE part
+    exists; a missing [DISABLE] marker is canonicalized into an explicit
+    empty phase by the parser, so both shapes classify identically.
+    """
+    return (all(part.phase != 'disable' or part.kind == 'phase'
+                or (part.kind == 'lua' and not part.text.strip())
+                for part in parts)
+            and any(part.phase == 'enable' and part.kind != 'phase' for part in parts))
+
+
+def extract_lua_symbol_providers(parts, *, one_shot: bool = False) -> list[str]:
     """Return the symbol names a record's embedded Lua proves to register
     while active and release on deactivation.
 
@@ -71,6 +107,14 @@ def extract_lua_symbol_providers(parts) -> list[str]:
     is collected from the ``enable`` phase, release evidence from the
     ``disable`` phase; the result is their intersection, sorted
     case-insensitively.  Returns an empty list when nothing is proven.
+
+    ``one_shot`` selects the WP-46 part 2 adoption rule for records
+    classified one-shot (missing/empty [DISABLE]): the ENABLE-phase
+    registration evidence is adopted without a matching unregister, because
+    the symbol is released by the owner scope at detach instead of by a
+    disable phase.  An unregister that does appear in such a record still
+    cancels the adoption (the symbol would not stay live after activation).
+    Non-one-shot records keep the strict register ∩ unregister rule.
     """
     registered: set[str] = set()
     released: set[str] = set()
@@ -86,7 +130,10 @@ def extract_lua_symbol_providers(parts) -> list[str]:
         elif part.phase == "disable":
             released.update(
                 match.group(1) for match in _UNREGISTER_CALL.finditer(text))
-    adopted = registered & released
+    if one_shot:
+        adopted = registered - released
+    else:
+        adopted = registered & released
     if len(adopted) > MAX_PROVIDERS:
         return []
     return sorted(adopted, key=str.casefold)

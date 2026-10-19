@@ -1229,7 +1229,12 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
         record_text = scripts[entry["id"]]
         if "lua_program" in entry:
             try:
-                lua_symbols = lua_symbol_provides(record_text)
+                # WP-46 part 2 (GC-E12): drive the one-shot adoption branch
+                # with the entry's canonical flag so the map and the entry's
+                # provides never diverge.
+                lua_symbols = lua_symbol_provides(
+                    record_text,
+                    one_shot=entry["lua_program"].get("one_shot", False))
             except LuaProgramError:
                 lua_symbols = []
             for symbol in lua_symbols:
@@ -1769,7 +1774,19 @@ def validate_plan(plan: dict) -> None:
                             if phase != "disable":
                                 raise NativeCompileError("Only disable may unregister symbols.")
                             unregistered.add(operation["symbol"].casefold())
-                if (registered != unregistered or registered != {symbol.casefold() for symbol in entry["provides"]}
+                provides_cf = {symbol.casefold() for symbol in entry["provides"]}
+                if entry.get("one_shot"):
+                    # WP-46 part 2 (GC-E12): a one-shot record has an empty
+                    # disable phase by contract (checked above), so the
+                    # unregister side is empty by construction; the
+                    # registration evidence alone must equal the claimed
+                    # provides (the owner scope releases the symbol at
+                    # detach).  Mirrors the engine gate's branch.
+                    mismatch = registered != provides_cf
+                else:
+                    mismatch = (registered != unregistered
+                                or registered != provides_cf)
+                if (mismatch
                         or required != {symbol.casefold() for symbol in entry["requires"]}):
                     raise NativeCompileError("Script symbol dependency/registration metadata does not match its operations.")
                 if not registered and not any(operation["op"] == "write" for operation in entry["enable"]):
