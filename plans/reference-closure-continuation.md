@@ -618,8 +618,13 @@ stay inactive"). Case: `case-22`.
      write T; any other writer or out-of-contract target is refused with the
      named "Dynamic address write outside the planned provider contract.",
      (iii) stores `dynamic_addresses[T] = value`. `address = nil` from the
-     same pair clears the entry. The proxy upgrade is documented in the plan
-     note; the 27 pinned tables' differential compile must stay
+     same pair clears the entry. The engine exposes a built-in `AddressList`
+     global in every record-Lua scope (name→proxy map keyed by exact record
+     description); a table-defined `AddressList` shadows it in that scope
+     (the Octopath2 Starter-layer equivalent). Proxies are bound to the
+     requesting scope, so the setter contract check is scope-local. The
+     proxy upgrade is documented in the plan note; the 27 pinned tables'
+     differential compile must stay
      byte-identical (no pinned table triggers the marker, so plans are
      unchanged).
   5. *Child resolution.* Relative children of T resolve their base fresh from
@@ -642,9 +647,9 @@ stay inactive"). Case: `case-22`.
      not addressless, cyclic pair) are refused with named reasons.
   8. *Scope limits (documented).* Only the two static idioms are admitted;
      compatibility with real table helper layers (Octopath2's encoded
-     `Starter.lua`/`Recorder.lua`; `AddressList` is table-defined, not CE
-     core) is verified under AP-11 on the real target; label mapping is
-     exact-description lookup only.
+     `Starter.lua`/`Recorder.lua`, which may define their own `AddressList`
+     that shadows the engine built-in) is verified under AP-11 on the real
+     target; label mapping is exact-description lookup only.
   9. *Expected unblock.* GC-E8 — current exact plan-level refusal "Relative
      address has no address-bearing ancestor." (330: Octopath2 327, HFW 1,
      AtomicHeart 1, DS2 1) to the extent the shapes match the idioms;
