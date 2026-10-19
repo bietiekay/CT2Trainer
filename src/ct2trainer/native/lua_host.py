@@ -250,7 +250,7 @@ local scans, scan_count=setmetatable({}, {__mode='k'}),0
 function createMemScan(progressbar)
   if progressbar~=nil then error('Scan progress controls are outside this profile',2) end
   if scan_count>=128 then error('Memory scan object limit exceeded',2) end
-  local data={dead=false,complete=false,addresses=nil}
+  local data={dead=false,complete=false,addresses=nil,only_one=false}
   local object
   object=setmetatable({}, {
     __index=function(_,key)
@@ -264,9 +264,28 @@ function createMemScan(progressbar)
         if not data.complete then error('Memory scan has not completed',2) end
       end end
       if key=='destroy' then return function() data.dead=true; data.addresses=nil; scan_count=scan_count-1 end end
+      -- CE TMemScan contract: Result is the single found address as an
+      -- integer (nil otherwise); it answers the first result when the
+      -- OnlyOneResult flag asked for a single-result scan.
+      if key=='Result' then
+        local addresses=data.addresses
+        if not addresses then return nil end
+        if #addresses==1 or (data.only_one and #addresses>0) then
+          return tonumber(addresses[1],16)
+        end
+        return nil
+      end
+      if key=='OnlyOneResult' then return data.only_one end
       error('Unsupported memory scan property: '..tostring(key),2)
     end,
-    __newindex=function() error('Memory scan property is outside this profile',2) end,
+    __newindex=function(_,key,value)
+      if key=='OnlyOneResult' then
+        if data.dead then error('Memory scan is destroyed',2) end
+        data.only_one=value~=nil and value~=false
+        return
+      end
+      error('Memory scan property is outside this profile',2)
+    end,
     __metatable='CT2Trainer memory scan'
   })
   scans[object]=data; scan_count=scan_count+1
@@ -295,11 +314,142 @@ function createFoundList(scan)
         if type(index)~='number' or index%1~=0 or index<0 then error('Invalid found list index',2) end
         return data.addresses[index+1]
       end}) end
+      -- CE FoundList contract (0-based rows): getCount() reports the row
+      -- count; getAddress(i) answers the 8-digit uppercase hexadecimal
+      -- address, the zero address for an out-of-bounds row.
+      if key=='getCount' then return function()
+        check()
+        return #data.addresses
+      end end
+      if key=='getAddress' then return function(index)
+        check()
+        if index==nil then return nil end
+        if type(index)~='number' or index%1~=0 then error('Invalid found list index',2) end
+        if index<0 or index>=#data.addresses then return '00000000' end
+        return string.format('%08X',tonumber(data.addresses[index+1],16))
+      end end
       error('Unsupported found list property: '..tostring(key),2)
     end,
     __newindex=function() error('Found lists are read-only',2) end,
     __metatable='CT2Trainer found list'
   })
+end
+-- CE string-list utility (TStrings surface). Bounded in-memory list: file
+-- I/O and foreign object data are outside the profile. Indices follow the
+-- CE 0-based ordinal (item 0 is the first entry); add() returns the new
+-- ordinal. Case-sensitive lookups are opt-in, matching the CE default.
+local stringlists, stringlist_count, stringlist_item_limit={},0,65536
+local function stringlist_new()
+  if stringlist_count>=256 then error('String list object limit exceeded',2) end
+  local data={items={},case_sensitive=false,updates=0}
+  local function ordinal(index)
+    if type(index)~='number' or index%1~=0 or index<0 or index>=#data.items then
+      error('String list index out of range',2)
+    end
+    return index
+  end
+  local function item_of(value)
+    if type(value)~='string' and type(value)~='number' then
+      error('String list items require text',2)
+    end
+    return tostring(value)
+  end
+  local function find_item(value)
+    local text=item_of(value)
+    for i=0,#data.items-1 do
+      local item=data.items[i+1]
+      if (data.case_sensitive and item==text)
+         or (not data.case_sensitive and item:lower()==text:lower()) then
+        return i
+      end
+    end
+    return -1
+  end
+  local function append(value)
+    if #data.items>=stringlist_item_limit then error('String list item limit exceeded',2) end
+    data.items[#data.items+1]=item_of(value)
+    return #data.items-1
+  end
+  local object
+  object=setmetatable({}, {
+    __index=function(_,key)
+      if type(key)=='number' then return data.items[ordinal(key)+1] end
+      if key=='add' then return function(value,extra)
+        if extra~=nil and extra~=0 then error('String list object data is outside this profile',2) end
+        return append(value)
+      end end
+      if key=='addText' then return function(value)
+        append(value)
+      end end
+      if key=='clear' then return function() data.items={} end end
+      if key=='delete' then return function(index)
+        table.remove(data.items,ordinal(index)+1)
+      end end
+      if key=='getCount' then return function() return #data.items end end
+      if key=='Count' then return #data.items end
+      if key=='getString' then return function(index)
+        return data.items[ordinal(index)+1]
+      end end
+      if key=='setString' then return function(index,value)
+        data.items[ordinal(index)+1]=item_of(value)
+      end end
+      if key=='String' then return setmetatable({}, {
+        __index=function(_,index) return data.items[ordinal(index)+1] end,
+        __newindex=function(_,index,value) data.items[ordinal(index)+1]=item_of(value) end
+      }) end
+      if key=='indexOf' then return function(value)
+        return find_item(value)
+      end end
+      if key=='insert' then return function(index,value)
+        if type(index)~='number' or index%1~=0 or index<0 or index>#data.items then
+          error('String list index out of range',2)
+        end
+        if #data.items>=stringlist_item_limit then error('String list item limit exceeded',2) end
+        table.insert(data.items,index+1,item_of(value))
+      end end
+      if key=='remove' then return function(value)
+        local found=find_item(value)
+        if found>=0 then table.remove(data.items,found+1) end
+      end end
+      if key=='beginUpdate' then return function() data.updates=data.updates+1 end end
+      if key=='endUpdate' then return function()
+        if data.updates==0 then error('String list update is not open',2) end
+        data.updates=data.updates-1
+      end end
+      if key=='CaseSensitive' then return data.case_sensitive end
+      if key=='getCaseSensitive' then return function() return data.case_sensitive end end
+      if key=='setCaseSensitive' then return function(value)
+        data.case_sensitive=value~=nil and value~=false
+      end end
+      if key=='loadFromFile' or key=='saveToFile' then
+        error('String list file access is outside this profile',2)
+      end
+      if key=='getData' or key=='setData' then
+        error('String list object data is outside this profile',2)
+      end
+      error('Unsupported string list property: '..tostring(key),2)
+    end,
+    __newindex=function(_,key,value)
+      if type(key)=='number' then
+        data.items[ordinal(key)+1]=item_of(value)
+        return
+      end
+      if key=='CaseSensitive' then
+        data.case_sensitive=value~=nil and value~=false
+        return
+      end
+      error('String list property is outside this profile',2)
+    end,
+    __metatable='CT2Trainer string list'
+  })
+  stringlists[object]=data; stringlist_count=stringlist_count+1
+  return object
+end
+function createStringlist()
+  return stringlist_new()
+end
+function createStringList()
+  return createStringlist()
 end
 local functions={
   'getAddress','getAddressSafe','getModuleSize','readInteger','readSmallInteger',
@@ -307,7 +457,7 @@ local functions={
   'writeInteger','writeSmallInteger','writeQword','writeFloat','writeDouble',
   'writeString','registerSymbol','unregisterSymbol','getAddressOfSymbol',
   'getAddressOfSymbolSafe','getProcHandle','getOpenProcessID','isKeyPressed',
-  'getXBox360ControllerState','showMessage','print','executeCodeEx',
+  'getXBox360ControllerState','showMessage','print','executeCodeEx','fullAccess',
   'speedhack_setSpeed','speedhack_getSpeed','attachProcess','detachProcess',
   'LaunchMonoDataCollector','mono_enumDomains','mono_findMethod','mono_invoke_method'
 }
@@ -502,6 +652,8 @@ local function cancel_resources()
   workers={}; worker_count=0; current_worker=nil
   for _,data in pairs(scans) do data.dead=true; data.addresses=nil end
   scan_count=0; current_record_id=nil; memrec=nil
+  for _,data in pairs(stringlists) do data.items={} end
+  stringlist_count=0; stringlists={}
 end
 local function cancel()
   -- This may be entered recursively from a Python broker while a user chunk
@@ -551,6 +703,7 @@ class _ReadOnlyBroker:
         'getProcHandle', 'getOpenProcessID', 'readInteger',
         'readSmallInteger', 'readQword', 'readFloat', 'readDouble',
         'readPointer', 'readString', 'readBytes', 'AOBScan', 'scan.firstScan',
+        'fullAccess',
         'addresslist.Count', 'addresslist.at', 'addresslist.getMemoryRecordByID',
         'addresslist.getMemoryRecordByDescription', 'record.get',
         'isKeyPressed', 'getXBox360ControllerState', 'speedhack_getSpeed',
@@ -1300,6 +1453,24 @@ class EngineLuaBroker:
             if not isinstance(values,list) or not values or len(values)>65536 or any(type(v) is not int or not 0<=v<=255 for v in values):
                 raise LuaHostError('writeBytes requires bounded byte values')
             return self._mutate(address(arguments[0]),bytes(values),syntaxcheck)
+        if name == 'fullAccess':
+            # CE contract: page protection upgrade reported as a plain
+            # boolean. The profile's memory is always writable, so a valid
+            # bounded range answers true; a failing range check answers
+            # false instead of raising (VirtualProtectEx failure in CE).
+            if len(arguments)!=2:
+                raise LuaHostError('fullAccess requires exactly two arguments (address, size)')
+            size=arguments[1]
+            if type(size) is not int or not 1<=size<=4*1024*1024:
+                raise LuaHostError('fullAccess size is outside 1..4 MiB')
+            start=arguments[0]
+            if type(start) is not int:
+                start=address(start)
+            try:
+                memory._range(start,size)
+            except Exception:
+                return False
+            return True
         if name == 'AOBScan':
             if not 1<=len(arguments)<=4: raise LuaHostError('AOBScan requires a pattern and up to three options')
             pattern=arguments[0]
@@ -1312,7 +1483,12 @@ class EngineLuaBroker:
                 raise LuaHostError('firstScan requires the documented fourteen arguments')
             option,kind,rounding,pattern,second,start,end,protection,alignment,param,ishex,notbinary,unicode,casesensitive=arguments
             if isinstance(pattern,str): pattern=pattern.replace('*','?')
-            if (option,kind,rounding)!=('soExactValue',8,'rtRounded'):
+            # CE maps a nil rounding argument through lua_tointeger to 0
+            # (rtRounded); accept the nil and the rounded constant, and keep
+            # the exact byte-array option gate fail-closed.
+            if rounding not in (None,0,'rtRounded'):
+                raise LuaHostError('Unsupported scan rounding type: '+str(rounding))
+            if (option,kind)!=('soExactValue',8):
                 raise LuaHostError('This scan profile supports exact byte arrays with symbolic API constants')
             if second is not None or ishex is not True or any(v is not False for v in (notbinary,unicode,casesensitive)):
                 raise LuaHostError('Unsupported exact byte-array scan options')
