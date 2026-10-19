@@ -369,9 +369,12 @@ class ScanBrokerTests(unittest.TestCase):
     # unknown globals / existing surface -------------------------------------
 
     def test_unknown_global_keeps_named_lua_refusal(self):
+        # WP-56 (lane w4-d): unknown nil globals now surface the exact named
+        # refusal instead of the raw Lua nil-call text, so the bootstrap
+        # error and the broker catch-all agree on one message.
         host = self.host()
         with self.assertRaisesRegex(
-                LuaHostError, "attempt to call a nil value \\(global 'zetaScan'\\)"):
+                LuaHostError, "Unsupported CE Lua API: zetaScan"):
             host.execute('return zetaScan("AA BB")')
         # The broker-level catch-all stays intact for routed names.
         broker = self.engine.lua_sessions[-1][1]
