@@ -104,18 +104,22 @@ class NativeLuaProcessApiHostTests(unittest.TestCase):
                                     'Process API takes no arguments'):
             self.host.execute('return getOpenProcessID("x")')
 
-    def test_open_process_handle_creation_stays_outside_profile(self):
-        # OpenProcess is deliberately absent from the owned profile, so any
-        # attempt fails at the Lua boundary as a nil global (fail-closed).
+    def test_open_process_verifies_the_attached_process_identity(self):
+        # WP-56 (Sinking City 2 attach record): the native trainer is attached
+        # before record Lua ever runs, so OpenProcess is a truthy no-op that
+        # verifies the requested identity (case-insensitive, both CE
+        # spellings).  A mismatch is a named refusal.
+        self.assertIs(self.host.execute('return OpenProcess("fixture.exe")'), True)
+        self.assertIs(self.host.execute('return openProcess("FIXTURE.EXE")'), True)
         with self.assertRaisesRegex(LuaHostError,
-                                    "attempt to call a nil value \\(global 'OpenProcess'\\)"):
-            self.host.execute('return OpenProcess("fixture.exe")')
+                                    "openProcess target does not match the attached process: other.exe"):
+            self.host.execute('return OpenProcess("other.exe")')
 
-    def test_open_process_refused_during_syntaxcheck(self):
-        with self.assertRaisesRegex(LuaHostError,
-                                    "attempt to call a nil value \\(global 'OpenProcess'\\)"):
-            self.host.execute('return OpenProcess("fixture.exe")',
-                              syntaxcheck=True)
+    def test_open_process_is_a_pure_read_during_syntaxcheck(self):
+        # WP-56: the identity check performs no live mutation, so the call
+        # succeeds in check-only mode as well.
+        self.assertIs(self.host.execute('return OpenProcess("fixture.exe")',
+                                        syntaxcheck=True), True)
 
     def test_syntaxcheck_reads_process_surface(self):
         self.assertEqual(self.host.execute('return getProcHandle()',

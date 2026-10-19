@@ -29,6 +29,13 @@ ADVANCED_VALUE_TYPES = frozenset({"Array of byte", "Binary", "Custom"})
 SIMPLE_VALUE_TYPES = frozenset({"Byte", "2 Bytes", "4 Bytes", "8 Bytes", "Float", "Double"})
 HEX_INTEGER_TYPES = frozenset({"Byte", "2 Bytes", "4 Bytes", "8 Bytes"})
 HEX_DIGITS_BY_TYPE = {"Byte": 2, "2 Bytes": 4, "4 Bytes": 8, "8 Bytes": 16}
+# WP-46 (part 1): bound and fail-closed address grammar for the table-level
+# <UserdefinedSymbols> section.  CE stores these addresses as hexadecimal
+# absolute integers; an optional 0x/$ prefix is tolerated, at most 16 hex
+# digits (64 bits).  A decimal-looking string is read as hex, matching how
+# CE stores and displays the section.
+MAX_UDS_ENTRIES = 4096
+_UDS_ADDRESS = re.compile(r"^(?:0[xX]|\$)?[0-9A-Fa-f]{1,16}\Z")
 
 
 class TableError(ValueError):
@@ -52,6 +59,22 @@ class RecordHotkey:
     value: str
     description: str
     active: bool
+
+
+@dataclass(frozen=True)
+class UserDefinedSymbol:
+    """One accepted <SymbolEntry> of the table-level <UserdefinedSymbols> section.
+
+    Cheat Engine 7.x writes the (often empty) section into every table; a
+    non-empty section defines static symbol addresses that act as table-level
+    symbol definitions for every record.  Accepted entries are available to
+    address-expression and AA symbol resolution (casefold-insensitive) only
+    while no supported record provides the same symbol — record providers
+    always win, and the compiler seeds exactly that residual set.
+    """
+
+    name: str
+    address: int
 
 
 @dataclass(frozen=True)
@@ -173,6 +196,7 @@ class Table:
     custom_types: tuple
     sections: tuple[SectionSummary, ...]
     warnings: tuple[str, ...]
+    user_defined_symbols: tuple[UserDefinedSymbol, ...] = ()
 
     @property
     def counts(self) -> dict[str, int]:
@@ -221,6 +245,10 @@ class Table:
             "sections": [asdict(section) for section in self.sections],
             "counts": self.counts,
             "warnings": list(self.warnings),
+            "user_defined_symbols": [
+                {"name": symbol.name, "address": symbol.address}
+                for symbol in self.user_defined_symbols
+            ],
             "entries": [entry.to_dict() for entry in self.entries],
         }
 
@@ -589,6 +617,60 @@ def read_table(path: str | Path) -> Table:
         warnings.append(
             f"Duplicate CheatEntry ID: {entry_id} (kept first occurrence; "
             f"dropped {len(names)} duplicate record(s): {', '.join(names)})")
+    # WP-46 (part 1): interpret the table-level <UserdefinedSymbols> section.
+    # CE 7.x writes the tag (usually empty) into every table, so an empty or
+    # absent section yields no symbols and no warning.  Every entry is judged
+    # fail-closed: a rejected entry is dropped with a named per-entry warning
+    # and the remaining entries (and the table itself) still compile.
+    uds_symbols: list[UserDefinedSymbol] = []
+    uds_section = root.find("UserdefinedSymbols")
+    if uds_section is not None:
+        uds_nodes = uds_section.findall("SymbolEntry")
+        if len(uds_nodes) > MAX_UDS_ENTRIES:
+            warnings.append(
+                f"UserdefinedSymbols section exceeds {MAX_UDS_ENTRIES} "
+                f"entries; section ignored.")
+        else:
+            from .native.aa import AAError, validate_symbol
+            uds_seen: set[str] = set()
+            for index, node in enumerate(uds_nodes, start=1):
+                name = (node.findtext("Name") or "").strip()
+                if not name:
+                    warnings.append(
+                        f"UserdefinedSymbols entry {index}: missing <Name>; "
+                        f"entry ignored.")
+                    continue
+                try:
+                    validate_symbol(name)
+                except AAError as exc:
+                    warnings.append(
+                        f"UserdefinedSymbols entry '{name}': invalid symbol "
+                        f"name ({exc}); entry ignored.")
+                    continue
+                key = name.casefold()
+                if key in uds_seen:
+                    warnings.append(
+                        f"UserdefinedSymbols entry '{name}': duplicate symbol "
+                        f"name (kept first occurrence); later entry ignored.")
+                    continue
+                address_text = (node.findtext("Address") or "").strip()
+                if not address_text:
+                    warnings.append(
+                        f"UserdefinedSymbols entry '{name}': missing or empty "
+                        f"<Address>; entry ignored.")
+                    continue
+                if _UDS_ADDRESS.fullmatch(address_text) is None:
+                    warnings.append(
+                        f"UserdefinedSymbols entry '{name}': address "
+                        f"'{address_text}' is not a hexadecimal absolute "
+                        f"integer; entry ignored.")
+                    continue
+                uds_seen.add(key)
+                uds_symbols.append(UserDefinedSymbol(
+                    name=name,
+                    address=int(address_text.removeprefix("$").removeprefix("0x")
+                                .removeprefix("0X"), 16),
+                ))
     sections = tuple(
         SectionSummary(
             name=element.tag,
@@ -611,4 +693,5 @@ def read_table(path: str | Path) -> Table:
         custom_types=custom_types,
         sections=sections,
         warnings=tuple(warnings),
+        user_defined_symbols=tuple(uds_symbols),
     )

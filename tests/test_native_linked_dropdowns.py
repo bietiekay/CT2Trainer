@@ -200,10 +200,12 @@ class LinkedDropdownCompileRefusalTests(unittest.TestCase):
 
 class CorpusLinkDiagnosticShapeTests(unittest.TestCase):
     def test_corpus_link_refusals_use_the_split_messages(self):
-        # WP-34 (FLAG-2 follow-up 1a): catalog shape over the pinned corpus —
-        # the old generic "missing or ambiguous" refusal is gone; every
-        # link-target refusal is either the exact missing message or the
-        # ambiguous message carrying a candidate count of at least two.
+        # WP-34 (FLAG-2 follow-up 1a) + WP-45 (GC-E9): catalog shape over the
+        # pinned corpus.  Missing link targets no longer block the record:
+        # they demote the linked dropdown to an empty plain list with a
+        # named plan warning, so no entry carries a missing-target refusal
+        # anymore.  Ambiguous targets keep the exact hard refusal with a
+        # candidate count of at least two.
         corpus = Path(__file__).resolve().parents[1] / "TableReferences"
         if not corpus.exists():
             self.skipTest(
@@ -213,6 +215,7 @@ class CorpusLinkDiagnosticShapeTests(unittest.TestCase):
         self.assertEqual(len(paths), 24, "The repository compatibility corpus "
                                          "must retain all 24 case tables.")
         missing = ambiguous = 0
+        demotions = []
         for path in paths:
             with self.subTest(path=path.name):
                 plan = compile_table(path, "Target.exe")
@@ -228,9 +231,21 @@ class CorpusLinkDiagnosticShapeTests(unittest.TestCase):
                         ambiguous += 1
                     else:
                         self.fail("unexpected link-target refusal shape: " + reason)
-        # The pinned corpus carries exactly one unresolvable link target:
-        # case-16 part 2's dangling link (record 14, "no such list").
-        self.assertEqual((missing, ambiguous), (1, 0))
+                demotions.extend(warning for warning in plan["warnings"]
+                                 if warning.endswith("The linked dropdown is demoted to an empty list."))
+        # WP-45 (GC-E9): no record is blocked on a missing link target
+        # anymore; the pinned corpus's single dangling target (case-16
+        # part 2, record 14, "no such list") now demotes to a supported
+        # record with an empty plain dropdown and exactly one warning.
+        self.assertEqual((missing, ambiguous), (0, 0))
+        self.assertEqual(demotions, [
+            "Record 14 ('dangling link (stays blocked)'): Dropdown link target is missing: "
+            "'no such list' matches no record label. The linked dropdown is demoted to an empty list."])
+        case16 = compile_table(paths[15], "Target.exe")
+        record14 = next(entry for entry in case16["entries"] if entry["id"] == 14)
+        self.assertTrue(record14["supported"], record14["reason"])
+        self.assertEqual(record14["dropdown"], {"choices": [], "read_only": False})
+        self.assertNotIn("link_target_id", record14["dropdown"])
 
 
 class LinkedDropdownEngineTests(unittest.TestCase):

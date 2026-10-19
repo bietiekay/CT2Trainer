@@ -30,6 +30,18 @@ class LuaProgramError(ValueError):
     """Malformed, forged or out-of-profile source, with no source execution."""
 
 
+class AutoAssembleProofError(LuaProgramError):
+    """A non-executable static envelope whose autoAssemble proof fails (WP-51)."""
+
+
+AUTOASSEMBLE_PROOF_SCHEMA = 'ct2trainer-autoassemble-proof/v1'
+_NO_CONTENT_REASON = 'Enable section has no executable patch or data.'
+_MAX_PROOF_BODIES = 128
+_PROOF_ESCAPES = {'\\\\': '\\', '\\"': '"', "\\'": "'", '\\n': '\n', '\\t': '\t', '\\r': '\r'}
+_PROOF_IDENT = re.compile(r'[A-Za-z_][A-Za-z0-9_]*')
+_UNPROVABLE = 'Auto-assembled program body is not statically provable.'
+
+
 def _bounded_source(source: Any) -> str:
     if not isinstance(source, str):
         raise LuaProgramError('Lua program source must be text')
@@ -227,6 +239,316 @@ def _lua_call_source(text: str, aa: _AALex) -> str:
                 return body
         index += 1
     raise LuaProgramError('Unterminated luaCall parentheses, Lua string or comment')
+
+
+def _lua_non_code_spans(text: str) -> list[tuple[int, int]]:
+    """Half-open [start, end) intervals of Lua string/comment text.
+
+    Quoted strings honor backslash escapes, long strings honor any ``=``
+    level, line comments end at the newline, and ``--[=]*[`` opens a block
+    comment with the matching ``]=]*``.  Everything outside these spans is
+    code; unterminated strings/comments extend to the end of the text.
+    """
+    spans: list[tuple[int, int]] = []
+    index, length = 0, len(text)
+    quote: str | None = None
+    quote_start = 0
+    long_level: str | None = None
+    long_start = 0
+    while index < length:
+        if long_level is not None:
+            close = ']' + long_level + ']'
+            end = text.find(close, index)
+            if end < 0:
+                spans.append((long_start, length))
+                break
+            spans.append((long_start, end + len(close)))
+            index = end + len(close)
+            long_level = None
+            continue
+        char = text[index]
+        if quote is not None:
+            if char == '\\' and index + 1 < length:
+                index += 2
+                continue
+            if char == quote:
+                spans.append((quote_start, index + 1))
+                quote = None
+            index += 1
+            continue
+        if char in {'"', "'"}:
+            quote, quote_start = char, index
+            index += 1
+            continue
+        if text.startswith('--', index):
+            opener = _LONG_OPEN.match(text, index + 2)
+            if opener is None:
+                newline = text.find('\n', index)
+                spans.append((index, length if newline < 0 else newline))
+                index = length if newline < 0 else newline + 1
+            else:
+                long_level, long_start = opener.group(1), index
+                index = opener.end()
+            continue
+        if char == '[' and (opener := _LONG_OPEN.match(text, index)) is not None:
+            long_level, long_start = opener.group(1), index
+            index = opener.end()
+            continue
+        index += 1
+    if quote is not None:
+        spans.append((quote_start, length))
+    return spans
+
+
+def _code_mask(text: str) -> bytearray:
+    """One per text position; nonzero exactly at code positions."""
+    mask = bytearray(b'\x01') * len(text)
+    for start, end in _lua_non_code_spans(text):
+        mask[start:end] = b'\x00' * (end - start)
+    return mask
+
+
+def _code_view(text: str, mask: bytearray) -> str:
+    """Raw text with non-code characters NULed, newlines preserved."""
+    chars = list(text)
+    for i in range(len(text)):
+        if not mask[i] and text[i] != '\n':
+            chars[i] = '\x00'
+    return ''.join(chars)
+
+
+def _block_depth_at(view: str, position: int) -> int:
+    """End-block nesting depth at position: function/then/do open, end closes.
+
+    ``elseif ... then`` shares the enclosing ``if`` block (one ``end``), so
+    its ``then`` reopens nothing.  The rare unpaired corner cases fail
+    closed, never widening the proven scope.
+    """
+    depth, index, length = 0, 0, len(view)
+    pending_elseif = False
+    while index < length and index < position:
+        char = view[index]
+        if char in ' \t\n\x00':
+            index += 1
+            continue
+        token = _PROOF_IDENT.match(view, index)
+        if token is None:
+            index += 1
+            continue
+        word = token.group()
+        index += len(word)
+        if word == 'elseif':
+            pending_elseif = True
+        elif word == 'then':
+            if not pending_elseif:
+                depth += 1
+            pending_elseif = False
+        elif word in {'function', 'do'}:
+            depth += 1
+        elif word == 'end':
+            depth = max(0, depth - 1)
+            pending_elseif = False
+    return depth
+
+
+def _auto_assemble_call_positions(text: str, mask: bytearray) -> list[tuple[int, int]]:
+    """(name index, first-argument index) pairs of code-context calls.
+
+    Only the bare global spelling counts: a preceding identifier character,
+    ``.`` or ``:`` belongs to a member call and is not the CE global.
+    """
+    positions: list[tuple[int, int]] = []
+    index = 0
+    length = len(text)
+    while True:
+        index = text.find('autoAssemble', index)
+        if index < 0:
+            break
+        after = index + len('autoAssemble')
+        before = text[index - 1] if index else ''
+        if index == 0 or (not before.isalnum() and before not in '_.:'):
+            j = after
+            while j < length and text[j] in ' \t':
+                j += 1
+            if j < length and text[j] == '(' and mask[index] and mask[j]:
+                positions.append((index, j + 1))
+        index = after
+    return positions
+
+
+def _proof_literal(text: str, index: int, mask: bytearray) -> tuple[str, int]:
+    """Parse one code-context string literal (quoted or long) at index.
+
+    Quoted strings accept exactly the pinned escape set; any other escape,
+    an unescaped newline or an unterminated literal refuses the proof.
+    """
+    length = len(text)
+    while index < length and text[index] in ' \t\r\n':
+        index += 1
+    if index >= length:
+        raise AutoAssembleProofError(_UNPROVABLE)
+    char = text[index]
+    if char in {'"', "'"}:
+        index += 1
+        chars: list[str] = []
+        while index < length:
+            c = text[index]
+            if c == '\\' and index + 1 < length:
+                escape = text[index:index + 2]
+                if escape not in _PROOF_ESCAPES:
+                    raise AutoAssembleProofError(_UNPROVABLE)
+                chars.append(_PROOF_ESCAPES[escape])
+                index += 2
+                continue
+            if c == char:
+                return ''.join(chars), index + 1
+            if c == '\n':
+                raise AutoAssembleProofError(_UNPROVABLE)
+            chars.append(c)
+            index += 1
+        raise AutoAssembleProofError(_UNPROVABLE)
+    if char == '[' and (opener := _LONG_OPEN.match(text, index)) is not None:
+        close = ']' + opener.group(1) + ']'
+        end = text.find(close, opener.end())
+        if end < 0:
+            raise AutoAssembleProofError(_UNPROVABLE)
+        return text[opener.end():end], end + len(close)
+    raise AutoAssembleProofError(_UNPROVABLE)
+
+
+def _literal_chain(text: str, view: str, mask: bytearray, start: int) -> str:
+    """A ``..``-concatenated chain of string literals, statement-terminated."""
+    value, index = _proof_literal(text, start, mask)
+    length = len(text)
+    while True:
+        j = index
+        while j < length and text[j] in ' \t\r\n':
+            j += 1
+        if j < length and view[j:j + 2] == '..' and not (j + 2 < length and view[j + 2] == '.'):
+            piece, index = _proof_literal(text, j + 2, mask)
+            value += piece
+        else:
+            break
+    k = index
+    while k < length and text[k] in ' \t':
+        k += 1
+    if k < length and text[k] not in '\n;' and text[k:k + 2] != '--':
+        raise AutoAssembleProofError(_UNPROVABLE)
+    return value
+
+
+def _assigned_literal_chain(text: str, view: str, mask: bytearray, name: str,
+                            call_index: int, call_depth: int) -> str:
+    """Single-level indirection: the last statement assignment of ``name``
+    before the call whose block scope still encloses it and whose right-hand
+    side is a literal concatenation chain.  Multi-assign, member and out-of-
+    scope assignments stay unprovable (fail-closed).
+    """
+    pattern = re.compile(r'(?:\blocal\s+|(?<![A-Za-z0-9_.:\x00]))' + re.escape(name) + r'\s*=(?!=)')
+    candidates = [match for match in pattern.finditer(view, 0, call_index)
+                  if match.group().startswith('local') or _statement_start(view, match.start())]
+    for match in reversed(candidates):
+        if _block_depth_at(view, match.start()) == call_depth:
+            return _literal_chain(text, view, mask, match.end())
+    raise AutoAssembleProofError(_UNPROVABLE)
+
+
+def _statement_start(view: str, index: int) -> bool:
+    j = index - 1
+    while j >= 0 and view[j] in ' \t':
+        j -= 1
+    return j < 0 or view[j] in '\n;('
+
+
+def _proof_first_argument(text: str, mask: bytearray, view: str, start: int,
+                          call_depth: int) -> tuple[str, str | None]:
+    """Classify one autoAssemble first argument.
+
+    ``nil`` is a retire call (``'retire', None``); a quoted literal, a long
+    string, or an identifier bound earlier to a literal concatenation chain
+    proves the body; anything else refuses with the named reason.
+    """
+    index = start
+    length = len(text)
+    while index < length and text[index] in ' \t\r\n':
+        index += 1
+    if index >= length:
+        raise AutoAssembleProofError(_UNPROVABLE)
+    if (text[index:index + 3] == 'nil'
+            and (index + 3 >= length or not (text[index + 3].isalnum() or text[index + 3] == '_'))):
+        return ('retire', None)
+    char = text[index]
+    if char in {'"', "'"} or (char == '[' and _LONG_OPEN.match(text, index) is not None):
+        return ('body', _proof_literal(text, index, mask)[0])
+    if char.isalpha() or char == '_':
+        ident = _PROOF_IDENT.match(text, index)
+        if ident is None:
+            raise AutoAssembleProofError(_UNPROVABLE)
+        return ('body', _assigned_literal_chain(text, view, mask, ident.group(),
+                                                index, call_depth))
+    raise AutoAssembleProofError(_UNPROVABLE)
+
+
+def _auto_assemble_proof(parts: list[_Part], process_name: str, bitness: int):
+    """WP-51: prove the enable Lua's autoAssemble bodies, statically.
+
+    Scans exactly the enable-attributed chunks: every enable-phase Lua part,
+    with the shared preamble folded in the same way ``phase_expansion`` folds
+    it.  A ``nil`` first argument is a retire call and is ignored.  Returns
+    the proof report when at least one body is proven, ``None`` when the
+    record carries no autoAssemble call at all, and raises
+    ``AutoAssembleProofError`` with a named reason when a present body cannot
+    be proven.  Raw bodies never leave the report: only their SHA-256 and
+    byte count do.  Symbols/requires come from a plain ``prepare_program`` of
+    each body without ``external_owned`` so validation regeneration matches;
+    a body that fails static preparation contributes no symbols and does not
+    block admission (the record stays admitted, its consumers keep the
+    existing named provider refusal).
+    """
+    common = '\n'.join(part.text for part in parts
+                       if part.kind == 'lua' and part.phase == 'preamble' and part.shared)
+    calls: list[dict] = []
+    bodies: dict[str, str] = {}
+    for part in parts:
+        if part.kind != 'lua' or part.phase not in {'preamble', 'enable'}:
+            continue
+        if part.phase == 'preamble' and not part.shared:
+            continue
+        chunk = common + '\n' + part.text if part.shared and part.phase != 'preamble' else part.text
+        if not chunk.strip():
+            continue
+        mask = _code_mask(chunk)
+        view = _code_view(chunk, mask)
+        for name_index, arg_index in _auto_assemble_call_positions(chunk, mask):
+            verdict, value = _proof_first_argument(
+                chunk, mask, view, arg_index, _block_depth_at(view, name_index))
+            if verdict == 'retire':
+                continue
+            body = value
+            if not body:
+                raise AutoAssembleProofError('Auto-assembled program body is empty.')
+            size = len(body.encode('utf-8'))
+            if size > MAX_SOURCE_BYTES:
+                raise AutoAssembleProofError('Auto-assembled program body exceeds its size bound.')
+            if len(calls) >= _MAX_PROOF_BODIES:
+                raise AutoAssembleProofError('Auto-assembled program call count exceeds its bound.')
+            digest = hashlib.sha256(body.encode('utf-8')).hexdigest()
+            calls.append({'body_sha256': digest, 'body_bytes': size})
+            bodies[digest] = body
+    if not calls:
+        return None
+    body_symbols: set[str] = set()
+    body_requires: set[str] = set()
+    for body in bodies.values():
+        try:
+            body_program = prepare_program(body, process_name, bitness=bitness)
+        except ProgramError:
+            continue
+        body_symbols.update(body_program['provides'])
+        body_requires.update(body_program['requires'])
+    return {'schema': AUTOASSEMBLE_PROOF_SCHEMA, 'calls': calls,
+            'body_symbols': sorted(body_symbols, key=str.casefold),
+            'body_requires': sorted(body_requires, key=str.casefold)}
 
 
 def has_lua_sections(source: str) -> bool:
@@ -445,11 +767,29 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
             definitions.append(definition)
     except NthAOBError as exc:
         raise LuaProgramError(str(exc)) from exc
+    auto_assemble = None
     try:
         static_program = prepare_program(static_source, process_name, bitness=bitness,
                                          external_owned=external_owned) if static_body else None
     except ProgramError as exc:
-        raise LuaProgramError('Static AA envelope: ' + str(exc)) from exc
+        # WP-51: a non-executable static envelope is still plan-admissible
+        # when the record Lua provably assembles the program itself.
+        if static_body and str(exc) == _NO_CONTENT_REASON:
+            auto_assemble = _auto_assemble_proof(parts, process_name, bitness)
+            if auto_assemble is None:
+                raise LuaProgramError('Static AA envelope: ' + str(exc)) from exc
+            static_program = None
+        else:
+            raise LuaProgramError('Static AA envelope: ' + str(exc)) from exc
+    if static_program is None and auto_assemble is None:
+        # WP-51 shape C (no static envelope): plan-level admission is already
+        # in effect, so the proof is additive — a provable autoAssemble body
+        # contributes symbols, an unprovable one leaves the profile untouched
+        # (the runtime assembler refusal stays fail-closed at activation).
+        try:
+            auto_assemble = _auto_assemble_proof(parts, process_name, bitness)
+        except AutoAssembleProofError:
+            pass
     one_shot = (all(part.phase != 'disable' or part.kind == 'phase'
                     or (part.kind == 'lua' and not part.text.strip())
                     for part in parts)
@@ -487,6 +827,42 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
         result['provides'] = sorted(result['provides'] + [item['symbol'] for item in definitions], key=str.casefold)
         if any(item['helper'] == 'lua_aobscan' for item in definitions):
             result['nth_aob_helper'] = nth_aob_helper
+    # WP-48: luaCall(lua_aobscan(...)) symbols are static symbol providers
+    # from the record's own Lua, resolved through the pinned luaCall plan
+    # model.  The model's domain exclusion (mode sections, malformed call
+    # syntax, in-record conflicting definitions) leaves the record on its
+    # existing profile with the symbol unavailable (the downstream named
+    # provider refusal is unchanged).
+    from .aa_luacall import LuaCallError, analyze_luacall_program
+    try:
+        aob_symbols = analyze_luacall_program(source).aob_symbols
+    except LuaCallError:
+        aob_symbols = ()
+    if aob_symbols:
+        # A name the record's own static program declares as a positional
+        # label is local to that program (WP-28): its runtime registration by
+        # the binding-gated luaCall stays in the luacall plan domain, so it
+        # is not claimed as a static provider here (the proven
+        # dynamic_definitions merge above owns that case instead).
+        local_labels = set()
+        if static_program is not None:
+            local_labels = {label.casefold()
+                            for label in static_program.get('positional_labels', [])}
+        merged = [symbol for symbol in aob_symbols
+                  if symbol.casefold() not in local_labels]
+        if merged:
+            keys = {symbol.casefold() for symbol in merged}
+            result['requires'] = [name for name in result['requires']
+                                  if name.casefold() not in keys]
+            result['provides'] = sorted(set(result['provides']) | set(merged),
+                                        key=str.casefold)
+    # WP-51: attach the proof report (admitted shape B + provable shape C)
+    # and merge the proven bodies' registered symbols into provides.
+    if auto_assemble is not None:
+        result['auto_assemble'] = auto_assemble
+        if auto_assemble['body_symbols']:
+            result['provides'] = sorted(set(result['provides']) | set(auto_assemble['body_symbols']),
+                                        key=str.casefold)
     return result
 
 
@@ -559,6 +935,12 @@ def phase_expansion(host: Any, program: dict, phase: str, syntaxcheck: bool = Fa
         values = iter(values)
     else:
         values = None
+    # WP-51: an admitted record's static AA envelope is non-executable; the
+    # proven autoAssemble call owns the actual patch.  Skip the static asm
+    # parts (phase markers stay, so the runtime section split sees the
+    # canonical ENABLE/DISABLE pair around the nil Lua returns).
+    drop_static = (program.get('auto_assemble') is not None
+                   and program.get('static_program') is None)
     output, size = [], 0
     for index, part in enumerate(parts):
         if part.kind == 'lua':
@@ -570,6 +952,8 @@ def phase_expansion(host: Any, program: dict, phase: str, syntaxcheck: bool = Fa
                 continue
             value = next(values) if values is not None else host.execute(selected_source(part), syntaxcheck=False)
             text = _returned_text(value)
+        elif drop_static and part.kind == 'asm':
+            continue
         else:
             text = part.text
         if not text:

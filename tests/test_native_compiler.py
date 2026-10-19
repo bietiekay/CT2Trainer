@@ -112,12 +112,24 @@ class NativeCompilerTests(unittest.TestCase):
         self.assertTrue(all("cycle" in entry["reason"] for entry in plan["entries"]))
 
     def test_unsupported_script_never_returns_partial_operations(self):
-        # WP-29: an allocation-only ENABLE is now a supported init profile, so
-        # the genuinely empty ENABLE is the canonical unsupported-script case.
-        plan = self.compile(script_record(1, "[ENABLE]\n[DISABLE]\n"))
-        self.assertEqual(plan["entries"][0]["kind"], "blocked")
-        self.assertIn("no executable patch or data", plan["entries"][0]["reason"])
-        self.assertNotIn("enable", plan["entries"][0])
+        # WP-44: a script without registered symbols and without a guarded
+        # byte-patch in either dialect is demoted to a supported inert
+        # heading; a genuinely refused script stays blocked.  Neither shape
+        # ever carries partial operations.
+        plan = self.compile(script_record(0, "[ENABLE]\n[DISABLE]\n")
+                            + script_record(1, "[ENABLE]\ncreatethread(1)\n[DISABLE]\n"))
+        inert = plan["entries"][0]
+        self.assertTrue(inert["supported"])
+        self.assertEqual(inert["kind"], "heading")
+        self.assertIn("Inert script", inert["reason"])
+        self.assertNotIn("enable", inert)
+        self.assertNotIn("disable", inert)
+        refused = plan["entries"][1]
+        self.assertFalse(refused["supported"])
+        self.assertEqual(refused["kind"], "blocked")
+        self.assertIn("createthread", refused["reason"])
+        self.assertNotIn("enable", refused)
+        self.assertNotIn("disable", refused)
 
     def test_table_lua_is_not_executed_or_used_as_symbol_provider(self):
         plan = self.compile(value_record(0, "CreatedByLua"), sections='<LuaScript>raise_error_if_executed()</LuaScript>')
@@ -617,13 +629,27 @@ class NativeCompilerTests(unittest.TestCase):
         validate_plan(plan)
         validate_runtime_plan(plan)
 
-    def test_cross_record_dropdown_link_refuses_missing_ambiguous_and_chained_targets(self):
-        missing = self.compile(value_record(0, extra='<DropDownListLink>Missing Target</DropDownListLink>'))["entries"][0]
-        # WP-34 (FLAG-2 follow-up 1a): missing and ambiguous targets are
-        # diagnosed with separate, exact messages.
-        self.assertFalse(missing["supported"])
-        self.assertEqual(missing["reason"],
-                         "Dropdown link target is missing: 'Missing Target' matches no record label.")
+    def test_cross_record_dropdown_link_demotes_missing_keeps_ambiguous_and_chained(self):
+        # WP-45 (GC-E9): a missing link target no longer blocks the record —
+        # CE shows an empty list and keeps the value writable.  The linked
+        # dropdown is demoted to an empty plain list (no link_target_id) and
+        # the record stays supported with a named plan warning carrying the
+        # original missing-target reason.
+        plan = self.compile(value_record(0, extra='<DropDownListLink>Missing Target</DropDownListLink>'))
+        missing = plan["entries"][0]
+        self.assertTrue(missing["supported"], missing.get("reason"))
+        self.assertEqual(missing["reason"], "")
+        self.assertEqual(missing["dropdown"], {"choices": [], "read_only": False})
+        self.assertNotIn("link_target_id", missing["dropdown"])
+        demotions = [warning for warning in plan["warnings"]
+                     if warning.endswith("The linked dropdown is demoted to an empty list.")]
+        self.assertEqual(demotions,
+                         ["Record 0 ('Value 0'): Dropdown link target is missing: 'Missing Target' "
+                          "matches no record label. The linked dropdown is demoted to an empty list."])
+        validate_plan(plan)
+        validate_runtime_plan(plan)
+        # WP-34 (FLAG-2 follow-up 1a): ambiguous and chained targets keep
+        # their separate, exact hard refusals byte-for-byte.
         ambiguous = ('<CheatEntry><ID>0</ID><Description>Twin</Description><VariableType>4 Bytes</VariableType>'
                      '<Address>1000</Address><DropDownList>1:One</DropDownList></CheatEntry>'
                      + '<CheatEntry><ID>1</ID><Description>twin</Description><VariableType>4 Bytes</VariableType>'
@@ -826,13 +852,16 @@ class NativeAATests(unittest.TestCase):
         self.assertEqual(expression_symbols("Game.exe+10"), [])
         self.assertEqual(expression_symbols("1234"), [])
         # WP-30: the bounded profile now admits typed casts (no-ops) and up
-        # to two pointer dereferences; the canonical form of a cast-only
-        # address drops the cast.
+        # to six pointer dereferences (WP-45, GC-E10: bound raised from two
+        # to six; corpus chains reach 4-5, Borderlands3 max 6); the canonical
+        # form of a cast-only address drops the cast.
         self.assertEqual(validate_expression("[Anchor]+4"), "[Anchor]+4")
         self.assertEqual(validate_expression("[[Anchor]]+4"), "[[Anchor]]+4")
+        self.assertEqual(validate_expression("[[[Anchor]]]"), "[[[Anchor]]]")
+        self.assertEqual(validate_expression("[[[[[[Anchor]]]]]]"), "[[[[[[Anchor]]]]]]")
         self.assertEqual(validate_expression("(dword)Anchor+10"), "Anchor+10")
         self.assertEqual(expression_symbols("[Anchor]+4"), ["Anchor"])
-        for expression in ("lua('x')", "Target.exe*2", "C:\\Target.exe+4", "Anchor+10000000000000000", "(int)Anchor*2", "[[[Anchor]]]"):
+        for expression in ("lua('x')", "Target.exe*2", "C:\\Target.exe+4", "Anchor+10000000000000000", "(int)Anchor*2", "[[[[[[[Anchor]]]]]]]"):
             with self.subTest(expression=expression), self.assertRaises(AAError):
                 validate_expression(expression)
 

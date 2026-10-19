@@ -221,6 +221,23 @@ def _overlap(first: tuple[int, int], second: tuple[int, int]) -> bool:
     return first[0] < second[0] + second[1] and second[0] < first[0] + first[1]
 
 
+def _block_code_gaps(block: Mapping[str, Any]) -> list[tuple[int, int]]:
+    """(start, size) spans of block bytes that are not source-proven data.
+
+    A block whose whole body is literal data has no code gap; a mixed block
+    leaves only its non-literal (code) bytes guarded.
+    """
+    start, size = block["address"], len(bytes.fromhex(block["bytes"]))
+    holes = sorted((item["address"] - start, item["size"])
+                   for item in block.get("literal_data_ranges", ()))
+    gaps, cursor = [], 0
+    for offset, length in holes + [(size, 0)]:
+        if cursor < offset:
+            gaps.append((start + cursor, offset - cursor))
+        cursor = offset + length
+    return gaps
+
+
 _EXTERNAL_LITERAL_ISSUER = object()
 
 
@@ -495,6 +512,7 @@ class HookManager:
         allocation = {"address": None, "size": size, "budget_size": charged,
                       "near": near, "executable": executable, "writable": writable,
                       "actual_size": None, "literal_data_ranges": [],
+                      "value_data_ranges": [],
                       "state": "allocation-intent"}
         self.allocations[key] = allocation
         self._save()
@@ -812,9 +830,22 @@ class HookManager:
                 observed = self.memory.read(start, size)
                 if len(observed) != size:
                     raise HookError("Owned executable allocation body could not be read exactly.")
-                holes = sorted((item["address"] - start, item["size"])
-                               for item in allocation["literal_data_ranges"]
-                               if allocation["writable"])
+                # Literal spans come from one link pass and are disjoint by
+                # construction; controller-declared value spans may nest inside
+                # each other and inside literal spans, so merge every span
+                # into non-overlapping intervals before the cursor walk.
+                raw_holes = sorted((item["address"] - start, item["size"])
+                                   for item in allocation["literal_data_ranges"]
+                                   if allocation["writable"])
+                raw_holes += ((item["address"] - start, item["size"])
+                              for item in allocation.get("value_data_ranges", []))
+                holes = []
+                for offset, length in raw_holes:
+                    if holes and offset <= holes[-1][0] + holes[-1][1]:
+                        holes[-1] = (holes[-1][0],
+                                     max(holes[-1][1], offset + length - holes[-1][0]))
+                    else:
+                        holes.append((offset, length))
                 cursor = 0
                 for offset, length in holes + [(size, 0)]:
                     if observed[cursor:offset] != expected[cursor:offset]:
@@ -966,23 +997,31 @@ class HookManager:
         return self.receipt()
 
     @restoration_entry
-    def commit(self) -> None:
+    def commit(self, exports: Mapping[str, int] | None = None) -> None:
         """Publish an allocation-only hook that owns no live entries.
 
         Retained global storage without a literal initializer writes no target
         bytes at publication time; its only publication path is this commit.
         The exact journal, identity, liveness and allocation-protection gates
         of stage/publish still apply.  A hook that already staged entries or
-        exports must not mix this path with a normal publication.
+        blocks must not mix this path with a normal publication.  Exported
+        symbols (registered allocation names) are validated exactly like the
+        staged path and become live on commit, cleared again on disable.
         """
         self._guard()
         if self.state != "preparing":
             raise HookError("A hook activation can be committed only once.")
         if not self.allocations:
             raise HookError("An allocation-only commit needs an owned allocation.")
-        if (self.entries or self.blocks or self.exports
-                or self._external_literal_permits):
-            raise HookError("Allocation-only commits cannot mix live entries or exports.")
+        if self.entries or self.blocks or self._external_literal_permits:
+            raise HookError("Allocation-only commits cannot mix live entries or blocks.")
+        exports = dict(exports or {})
+        if (any(not isinstance(name, str) or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.$]*", name)
+                or type(address) is not int or not 0 < address <= 0x7FFFFFFFFFFF
+                for name, address in exports.items())
+                or len({name.casefold() for name in exports}) != len(exports)):
+            raise HookError("Invalid or case-ambiguous exported symbols.")
+        self.exports = exports
         try:
             self.state = "publication-intent"
             self._save()
@@ -1017,6 +1056,44 @@ class HookManager:
                 raise self._fail_uncertain(HookError(
                     "An owned hook entry changed externally; further writes are blocked."))
         self._check_allocation_guards()
+
+    def declare_value_data(self, address: int, size: int) -> bool:
+        """Declare a controller-written value range inside an owned allocation.
+
+        Value records that resolve into an owned provider allocation are
+        declared data, not foreign mutation: the owning manager records the
+        exact (address, size) span so the executable-allocation integrity
+        guard skips it, the same contract as source literal spans.  Returns
+        False when this manager owns no allocation covering the range (the
+        range then belongs to ordinary target memory, or to another
+        manager).  Refused fail-closed unless the provider is live, the
+        range lies wholly inside one owned writable allocation, and it does
+        not overlap a live entry of this manager.
+        """
+        self._guard()
+        _range(address, size)
+        allocation = next((item for item in self.allocations.values()
+                           if item["address"] is not None
+                           and item["address"] <= address
+                           and address + size <= item["address"] + item["actual_size"]), None)
+        if allocation is None:
+            return False
+        if self.state != "enabled":
+            raise HookError("Value data can be declared only inside a live provider.")
+        if not allocation["writable"]:
+            raise HookError("Value data requires a writable owned allocation.")
+        for block in self.blocks:
+            if not _overlap((address, size),
+                            (block["address"], len(bytes.fromhex(block["bytes"])))):
+                continue
+            if any(_overlap((address, size), gap)
+                   for gap in _block_code_gaps(block)):
+                raise HookError("Value data overlaps a live entry of the owning provider.")
+        if not any(item["address"] == address and item["size"] == size
+                   for item in allocation.setdefault("value_data_ranges", [])):
+            allocation["value_data_ranges"].append({"address": address, "size": size})
+            self._save()
+        return True
 
     def commit_data_only(self) -> None:
         """Commit confirmed numeric literal values without an active undo record.
