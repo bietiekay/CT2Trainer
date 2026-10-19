@@ -192,12 +192,11 @@ class EntryWindowTests(unittest.TestCase):
             with self.subTest(original=original.hex()), self.assertRaisesRegex(HookError, "return-context"):
                 _check_overwrite_windows(memory, [(0x1000, 14)], ((0x1000, original, replacement, replacement),))
 
-    def test_extended_prefix_cut_receipt_passes_the_strict_window_check(self):
-        # Field fix (0.15 prefix-cut, 0.15-ext2 log): the linker now extends
-        # prefix-cut receipts to the full original instruction, so the
-        # historical strict complete-sequence contract applies at the
-        # coordinator window too. Stealth shape: jnz rel32 +131 ->
-        # nop; jmp rel32 +131 (displacement tail written back unchanged).
+    def test_complete_receipt_pair_passes_the_strict_window_check(self):
+        # A complete-instruction receipt pair satisfies the historical strict
+        # contract on both sides: the full 6-byte conditional jump (jnz rel32
+        # +131, the Stealth shape from the 0.15-ext2 Great Circle log) over
+        # nop; jmp rel32 reusing the same displacement.
         original = bytes.fromhex("0F8783000000")
         replacement = bytes.fromhex("90E983000000")
         memory = _Memory()
@@ -205,10 +204,26 @@ class EntryWindowTests(unittest.TestCase):
         memory.read = lambda address, size: original
         _check_overwrite_windows(memory, [(0x1000, 6)], ((0x1000, original, replacement, original),))
 
+    def test_prefix_cut_fragment_passes_the_window_check_with_live_proof(self):
+        # Field case (0.15-ext2 Great Circle log): the linked 2-byte
+        # prefix-cut receipt (0F 87 / 90 E9) is not a complete instruction
+        # sequence on either side, but the live target window proves the cut:
+        # the full 6-byte conditional jump is intact and nop; jmp reuses its
+        # displacement.
+        original = bytes.fromhex("0F87")
+        replacement = bytes.fromhex("90E9")
+        live = bytes.fromhex("0F8783000000") + bytes(64)
+        memory = _Memory()
+        memory.is_executable = lambda address, size: True
+        memory.read = lambda address, size: live[:size]
+        _check_overwrite_windows(memory, [(0x1000, 2)],
+                                 ((0x1000, original, replacement, original),))
+
     def test_unextended_prefix_cut_fragment_still_fails_closed(self):
-        # The pre-extension 2-byte receipt fragment (0F 87 / 90 E9) is not a
-        # complete instruction sequence on either side; the strict contract
-        # refuses it without a live prefix-cut proof.
+        # The same 2-byte receipt fragment, but the live window cannot be
+        # proven (the target read returns the bare fragment, so no complete
+        # instruction boundary is reachable): the strict-contract refusal
+        # stands.
         fragment = bytes.fromhex("0F87")
         memory = _Memory()
         memory.is_executable = lambda address, size: True
@@ -216,6 +231,31 @@ class EntryWindowTests(unittest.TestCase):
         with self.assertRaisesRegex(HookError, "cuts or contains"):
             _check_overwrite_windows(memory, [(0x1000, 2)],
                                      ((0x1000, fragment, bytes.fromhex("90E9"), fragment),))
+
+    def test_prefix_cut_fragment_with_drifted_live_bytes_is_refused(self):
+        # Receipt drift is caught by the owned-receipt check before any
+        # instruction validation (live jae instead of the held jnz).
+        fragment = bytes.fromhex("0F87")
+        live = bytes.fromhex("0F8483000000") + bytes(64)
+        memory = _Memory()
+        memory.is_executable = lambda address, size: True
+        memory.read = lambda address, size: live[:size]
+        with self.assertRaisesRegex(HookError, "receipt differs"):
+            _check_overwrite_windows(memory, [(0x1000, 2)],
+                                     ((0x1000, fragment, bytes.fromhex("90E9"), fragment),))
+
+    def test_complete_original_with_invalid_replacement_still_refused(self):
+        # The live-proof fallback must not mask a genuinely invalid
+        # replacement: a complete original fast-paths back into the strict
+        # replacement check inside the proof (90 E9 alone is a fragment).
+        original = bytes.fromhex("FFC8")
+        replacement = bytes.fromhex("90E9")
+        memory = _Memory()
+        memory.is_executable = lambda address, size: True
+        memory.read = lambda address, size: original
+        with self.assertRaisesRegex(HookError, "cuts or contains"):
+            _check_overwrite_windows(memory, [(0x1000, 2)],
+                                     ((0x1000, original, replacement, original),))
 
 
 @unittest.skipUnless(sys.platform == "win32", "Win32 debugger cleanup API contract")

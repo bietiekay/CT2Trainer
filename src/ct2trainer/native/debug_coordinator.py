@@ -26,7 +26,13 @@ import time
 from .lua_work_budget import remaining_seconds, broker_checkpoint
 from typing import Any
 
-from .hooks import HookError, HookUncertain, QuiescenceProof, validate_entry_control_flow
+from .hooks import (
+    HookError,
+    HookUncertain,
+    QuiescenceProof,
+    validate_entry_control_flow,
+    validate_entry_prefix_cut,
+)
 
 
 MAX_DEBUG_THREADS = 1024
@@ -198,8 +204,22 @@ def _check_overwrite_windows(memory, ranges, entry_windows=None):
         if not memory.is_executable(address, length):
             continue
         if address in owned:
-            validate_entry_control_flow(address, original, memory.pointer_size * 8)
-            validate_entry_control_flow(address, replacement, memory.pointer_size * 8, inline_jump=True)
+            try:
+                validate_entry_control_flow(address, original, memory.pointer_size * 8)
+                validate_entry_control_flow(address, replacement, memory.pointer_size * 8,
+                                            inline_jump=True)
+            except HookError:
+                # A proven prefix-cut receipt (byte patch rewriting an
+                # instruction prefix, e.g. db 90 E9 over a conditional jump)
+                # keeps the complete-sequence contract live: the captured
+                # original is the head of a longer original instruction and
+                # the patched stream must complete exactly on that boundary.
+                # The live proof re-validates against the quiesced target
+                # under the held context; a complete original fast-paths
+                # back into the full two-sided strict contract, so a call
+                # or interrupt entry keeps its return-context refusal.
+                validate_entry_prefix_cut(memory, address, replacement, original,
+                                          memory.pointer_size * 8)
         else:
             validate_entry_control_flow(address, memory.read(address, length), memory.pointer_size * 8)
 

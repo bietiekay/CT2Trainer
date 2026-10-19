@@ -152,12 +152,18 @@ def validate_entry_prefix_cut(memory, address: int, raw: bytes, original: bytes,
     except ImportError as exc:
         raise HookError("Executable hooks require the pinned MIT iced-x86 decoder.") from exc
     # Fast path: the captured original already displaces complete
-    # instructions, so the historical static contract applies.
+    # instructions, so the historical two-sided static contract applies —
+    # the original keeps its own strict check (including the return-context
+    # refusal for call/interrupt entries) and the replacement the inline
+    # form. The live proof below only ever runs for genuine fragment
+    # receipts (a prefix-cut byte patch whose original is the head of a
+    # longer original instruction).
     try:
         validate_instruction_boundary(address, original, bitness)
     except HookError:
         pass
     else:
+        validate_entry_control_flow(address, original, bitness)
         validate_entry_control_flow(address, raw, bitness, inline_jump=True)
         return
     try:
