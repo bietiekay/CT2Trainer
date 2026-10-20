@@ -41,6 +41,7 @@ from .hotkey_model import (ACTIVATION_HOTKEY_ACTIONS, VALUE_HOTKEY_ACTIONS,
                            ToggleOutcome, ToggleOutcomeStatus, format_hotkey_keys,
                            vk_to_spec)
 from .memory import ScanMiss
+from .patterns import pattern_byte_length, placeholder_spans
 
 
 class NativeRuntimeError(RuntimeError):
@@ -1227,6 +1228,10 @@ class TrainerEngine:
             self.applied: dict[int, list[_Patch]] = {}
             self.local_symbols: dict[int, dict[str, int]] = {}
             self.symbols: dict[str, int] = {}
+            # WP-57: scan-time captured placeholder bytes per active entry
+            # (classic dialect bookkeeping + program-dialect disable restore
+            # input); dropped with the entry on disable.
+            self.placeholder_captures: dict[int | str, dict[str, str]] = {}
             # WP-46 (part 1): seed the runtime symbol table with the
             # table-level <UserdefinedSymbols> static definitions (plan
             # field, casefolded keys).  Without this seed, records whose
@@ -2216,6 +2221,14 @@ class TrainerEngine:
                 if isinstance(diagnostics, dict) and diagnostics.get("match_count", 0) > 1:
                     scan_details["match_count"] = diagnostics["match_count"]
                     scan_details["match_offsets"] = [hex(offset) for offset in diagnostics.get("match_addresses", [])]
+                # WP-57: capture placeholder spans of the matched bytes so the
+                # scan evidence is visible in the debug log.
+                spans = placeholder_spans(op["pattern"])
+                if spans:
+                    raw = self.memory.read(address, pattern_byte_length(op["pattern"]))
+                    scan_details["captured_placeholders"] = {
+                        name: raw[offset:offset + count].hex().upper()
+                        for name, (offset, count) in spans.items()}
                 if self.debug_log.enabled:
                     try:
                         base, size = self.memory.module(module)
@@ -3470,6 +3483,12 @@ class TrainerEngine:
                                   disassembler=disassembler, thread_model=thread_model,
                                   protection_model=protection_model, export_model=export_model,
                                   execute_side_effects=False, _allow_external_literals=True)
+            # WP-57: hold the scan-time placeholder captures for the enable
+            # lifetime (journal persistence + disable-phase restore input).
+            captures_by_entry = getattr(self, 'placeholder_captures', None)
+            if captures_by_entry is None:
+                self.placeholder_captures = captures_by_entry = {}
+            captures_by_entry[owner] = dict(linked['captured_placeholders'])
             live = [b for b in linked['blocks'] if not b['is_allocation']]
             for block in live:
                 start,size=block['address'],len(bytes.fromhex(block['bytes']))
@@ -3496,14 +3515,17 @@ class TrainerEngine:
                     inverse=link_program(program,link_memory,linked['symbols'],manager.allocation_map(),phase='disable',owned_data_ranges=owned_data_ranges,
                                          owned_executable_data_ranges=executable_data, disassembler=disassembler,
                                          thread_model=thread_model, protection_model=protection_model,
-                                         export_model=export_model, execute_side_effects=True)
+                                         export_model=export_model, execute_side_effects=True,
+                                         captured_placeholders=linked['captured_placeholders'])
                     restored=sorted((b['address'],bytes.fromhex(b['bytes'])) for b in inverse['blocks'] if not b['is_allocation'])
                     expected=sorted((b['address'],bytes.fromhex(b['original'])) for b in live)
                     if restored!=expected:
                         raise NativeRuntimeError('Assembler disable must restore the captured original entry bytes')
-                manager.commit(linked['exports'])
+                manager.commit(linked['exports'], captured_placeholders=linked['captured_placeholders'])
             else:
-                manager.stage(linked['blocks'],linked['exports'], _external_literal_permits=linked.pop('_external_literal_permits', ()))
+                manager.stage(linked['blocks'],linked['exports'],
+                              captured_placeholders=linked['captured_placeholders'],
+                              _external_literal_permits=linked.pop('_external_literal_permits', ()))
                 # Disable text is checked against the owned original entries before publication.
                 # One-shot programs have no disable phase by contract; their close-time
                 # restore is derived from the applied journal instead.
@@ -3511,7 +3533,8 @@ class TrainerEngine:
                     inverse=link_program(program,link_memory,linked['symbols'],manager.allocation_map(),phase='disable',owned_data_ranges=owned_data_ranges,
                                          owned_executable_data_ranges=executable_data, disassembler=disassembler,
                                          thread_model=thread_model, protection_model=protection_model,
-                                         export_model=export_model, execute_side_effects=True)
+                                         export_model=export_model, execute_side_effects=True,
+                                         captured_placeholders=linked['captured_placeholders'])
                     restored=sorted((b['address'],bytes.fromhex(b['bytes'])) for b in inverse['blocks'] if not b['is_allocation'])
                     expected=sorted((b['address'],bytes.fromhex(b['original'])) for b in live)
                     if staged_restore:
@@ -3651,6 +3674,8 @@ class TrainerEngine:
             self._write_transaction(reversal)
         del self.applied[identifier]
         self.local_symbols.pop(identifier, None)
+        # WP-57: placeholder captures live with the entry.
+        self.placeholder_captures.pop(identifier, None)
         for name in provided:
             self.symbols.pop(name, None)
         if self.global_pool is not None:

@@ -25,7 +25,7 @@ import struct
 import time
 from dataclasses import dataclass
 
-from .patterns import normalize_pattern
+from .patterns import normalize_pattern, pattern_byte_length
 from .scan_plan import pattern_has_wildcard
 
 
@@ -561,7 +561,7 @@ class ScanRuntime:
         except ValueError as exc:
             raise PatternMalformedError(str(exc)) from exc
         has_wildcard = pattern_has_wildcard(normalized)
-        self._pattern_size = len(normalized.split())
+        self._pattern_size = pattern_byte_length(normalized)
         if has_wildcard:
             self._wildcard_used = True
         checked = self._check_regions(regions, self._pattern_size)

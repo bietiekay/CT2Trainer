@@ -47,6 +47,11 @@ import struct
 from collections.abc import Mapping
 
 from .aa import AAError, validate_symbol, normalize_pattern
+from .patterns import (MAX_PLACEHOLDER_TOKENS, is_placeholder_ref_token,
+                       is_placeholder_token, pattern_byte_length,
+                       pattern_has_placeholder_token, placeholder_spans,
+                       symbol_is_placeholder_shaped,
+                       validate_placeholder_captures)
 from .aa_blocks import (BlockError, analyze_blocks, label_spans, parse_invocation,
                         parse_label, prune_conditionals, resolve_nested_assembly)
 from .aa_directives import MAX_DISASSEMBLE_COUNT, MAX_PROTECTION_SIZE, PAGE_NAMES
@@ -199,6 +204,14 @@ def _data_values(text: str, directive: str) -> list[str]:
                 raise ProgramError("Only db supports ASCII string constants.")
             if "\\" in value[1:-1]:
                 raise ProgramError("Quoted data literals must not contain backslash escapes.")
+        elif is_placeholder_token(value):
+            # WP-57: bare s<N> references are admitted only by db (their
+            # captured bytes are substituted at link time); the definition
+            # form s<N>.<M> and any reference in dw/dd/dq stay refused.
+            if directive == "db" and is_placeholder_ref_token(value):
+                continue
+            raise ProgramError(
+                "Placeholder tokens are not supported in assertions or data literals.")
         elif _float_bits(value):
             if _float_bits(value)[1] > size:
                 raise ProgramError("Floating bit-pattern does not fit the data directive.")
@@ -452,6 +465,13 @@ def _parse_line(line: str) -> dict:
                     raise ProgramError("readmem size must contain 1–65536 bytes.")
                 node["size"] = size
             elif name == "assert":
+                # WP-57: assert keeps its exact-bytes capture semantics; a
+                # placeholder token (definition or reference form) is refused
+                # here, before the pattern grammar would call a bare s<N>
+                # "not defined in the scan pattern".
+                if pattern_has_placeholder_token(args[1]):
+                    raise ProgramError(
+                        "Placeholder tokens are not supported in assertions or data literals.")
                 node["pattern"] = _pattern(args[1])
             return node
         if name == "disassemble":
@@ -530,14 +550,43 @@ def _node_refs(node: dict) -> list[str]:
             values.extend(expression_symbols(text))
     if node["op"] == "data":
         for value in node["values"]:
+            # WP-57: a bare s<N> reference is resolved from scan-time
+            # captures at link time, never from an externally provided
+            # symbol, so it must not enter the program's requirements.
+            if is_placeholder_ref_token(value):
+                continue
             if not value.startswith(('"', "'")) and _float_bits(value) is None:
                 values.extend(expression_symbols(value))
     if node["op"] == "instruction":
         text = node["text"].split(None, 1)
         for token in _operand_tokens(text[1] if len(text) == 2 else ""):
+            if is_placeholder_ref_token(token):
+                continue
             if _SYMBOL_TOKEN.fullmatch(token) and token.casefold() not in _REGISTERS | _KEYWORDS and not re.fullmatch("[0-9A-Fa-f]+", token) and token.casefold() not in {"@f", "@b"}:
                 values.append(token)
     return values
+
+
+def _placeholder_symbols_in(expression: str) -> list[str]:
+    """Placeholder-shaped names anywhere in one parsed address expression.
+
+    Covers plain symbol nodes and dotted export nodes (``s1.2`` parses as an
+    export), both of which must be refused in expression positions.
+    """
+    names: list[str] = []
+
+    def visit(node):
+        if node.get("kind") in {"symbol", "export"}:
+            name = node.get("name")
+            if symbol_is_placeholder_shaped(name):
+                names.append(name)
+        for key in ("value", "left", "right"):
+            child = node.get(key)
+            if isinstance(child, dict):
+                visit(child)
+
+    visit(parse_expression(expression))
+    return names
 
 
 def _literal_data(node: dict) -> bool:
@@ -1103,6 +1152,52 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         for symbol in _node_refs(node):
             if symbol.casefold() not in locals_:
                 required.setdefault(symbol.casefold(), symbol)
+    # WP-57: placeholder tokens.  Definitions (s<N>.<M>) live only in scan
+    # patterns; a name defined by more than one scan is a duplicate.  Patch
+    # side, bare s<N> references are admitted in data values (db only,
+    # enforced at parse) and instruction operands; every other position
+    # (assert patterns, expressions, other data values) is refused, because
+    # captures only exist from the moment the scan succeeds.
+    placeholder_definitions: dict[str, int] = {}
+    for node in sections["preamble"] + sections["enable"] + sections["disable"]:
+        if node["op"] in {"scan", "scan_region", "scan_process"}:
+            for name, (offset, count) in placeholder_spans(node["pattern"]).items():
+                if name in placeholder_definitions:
+                    raise ProgramError(
+                        f"Placeholder token {name} is defined more than once in the pattern.")
+                placeholder_definitions[name] = count
+    for node in sections["preamble"] + sections["enable"] + sections["disable"]:
+        if node["op"] == "assert" and pattern_has_placeholder_token(node["pattern"]):
+            raise ProgramError(
+                "Placeholder tokens are not supported in assertions or data literals.")
+        if node["op"] == "data":
+            for value in node["values"]:
+                if value.startswith(('"', "'")) or _float_bits(value) is not None:
+                    continue
+                if is_placeholder_ref_token(value):
+                    if value.casefold() not in placeholder_definitions:
+                        raise ProgramError(
+                            f"Placeholder token {value.casefold()} is not defined in the scan pattern.")
+                    continue
+                if _placeholder_symbols_in(value):
+                    raise ProgramError(
+                        "Placeholder tokens are not supported in assertions or data literals.")
+        if node["op"] == "instruction":
+            split = node["text"].split(None, 1)
+            for token in _operand_tokens(split[1] if len(split) == 2 else ""):
+                if is_placeholder_ref_token(token):
+                    if token.casefold() not in placeholder_definitions:
+                        raise ProgramError(
+                            f"Placeholder token {token.casefold()} is not defined in the scan pattern.")
+                elif is_placeholder_token(token) or symbol_is_placeholder_shaped(token):
+                    raise ProgramError(
+                        "Placeholder tokens are not supported in assertions or data literals.")
+        for key in ("address", "expression", "near", "start", "end"):
+            text = node.get(key)
+            if text and not text.startswith("@") and _float_bits(text) is None:
+                if _placeholder_symbols_in(text):
+                    raise ProgramError(
+                        "Placeholder tokens are not supported in assertions or data literals.")
     if wildcard_cleanup and external_owned:
         # WP-37: the wildcard sweep above expanded to this program's own
         # phase-owned names only; combining it with a required externally
@@ -1122,7 +1217,9 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     for nodes in sections.values():
         for node in nodes:
             op = node["op"]
-            estimated_bytes += node["count"] if op == "nops" else node["size"] if op == "readmem" else node["alignment"] - 1 if op == "align" else node["bytes"] if op == "reserve" else 15 if op == "instruction" else 64 if op == "reassemble" else sum(len(value[1:-1]) if value.startswith(('"', "'")) else {"db": 1, "dw": 2, "dd": 4, "dq": 8}[node["directive"]] for value in node["values"]) if op == "data" else 0
+            # WP-57: a bare s<N> db value expands to its definition's M bytes at
+            # link time, so the static estimate counts the definition byte count.
+            estimated_bytes += node["count"] if op == "nops" else node["size"] if op == "readmem" else node["alignment"] - 1 if op == "align" else node["bytes"] if op == "reserve" else 15 if op == "instruction" else 64 if op == "reassemble" else sum(len(value[1:-1]) if value.startswith(('"', "'")) else placeholder_definitions.get(value.casefold(), 1) if is_placeholder_ref_token(value) else {"db": 1, "dw": 2, "dd": 4, "dq": 8}[node["directive"]] for value in node["values"]) if op == "data" else 0
     if estimated_bytes > MAX_TOTAL_BYTES:
         raise ProgramError("Program exceeds its total generated-byte bound.")
     allocation_executable, allocation_writable = _allocation_capabilities(sections["enable"], allocations)
@@ -1213,10 +1310,33 @@ def _resolve(text, memory, symbols, program):
     return floating[0] if floating else resolve_expression(text, memory, symbols, process_name=program["process_name"], pointer_size=program["bitness"] // 8)
 
 
-def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None = None, *, phase: str = "enable", scan_results=None, disassembler=None, thread_model=None, protection_model=None, export_model=None, execute_side_effects: bool = True, on_scan=None) -> dict:
+def _capture_placeholder_bytes(raw: bytes, pattern: str) -> dict[str, str]:
+    """Capture the placeholder spans of one scan; empty when the pattern
+    defines none.  Fails closed when the match bytes cannot be read in full."""
+    spans = placeholder_spans(pattern)
+    if not spans:
+        return {}
+    if len(raw) != pattern_byte_length(pattern):
+        raise ProgramError("Could not capture every placeholder span of the scan match.")
+    return {name: raw[offset:offset + count].hex().upper()
+            for name, (offset, count) in spans.items()}
+
+
+def _merge_placeholder_captures(existing: dict[str, str], fresh: dict[str, str]) -> None:
+    for name, value in fresh.items():
+        if name in existing and existing[name] != value:
+            raise ProgramError("Captured placeholder bytes changed while linking the patch.")
+        existing[name] = value
+
+
+def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None = None, *, phase: str = "enable", scan_results=None, disassembler=None, thread_model=None, protection_model=None, export_model=None, execute_side_effects: bool = True, on_scan=None, captured_placeholders=None) -> dict:
     validate_program(program)
     if phase not in {"enable", "disable"}:
         raise ProgramError("Invalid AA phase.")
+    try:
+        placeholder_captures = validate_placeholder_captures(captured_placeholders)
+    except ValueError as exc:
+        raise ProgramError(str(exc)) from exc
     resolved = _symbol_map({} if symbols is None else symbols)
     requests = []
     deferred = []
@@ -1240,13 +1360,20 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
                 raise ProgramError("$process requires an exact process name.")
             try:
                 resolved[node["symbol"].casefold()] = memory.scan_module(module, node["pattern"])
+                scan_captures = _capture_placeholder_bytes(
+                    memory.read(resolved[node["symbol"].casefold()],
+                                pattern_byte_length(node["pattern"])),
+                    node["pattern"])
             except Exception as exc:
                 if on_scan is not None:
                     on_scan(node["symbol"], module, node["pattern"], address=None, error=exc)
                 raise
+            _merge_placeholder_captures(placeholder_captures, scan_captures)
             if on_scan is not None:
                 on_scan(node["symbol"], module, node["pattern"],
-                        address=resolved[node["symbol"].casefold()], error=None)
+                        address=resolved[node["symbol"].casefold()], error=None,
+                        **({"extra": {"captured_placeholders": scan_captures}}
+                           if scan_captures else {}))
         elif op == "scan_process":
             if type(memory.pointer_size) is not int or memory.pointer_size != program["bitness"] // 8:
                 raise ProgramError("Process scan source bitness differs from the held target.")
@@ -1257,13 +1384,20 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
                 else:
                     result = scan_results[len(captured)]
                     recheck_result(result, memory, program["source_sha256"], node)
+                # WP-57: process-scan receipts carry the matched bytes, so the
+                # placeholder spans come from the receipt itself.
+                scan_captures = _capture_placeholder_bytes(
+                    bytes.fromhex(result["bytes"]), node["pattern"])
             except Exception as exc:
                 if on_scan is not None:
                     on_scan(node["symbol"], None, node["pattern"], address=None, error=exc)
                 raise
+            _merge_placeholder_captures(placeholder_captures, scan_captures)
             if on_scan is not None:
                 on_scan(node["symbol"], None, node["pattern"],
-                        address=result["address"], error=None)
+                        address=result["address"], error=None,
+                        **({"extra": {"captured_placeholders": scan_captures}}
+                           if scan_captures else {}))
             captured.append(result)
             resolved[node["symbol"].casefold()] = result["address"]
             guards.append({"address": result["address"], "bytes": result["bytes"].upper()})
@@ -1274,16 +1408,23 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
             end = _resolve(node["end"], memory, resolved, program)
             try:
                 addr = memory.scan_region(start, end, node["pattern"])
+                scan_captures = _capture_placeholder_bytes(
+                    memory.read(addr, pattern_byte_length(node["pattern"])),
+                    node["pattern"])
             except Exception as exc:
                 if on_scan is not None:
                     on_scan(node["symbol"], None, node["pattern"],
                             address=None, error=exc,
                             extra={"start": hex(start), "end": hex(end)})
                 raise
+            _merge_placeholder_captures(placeholder_captures, scan_captures)
+            region_extra = {"start": hex(start), "end": hex(end)}
+            if scan_captures:
+                region_extra["captured_placeholders"] = scan_captures
             if on_scan is not None:
                 on_scan(node["symbol"], None, node["pattern"],
                         address=addr, error=None,
-                        extra={"start": hex(start), "end": hex(end)})
+                        extra=region_extra)
             resolved[node["symbol"].casefold()] = addr
         elif op == "define":
             try:
@@ -1353,10 +1494,10 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
                 observations.append(export_model.getmodulehandle(node["module"]))
             else:
                 observations.append(export_model.getprocaddress(node["module"], node["export"]))
-    return {"symbols": resolved, "allocation_requests": requests, "requires": program["requires"], "deferred_defines": deferred, "guards": guards, "scan_results": captured, "observations": observations}
+    return {"symbols": resolved, "allocation_requests": requests, "requires": program["requires"], "deferred_defines": deferred, "guards": guards, "scan_results": captured, "observations": observations, "captured_placeholders": placeholder_captures}
 
 
-def _translate_operands(text: str, names: dict, memory, symbols, program, backward: str | None, forward: str | None) -> str:
+def _translate_operands(text: str, names: dict, memory, symbols, program, backward: str | None, forward: str | None, captures: dict[str, int] | None = None) -> str:
     typed = _FLOAT.search(text)
     if typed and "[" in text and not re.search(r"\b(?:byte|word|dword|qword)\s+(?:ptr\s+)?\[", text, re.I):
         text = text.replace("[", ("dword " if typed.group(1).casefold() == "float" else "qword ") + "[", 1)
@@ -1372,7 +1513,13 @@ def _translate_operands(text: str, names: dict, memory, symbols, program, backwa
             # Bounded type cast (WP-30): value no-op for symbol translation.
             cursor += 3
             continue
-        if key in {"@f", "@b"}:
+        # WP-57: a bare s<N> operand is the scan-captured bytes as a
+        # little-endian integer; captures beat symbol names so a placeholder
+        # token can never be shadowed by a coincidental label of the same
+        # name.
+        if captures is not None and token.casefold() in captures:
+            output.append("0x" + format(captures[token.casefold()], "X"))
+        elif key in {"@f", "@b"}:
             label = forward if key == "@f" else backward
             if label is None:
                 raise ProgramError("Anonymous forward/backward label has no target.")
@@ -1541,11 +1688,15 @@ def _memory_operands(node, names):
     return targets
 
 
-def _located_value(text, index, anonymous, locations, memory, symbols, program, registers=(), named=()):
+def _located_value(text, index, anonymous, locations, memory, symbols, program, registers=(), named=(), captures=None):
     output = []
     for token in _operand_tokens(text):
         if token in registers:
             output.append("0")
+        elif captures is not None and token.casefold() in captures:
+            # WP-57: scan-captured placeholder bytes as a little-endian
+            # integer; checked before symbol resolution.
+            output.append("0x" + format(captures[token.casefold()], "X"))
         elif token.casefold() == "@b":
             label = next(name for position, name in reversed(anonymous) if position < index)
             output.append("0x" + format(locations[label], "X"))
@@ -1840,7 +1991,8 @@ def dry_link_program(program: dict, memory, symbols: Mapping[str, int] | None = 
                            owned_executable_data_ranges=owned_executable_data_ranges,
                            disassembler=disassembler,
                            thread_model=thread_model, protection_model=protection_model,
-                           export_model=export_model, execute_side_effects=False)
+                           export_model=export_model, execute_side_effects=False,
+                           captured_placeholders=enable["captured_placeholders"])
     expected = sorted((block["address"], block["original"]) for block in enable["blocks"] if not block["is_allocation"])
     restored = sorted((block["address"], block["bytes"]) for block in disable["blocks"] if not block["is_allocation"])
     if expected != restored:
@@ -1851,7 +2003,7 @@ def dry_link_program(program: dict, memory, symbols: Mapping[str, int] | None = 
             "diagnostics": ["Allocations use synthetic private addresses; successful branch/layout checking does not prove actual target placement, live scan outcomes or game compatibility."]}
 
 
-def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None, allocations: Mapping[str, dict] | None = None, *, phase: str = "enable", assembler=None, owned_data_ranges=None, owned_executable_data_ranges=None, scan_results=None, disassembler=None, thread_model=None, protection_model=None, export_model=None, execute_side_effects: bool = False, _allow_external_literals=False) -> dict:
+def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None, allocations: Mapping[str, dict] | None = None, *, phase: str = "enable", assembler=None, owned_data_ranges=None, owned_executable_data_ranges=None, scan_results=None, disassembler=None, thread_model=None, protection_model=None, export_model=None, execute_side_effects: bool = False, captured_placeholders=None, _allow_external_literals=False) -> dict:
     """Resolve at final remote addresses, without mutation.
 
     owned_data_ranges is controller-only provenance for live, owned RW memory;
@@ -1866,8 +2018,15 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
         raise ProgramError("Invalid private external literal link mode.")
     preflight = preflight_program(program, memory, symbols, phase=phase, scan_results=scan_results, disassembler=disassembler,
                                   thread_model=thread_model, protection_model=protection_model,
-                                  export_model=export_model, execute_side_effects=execute_side_effects)
+                                  export_model=export_model, execute_side_effects=execute_side_effects,
+                                  captured_placeholders=captured_placeholders)
     resolved = preflight["symbols"]
+    # WP-57: bare s<N> substitution inputs.  The enable phase gets its
+    # captures from the scans re-run by the preflight above; the disable
+    # phase never rescans, so its captures arrive via the parameter.
+    captured_map = preflight["captured_placeholders"]
+    captures = {name: int.from_bytes(bytes.fromhex(value), "little")
+                for name, value in captured_map.items()}
     allocations = {} if allocations is None else allocations
     owned_data_ranges = [] if owned_data_ranges is None else owned_data_ranges
     if not isinstance(owned_data_ranges, (list, tuple)) or len(owned_data_ranges) > 4096:
@@ -2029,7 +2188,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                     exports[symbol] = address
                 else:
                     raise ProgramError("Program exports an unresolvable symbol: " + symbol)
-        return {"blocks": [], "literal_data_ranges": [], "symbols": dict(resolved), "exports": exports, "requires": program["requires"], "guards": preflight["guards"], "allocation_requests": [], "deallocations": [symbol for node in nodes if node["op"] == "dealloc" for symbol in node["symbols"]], "unregister": [symbol for node in nodes if node["op"] == "unregister" for symbol in node["symbols"]], "nasm_source": "", "requires_coordinator": False}
+        return {"blocks": [], "literal_data_ranges": [], "symbols": dict(resolved), "exports": exports, "requires": program["requires"], "guards": preflight["guards"], "allocation_requests": [], "deallocations": [symbol for node in nodes if node["op"] == "dealloc" for symbol in node["symbols"]], "unregister": [symbol for node in nodes if node["op"] == "unregister" for symbol in node["symbols"]], "nasm_source": "", "requires_coordinator": False, "captured_placeholders": captured_map}
     if phase == "enable" and set(declared) - located:
         raise ProgramError("Declared labels have no position: " + ", ".join(sorted(set(declared) - located)))
     assembler = NasmAssembler() if assembler is None else assembler
@@ -2071,7 +2230,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                 value = deferred_values[key]
                 lines.extend([f"section tf_definition_{ordinal} nobits vstart=0x{value:X}", names[key] + ":"])
             else:
-                value = _translate_operands(node["expression"], names, memory, resolved, program, None, None)
+                value = _translate_operands(node["expression"], names, memory, resolved, program, None, None, captures=captures)
                 lines.append(f"{names[key]} equ {value}")
         for ordinal, section in enumerate(sections):
             section_name = f"tf_s{ordinal}"
@@ -2098,7 +2257,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                         prefix, mnemonic = mnemonic + " ", nested[0].casefold()
                         operands = nested[1] if len(nested) == 2 else ""
                     if program["bitness"] == 64 and mnemonic in {"jmp", "call"} and re.match(r"far\s+", operands, re.I):
-                        target = _translate_operands(re.sub(r"^far\s+", "", operands, flags=re.I), names, memory, resolved, program, backward, forward)
+                        target = _translate_operands(re.sub(r"^far\s+", "", operands, flags=re.I), names, memory, resolved, program, backward, forward, captures=captures)
                         if mnemonic == "jmp":
                             lines.extend(["db 0xFF,0x25,0,0,0,0", "dq " + target])
                         else:
@@ -2109,7 +2268,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                         if len(pieces) == 1 or len(pieces) == 2 and not any(token.strip().casefold() in _REGISTERS for token in _operand_tokens(pieces[1])):
                             # CE's unsized integer memory operand is dword.
                             operands = "dword " + operands
-                    lines.append(prefix + mnemonic + " " + _translate_operands(operands, names, memory, resolved, program, backward, forward))
+                    lines.append(prefix + mnemonic + " " + _translate_operands(operands, names, memory, resolved, program, backward, forward, captures=captures))
                     if index in instruction_checks:
                         lines.append(f"tf_instruction_end_{index}:")
                 elif op == "nops":
@@ -2119,10 +2278,16 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                         lines.append(f"tf_literal_start_{index}:")
                     values = []
                     for value in node["values"]:
-                        if value.startswith(('"', "'")):
+                        key = value.casefold()
+                        if is_placeholder_ref_token(value) and key in captured_map:
+                            # WP-57: db bare s<N> expands to the captured
+                            # bytes, one 0xNN token per definition byte.
+                            values.extend(f"0x{byte:02X}"
+                                          for byte in bytes.fromhex(captured_map[key]))
+                        elif value.startswith(('"', "'")):
                             values.extend(f"0x{ord(char):X}" for char in value[1:-1])
                         else:
-                            values.append(_translate_operands(value, names, memory, resolved, program, backward, forward))
+                            values.append(_translate_operands(value, names, memory, resolved, program, backward, forward, captures=captures))
                     lines.append(node["directive"] + " " + ",".join(values))
                     if _literal_data(node):
                         lines.append(f"tf_literal_end_{index}:")
@@ -2228,10 +2393,10 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                 data = binary[offset + start - address:offset + end - address]
                 check = instruction_checks[index]
                 if check["branch"] is not None:
-                    target = _located_value(check["branch"], index, anonymous, locations, memory, linked_symbols, program, named=named_labels)
+                    target = _located_value(check["branch"], index, anonymous, locations, memory, linked_symbols, program, named=named_labels, captures=captures)
                     _check_direct_branch(data, start, target, program["bitness"])
                 for operand in check["memory"]:
-                    target = _located_value(operand["expression"], index, anonymous, locations, memory, linked_symbols, program, operand["registers"], named=named_labels)
+                    target = _located_value(operand["expression"], index, anonymous, locations, memory, linked_symbols, program, operand["registers"], named=named_labels, captures=captures)
                     _check_memory_displacement(data, start, target, program["bitness"], bool(operand["registers"]))
             if not _literal_data(node):
                 continue
@@ -2287,7 +2452,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
             block["requires_coordinator"] = True
         external_permits = _seal_external_literals(memory, program, blocks)
     exports = {symbol: linked_symbols[symbol.casefold()] for symbol in program["provides"]} if phase == "enable" else {}
-    result = {"blocks": blocks, "literal_data_ranges": literal_data_ranges, "symbols": linked_symbols, "exports": exports, "requires": program["requires"], "guards": preflight["guards"], "allocation_requests": preflight["allocation_requests"], "deallocations": [symbol for node in nodes if node["op"] == "dealloc" for symbol in node["symbols"]], "unregister": [symbol for node in nodes if node["op"] == "unregister" for symbol in node["symbols"]], "nasm_source": nasm_source, "requires_coordinator": any(block["requires_coordinator"] for block in blocks)}
+    result = {"blocks": blocks, "literal_data_ranges": literal_data_ranges, "symbols": linked_symbols, "exports": exports, "requires": program["requires"], "guards": preflight["guards"], "allocation_requests": preflight["allocation_requests"], "deallocations": [symbol for node in nodes if node["op"] == "dealloc" for symbol in node["symbols"]], "unregister": [symbol for node in nodes if node["op"] == "unregister" for symbol in node["symbols"]], "nasm_source": nasm_source, "requires_coordinator": any(block["requires_coordinator"] for block in blocks), "captured_placeholders": captured_map}
     if _allow_external_literals:
         result["_external_literal_permits"] = external_permits
     return result

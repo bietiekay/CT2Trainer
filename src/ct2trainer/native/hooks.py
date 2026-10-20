@@ -24,6 +24,7 @@ import uuid
 
 from .lua_work_budget import broker_checkpoint
 from .memory import _checked_write
+from .patterns import validate_placeholder_captures
 
 
 MAX_HOOK_ALLOCATION = 4 * 1024 * 1024
@@ -365,6 +366,9 @@ class HookManager:
         self.entries: list[dict[str, Any]] = []
         self.blocks: list[dict[str, Any]] = []
         self.exports: dict[str, int] = {}
+        # WP-57: placeholder captures from the activation scans (empty for
+        # journal entries that carry no placeholder tokens).
+        self.captured_placeholders: dict[str, str] = {}
         self.state = "preparing"
         self.data_commit = False
         self.uncertain = False
@@ -385,6 +389,8 @@ class HookManager:
                 "retirement_policy": "retain-published-allocations-until-target-exit"}
         if self._external_literal_permits and self.entries:
             result["external_data_program"] = json.loads(self._external_literal_permits[0].program_json)
+        if self.captured_placeholders:
+            result["captured_placeholders"] = self.captured_placeholders
         return result
 
     def _verify_journal(self) -> None:
@@ -660,11 +666,15 @@ class HookManager:
         return result
 
     def stage(self, blocks: Sequence[Mapping[str, Any]], exports: Mapping[str, int] | None = None,
-              *, _external_literal_permits=()) -> None:
+              *, captured_placeholders=None, _external_literal_permits=()) -> None:
         """Stage all allocations and record exact live entries without publishing."""
         self._guard()
         if self.state != "preparing":
             raise HookError("A hook activation can be staged only once.")
+        try:
+            self.captured_placeholders = validate_placeholder_captures(captured_placeholders)
+        except ValueError as exc:
+            raise HookError(str(exc)) from exc
         if _external_literal_permits:
             if (not isinstance(_external_literal_permits, tuple) or self.allocations
                     or len(_external_literal_permits) != len(blocks)
@@ -695,7 +705,15 @@ class HookManager:
         for name, allocation in self.allocations.items():
             allocation["literal_data_ranges"] = [dict(span) for block in normalized
                 if block["allocation"] == name for span in block["literal_data_ranges"]]
-        self.entries = [dict(block, state="unpublished") for block in normalized if not block["is_allocation"]]
+        if self.captured_placeholders:
+            # WP-57: persist the scan-time placeholder bytes next to each live
+            # entry (journal key ``captured_placeholders``); journals without
+            # placeholders keep their exact pre-WP-57 shape.
+            self.entries = [dict(block, state="unpublished",
+                                 captured_placeholders=dict(self.captured_placeholders))
+                            for block in normalized if not block["is_allocation"]]
+        else:
+            self.entries = [dict(block, state="unpublished") for block in normalized if not block["is_allocation"]]
         # Candidate permits were collected across active providers for linking.
         # Only actual literal borrowers retain a lease after normalization.
         self.owned_executable_data_ranges = self._used_literal_permits()
@@ -997,7 +1015,7 @@ class HookManager:
         return self.receipt()
 
     @restoration_entry
-    def commit(self, exports: Mapping[str, int] | None = None) -> None:
+    def commit(self, exports: Mapping[str, int] | None = None, *, captured_placeholders=None) -> None:
         """Publish an allocation-only hook that owns no live entries.
 
         Retained global storage without a literal initializer writes no target
@@ -1011,6 +1029,10 @@ class HookManager:
         self._guard()
         if self.state != "preparing":
             raise HookError("A hook activation can be committed only once.")
+        try:
+            self.captured_placeholders = validate_placeholder_captures(captured_placeholders)
+        except ValueError as exc:
+            raise HookError(str(exc)) from exc
         if not self.allocations:
             raise HookError("An allocation-only commit needs an owned allocation.")
         if self.entries or self.blocks or self._external_literal_permits:
