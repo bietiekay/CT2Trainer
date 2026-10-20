@@ -1,9 +1,15 @@
 # New CT test cases for CT2Trainer — 30.09.2026
 
-Status 2026-10-10: historical corpus-selection document. The candidates
-below informed the 0.9 feature work; the live pinned corpus is now the
-synthetic clean-room set in `TableReferences/` (case-01 … case-13, see
-`TableReferences/README.md`).
+Status **2026-10-20**: historical corpus-selection document. The live
+pinned corpus is now 30 synthetic clean-room tables (case-01 … case-31,
+with numbering gaps; see `TableReferences/README.md`), totaling 6,143
+AP-11 expected actions. Wave 4 and the 0.16 field-fix re-cut are complete;
+the 42-feature matrix is closed at 100%. The reference catalog currently
+measures 2,698 blocked of 117,624 plan entries (2026-10-20,
+`blocked-catalog-w4b4.json`). See [`plans/TRACKING.md`](../plans/TRACKING.md)
+and the [reference-table roadmap](../plans/reference-table-100-roadmap.md)
+for current gaps and next actions. The candidates and figures below
+remain historical evidence from earlier selection work.
 
 The recursive inventory covers **162 CT paths** with **147 distinct
 SHA-256 hashes**. 160 files can be parsed by the bounded own CT parser;
@@ -22,11 +28,11 @@ a resolver, or an upstream dependency.
 | Candidate | Scope | Gap evidenced and relevant IDs | Use |
 | --- | --- | --- | --- |
 | Yooka-Laylee (case-03) | 35 records | Mono: collector, method search, JIT addresses and call; IDs 1, 95, 97, 108 | First method search in an own managed fixture; evidence the call separately |
-| Disco Elysium, 2024-06-24 (case-04) | 29 | IL2CPP method alias `Sunshine.Metric.SunshineRoller.RollOne`; IDs 182, 216, 224 | Alias resolution with a plain `GameAssembly.dll` AOB as comparison; currently wrongly assumed to be a PE export |
+| Disco Elysium, 2024-06-24 (case-04) | 29 | IL2CPP method alias `Sunshine.Metric.SunshineRoller.RollOne`; IDs 182, 216, 224 | Historical review flagged alias resolution against a plain `GameAssembly.dll` AOB; the review found it was being treated as a PE export |
 | Rage (no pinned case) | 16 | Explicit x86 profile through compiler, plan and trainer; IDs 6, 40, 62 | Own PE32 fixture; check architecture before allocation and writes |
 | Trine 2 (case-01) | 115 | Process-wide AA `aobscan`, `globalalloc` and x86; IDs 121, 61, 63, 65 | Develop scan bounds, multiple hits and jointly owned allocations separately |
 | Fallout 4 (case-02) | 154 | Compact AOB tokens such as `0F28`, `*`, `globalalloc`, `readmem` and relocation; IDs 1095, 1096 | Small syntax cases and exact original-byte/buffer ownership |
-| Alien Isolation (case-05) | 9 | `speedhack_setSpeed(2.5/0.5)`; IDs 46, 47 | Clear runtime test for the still-missing clock broker; the records already pass syntax checks |
+| Alien Isolation (case-05) | 9 | `speedhack_setSpeed(2.5/0.5)`; IDs 46, 47 | At selection time, a compact runtime test for the missing clock broker; the records passed syntax checks |
 | Expedition 33 V5 (case-08) | 16 | Typed `executeCodeEx` calls, string/buffer passing and dynamic records; IDs 1337320550, 1337320545 | Own harmless target call with confirmed completion, then bounded dynamic value rows |
 
 A particularly small additional Mono case is **My Friend Pedro** with eight
@@ -82,10 +88,10 @@ EOF CT case and the game acceptances remained open. The following points
 5. Use table UI/assets and the large async/reflection tables as later
    gates.
 
-This order followed different missing functions, not the number of
-statically assumed records. Current status (2026-10-10): the 100%
-feature-matrix goal (without AP-11) is reached and closed; the AP-11
-real-game campaign remains the separate end goal (see
+This historical order followed different missing functions, not the number of
+statically assumed records. Current status (2026-10-20): the feature-matrix goal remains closed
+(42/42; 7,475/7,475 action-weighted), while AP-11 remains open at
+0/6,143 real-game actions confirmed (see
 [native-ap11-campaign.md](native-ap11-campaign.md)).
 
 ## Input errors and reproducible evidence

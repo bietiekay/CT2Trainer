@@ -1,5 +1,11 @@
 # CT2Trainer
 
+**Current status (0.16, 2026-10-20):** the 30-case synthetic feature matrix
+is 42/42, while the local 151-path original reference corpus still has
+2,698 blocked of 117,624 compiled entries and one legacy-binary load
+error. The active goal is [full reference-table support](plans/reference-table-100-roadmap.md).
+Static coverage is separate from confirmed game effect (AP-11: 0/6,143).
+
 CT2Trainer is an independently authored converter and Windows trainer for
 `.CT` (Cheat Engine XML) table files. It reads a table and the exact game
 process EXE name, then produces a standalone trainer EXE that attaches to
@@ -16,8 +22,8 @@ This repository — code, tests, tooling, documentation and release
 artifacts — is fully AI-generated: developed end-to-end by AI agents
 under human direction. AI-authored commits are welcome; the working
 contract for agents (boundaries, build rules, lane protocol) is
-documented in `AGENTS.md` and
-`plans/native-implementation-continuation.md`.
+documented in `AGENTS.md` and the active
+`plans/reference-table-100-roadmap.md`.
 
 ## Why it exists
 
@@ -59,8 +65,8 @@ processes you own and play.
 - attaches to the running target process and **re-proves the target
   identity** (PID/creation time, PE header, architecture, ownership,
   current bytes) before any memory mutation;
-- shows one switch card per record with its current state, per-record
-  toggles, group navigation and a master toggle;
+- shows compact rows with each record's current state, per-record
+  toggles, collapsible groups and a master toggle;
 - supported record types:
   - **value records**: 4/8/16/32/64-bit integers (decimal and hex),
     float/double — including raw IEEE-754 bit-pattern editing, string
@@ -89,9 +95,9 @@ architecture, and lists every record with its include flag and capability:
 
 ![CT2Trainer converter UI](documentation/screenshots/ct2trainerui.png)
 
-The generated trainer shows one switch card per record with its current
-state, auto-on for the next game launch and navigation; while the target
-process is not running, the hooks stay in the waiting state:
+The generated trainer now uses compact rows. The screenshot below records
+the earlier card layout; while the target process is not running, hooks
+stay in the waiting state:
 
 ![Generated CT2Trainer trainer UI](documentation/screenshots/finishedtrainerui.png)
 

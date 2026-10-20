@@ -1,14 +1,25 @@
 # CT2Trainer: Implementation and continuation plan
 
-Status: **October 11, 2026** (0.10 in cycle on working branch
-**`native-0.9-staged`**; `main` tracks the milestone between cycle-end
-merges — see §7).
+**ARCHIVED** — Historical plan retained for reference.
 
-This plan is maintained with every integration, new check, and handoff.
-The binding result list is in
-[native-progress.md](../documentation/native-progress.md). The work
-packages **AP-01 through AP-12** below carry scope and status; AP-01
-through AP-10 are complete, **AP-11 and AP-12 remain open**.
+
+**Historical implementation plan.** The implementation packages recorded below are complete. AP-11 real-game
+confirmation and Windows/Deck acceptance remain open as stated here. Current
+project state (2026-10-20): CT2Trainer 0.16; 30 pinned synthetic corpus
+tables; 6,143 expected AP-11 actions; feature matrix 42/42 (7,475/7,475
+action-weighted); reference-corpus assessment remains blocked at
+2,698/117,624 entries; AP-11 remains 0 confirmed; Windows and Steam Deck
+acceptance remain open. See [TRACKING.md](../TRACKING.md) and
+[native-progress.md](../../documentation/native-progress.md) for binding
+status. Future reference-table work belongs in the active
+[reference-table-100-roadmap.md](../reference-table-100-roadmap.md).
+
+This document preserves the implementation-cycle scope and handoff
+history. It is not the current launch plan. The binding result list is in
+[native-progress.md](../../documentation/native-progress.md). The work
+packages **AP-01 through AP-12** below carry their cycle-era scope and
+status. Current remaining acceptance work is summarized above; use the
+future roadmap for reference-table implementation planning.
 
 ## 1. Mandate and completion criteria
 
@@ -30,17 +41,16 @@ closure just because of individual MIT files.
 
 Completion criteria:
 
-- **Feature matrix: 100% in-scope coverage without AP-11 — reached and
-  extended (2026-10-11, WP-14).** 42/42 in-scope features covered
-  (39 gap classes + 3 gates): 100% feature-weighted, 7361/7361
-  action-weighted over the pinned 6011-action corpus (14 tables, run
-  `wp14-staged-20261011T093320Z`; `gap_inventory/feature-coverage.json`).
+- **Feature matrix: 100% in-scope coverage without AP-11.** 42/42
+  features covered: 100% feature-weighted and 7,475/7,475
+  action-weighted over 6,143 expected actions in 30 pinned tables
+  (run `w4b4-case30-20261020081722Z`; `gap_inventory/feature-coverage.json`).
   The 90% hurdle and the original 100% goal (2026-10-10, 39/39 over
   5967) remain closed.
 - **Gates 1–3 closed with real, tested evidence** (see §2). Gate action
   weights remain 0 — they are completeness/proof features, not record
   actions.
-- **AP-11 (real-game confirmation of all 6011 pinned actions) remains a
+- **AP-11 (real-game confirmation of all 6,143 pinned actions) remains a
   separate end goal** and is excluded from the feature metric
   (0 confirmed so far).
 - **Product acceptance is still open** on both platforms: standalone
@@ -54,18 +64,21 @@ Irreversible one-time calls receive no faked OFF/save/reapply contract:
 exactly one publish per attempt, save only after a confirmed ON, failed
 attempts stay visibly inactive and are never replayed as saved wishes.
 
-## 2. Current binding state
+## 2. Cycle-era binding state (historical snapshot)
+
+The table below records the 0.11-era state when this plan was written;
+it is superseded by the 2026-10-20 state linked at the top of this file.
 
 | Item | State (verified) |
 | --- | --- |
-| Repository baseline | `main` @ `b6c48cc` "initial 0.9 version" — the self-contained 0.9 tree (source, tests, synthetic corpus, docs) |
-| Test suite | local dev suite 2710 OK / 25 expected skips, 0 failures on `main` after the WP-18 merge (`9a76eb8`, 2026-10-12); latest offline build suite 2710/25 (0.11 build `native-20261012T092729Z-2d8aaf12`) |
-| Feature matrix | 42/42 in-scope features covered = 100% feature-weighted, 7361/7361 action-weighted; committed artifacts under `gap_inventory/` (run `wp14-staged-20261011T093320Z`) |
-| gate:1 per-table completeness | closed — `tests/test_native_table_completeness.py`: all 14 pinned tables, every source record preserved, table-level constructs (Forms, Lua lifecycle, Custom Types, Assets) handled or surfaced fail-closed, synthetic embedded-Files case |
+| Repository baseline | `main` @ `b6c48cc` "initial 0.9 version" — historical 0.9 tree |
+| Test suite | 0.11-era suite 2710 OK / 25 skips after WP-18 (`9a76eb8`, 2026-10-12) |
+| Feature matrix | Then 42/42; current 42/42, 7,475/7,475 weighted over 6,143 actions |
+| gate:1 per-table completeness | closed — `tests/test_native_table_completeness.py`: all 30 pinned tables, every source record preserved, table-level constructs (Forms, Lua lifecycle, Custom Types, Assets) handled or surfaced fail-closed, synthetic embedded-Files case |
 | gate:2 Source-to-Frozen parity | closed — `tests/test_native_source_frozen_parity.py` (corpus plans byte-identical through `build_trainer`/`read_embedded_plan`) plus the binary static-IL2CPP probe adapter `src/ct2trainer/native/il2cpp_static_probe.py` (frozen launcher `--il2cpp-static-pe/--il2cpp-static-metadata/--il2cpp-static-report`, source CLI `ct2trainer native il2cpp`, `tests/test_native_il2cpp_static_probe.py`) |
 | gate:3 reproducible chain | closed — `tests/test_native_repro_chain.py`: denominator → feature matrix → AP-11 manifest byte-identical for a fixed run-id |
-| AP-11 campaign | open — baseline manifest committed (`gap_inventory/ap11-campaign.json`: 14 tables, 6011 expected actions, 0 confirmed, `all_ok`, run `wp14-staged-20261011T093320Z`); runbook in [native-ap11-campaign.md](../documentation/native-ap11-campaign.md) |
-| Latest verified build | `native-20261010T172336Z-ffe35eb0` via `scripts/Build-Native.ps1`: both ZIPs, in-build suite 2617/25, `ce_inputs: []`, `runtime_unverified` deliberately set |
+| AP-11 campaign | Current: 30 pinned tables, 6,143 expected actions, 0 confirmed; runbook in [native-ap11-campaign.md](../../documentation/native-ap11-campaign.md) |
+| Latest verified build | Current 0.16 field-fix re-cut `native-20261020T150115Z-c426fb92`; see TRACKING.md and native-progress.md |
 
 The portable ZIP was user-tested in that state: the converter run and a
 generated trainer EXE work without CE or Python installed on the
@@ -109,10 +122,9 @@ machine.
    evidence. Store baseline hashes, environment, and the first intended
    action. Do not overwrite existing reports; failed attempts belong to
    the evidence.
-8. Continue at the first open package with fulfilled dependencies.
-   Assign independent packages in parallel; shared engine/compiler files
-   may only be written by one integrator. After a new integration, run
-   the full suite, then update this plan and the progress ledger.
+8. For current open reference-table work, consult TRACKING.md and the
+   [reference-table-100-roadmap.md](../reference-table-100-roadmap.md).
+   The AP/WP queues and parallel launch sequence below are historical.
 
 ### Known working tools and commands
 
@@ -138,7 +150,7 @@ Read-only CT inspection and prepared source artifacts:
 permission. The actual target path must re-prove PID/creation time,
 remote PE, architecture, ownership, and current bytes/regions.
 
-## 4. Parallelization and file responsibility
+## 4. Historical parallelization and file responsibility
 
 Use at most four concurrent agents including the integrator. With fewer
 slots, fill integration, implementation, and independent review first.
@@ -164,7 +176,8 @@ exactly open scope. The integrator checks whether the baseline still
 matches, merges changes semantically, and tests the actually merged
 bytes. A green old shadow suite is no proof for the new merge.
 
-Dependency graph (current open end is AP-11 → AP-12):
+Historical 0.9 dependency graph (not a current work queue; current future
+reference-table work will be scoped in the roadmap linked above):
 
 ```mermaid
 flowchart TD
@@ -182,7 +195,7 @@ AP-10 runs continuously alongside the other packages where corpus
 evidence is needed. A green build is a repeated milestone gate, not a
 one-off final build.
 
-## 5. Work package status
+## 5. Historical work-package status
 
 | Package | Scope | Status |
 | --- | --- | --- |
@@ -196,15 +209,15 @@ one-off final build.
 | AP-08 | Table Lua, custom types, scan, AA | **complete** — custom types, scan modes, AA directives (luaCall, conditional blocks, nested scripts, disassemble, createThread/threadWait, protect/unprotect, getmodulehandle/getprocaddress) |
 | AP-09 | Product UX | **complete** — process finder, hotkeys, sounds, frozen-recovery GUI, forms/assets, group navigation; physical touch/keyboard/DPI observation remains AP-11 |
 | AP-10 | Corpus + measurement | **complete** — deterministic denominator, feature matrix, AP-11 manifest, gates 1–3; committed artifacts under `gap_inventory/` |
-| AP-11 | Real games, clean PC, Deck | **OPEN — the separate end goal** (6011 expected actions, 0 confirmed) |
+| AP-11 | Real games, clean PC, Deck | **OPEN — separate end goal** (6,143 expected actions, 0 confirmed) |
 | WP-14 | Staged capabilities (signed offsets, script-parent cascades, staged gating, record-ID activation sets, 14th corpus table) | **complete** — released in 0.10 (build `native-20261011T121914Z-bfc5fc11`, gate-test rework `54b172e`); see [native-staged-capabilities.md](native-staged-capabilities.md) |
 | WP-15 | Executable literal bit-field writes (L2-37) | **complete** — bit-field writes/freezes on fully permitted executable literal spans via the literal-data hook path under single-permit full coverage; under-covered/mixed spans keep named fail-closed refusals; merged at `d3316aa`; see [native-exec-bitfield-writes.md](native-exec-bitfield-writes.md) |
 | WP-16 | Named table-Lua tabs (L5-19) | **complete** — `_table_lua_source` gather + dedicated tests; see [native-table-lua-tabs.md](native-table-lua-tabs.md) |
 | WP-17 | Version display + repository link in both windows | **complete** — window titles carry the build version (fail-closed `verify_version_sync` in the build); clickable `https://github.com/bietiekay/CT2Trainer` label in the converter and trainer windows; merged at `557b2ac`; see [native-version-repo-link.md](native-version-repo-link.md) |
 | WP-18 | `$process` AOB module token + trailing `@F` label fallback | **complete** — `aobscanmodule(LABEL, $process, …)` accepted in bounded path (`aa.py`) and program path, resolved to `plan["process_name"]` at both engine scan dispatch sites; forward `@F` without a following `@@` falls back to the next positioned named label of the phase (explicit `@@` still wins, `@B` unchanged, fail-closed no-target refusal kept); unblocks the two PRAGMATA root scripts (entries 11, 25) and their seven symbol dependents (12–17, 26) — reference table now 595/595 supported, 0 blocked; merged at `9a76eb8`; see [native-process-aob-labels.md](native-process-aob-labels.md) |
-| AP-12 | Final assessment + maintainability | **OPEN** — `runtime_unverified`, Windows + Deck acceptance, 0.10 release closure |
+| AP-12 | Final assessment + maintainability | **historical scope; acceptance remains open** — `runtime_unverified`, Windows + Deck acceptance |
 
-### AP-11: Real games, clean PC and Deck (open)
+### AP-11: Real games, clean PC and Deck (open; current campaign)
 
 Per gate pin OS/Proton/game/CT/trainer/PE/dependency hashes and the test
 steps. Observe/read the effect independently; check ON/OFF,
@@ -212,14 +225,18 @@ values/freeze, target restart, controller restart, saved wishes,
 errors/pending and cleanup. For irreversible calls check the one-time
 effect and no retry/save.
 
-The campaign plan over the 14 pinned tables (manifest, per-table
-priority order, report format, ingestion tool) is in
-[native-ap11-campaign.md](../documentation/native-ap11-campaign.md).
-Start with the small tables — `case-05` (9 actions, clock),
+The campaign plan over the pinned tables (manifest, per-table priority
+order, report format, ingestion tool) is in
+[native-ap11-campaign.md](../../documentation/native-ap11-campaign.md).
+The historical suggested first tables were `case-05` (9 actions, clock),
 `case-03` (32, mono), `case-04` (25, IL2CPP), `case-08` (16, typed
 calls) — before the large ones.
 
-VM/clean PC without CE/Python: portable converter start, new trainer,
+Windows clean-PC and real Steam Deck acceptance remain open. Use the
+current acceptance protocol and evidence requirements in TRACKING.md and
+`documentation/native-verification.md`; the following checklist is the
+original AP-11 scope retained for context. VM/clean PC without CE/Python:
+portable converter start, new trainer,
 Unicode path, settings/state, notices, rights/UAC and debugger conflict.
 Steam Deck with a real Proton prefix and target: x86/x64 APIs/debug
 events, touch/screen keyboard, hotkeys, state/freeze/clock and exit. A
@@ -227,7 +244,7 @@ Windows mock and virtual screen dimensions do not replace this
 observation. Carry unavailable device/game as open, keep working on the
 independent implementation packages.
 
-### AP-12: Final assessment and maintainability (open)
+### AP-12: Final assessment and maintainability (open; acceptance gates)
 
 Evaluate the pinned denominator completely, count the open mandatory
 actions, and show the rate plus the table-level completeness. The
@@ -260,8 +277,7 @@ missing anymore.
 
 ## 7. Maintenance, commit, push and interruption handoff
 
-After every integrated work package (or batch of lane integrations
-including matrix flips and docs): package status, owner, baseline/current
+During the historical implementation cycles, each integrated work package (or batch including matrix flips and docs) recorded: package status, owner, baseline/current
 hashes, new tests, findings, active vs ignored adoption and the next
 concrete action; update this plan and the progress ledger in sync. Only
 promote draft → reviewed → source → frozen → export → game → Deck with
@@ -272,8 +288,8 @@ staged diff. Stage native sources/tests/licenses/manifest/documentation
 deliberately; no blanket `git add .` that includes local scratch or
 unrelated inputs.
 
-Workflow policy (see `AGENTS.md`): each implementation cycle runs on its
-own working branch (e.g. `native-0.9`); within a cycle, after each
+Historical workflow policy (see `AGENTS.md`): each implementation cycle ran
+on its own working branch (e.g. `native-0.9`); within a cycle, after each
 integrated work package the working branch is merged into `main` and
 pushed (normal merge + push, never force), so `main` continuously tracks
 the milestone between cycle-end releases. No force push. On divergence
@@ -311,4 +327,7 @@ Do not remove unknown locks to manufacture a clean status.
 The detailed lane/commit history of the 0.5–0.9 implementation cycle
 (matrix progression from 33% to 100%, work-package adoptions) predates
 this standalone repository and is not duplicated here; this plan
-carries the current state and the remaining work.
+carries historical scope and implementation evidence. Current open work
+is maintained in TRACKING.md and native-progress.md; future reference
+table coverage planning belongs in the active
+[reference-table-100-roadmap.md](../reference-table-100-roadmap.md).

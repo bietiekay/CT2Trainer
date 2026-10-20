@@ -1,5 +1,14 @@
 # Subagent Lane Rules
 
+Status: 2026-10-20. The active objective is 100% trainer/cheat handling
+for the local reference tables; see
+[`plans/reference-table-100-roadmap.md`](../plans/reference-table-100-roadmap.md).
+The old AP/WP plans are historical. A new lane starts only after root
+assigns a bounded package with a current baseline, independently authored
+synthetic case, file ownership and acceptance checks. Session-specific
+user launch instructions take precedence over the standing load check in
+`AGENTS.md`.
+
 Operational contract for implementation lanes spawned by the root agent on
 the current milestone. Each lane owns exactly ONE work package
 (feature wiring + tests) in its own git worktree and branch. The root agent
@@ -10,9 +19,9 @@ and pushes.
 
 1. `AGENTS.md` — project boundaries (Native edition: no CE implementation
    inputs or binaries; public API/format contracts may be derived).
-2. `plans/native-implementation-continuation.md` — the relevant AP section
-   for your feature, §5 (work package status) and §7 (commit/push
-   protocol).
+2. `plans/TRACKING.md` and `plans/reference-table-100-roadmap.md` — the
+   active package and completion gates. Read historical AP/WP plans only
+   for relevant design detail.
 3. `documentation/native-progress.md` — current state and open list.
 4. This file — workspace, test and reporting contracts.
 

@@ -1,22 +1,37 @@
-# CT2Trainer: Reference-Corpus Closure Plan (WP-19 … WP-42)
+# CT2Trainer: Reference-Corpus Closure Plan (WP-19 … WP-58)
 
-Status: **2026-10-13** — plan created at the start of the reference-corpus
-closure cycle. Baseline: `main` @ `9a76eb8` (0.11), full suite 2710 OK /
-25 expected skips, latest build `native-20261012T092729Z-2d8aaf12`.
-Working branch for this cycle: **`native-0.12`** (cut from `main` before
-the first integration).
+**ARCHIVED** — Historical plan retained for reference.
 
-Companion document: the consolidated gap assessment in
-[`documentation/reference-gap-assessment.md`](../documentation/reference-gap-assessment.md)
-(root causes, counts, CE 7.5 behavior-reference notes). This plan carries
-the work packages, ownership, sequencing, test/fixture design, and the
-compatibility-assessment update protocol.
+
+**Historical execution plan.** The reference-corpus closure cycle recorded
+here is complete through Wave 4 and WP-58. WP-42 (Forms) was deferred and
+may be reconsidered under the roadmap. Current state
+(2026-10-20):
+CT2Trainer 0.16; 30 pinned synthetic tables; 6,143 expected AP-11 actions;
+feature matrix 42/42 (7,475/7,475 action-weighted); reference-corpus
+assessment remains blocked at 2,698/117,624 entries; AP-11 is 0 confirmed;
+Windows and Steam Deck acceptance remain open. See
+[`TRACKING.md`](../TRACKING.md) and
+[`documentation/native-progress.md`](../../documentation/native-progress.md)
+for binding status. Do not launch the historical wave instructions below
+as current work. Future reference-table coverage work will be planned in
+the active
+[`reference-table-100-roadmap.md`](../reference-table-100-roadmap.md).
+
+The plan began on 2026-10-13 from `main` @ `9a76eb8` (0.11), suite 2710 OK
+/ 25 skips, working branch `native-0.12`; its original scope was WP-19…WP-42
+and later extended through Wave 4/WP-58.
+
+Historical companion document: the consolidated gap assessment in
+[`documentation/reference-gap-assessment.md`](../../documentation/reference-gap-assessment.md)
+(root causes, counts, CE 7.5 behavior-reference notes). This historical plan preserves the work packages, ownership, sequencing,
+test/fixture design, and compatibility-assessment update protocol.
 
 ## 1. Goal and completion criteria
 
-Close the 21,852 blocked entries of the 151-table reference corpus
-(local-only, never added to git) by implementing the missing engine
-features and trainer/trainer-creator UX. Per work package (WP):
+The original cycle goal was to reduce blocked entries in a 151-table
+local-only reference corpus by implementing engine features and trainer
+UX. The following completion criteria describe that historical process:
 
 1. The implementing lane delivers a green full suite (baseline 2710/25 +
    new tests) in its own worktree, one commit.
@@ -39,20 +54,21 @@ documented, named residual (malformed authoring defects that stay
 fail-closed), measured by the catalog re-run.
 
 **Cycle completion (0.12):** all Wave 1 + Wave 2 WPs integrated; catalog
-re-run shows the expected deltas; feature matrix rows for the new
+re-run showed the expected deltas; feature matrix rows for the new
 capabilities flipped to covered with evidence; build re-cut from `main`.
 **Wave 3 complete (2026-10-18, on `native-0.15`):** all five Wave 3
 work packages integrated (WP-37/38/39/40/41, batches 1–4, see change log)
-with case-23/21/22/24 pinned as the 21st–24th corpus tables; WP-42
-(Forms rendering) remains explicitly deferred to a later milestone.
+with case-23/21/22/24 pinned as the 21st–24th corpus tables. WP-42
+(Forms rendering) remained deferred at that checkpoint; this is historical
+and does not define current roadmap scope.
 **Wave 4 batches 1–3 complete (2026-10-19, merged into `main` @
 `0c9879e`):** all six lanes integrated (w4-a: WP-43/44; w4-b: WP-46 part
 1; w4-c: WP-47/55; w4-d: WP-45/56; w4-e: WP-51/48; w4-f: WP-52), with
 cases 26/27/31 pinned as the 25th–27th corpus tables (chain
 `w4-case31-20261019061339`: 27 tables, 6119 expected actions, weights
-7446/7446, gate:1 → 27). Batch 4 (WP-46 part 2, WP-49/50/53/54/57,
-cases 28/29/30) waits on the §3.3 design gates; WP-42 (Forms) remains
-deferred.
+7446/7446, gate:1 → 27). Batch 4 was subsequently completed with WP-46
+part 2, WP-49/50/53/54/57/58 and cases 28/29/30; see the 2026-10-20 log
+and current status above.
 
 ## 2. Corpus and reference-source rules
 
@@ -68,7 +84,11 @@ deferred.
   target behavior, not CE internals.
 - `reference-assessment/` (lane raw reports) stays gitignored.
 
-## 3. Master work-package table
+The status cells below capture their initial planning snapshot. The dated
+integration log records completion and supersedes those snapshots; WP-42
+was deferred.
+
+## 3. Master work-package table (historical scope; completed packages are not launch work)
 
 Unified numbering (lane proposals mapped: Lane B "WP-19..25" ≈ this
 WP-19..23+25; Lane A WPs ≈ WP-24/27/32/33/34; Lane C WPs ≈ WP-28/29/30/
@@ -113,7 +133,7 @@ Dependency notes:
 - WP-41 soft-depends on WP-39 (banner/warning surface) but the engine
   work is independent.
 
-## 4. Wave 1 (launch order)
+## 4. Wave 1 (historical launch order)
 
 Wave 1 is all low-to-medium risk, mostly parser/policy level, no
 write-path semantics change. Lanes are file-disjoint:
@@ -173,7 +193,7 @@ must occupy standalone lines` → 0;
 `ASM delimiter without a Lua section` → 0. Whole tables: AtomicHeart,
 Cyberpunk2077, Octopath1, 20XX all compile.
 
-## 5. Wave 2 (after Wave 1 merges; launch in batches of ≤ 3 lanes)
+## 5. Wave 2 (historical sequence)
 
 **Lane W2-A (compiler/value policy):** WP-27 → WP-32 → WP-33 → WP-34
 (`compiler.py` + `value_types.py` + `engine.py` guards + `table.py`
@@ -210,7 +230,7 @@ no address expression` → 0 (demoted); `Hexadecimal floating-point bit
 patterns are unsupported` → 0; `Dropdown link target is missing or
 ambiguous` → 36 unchanged but messages split missing/ambiguous.
 
-## 6. Wave 3 (risk-ordered; each needs its own review pass)
+## 6. Wave 3 (historical sequence; completed)
 
 **WP-37 (Lua-owned symbol handover):** design the contract first
 (root-owned doc in this file's §10): a program may `registersymbol` /
@@ -247,7 +267,7 @@ table load *activation* (not the table parse) with named reasons;
 trainer-UI banner ("Table Lua not executed on load — N record scripts
 stay inactive"). Case: `case-22`.
 
-## 7. Trainer / trainer-creator UI work (cross-WP)
+## 7. Trainer / trainer-creator UI work (historical cross-WP scope)
 
 | Surface | Change | WP |
 | --- | --- | --- |
@@ -259,7 +279,7 @@ stay inactive"). Case: `case-22`.
 | Trainer UI | visual distinction heading vs blocked rows (polish, optional) | WP-32 (piggyback) |
 | Both | version display / repo link already present (WP-17); no change | — |
 
-## 8. Compatibility-assessment update protocol (root-owned, per integration)
+## 8. Compatibility-assessment update protocol (historical cycle procedure)
 
 1. **Pinned corpus:** after adding derivative case(s), re-run the full
    deterministic chain with one fresh run id
@@ -292,7 +312,7 @@ stay inactive"). Case: `case-22`.
 4. **Ledger sync:** `documentation/native-progress.md` §4 open work +
    §2 confirmed state updated in the same commit as the plan status.
 
-## 9. Load / parallelization policy
+## 9. Load / parallelization policy (historical cycle guidance)
 
 - Before each fan-out: `& .tools\native-build-env\Scripts\python.exe
   tools\agent_load.py` (exit 0 = at least one lane may launch, 1 =
@@ -310,7 +330,7 @@ stay inactive"). Case: `case-22`.
 - The root handles: all corpus additions, matrix flips, artifact
   regeneration, catalog re-runs, doc updates, merges/pushes.
 
-## 10. Design notes owned by root (fill before WP start)
+## 10. Design notes owned by root (historical designs; packages completed)
 
 - **WP-37 Lua-owned symbol handover (designed 2026-10-14; case-24):**
   1. *`external_owned_providers` shape.* Per-table dict

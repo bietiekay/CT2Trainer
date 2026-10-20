@@ -1,13 +1,14 @@
 # CT2Trainer Native verification
 
-Status: October 11, 2026 (0.9.0-rc2 baseline + WP-14 staged
-capabilities, in cycle on `native-0.9-staged`).
+Status: October 20, 2026 (0.16; release build `native-20261020T150115Z-c426fb92`, cut from `main` @ `7616edb`).
 
 This document records the **current** verification state of the
 independent CT2Trainer Native edition: what is proven, how it is
 reproduced, and what remains open. Per-run evidence lives in the local
 build run folders (`build/runs/native-<UTC-timestamp>-<id>/`) and is not
 committed.
+
+The feature matrix covers 42/42 in-scope features over the 30-table synthetic corpus; that result does not establish support for the full real reference corpus or real-game behavior. The local-only full-reference static catalog still has 2,698 of 117,624 plan entries blocked. AP-11 has 0 confirmed real-game actions, and runtime acceptance remains `runtime_unverified: true`.
 
 ## 1. Current baseline
 
@@ -57,14 +58,14 @@ reproducibility; it deliberately does **not** clear
 
 | Gate | Evidence |
 | --- | --- |
-| Per-table completeness for all 14 pinned case tables (Forms, table-Lua lifecycle, Custom Types, Assets; the WP-14 staged case-14 adds signed-offset parents, script-parent cascades, staged leaf values and a record-ID activation set) | `tests/test_native_table_completeness.py` |
+| Per-table completeness for all 30 pinned synthetic case tables (Forms, table-Lua lifecycle, Custom Types, Assets; including WP-14 staged capabilities and the later Wave 4 cases) | `tests/test_native_table_completeness.py` |
 | Source-to-Frozen parity of the 0.9 feature set, plus the binary CLI/GUI adapter for the static IL2CPP parser | `tests/test_native_source_frozen_parity.py`, `tests/test_native_il2cpp_static_probe.py` |
 | End-to-end reproducibility chain (denominator -> feature matrix -> AP-11 manifest, byte-identical per fixed run-id) | `tests/test_native_repro_chain.py` |
 
 Gate action weights remain 0: they are completeness/proof features, not
-record actions. The AP-11 campaign (6,011 expected actions, 0 confirmed
+record actions. The AP-11 campaign (6,143 expected actions, 0 confirmed
 real-game effect so far) is a separate end goal and is excluded from the
-100% feature metric.
+100% feature metric. The synthetic-corpus result does not establish full real-reference-corpus support; the local-only static catalog still has 2,698 of 117,624 plan entries blocked.
 
 ## 4. Reproduction commands
 
@@ -120,7 +121,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\windows\fixture_ta
     [fixture manual](../tests/windows/fixture_target/README.md)), and
   - the Steam Deck / Proton protocol (see the
     [compatibility matrix](../tests/deck/compatibility-matrix.md)).
-- **AP-11**: 0 of 6,011 expected actions confirmed with observed
+- **AP-11**: 0 of 6,143 expected actions confirmed with observed
   real-game effect.
 - Broad automatic table forms, remote speed control and managed
   invocation remain in development (see

@@ -1,5 +1,21 @@
 # Project Handoff for Further Agents
 
+**Active outcome (2026-10-20): 100% of the 151 local-only reference-table
+paths (143 distinct hashes) must load and support their intended behavior
+through an independent clean-room implementation.** The 0.16 Wave-4
+feature work is complete, but the latest original-table catalog still has
+2,698 blocked of 117,624 plan entries, 58,950 staged entries and one
+legacy-binary load error. The 42/42 feature matrix measures only the 30
+pinned synthetic cases; AP-11 has 0/6,143 confirmed game effects. Read
+[`plans/reference-table-100-roadmap.md`](plans/reference-table-100-roadmap.md)
+for the active RT-1…RT-7 work and completion gates. Historical AP/WP
+plans remain useful design records, not the current goal queue.
+The requested parity scope is trainer/cheat handling and game-facing
+effects; CE visual UI and editor features are outside scope unless a
+table's UI API carries a game-facing action. The initial general
+[capability assessment](documentation/ce-feature-parity-assessment.md)
+records known gaps and the measurement method.
+
 **All repository documentation and workflow content is English-only
 (2026-10-07, user decision).** Every doc, plan, ledger, tool message and
 artifact string is maintained in English from now on, regardless of the
@@ -29,11 +45,12 @@ configuration, documentation and tooling.
 
 Read first: the [central gap & goal tracking document](plans/TRACKING.md)
 (single source of truth for all open gaps, goals, work packages, corpus
-cases and the latest measurement snapshot), then the maintained
-[continuation plan](plans/native-implementation-continuation.md) and the
+cases and the latest measurement snapshot), then the active
+[100% reference-table roadmap](plans/reference-table-100-roadmap.md) and the
 [progress ledger](documentation/native-progress.md). They contain
 the work packages, parallel ownership, resume commands and acceptance
-criteria. Code/build boundaries: `documentation/native-runtime.md` and
+criteria. The [earlier continuation plan](plans/archive/native-implementation-continuation.md)
+preserves AP-01…AP-12 history. Code/build boundaries: `documentation/native-runtime.md` and
 `documentation/native-verification.md`. Build guide:
 `documentation/build.md`.
 
@@ -220,7 +237,7 @@ never blindly launch into a saturated server. Lane contract:
 Read before any change:
 
 1. [`README.md`](README.md) — quick start, provenance and current scope.
-2. [`plans/native-implementation-continuation.md`](plans/native-implementation-continuation.md) — work packages and acceptance.
+2. [`plans/reference-table-100-roadmap.md`](plans/reference-table-100-roadmap.md) — active RT-1…RT-7 work packages and acceptance.
 3. [`documentation/native-progress.md`](documentation/native-progress.md) — confirmed base, measured numbers and prioritized work.
 4. [`documentation/native-runtime.md`](documentation/native-runtime.md) / [`native-verification.md`](documentation/native-verification.md) — code/build boundaries and proofs.
 5. [`documentation/build.md`](documentation/build.md) — offline build, local test suite, release content rules.

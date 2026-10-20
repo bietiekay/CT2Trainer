@@ -1,6 +1,6 @@
 # CT2Trainer derivation and design intent
 
-Status: October 10, 2026.
+Status: October 20, 2026 (0.16; current corpus run `w4b4-case30-20261020081722Z`).
 
 This document explains why the CT2Trainer Native edition exists, how it was
 derived from the public Cheat Engine contract without using CE
@@ -31,64 +31,38 @@ scan enforce this.
 
 ## 2. Clean-room corpus (synthetic replacement of the real tables)
 
-The measurement corpus (`TableReferences/`) is a **synthetic clean-room
-corpus** that exercises the same 36 gap classes, so that no third-party
-game table bytes enter the distributable tests. The 13 pinned tables are
-committed as flat, neutral case files `case-01.ct` through `case-13.ct`;
-the game of origin for each case is documentation-level provenance only
-and is recorded in `TableReferences/README.md`:
+The measurement corpus (`TableReferences/`) is a synthetic clean-room corpus
+that exercises the in-scope gap classes, so no third-party game table bytes
+enter distributable tests. It contains 30 pinned synthetic tables. The full
+case-to-origin mapping is documented in `TableReferences/README.md`; the
+native tests embed only synthetic corpus content. These tables are not the
+full real reference corpus and do not establish that every real table is
+supported.
 
-1. `case-01.ct` (origin: Trine 2)
-2. `case-02.ct` (origin: Fallout 4)
-3. `case-03.ct` (origin: Yooka-Laylee)
-4. `case-04.ct` (origin: Disco Elysium)
-5. `case-05.ct` (origin: Alien Isolation)
-6. `case-06.ct` (origin: Resident Evil 2)
-7. `case-07.ct` (origin: Borderlands 3)
-8. `case-08.ct` (origin: Clair Obscure Expedition 33)
-9. `case-09.ct` (origin: Silent Hill Townfall, Steam build)
-10. `case-10.ct` (origin: Senua's Saga Hellblade 2)
-11. `case-11.ct` (origin: Red Dead Redemption 2)
-12. `case-12.ct` (origin: Silent Hill Townfall, community "rml" build)
-13. `case-13.ct` (origin: Resident Evil 4)
+## 3. Current denominator and measurement baseline
 
-Each of the 13 tables carries **exactly one owned module token**,
-`ct2synth01.exe` through `ct2synth13.exe`, assigned 1:1 to the pinned paths
-in the order listed above (verified: every table references only its own
-token, and no other module name appears in the corpus). The committed
-baselines under `gap_inventory/` are regenerated against this synthetic
-corpus (run `repo-reproducible`); the native tests embed only synthetic
-corpus content.
+- The current pinned synthetic corpus contains **30 tables and 6,143 expected
+  actions** (records minus navigation; 1,291 groups counted separately), run
+  `w4b4-case30-20261020081722Z`. Status split: 5,559 locked, 544 statically
+  assumed, 42 unknown; 4 group-toggle actions.
+- The feature matrix covers **42/42 in-scope features** (100% feature-weighted;
+  7,475/7,475 action-weighted). This is coverage against the pinned synthetic
+  corpus and is not full support for the real reference corpus. The separate
+  full-corpus static catalog status is **2,698 of 117,624 plan entries blocked**.
+- AP-11 remains separate: **0 of 6,143 expected actions** have confirmed real
+  game effect. The metric excludes synthetic fixture/mock evidence.
+- The three proof gates are closed with tested evidence: per-table completeness
+  (`tests/test_native_table_completeness.py`), source-to-frozen parity and the
+  binary IL2CPP adapter (`tests/test_native_source_frozen_parity.py` and
+  `tests/test_native_il2cpp_static_probe.py`), and reproducibility
+  (`tests/test_native_repro_chain.py`). Runtime acceptance remains
+  `runtime_unverified: true` until Windows and Steam Deck/Proton acceptance is
+  recorded.
 
-## 3. Denominator and measurement baseline
-
-- The pinned start corpus of **13 tables** contains **5,967 expected
-  actions** (records minus navigation; groups counted separately). Status
-  split at the baseline: 5,455 locked (91.4%) / 479 statically assumed
-  (8.0%) / 33 unknown (0.6%); 1,269 groups; 0 group-toggle actions.
-- The feature matrix (`gap_inventory/feature-coverage.json`, run
-  `repo-reproducible`) measures **39/39 in-scope
-  features covered: 100% feature-weighted and 7332/7332
-  (100%) action-weighted**. The 100% feature-matrix goal (excluding
-  AP-11) is reached and closed. The four
-  AP-11 features (real game installs/builds, observed game effect,
-  VM/Clean-PC, real Steam Deck with Proton prefix incl. physical input) are
-  excluded from the metric by rule.
-- The **AP-11 campaign** (the 5,967 expected actions with **0 confirmed**
-  real game effect so far) is a **separate end goal** and is excluded from
-  the 100% feature metric.
-- The three **gate features** are now closed with tested evidence:
-  gate:1 per-table completeness (Forms, table-Lua lifecycle, Custom Types,
-  Assets) demonstrated by `tests/test_native_table_completeness.py`;
-  gate:2 Source-to-Frozen parity of the 0.9 feature set including the
-  binary CLI/GUI adapter for the static IL2CPP parser demonstrated by
-  `tests/test_native_source_frozen_parity.py` and
-  `tests/test_native_il2cpp_static_probe.py`;
-  gate:3 the end-to-end reproducibility chain with exact commands and
-  pinned inputs demonstrated by `tests/test_native_repro_chain.py`.
-  Gate action weights remain 0 (completeness/proof features, not record
-  actions).
-
+Historical baseline: the October 10, 2026 `repo-reproducible` snapshot covered
+13 tables / 5,967 actions and 39/39 features. The October 11 WP-14 snapshot
+covered 14 tables / 6,011 actions. Those figures are retained in old run
+artifacts and are not current measurements.
 ## 4. The 36 gap classes (concept)
 
 Gap classes are **static, read-only classifications of table

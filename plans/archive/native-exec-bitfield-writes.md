@@ -1,14 +1,21 @@
 # CT2Trainer: Executable-Literal Bitfield Writes (WP-15, L2-37)
 
-**Status:** Plan (2026-10-11) — Baseline: `main` @ `7927cb4` (0.10, suite
-2671 OK / 25 expected skips)
+**ARCHIVED** — Historical plan retained for reference.
 
-Closes **L2-37** from the CE7.5 comparison: the single open P0 write-path
-limit. Masked (bitfield) writes and freezes into source-proven executable
-literal spans are refused fail-closed today, while full-span numeric writes
-and freezes on the same spans are supported.
 
-## 1. Current state (verified 2026-10-11)
+**Historical plan — WP-15 complete.** Implemented and merged into `main`
+at `d3316aa` on 2026-10-11. The original baseline and design below are
+preserved as implementation history. Current project status is maintained
+in [TRACKING.md](../TRACKING.md); future reference-table work will be scoped
+in the active
+[reference-table-100-roadmap.md](../reference-table-100-roadmap.md).
+
+This package closed **L2-37** from the comparison: masked (bitfield)
+writes and freezes are supported on fully permitted source-proven
+executable literal spans. The historical investigation below records the
+pre-WP-15 refusal and design.
+
+## 1. Pre-implementation state (verified 2026-10-11)
 
 - `Binary` CT records compile to a `value_profile` of kind `bitfield`
   (`compiler.py:581-592`, `value_types.py:107-117`); mask / merge / parse
@@ -90,7 +97,7 @@ literal-data hook path, mirroring `_write_owned_literal_values`:
 - **No** plan JSON fields, no validator changes, no bundle changes, no
   `gap_inventory/` changes (zero `BitStart` records in the pinned corpus).
 
-## 4. Lane ownership
+## 4. Historical lane ownership
 
 - Branch `wp15-exec-bitfield` cut from `native-l2-37`; worktree
   `C:\Users\xboxl\AppData\Local\Temp\opencode\wp15-execbitfield`.
@@ -102,7 +109,7 @@ literal-data hook path, mirroring `_write_owned_literal_values`:
   `AGENTS.md`, `TableReferences/*`.
 - No new third-party dependencies; no pushes; no commit to `main`.
 
-## 5. Acceptance
+## 5. Historical acceptance criteria (satisfied at integration)
 
 - New `tests/test_native_exec_bitfield_runtime.py` (fixtures: synthetic
   provider hook with a literal hole + real `Binary` record pointing into
@@ -123,7 +130,7 @@ literal-data hook path, mirroring `_write_owned_literal_values`:
 - `git diff --stat` against the branch base shows **no** `gap_inventory/*`
   changes.
 
-## 6. Known worktree caveat
+## 6. Historical worktree caveat
 
 In any non-canonical worktree, exactly three tests fail because the
 committed artifacts embed the canonical absolute paths:

@@ -1,6 +1,13 @@
 # Trainer UI/UX Design — Compact Touch-First Row Grid (WP-58)
 
-Status: **designed 2026-10-19** (root; cycle `native-0.16`, lane `w4-ui`).
+Status: **designed and implemented in 0.16** (WP-58, integrated into
+Wave 4; design dated 2026-10-19, field-fix re-cut
+`native-20261020T150115Z-c426fb92`). The shipped UI startup crash fix is
+recorded in [`plans/TRACKING.md`](../plans/TRACKING.md). Windows and real
+Steam Deck/Proton acceptance remain open, so this design does not change
+`runtime_unverified`. The reference-table work is tracked in the
+[reference-table roadmap](../plans/reference-table-100-roadmap.md).
+
 Supersedes the current card-based layout in `src/ct2trainer/native/ui.py` /
 `ui_layout.py` for the trainer window. Engine contract, plan format, release
 build path and dark palette are unchanged.

@@ -1,6 +1,16 @@
 # CT2Trainer: Version in Window Titles + Repository Link (WP-17)
 
-## 1. Current state (verified 2026-10-11)
+**ARCHIVED** — Historical plan retained for reference.
+
+
+**Historical plan — WP-17 complete.** Merged into `main` at `557b2ac` on
+2026-10-11. The design and pre-implementation investigation below are
+retained as history. Current project status is maintained in
+[TRACKING.md](../TRACKING.md); future reference-table work will be scoped in
+the active
+[reference-table-100-roadmap.md](../reference-table-100-roadmap.md).
+
+## 1. Pre-implementation state (verified 2026-10-11)
 
 - Converter window title: `CT2Trainer — independent CT converter`
   (`src/ct2trainer/native/converter.py:16`).
@@ -63,7 +73,7 @@
    ttk; trainer: tk with the module's `BG`/`FG` palette — link label uses
    `FG` on `BG_HEADER` in the header).
 
-## 4. Lane ownership
+## 4. Historical lane ownership
 
 Files the lane owns (exactly):
 
@@ -82,7 +92,7 @@ Zero changes to: plan schema/validators, `compiler.py`, `engine.py`,
 `bundle.py`, `gap_inventory/*`, `TableReferences/`, `plans/*`,
 `documentation/*`, any existing test file.
 
-## 5. Acceptance
+## 5. Historical acceptance criteria (satisfied at integration)
 
 - `tests/test_native_version_display.py` covers at minimum:
   1. `ct2trainer.__version__` equals the root `VERSION` file content
@@ -104,10 +114,10 @@ Zero changes to: plan schema/validators, `compiler.py`, `engine.py`,
 - Integration (root agent): canonical-path full suite, suite-baseline
   updates in `documentation/native-verification.md` and
   `documentation/native-progress.md`, WP-17 row in
-  `plans/native-implementation-continuation.md` §5, worktree/branch
+  `plans/archive/native-implementation-continuation.md` §5, worktree/branch
   cleanup, push.
 
-## 6. Known worktree caveat
+## 6. Historical worktree caveat
 
 Off-canonical worktrees fail exactly three provenance byte-identity tests
 (`test_committed_manifest_is_byte_reproducible`,
