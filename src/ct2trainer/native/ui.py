@@ -157,9 +157,10 @@ class TrainerWindow:
     @staticmethod
     def _button(parent, label, action, **kwargs):
         style = {"bg": BG_BUTTON, "fg": FG, "activebackground": BG_BUTTON_ACTIVE,
-                 "activeforeground": FG, "disabledforeground": FG_DIM}
+                 "activeforeground": FG, "disabledforeground": FG_DIM,
+                 "font": ("Segoe UI", 12), "height": 2, "pady": 4}
         style.update(kwargs)
-        return tk.Button(parent, text=label, command=action, font=("Segoe UI", 12), height=2, pady=4, **style)
+        return tk.Button(parent, text=label, command=action, **style)
 
     # -- chrome rows (D7) ----------------------------------------------------
 
@@ -261,9 +262,9 @@ class TrainerWindow:
         self._button(self.pagination, "Next ▶", lambda: self.move_page(1),
                      width=5).pack(side="right")
         self._button(self.pagination, "◀ Previous", lambda: self.move_page(-1),
-                     width=5, padx=(0, 4)).pack(side="right")
+                     width=5).pack(side="right", padx=(0, 4))
         self._button(self.pagination, "⤒", self.go_top,
-                     width=3, padx=(0, 4)).pack(side="right")
+                     width=3).pack(side="right", padx=(0, 4))
 
     # -- view / search / page controls ----------------------------------------
 
