@@ -100,8 +100,9 @@ error, `SuperMeatBoy.CT` (legacy binary format).
 
 Use a new milestone working branch. Each integrated package includes a
 focused synthetic case, runtime tests where effects matter, full suite,
-catalog delta with zero unexplained supported regressions, updated central
-tracker and ledger, then normal merge and push to `main` under `AGENTS.md`.
+catalog delta with zero unexplained supported regressions, updated
+[`STATUS.md`](../STATUS.md), central tracker and ledger in the same change,
+then normal merge and push to `main` under `AGENTS.md`.
 Root owns the catalog and documentation. Subagent lanes follow
 `documentation/subagent-lane-rules.md`; when the user directs a different
 launch policy for a session, follow that instruction. Never infer game

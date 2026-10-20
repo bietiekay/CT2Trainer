@@ -38,7 +38,7 @@ and pushes.
   worktree means a stale checkout — sync from the main checkout first,
   and stay read-only.
 - No modifications of root-owned files:
-  `tools/corpus_denominator/*`, `gap_inventory/*`,
+  `STATUS.md`, `tools/corpus_denominator/*`, `gap_inventory/*`,
   `tests/test_native_feature_matrix.py`,
   `tests/test_native_ap11_campaign.py`,
   `tests/test_native_corpus_traceability.py`,
