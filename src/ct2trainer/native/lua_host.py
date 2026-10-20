@@ -597,9 +597,28 @@ local function retire_worker(data)
     data.dead=true; workers[data.id]=nil; worker_count=worker_count-1
   end
 end
+-- WP-54 (a'): the scheduler-free helper replay.  The table-source replay
+-- into a record scope binds createTimer/createThread to inert stubs:
+-- property assignment is accepted (stored, never used), destroy/terminate
+-- are no-ops, and callbacks never fire.  The table's globals still
+-- establish; real timers and workers live only in their own scope (the
+-- table scope at bootstrap, the record scope for record Lua).
+local function inert_scheduler_stub()
+  local data={}
+  return setmetatable({}, {
+    __index=function(_,key)
+      if data[key]~=nil then return data[key] end
+      if key=='destroy' or key=='terminate' then return function() end end
+      return nil
+    end,
+    __newindex=function(_,key,value) data[key]=value end,
+    __call=function() return inert_scheduler_stub() end,
+    __metatable='CT2Trainer inert scheduler stub'
+  })
+end
 function createThread(callback,...)
-  if checking then checkpoint('scheduler-write'); error('Syntax checking cannot create workers',2) end
   if type(callback)~='function' then error('Worker callback must be a Lua function',2) end
+  if checking then return inert_scheduler_stub() end
   if worker_count>=128 then error('Worker count limit exceeded',2) end
   workerid=workerid+1
   local data,args={id=workerid,dead=false,wait=0,recordid=current_record_id},pack(...)
@@ -629,8 +648,8 @@ function sleep(milliseconds)
   return coyield(milliseconds)
 end
 function createTimer(owner,enabled)
-  if checking then checkpoint('scheduler-write'); error('Syntax checking cannot create live timers',2) end
   if owner~=nil then error('Native UI timer owners are unsupported',2) end
+  if checking then return inert_scheduler_stub() end
   nextid=nextid+1
   local id=nextid
   local data={Enabled=enabled~=false,Interval=1000,OnTimer=nil,elapsed=0,dead=false,recordid=current_record_id}
@@ -962,6 +981,14 @@ class LuaHost:
         if not self._running:
             raise LuaHostError('Lua calls require an active execution slice')
         self._checkpoint()
+        if self._installing_helpers and name in {'registerSymbol', 'unregisterSymbol'}:
+            # WP-54 (a'): scheduler-free table-source replay — the table's
+            # symbol registrations are inert in a record scope.  Ownership
+            # belongs to the table scope (established by the table-scope
+            # bootstrap before any record activation); replaying the
+            # registration here would collide with it, so the call is a
+            # silent no-op and the table globals still establish.
+            return None
         if (self._installing_helpers and name not in _ReadOnlyBroker._READS
                 and name not in {'print', 'showMessage'}):
             # Record the forbidden API attempt before converting its arguments.
@@ -1705,6 +1732,131 @@ class EngineLuaBroker:
             raise LuaHostError('Controller patch confirmation failed: '+str(exc)) from exc
 
 
+class TableSymbolOwner:
+    """WP-54 (b): symbol ownership for the per-table bootstrap scope.
+
+    Distinct from record-scope ownership (``LuaActivation.symbols``): table
+    symbols enter the engine's runtime symbol table at bootstrap and live
+    for the whole attach; they are released exactly once at table-scope
+    retirement, which the engine orders after every record consumer scope
+    has retired (WP-54 (d)).  Refusals are fail-soft per the WP-41
+    table-Lua contract: the exact named reason is recorded on the
+    table-Lua broker (bounded) and the call is answered with nil, so the
+    table source keeps running.
+
+    Registration semantics (WP-54 (b)/(e)):
+
+    - a re-registration inside this scope is a named conflict refusal;
+    - a name a supported script record provides is skipped quietly
+      (residual rule — record providers always win; the plan field
+      excludes it and the record's own registration stays
+      collision-free);
+    - any other same-named entry in the engine table is the attach-time
+      UDS seed (the bootstrap runs after the reseed), so the
+      table-scope registration overwrites it — CE last-write order.
+    """
+
+    def __init__(self, engine: Any, broker: 'TableLuaBroker'):
+        self.engine = engine
+        self.broker = broker
+        self.symbols: dict[str, int] = {}
+        self.released = False
+        # WP-54 (b) residual rule, runtime side: the symbols a supported
+        # script record provides always win, so the bootstrap skips those
+        # names (fail-soft, named reason) and the record's own registration
+        # stays collision-free at activation time.
+        self._record_provides = {name.casefold()
+                                 for entry in engine.plan.get("entries", [])
+                                 if entry.get("supported")
+                                 and entry.get("kind") == "script"
+                                 for name in entry.get("provides", [])}
+
+    def _refuse(self, reason: str) -> None:
+        if len(self.broker.reasons) < self.broker._max_reasons:
+            self.broker.reasons.append(reason)
+
+    def call(self, name: str, arguments: tuple, *, generation: int) -> None:
+        if generation != self.broker.generation:
+            raise LuaHostError('Stale Lua session generation')
+        e = self.engine
+        e._guard()
+        if e.memory.identity != self.broker.inner.identity:
+            raise LuaHostError('Lua target identity changed; create a fresh activation')
+        if name == 'registerSymbol':
+            if (len(arguments) not in {2, 3}
+                    or type(arguments[0]) is not str or not arguments[0]
+                    or type(arguments[1]) is not int
+                    or (len(arguments) == 3 and type(arguments[2]) is not bool)):
+                self._refuse('Table Lua symbol registration has invalid arguments.')
+                return None
+            from .aa import AAError, validate_symbol
+            symbol = arguments[0]
+            try:
+                validate_symbol(symbol)
+            except AAError:
+                self._refuse('Table Lua symbol registration has invalid arguments.')
+                return None
+            address = arguments[1]
+            try:
+                e.memory._range(address, 1)
+            except Exception:
+                self._refuse('Table Lua symbol address is outside the attached target.')
+                return None
+            key = symbol.casefold()
+            if key in self.symbols:
+                self._refuse('Table Lua symbol registration conflict: ' + symbol + '.')
+                return None
+            if key in self._record_provides:
+                # Residual rule, runtime side: a supported script record owns
+                # this name (the plan field excludes it), so the bootstrap
+                # skips the registration quietly (answered with nil, no
+                # reason recorded) and the record's own registration is the
+                # authoritative one — no runtime ownership collision.
+                return None
+            # CE order: the bootstrap runs after the attach-time UDS reseed,
+            # so a table-scope registration overwrites a same-named UDS seed
+            # entry (last write wins).
+            self.symbols[key] = address
+            e.symbols[key] = address
+            return None
+        if name == 'unregisterSymbol':
+            if (len(arguments) != 1 or type(arguments[0]) is not str
+                    or not arguments[0]):
+                self._refuse('Table Lua symbol registration has invalid arguments.')
+                return None
+            symbol = arguments[0]
+            key = symbol.casefold()
+            if key not in self.symbols:
+                self._refuse('Table Lua unregistered a symbol it does not own: '
+                             + symbol + '.')
+                return None
+            if e.symbols.get(key) != self.symbols[key]:
+                self._refuse('Table Lua symbol registration conflict: ' + symbol + '.')
+                return None
+            del self.symbols[key]
+            e.symbols.pop(key, None)
+            return None
+        raise LuaHostError('Unsupported table-scope symbol mutation: ' + str(name))
+
+    def release(self) -> None:
+        """Exactly-once teardown at table-scope retirement.
+
+        Drops every table-owned symbol from the engine's runtime symbol
+        table (only while the engine entry still points at this scope's
+        address; a re-registered name belongs to its new owner).  Record
+        consumers are retired before this call by the engine's teardown
+        order, so no consumer can observe a half-released table symbol.
+        """
+        if self.released:
+            return
+        self.released = True
+        e = self.engine
+        for key, address in list(self.symbols.items()):
+            if e.symbols.get(key) == address:
+                e.symbols.pop(key, None)
+        self.symbols.clear()
+
+
 class TableLuaBroker:
     """Per-table bootstrap scope broker (WP-41): read-only by classification.
 
@@ -1716,6 +1868,11 @@ class TableLuaBroker:
     answered with nil so the table source keeps running its read-only
     code. The scope is generation-zero and retires through
     ``invalidate()`` with the wrapped dispatch.
+
+    WP-54 (b): ``registerSymbol``/``unregisterSymbol`` are admitted in the
+    table scope and owned by the per-scope ``TableSymbolOwner`` (their
+    WP-41 refusal class stays documented in the taxonomy; the broker no
+    longer routes them into it).
     """
 
     def __init__(self, engine: Any):
@@ -1727,6 +1884,7 @@ class TableLuaBroker:
         self._refusal_reason = table_lua_refusal_reason
         self._max_reasons = MAX_TABLE_LUA_REASONS
         self.reasons: list[str] = []
+        self.owner = TableSymbolOwner(engine, self)
 
     @property
     def generation(self) -> int:
@@ -1737,6 +1895,10 @@ class TableLuaBroker:
 
     def call(self, name: str, arguments: tuple, *, generation: int,
              syntaxcheck: bool, scope: int | None = None) -> Any:
+        if name in {'registerSymbol', 'unregisterSymbol'}:
+            # WP-54 (b): admitted in the table scope; owned by the table
+            # scope, fail-soft per the WP-41 contract.
+            return self.owner.call(name, arguments, generation=generation)
         if name in self._reads:
             # Table scope has no owning record; record-proxy address writes
             # are refused by the plan marker contract downstream.

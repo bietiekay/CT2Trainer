@@ -294,12 +294,15 @@ class TableLuaBrokerUnitTests(unittest.TestCase):
         self.assertEqual(broker.reasons, [])
 
     def test_reasons_are_bounded(self):
+        # WP-54 (b): registerSymbol/unregisterSymbol no longer produce table
+        # scope refusal reasons (they are admitted); a write-API call keeps
+        # pinning the bound with its exact named reason.
         broker = TableLuaBroker(self.engine)
         for _ in range(MAX_TABLE_LUA_REASONS + 5):
-            broker.call('registerSymbol', ('x', 1),
+            broker.call('writeInteger', (0x1040, 1),
                         generation=broker.generation, syntaxcheck=False)
         self.assertEqual(len(broker.reasons), MAX_TABLE_LUA_REASONS)
-        self.assertTrue(all(reason == 'Table Lua writes the symbol table: registerSymbol.'
+        self.assertTrue(all(reason == 'Table Lua uses a write API: writeInteger.'
                           for reason in broker.reasons))
 
     def test_generation_and_invalidation_delegate_to_the_wrapped_dispatch(self):
@@ -385,9 +388,11 @@ class TableLuaBootstrapRuntimeTests(unittest.TestCase):
         self.assertFalse(engine.blocked)
 
     def test_refusal_classes_are_recorded_exactly_and_records_stay_unaffected(self):
+        # WP-54 (b): the former registerSymbol case is admitted in the table
+        # scope now (table-owned symbols); its admission contract is pinned
+        # by tests/test_native_table_lua_phase2.py.
         cases = (
             ('writeInteger(0x1080, 42)', 'Table Lua uses a write API: writeInteger.'),
-            ('registerSymbol("synth", 0x1000)', 'Table Lua writes the symbol table: registerSymbol.'),
             ('autoAssemble("1000: dd 1")', 'Table Lua executes assembler patches: autoAssemble.'),
             ('executeCodeEx(0x1000, {})', 'Table Lua invokes target code: executeCodeEx.'),
             ('showMessage("hello", "title")', 'Table Lua registers a UI callback: showMessage.'),

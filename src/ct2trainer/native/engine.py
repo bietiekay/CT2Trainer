@@ -635,6 +635,11 @@ def validate_plan(plan: dict) -> None:
     # here (the strict map checks already ran in the compiler validator
     # this function delegates to first).
     uds_available = {name.casefold() for name in (plan.get("user_defined_symbols") or {})}
+    # WP-54 (c): table-Lua registered symbols are live for the whole attach
+    # (the table-scope bootstrap precedes wish restore), so they cover
+    # required symbols exactly like the UDS fallback — no record dependency
+    # is needed.
+    table_lua_available = {name.casefold() for name in (plan.get("table_lua_symbols") or [])}
 
     def visit(identifier: int) -> None:
         if identifier in visiting:
@@ -654,7 +659,7 @@ def validate_plan(plan: dict) -> None:
                 continue
             provider = providers.get(name.casefold())
             if provider is None:
-                if name.casefold() in uds_available:
+                if name.casefold() in uds_available or name.casefold() in table_lua_available:
                     continue
                 raise NativeRuntimeError(f"Selected entry requires an unavailable symbol: {name}")
             visit(provider)
@@ -1288,8 +1293,7 @@ class TrainerEngine:
             # overwrite these seeds at runtime registration
             # (self.symbols.update), matching CE's resolution order:
             # program registrations beat the userdefined symbol table.
-            for symbol, address in (plan.get("user_defined_symbols") or {}).items():
-                self.symbols[symbol.casefold()] = address
+            self._seed_user_defined_symbols()
             self.frozen: dict[int, tuple[int, bytes]] = {}
             # WP-50 (GC-E8): live bases written by a provider's record-Lua
             # into its symbol-null target; read fresh by the target's
@@ -1562,28 +1566,55 @@ class TrainerEngine:
         return scope.host
 
     def _cancel_lua_sessions(self) -> None:
+        # WP-54 (d): record sessions only.  The table scope's host retires
+        # through _retire_table_lua_scope — ordered after every record
+        # consumer has retired — so its timers and symbols live exactly as
+        # long as the attach.  The surviving entry is dropped there.
+        table_host = self.table_lua_scope[0] if self.table_lua_scope is not None else None
         for host, broker in self.lua_sessions:
+            if host is table_host:
+                continue
             broker.invalidate()
             host.cancel()
-        self.lua_sessions.clear()
+        self.lua_sessions = [entry for entry in self.lua_sessions
+                             if entry[0] is table_host]
 
     def _retire_table_lua_scope(self) -> None:
-        """WP-41: drop the bootstrap scope (idempotent).
+        """WP-41/WP-54: drop the bootstrap scope (idempotent).
 
-        Cancels the host (idempotent) and retires its broker generation, so
-        a re-attach starts from a fresh scope; safe to call after
-        ``_cancel_lua_sessions`` already retired every session.
+        WP-54 (d): the table scope retires only after every record consumer
+        scope has retired, so the table-owned symbols (WP-54 (b)) are
+        released exactly once at the end of the teardown — release, then
+        cancel the host (its timers die with it), then drop the scope.
+        Cancelling the host is idempotent, as is the owner's release, so a
+        re-attach starts from a fresh scope; safe to call after
+        ``_cancel_lua_sessions`` already retired every record session.
         """
         scope = self.table_lua_scope
         if scope is None:
             return
         host, broker = scope
+        broker.owner.release()
         broker.invalidate()
         host.cancel()
         self.lua_sessions = [(item_host, item_broker)
                              for item_host, item_broker in self.lua_sessions
                              if item_host is not host]
         self.table_lua_scope = None
+
+    def _seed_user_defined_symbols(self) -> None:
+        """WP-46 (part 1) + WP-54 (e): seed the runtime symbol table from the
+        plan's table-level <UserdefinedSymbols> map (casefolded keys).
+
+        Called at engine init and again on every confirmed attach: the
+        confirmed target-exit path clears ``self.symbols`` wholesale, so
+        without the reseed UDS-backed records would stop resolving after a
+        re-attach within one trainer session.  The call happens before any
+        wish restore and before the table-Lua bootstrap (a table-scope
+        registerSymbol then keeps CE order and overwrites the UDS seed).
+        """
+        for symbol, address in (self.plan.get("user_defined_symbols") or {}).items():
+            self.symbols[symbol.casefold()] = address
 
     def _run_table_lua_bootstrap(self) -> None:
         """WP-41: execute the table Lua exactly once per confirmed attach.
@@ -1994,11 +2025,14 @@ class TrainerEngine:
                     self.debug_log.log("target-exited",
                                        pid=getattr(self.memory, "pid", None),
                                        process_name=self.plan["process_name"])
+                    # WP-54 (d): record scopes retire leaves-first as before;
+                    # the table scope retires after every record consumer,
+                    # releasing its symbols exactly once at that point.
                     self._cancel_lua_sessions()
-                    self._retire_table_lua_scope()
                     for scope in self.lua_activations.values():
                         scope.finish_after_exit()
                     self.lua_activations.clear()
+                    self._retire_table_lua_scope()
                     for manager in list(self.hooks.values()) + self.retired_hooks:
                         manager.finish_after_exit()
                     self.hooks.clear()
@@ -2132,6 +2166,12 @@ class TrainerEngine:
                                pointer_size=getattr(memory, "pointer_size", None),
                                creation_time=getattr(memory, "creation_time", None))
             self._last_attach_failure = None
+            # WP-54 (e): the confirmed target-exit path cleared the runtime
+            # symbol table, so the table-level user-defined symbols are
+            # reseeded on every confirmed attach — before any wish restore
+            # and before the table-Lua bootstrap, whose table-scope
+            # registerSymbol then keeps CE order over the UDS seed.
+            self._seed_user_defined_symbols()
             # WP-41: the per-table Lua bootstrap runs exactly once per
             # confirmed attach, before any saved wish restore, so record
             # activations already see the final plan["table_lua"] state.
@@ -4636,8 +4676,11 @@ class TrainerEngine:
             if self.blocked or self.busy:
                 raise StateError(self.error or "An action is still in progress")
             self.store.guard()
+            # WP-54 (d): cancel the record sessions now (their callbacks
+            # must not fire during cleanup); the table scope retires only
+            # after the record scopes below, so table symbols outlive every
+            # record consumer.
             self._cancel_lua_sessions()
-            self._retire_table_lua_scope()
             if self.memory is not None:
                 if self.memory.is_alive():
                     require_target_architecture(self.plan, self.memory)
@@ -4684,6 +4727,10 @@ class TrainerEngine:
                 checkpoint()
                 self.store.release_session()
                 self.memory = None
+            # WP-54 (d): the table scope retires last — after every record
+            # scope above — so its symbols release exactly once, only after
+            # all record consumers have retired.
+            self._retire_table_lua_scope()
             # WP-50 (GC-E8): the live-base registry dies with the session;
             # provider deactivation already retired per-provider targets.
             self.dynamic_addresses.clear()

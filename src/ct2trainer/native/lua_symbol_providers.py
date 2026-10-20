@@ -98,6 +98,35 @@ def parts_are_one_shot(parts) -> bool:
             and any(part.phase == 'enable' and part.kind != 'phase' for part in parts))
 
 
+def extract_table_lua_symbols(source: str) -> list[str]:
+    """WP-54 (b): symbol names a combined table-Lua source proves to keep
+    live for the table's lifetime.
+
+    The table scope runs the combined source once at load and retires with
+    the attach, so the module's one-shot adoption rule applies to the whole
+    source: the same literal evidence (``registerSymbol('Name', ...)`` /
+    ``Register.symbol(...)`` / ``symbol='Name'`` registrations plus
+    ``unregisterSymbol('Name')`` releases) is collected over the unphased
+    table text, and a name is adopted only while it is not released inside
+    the source (the scope would not keep it live).  The same bounded safety
+    valve as the record extractor applies: more than MAX_PROVIDERS distinct
+    names are unproven (empty result), never truncated.  Pure text; no Lua
+    is executed.
+    """
+    if not isinstance(source, str):
+        raise ValueError("Table-Lua symbol source must be text")
+    if not source.strip():
+        return []
+    text = _without_comments(source)
+    registered = {match.group(1) for match in _REGISTER_CALL.finditer(text)}
+    registered.update(match.group(1) for match in _SYMBOL_FIELD.finditer(text))
+    released = {match.group(1) for match in _UNREGISTER_CALL.finditer(text)}
+    adopted = registered - released
+    if len(adopted) > MAX_PROVIDERS:
+        return []
+    return sorted(adopted, key=str.casefold)
+
+
 def extract_lua_symbol_providers(parts, *, one_shot: bool = False) -> list[str]:
     """Return the symbol names a record's embedded Lua proves to register
     while active and release on deactivation.
