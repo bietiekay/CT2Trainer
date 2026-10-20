@@ -10,6 +10,7 @@ import hashlib
 import re
 
 from .aa import AAError, normalize_pattern, validate_symbol
+from .patterns import pattern_has_placeholder_token
 
 
 HELPER_SCHEMA = 'ct2trainer-nth-aob-helper/v1'
@@ -85,7 +86,12 @@ def definition_from_call(source, part_index, helper_contract=None):
     try:
         symbol = validate_symbol(symbol[1:-1])
         module = _module_name(module[1:-1])
-        pattern = normalize_pattern(pattern[1:-1].replace('*', '?'))
+        raw = pattern[1:-1].replace('*', '?')
+        # WP-57: nth-AOB keeps its fixed-byte contract; placeholder tokens
+        # keep the pre-placeholder nibble refusal, byte-identical.
+        if pattern_has_placeholder_token(raw):
+            raise AAError('AOB pattern contains an invalid hexadecimal/wildcard nibble.')
+        pattern = normalize_pattern(raw)
     except AAError as exc:
         raise NthAOBError(str(exc)) from exc
     occurrence = int(occurrence)
@@ -105,6 +111,10 @@ def validate_definition(definition):
     try:
         validate_symbol(definition['symbol'])
         _module_name(definition['module'])
+        # WP-57: fixed-byte contract — placeholder tokens keep the
+        # pre-placeholder nibble refusal, byte-identical.
+        if pattern_has_placeholder_token(definition['pattern']):
+            raise AAError('AOB pattern contains an invalid hexadecimal/wildcard nibble.')
         if normalize_pattern(definition['pattern']) != definition['pattern']:
             raise NthAOBError('Nth-AOB pattern is not canonical')
     except AAError as exc:

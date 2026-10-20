@@ -20,7 +20,7 @@ from collections.abc import Mapping, Sequence
 
 from ct2trainer.local_processes import list_local_processes
 
-from .patterns import normalize_pattern
+from .patterns import expanded_pattern
 
 
 MAX_TRANSFER = 64 * 1024 * 1024
@@ -166,10 +166,14 @@ def _names_equal(left: str, right: str) -> bool:
 
 
 def _compile_pattern(pattern: str) -> tuple[re.Pattern[bytes], int]:
-    """Compile overlapping byte/nibble matches; avoid executing table code."""
+    """Compile overlapping byte/nibble matches; avoid executing table code.
+
+    Placeholder spans (WP-57) compile to per-byte wildcard slots, so a
+    pattern with ``s<N>.<M>`` tokens matches any M bytes at that offset.
+    """
     if not isinstance(pattern, str) or len(pattern) > MAX_PATTERN_SIZE * 3:
         raise ValueError("Invalid or oversized byte pattern.")
-    tokens = normalize_pattern(pattern).split()
+    tokens = expanded_pattern(pattern).split()
     if not tokens or len(tokens) > MAX_PATTERN_SIZE:
         raise ValueError("A byte pattern must contain 1 to 4096 bytes.")
     parts: list[bytes] = []
@@ -195,7 +199,10 @@ def _compile_pattern(pattern: str) -> tuple[re.Pattern[bytes], int]:
 
 def _pattern_anchor(pattern: str) -> tuple[bytes | re.Pattern[bytes], int]:
     """Find candidates using the longest literal run, or one constrained nibble."""
-    tokens = normalize_pattern(pattern).split()
+    # WP-57: placeholder spans are wildcard slots, so they break literal
+    # runs exactly like any other non-hex token; the expanded form keeps
+    # the anchor arithmetic in per-byte tokens.
+    tokens = expanded_pattern(pattern).split()
     best, best_offset, current, offset = b"", 0, bytearray(), 0
     for index, token in enumerate(tokens):
         if re.fullmatch(r"[0-9a-fA-F]{2}", token):

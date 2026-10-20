@@ -59,6 +59,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .aa import AAError, normalize_pattern, validate_symbol
+from .patterns import pattern_has_placeholder_token
 from .lua_program import (
     MAX_SOURCE_BYTES,
     MAX_SOURCE_LINES,
@@ -297,8 +298,12 @@ def _recognize_aob(call: ParsedCall, line: int) -> dict | None:
     try:
         symbol = validate_symbol(_string_argument(call, 0, 'symbol', line))
         module = _module_name(_string_argument(call, 1, 'module', line))
-        pattern = normalize_pattern(
-            _string_argument(call, 2, 'pattern', line).replace('*', '?'))
+        raw = _string_argument(call, 2, 'pattern', line).replace('*', '?')
+        # WP-57: luaCall AOB keeps its fixed-byte contract; placeholder
+        # tokens keep the pre-placeholder nibble refusal, byte-identical.
+        if pattern_has_placeholder_token(raw):
+            raise AAError('AOB pattern contains an invalid hexadecimal/wildcard nibble.')
+        pattern = normalize_pattern(raw)
     except (AAError, NthAOBError) as exc:
         raise LuaCallParseError(str(exc), line=line) from exc
     if count == 3:
