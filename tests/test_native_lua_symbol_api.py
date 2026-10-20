@@ -116,6 +116,7 @@ class NativeLuaSymbolApiHostTests(unittest.TestCase):
         if not _LUPA:
             self.skipTest('pinned MIT Lupa Lua53 dependency is not installed')
         engine = _make_engine({'flag': 0x123456789AB, 'base': 0x2000})
+        self.engine = engine
         self.broker = EngineLuaBroker(engine, input_handler=object())
         self.host = LuaHost(self.broker)
 
@@ -159,10 +160,27 @@ class NativeLuaSymbolApiHostTests(unittest.TestCase):
         self.assertEqual(self.host.execute('return probe_flag()'),
                          0x123456789AB)
 
-    def test_helper_bootstrap_cannot_mutate_symbols(self):
+    def test_helper_bootstrap_symbol_mutation_is_inert_noop(self):
+        # WP-54 (a'): registerSymbol/unregisterSymbol are inert no-ops in the
+        # helper bootstrap — ownership belongs to the table scope, so a
+        # record-scope replay must not claim table-owned symbols.  The
+        # bootstrap still completes, establishes its helpers, and leaves the
+        # engine symbol table untouched.
+        self.host.install_helpers(
+            'registerSymbol("owned", 0x1000)\n'
+            'unregisterSymbol("owned")\n'
+            'function probe_owned() '
+            'return getAddressOfSymbol("flag") end')
+        self.assertNotIn('owned', self.engine.symbols)
+        self.assertEqual(self.host.execute('return probe_owned()'),
+                         0x123456789AB)
+
+    def test_helper_bootstrap_other_mutations_still_refused(self):
+        # The still-valid refusal sub-case: every other mutation API stays
+        # refused with the exact named reason.
         with self.assertRaisesRegex(LuaHostError,
                                     'cannot call mutation API'):
-            self.host.install_helpers('registerSymbol("owned", 0x1000)')
+            self.host.install_helpers('writeInteger(0x1000, 1)')
 
     def test_mutation_symbol_api_still_requires_live_activation(self):
         with self.assertRaisesRegex(LuaHostError,

@@ -86,8 +86,8 @@ class NativeLuaHelperTests(unittest.TestCase):
                     self.calls.append((name, args, options))
                     return True
                 return super().call(name, args, **options)
-        for source in ('writeInteger(4096,1)', 'writeBytes(4096,1)', 'registerSymbol("flag",4096)',
-                       'unregisterSymbol("flag")', 'getAddressList().getMemoryRecordByID(1).Active=true',
+        for source in ('writeInteger(4096,1)', 'writeBytes(4096,1)',
+                       'getAddressList().getMemoryRecordByID(1).Active=true',
                        'autoAssemble("owned")'):
             with self.subTest(source=source):
                 broker = LaxBroker()
@@ -96,10 +96,24 @@ class NativeLuaHelperTests(unittest.TestCase):
                     host.install_helpers('partial=17; ' + source)
                 self.assertTrue(host.cancelled)
                 self.assertEqual(host.helper_sources, ())
-                self.assertFalse(any(item[0] in {'writeInteger', 'writeBytes', 'registerSymbol', 'unregisterSymbol',
+                self.assertFalse(any(item[0] in {'writeInteger', 'writeBytes',
                                                  'record.set', 'autoAssemble'} for item in broker.calls))
                 with self.assertRaisesRegex(LuaHostError, 'cancelled'):
                     host.execute('return partial')
+        # WP-54 (a'): registerSymbol/unregisterSymbol replayed into a record
+        # helper scope are inert no-ops — the symbols belong to the table
+        # scope — so the install succeeds, the helper global establishes and
+        # the broker is never reached.
+        for source in ('registerSymbol("flag",4096)', 'unregisterSymbol("flag")'):
+            with self.subTest(source=source):
+                broker = LaxBroker()
+                host = LuaHost(broker)
+                host.install_helpers('partial=17; ' + source)
+                self.assertFalse(host.cancelled)
+                self.assertEqual(host.helper_sources, ('partial=17; ' + source,))
+                self.assertFalse(any(item[0] in {'registerSymbol', 'unregisterSymbol'}
+                                      for item in broker.calls))
+                self.assertEqual(host.execute('return partial'), 17)
 
     def test_catching_a_mutation_denial_cannot_leave_a_usable_helper_profile(self):
         with self.assertRaisesRegex(LuaHostError, 'forbidden mutation'):
@@ -113,17 +127,32 @@ class NativeLuaHelperTests(unittest.TestCase):
         self.assertEqual(self.host.helper_sources, ())
         self.assertFalse(self.broker.calls)
 
-    def test_timer_and_worker_attempts_are_fatal_even_when_caught(self):
+    def test_timer_and_worker_helpers_are_inert_during_helper_install(self):
+        # WP-54 (a'): the scheduler-free table-source replay into a record
+        # helper scope — createTimer/createThread return inert stubs even
+        # under pcall: property assignment is stored, destroy/terminate are
+        # no-ops, callbacks never fire, and the install succeeds.
         for source in ('createTimer(nil,false)', 'createThread(function() end)',
                        'pcall(function() createTimer(nil,true) end)', 'pcall(function() createThread(function() end) end)'):
             with self.subTest(source=source):
                 host = LuaHost(self.broker)
-                with self.assertRaisesRegex(LuaHostError, 'forbidden mutation or scheduler'):
+                host.install_helpers('partial=17; ' + source)
+                self.assertFalse(host.cancelled)
+                self.assertEqual(host.helper_sources, ('partial=17; ' + source,))
+                self.assertEqual(host.execute('return partial'), 17)
+                self.assertFalse(self.broker.calls)
+                host.tick(60000)
+                self.assertFalse(self.broker.calls)
+        # Still-valid refusals: owner timers and non-function callbacks are
+        # rejected before the inert stub applies, cancelling the install.
+        for source, error in (('createTimer(1,false)', 'Native UI timer owners are unsupported'),
+                              ('createThread(42)', 'Worker callback must be a Lua function')):
+            with self.subTest(source=source):
+                host = LuaHost(self.broker)
+                with self.assertRaisesRegex(LuaHostError, error):
                     host.install_helpers(source)
                 self.assertTrue(host.cancelled)
                 self.assertEqual(host.helper_sources, ())
-                with self.assertRaisesRegex(LuaHostError, 'cancelled'):
-                    host.tick(0)
 
     def test_source_failure_unknown_top_level_api_and_second_install_cancel_host(self):
         for source in ('partial=4; error("failure")', 'function(', 'registerCustomTypeLua("x",4,nil,nil)'):
@@ -402,8 +431,11 @@ class NativeLuaTests(unittest.TestCase):
         self.assertEqual(len(self.broker.calls),count)
 
     def test_syntaxcheck_cannot_schedule_or_enable_live_timer(self):
-        with self.assertRaisesRegex(LuaHostError,'Syntax checking'):
-            self.host.execute('syntaxcheck=false; t=createTimer(nil,true)',syntaxcheck=True)
+        # WP-54 (a'): syntax-check createTimer returns an inert stub instead
+        # of refusing — no error, no real timer; a live timer created outside
+        # the check still obeys its Enabled flag on the live host.
+        self.assertEqual(self.host.execute(
+            't=createTimer(nil,true); return t', syntaxcheck=True), [])
         self.host.execute('t=createTimer(nil,false); t.OnTimer=function() print("later") end')
         self.assertTrue(self.host.execute('return t==nil',syntaxcheck=True))
         self.host.tick(1000)
@@ -725,8 +757,10 @@ print("pooled cancellation remained bounded")
         self.host.execute('w2.terminate()')
         count=len(self.broker.calls); self.host.tick(1000)
         self.assertEqual(len(self.broker.calls),count)
-        with self.assertRaisesRegex(LuaHostError,'Syntax checking'):
-            self.host.execute('w3=createThread(function() print("bad") end)',syntaxcheck=True)
+        # WP-54 (a'): syntax-check createThread returns an inert stub instead
+        # of refusing — the worker would never fire in a disposable check.
+        self.assertEqual(self.host.execute(
+            'w3=createThread(function() print("bad") end); return w3', syntaxcheck=True), [])
         with self.assertRaisesRegex(LuaHostError,'cooperative worker'):
             self.host.execute('sleep(1)')
         self.host.cancel()

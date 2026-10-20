@@ -538,7 +538,8 @@ def _native_literal_safe(value: str, value_type: str, hexadecimal: bool,
 
 
 def _dependencies(entries: list[dict], selected: set[int] | None = None,
-                  uds_symbols: dict[str, int] | None = None) -> None:
+                  uds_symbols: dict[str, int] | None = None,
+                  table_lua_symbols: set[str] | None = None) -> None:
     """Reject missing/ambiguous symbol providers and their dependent records.
 
     ``uds_symbols`` (WP-46, part 1) maps casefolded table-level
@@ -550,6 +551,13 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
     dependency_ids, so they cannot cascade from a later provider block;
     the static address itself is resolved at link/activation time from the
     runtime symbol table that the engine seeds from the plan field.
+
+    ``table_lua_symbols`` (WP-54, part c) is the casefolded name set the
+    table-Lua scope proves to register at bootstrap.  It covers a required
+    name on exactly the same zero-candidate fallback as the UDS symbols:
+    the table scope is live for the whole attach and its bootstrap
+    precedes wish restore, so no record dependency arises.  Record
+    providers still win in every non-zero-candidate branch.
     """
     providers: dict[str, list[dict]] = {}
     for entry in entries:
@@ -645,14 +653,19 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
                     if selected_supported:
                         supported = selected_supported
                 if len(supported) != 1:
-                    if (len(supported) == 0 and uds_symbols
-                            and symbol.casefold() in uds_symbols):
-                        # WP-46 (part 1): no supported record provides this
-                        # symbol, so the table-level user-defined symbol
+                    if (len(supported) == 0
+                            and ((uds_symbols
+                                   and symbol.casefold() in uds_symbols)
+                                 or (table_lua_symbols
+                                     and symbol.casefold() in table_lua_symbols))):
+                        # WP-46 (part 1) / WP-54 (c): no supported record
+                        # provides this symbol, so a table-level provider
                         # covers the requirement; no record dependency
-                        # arises and the record stays supported.  The
-                        # static address is seeded into the runtime symbol
-                        # table by the engine from the plan field.
+                        # arises and the record stays supported.  The UDS
+                        # address is seeded into the runtime symbol table
+                        # by the engine from the plan field; the table-Lua
+                        # address is registered live by the table-scope
+                        # bootstrap, which precedes wish restore.
                         continue
                     _block(entry, f"Required symbol has no unique supported provider: {symbol}.")
                     changed = True
@@ -1389,15 +1402,31 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
         elif "program" in entry and entry["program"].get("allocation_only"):
             for symbol in entry["program"]["provides"]:
                 raw_providers.setdefault(symbol.casefold(), []).append(entry["id"])
+    # WP-54 (b): table-scope symbol registration evidence - the module's
+    # literal-pair extractor applied to the combined table source (one-shot
+    # adoption over the whole unphased text: the table scope registers at
+    # load and retires with the attach, so a name that is also unregistered
+    # in the source does not stay live for the table lifetime).  Feeds the
+    # zero-candidate consumer fallback in _dependencies and the plan field
+    # emitted after the selection closure (residual rule).
     table_lua_symbols: set[str] = set()
     if bootstrap is not None:
+        from .lua_symbol_providers import extract_table_lua_symbols
+        table_lua_symbols = {symbol.casefold()
+                             for symbol in extract_table_lua_symbols(bootstrap["source"])}
+    # WP-37: the external-ownership exclusion keeps the baseline's
+    # phase-aware claim semantics (the table source parsed as a program;
+    # unparsable or unphased sources claim nothing), distinct from the
+    # WP-54 attach-lifetime set above.
+    table_lua_claimed: set[str] = set()
+    if bootstrap is not None:
         try:
-            table_lua_symbols = {symbol.casefold()
-                                 for symbol in lua_symbol_provides(_table_lua_source(root))}
+            table_lua_claimed = {symbol.casefold()
+                                 for symbol in lua_symbol_provides(bootstrap["source"])}
         except LuaProgramError:
-            table_lua_symbols = set()
+            table_lua_claimed = set()
     external_context = frozenset(symbol for symbol, owners in raw_providers.items()
-                                 if len(owners) == 1 and symbol not in table_lua_symbols)
+                                 if len(owners) == 1 and symbol not in table_lua_claimed)
     # Wave B1: re-derive the two generic cleanup refusals for blocked
     # records with the external-ownership context so the named handover
     # reasons surface; only a re-derivation that yields a WP-37 named
@@ -1477,7 +1506,7 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     # _dependencies), so record providers always win.
     uds_symbols = {symbol.name.casefold(): symbol.address
                    for symbol in table.user_defined_symbols}
-    _dependencies(entries, selected, uds_symbols)
+    _dependencies(entries, selected, uds_symbols, table_lua_symbols)
     # WP-38: adopt proven runtime bases for blocked relative values before
     # the selection closure and the staged/recursive post-passes see the
     # final supported state (the recompiled values carry no symbol
@@ -1507,7 +1536,7 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     # the ordinary dependency machinery.
     external_owned_providers: dict[str, int] = {}
     for symbol, owners in raw_providers.items():
-        if len(owners) != 1 or symbol in table_lua_symbols:
+        if len(owners) != 1 or symbol in table_lua_claimed:
             continue
         owner_id = owners[0]
         if by_id[owner_id]["supported"]:
@@ -1716,6 +1745,18 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                 if key not in supported_provides}
     if uds_plan:
         plan["user_defined_symbols"] = uds_plan
+    # WP-54 (b): table-scope symbol names the combined table source proves
+    # to register, minus the symbols a supported script record provides —
+    # record providers always win, so the bootstrap skips symbols a
+    # supported record owns (no runtime collision); under partial selection
+    # the table symbol registers anyway and consumers without a selected
+    # record provider resolve through it.  Emitted only when non-empty
+    # (byte-stable plans otherwise, WP-40 convention); both plan gates
+    # re-derive the field from plan["lua_bootstrap"]["source"].
+    table_lua_symbol_plan = [name for name in sorted(table_lua_symbols)
+                             if name not in supported_provides]
+    if table_lua_symbol_plan:
+        plan["table_lua_symbols"] = table_lua_symbol_plan
     validate_plan(plan)
     return plan
 
@@ -2300,6 +2341,39 @@ def validate_plan(plan: dict) -> None:
             if uds_keys & record_provides:
                 raise NativeCompileError(
                     "user_defined_symbols may not shadow a record-provided symbol.")
+        # WP-54 (b): the table-Lua symbol list is re-derived byte-exactly
+        # from the table bootstrap source — the same literal-pair
+        # extraction (one-shot adoption) plus the record-provider residual
+        # rule the compiler emits — so a forged list is refused here and,
+        # through the engine validator's delegation, by both plan gates.
+        table_symbol_list = plan.get("table_lua_symbols")
+        if table_symbol_list is not None:
+            from .lua_symbol_providers import (MAX_PROVIDERS,
+                                               extract_table_lua_symbols)
+            if plan["schema"] != 2:
+                raise NativeCompileError("table_lua_symbols requires schema 2")
+            if "lua_bootstrap" not in plan:
+                raise NativeCompileError("table_lua_symbols requires the table bootstrap source.")
+            if (not isinstance(table_symbol_list, list)
+                    or len(table_symbol_list) > MAX_PROVIDERS
+                    or any(type(item) is not str or not item
+                           for item in table_symbol_list)
+                    or len({item.casefold() for item in table_symbol_list}) != len(table_symbol_list)):
+                raise NativeCompileError(
+                    "table_lua_symbols must be a bounded casefold-unique name list.")
+            record_provides = {symbol.casefold()
+                               for entry in entries
+                               if entry.get("supported") and entry.get("kind") == "script"
+                               for symbol in entry.get("provides", [])}
+            # Same set-plus-sort rule the compiler emission uses (casefold
+            # collapses distinct spellings of one name, so the expectation
+            # stays deterministic even for a source that registers both).
+            expected = sorted({name.casefold()
+                               for name in extract_table_lua_symbols(plan["lua_bootstrap"]["source"])
+                               if name.casefold() not in record_provides})
+            if table_symbol_list != expected:
+                raise NativeCompileError(
+                    "table_lua_symbols does not re-derive from the table bootstrap source.")
         identity_fields = {"engine": "ct2trainer", "schema": plan["schema"],
                            "table_sha256": plan["table_sha256"],
                            "process_name": plan["process_name"].casefold(), "selected_ids": selected}
