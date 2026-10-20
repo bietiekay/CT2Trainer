@@ -7,6 +7,10 @@ is maintained in English.
 
 ## Getting started
 
+- [Current status](../STATUS.md): plain-language achievement, gaps,
+  next steps and evidence boundaries; update it when the measured state
+  changes.
+
 - [CE trainer-behavior parity assessment](ce-feature-parity-assessment.md):
   current capability map and reproducible method for measuring the original
   reference tables against the CE 7.5 behavior contract, excluding purely

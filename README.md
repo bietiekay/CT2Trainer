@@ -1,5 +1,8 @@
 # CT2Trainer
 
+For a short, plain-language view of progress and remaining work, read
+[Current status](STATUS.md).
+
 **Current status (0.16, 2026-10-20):** the 30-case synthetic feature matrix
 is 42/42, while the local 151-path original reference corpus still has
 2,698 blocked of 117,624 compiled entries and one legacy-binary load

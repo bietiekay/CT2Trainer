@@ -1,5 +1,17 @@
 # Project Handoff for Further Agents
 
+**Start with the plain-language [current status](STATUS.md).** It summarizes
+what is proven and what remains open; `plans/TRACKING.md` remains the
+detailed source of truth. The root integrator must update `STATUS.md` in
+the same change as `plans/TRACKING.md` and
+`documentation/native-progress.md` whenever a package changes catalog or
+feature-matrix counts, an AP-11/game or Windows/Deck observation is
+recorded, or a build/release is cut. Record the evidence date, exact build
+or source revision, input/run identifier and denominator. Keep synthetic
+coverage, original-table static coverage and observed effect separate.
+Do not report the reference-table goal as complete from the 42/42
+synthetic matrix or carry stale counts into this overview.
+
 **Active outcome (2026-10-20): 100% of the 151 local-only reference-table
 paths (143 distinct hashes) must load and support their intended behavior
 through an independent clean-room implementation.** The 0.16 Wave-4
@@ -43,7 +55,8 @@ implementation inputs or binaries at all**. It was formerly named
 "TrainerForge (Native)"; use CT2Trainer in all current code,
 configuration, documentation and tooling.
 
-Read first: the [central gap & goal tracking document](plans/TRACKING.md)
+Read first: the [current status overview](STATUS.md), then the
+[central gap & goal tracking document](plans/TRACKING.md)
 (single source of truth for all open gaps, goals, work packages, corpus
 cases and the latest measurement snapshot), then the active
 [100% reference-table roadmap](plans/reference-table-100-roadmap.md) and the

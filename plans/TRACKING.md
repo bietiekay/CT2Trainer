@@ -1,5 +1,9 @@
 # CT2Trainer — Central Gap & Goal Tracking
 
+For a concise explanation of these measurements and the overall goal,
+see [Current status](../STATUS.md). Update it with this tracker whenever
+new evidence changes a count, gate, build or next step.
+
 ## Current decision (2026-10-20)
 
 The active objective is [100% support of the local reference tables](reference-table-100-roadmap.md).
@@ -29,7 +33,7 @@ GOAL-4/5/6 remain open; GOAL-7 is historical release work.
 
 | Package | Owner | State | Next concrete output |
 | --- | --- | --- | --- |
-| RT-1 full-corpus rebaseline | root | ready | Freeze 151 path/143-hash manifest and process bindings, rerun on 0.16 source, reconcile entry totals and errors. |
+| RT-1 full-corpus rebaseline | root | ready | Freeze 151 path/143-hash manifest and process bindings, rerun on 0.16 source, reconcile entry totals and errors; repair stale 15/27-table prose fields in `gap-report.json`. |
 | RT-2 residual attribution | root | ready | Group all 2,698 blocked rows by upstream cause, inspect leading tables, assign code packages after synthetic cases. |
 | RT-3 legacy binary load | unassigned | design | Determine independently implementable format contract and table-level completeness test. |
 | RT-4 high-volume semantics | unassigned | design | Addressless ancestor, provider cascades, offsets, duplicate provider and AA residuals. |

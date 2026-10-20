@@ -3,6 +3,8 @@
 Status: 2026-10-20. This directory root contains only the active planning
 documents:
 
+For a quick overview, start with [Current status](../STATUS.md).
+
 - [Central tracking](TRACKING.md) — current goals, open packages and
   measurement snapshot. Start here.
 - [Reference-table 100% roadmap](reference-table-100-roadmap.md) — outcome,
