@@ -36,6 +36,7 @@ from .managed_session import (
 
 
 from .architecture import ArchitectureError, require_target_architecture
+from .hotkey_bridge import HotkeyRegistrationError
 from .hotkey_model import (ACTIVATION_HOTKEY_ACTIONS, VALUE_HOTKEY_ACTIONS,
                            HotkeyController, HotkeyModelError, HotKeySpec,
                            ToggleOutcome, ToggleOutcomeStatus, format_hotkey_keys,
@@ -635,6 +636,11 @@ def validate_plan(plan: dict) -> None:
     # here (the strict map checks already ran in the compiler validator
     # this function delegates to first).
     uds_available = {name.casefold() for name in (plan.get("user_defined_symbols") or {})}
+    # WP-54 (c): table-Lua registered symbols are live for the whole attach
+    # (the table-scope bootstrap precedes wish restore), so they cover
+    # required symbols exactly like the UDS fallback — no record dependency
+    # is needed.
+    table_lua_available = {name.casefold() for name in (plan.get("table_lua_symbols") or [])}
 
     def visit(identifier: int) -> None:
         if identifier in visiting:
@@ -654,7 +660,7 @@ def validate_plan(plan: dict) -> None:
                 continue
             provider = providers.get(name.casefold())
             if provider is None:
-                if name.casefold() in uds_available:
+                if name.casefold() in uds_available or name.casefold() in table_lua_available:
                     continue
                 raise NativeRuntimeError(f"Selected entry requires an unavailable symbol: {name}")
             visit(provider)
@@ -1229,6 +1235,16 @@ class TrainerEngine:
             text_focus_provider=lambda: False,
             binding_handler=self._hotkey_dispatch,
         )
+        # WP-53 (GC-D7): optional OS hotkey capture bridge. The trainer UI
+        # attaches a started bridge at trainer start (Windows only;
+        # non-Windows stays None and dispatch is programmatic-only). The
+        # steady poll tick mirrors every published binding into it and
+        # drains its captured-spec queue back into dispatch_hotkey. The
+        # drain source is a pluggable attribute so tests can inject fake
+        # specs without a real window.
+        self.hotkey_bridge = None
+        self.hotkey_spec_source = None
+        self._hotkey_os: dict[int, set[HotKeySpec]] = {}
         self.providers: dict[str, int] = {}
         for entry in plan["entries"]:
             if entry["selected"] and entry["supported"] and entry["kind"] == "script":
@@ -1251,15 +1267,15 @@ class TrainerEngine:
             state_dir = state_dir / "CT2Trainer" / "native" / plan["trainer_id"]
         directory = Path(state_dir)
         shared = Path(process_lock_dir) if process_lock_dir is not None else directory.parent / "_process_sessions"
-        # Wish-carrying records: script records on their own, plus flagged
-        # parent headings that own the cascade wish (parent-activation save
-        # boundary).  The state payload refuses any other ID on decode.
+        # Wish-carrying records: script records on their own, plus every
+        # supported group heading (WP-53: flagged headings own the cascade
+        # wish at the parent-activation save boundary; plain headings own
+        # their own active state).  The state payload refuses any other ID
+        # on decode.
         wish_ids = {i for i, e in self.entries.items()
                     if e["selected"] and e["supported"]
                     and (e["kind"] == "script"
-                         or (e["kind"] == "heading"
-                             and (e.get("parent_activation") is not None
-                                  or e.get("parent_mo_bind") is True)))}
+                         or e["kind"] == "heading")}
         try:
             self.store = _StateStore(directory, plan, wish_ids, shared, process_probe)
         except Exception as exc:
@@ -1288,8 +1304,7 @@ class TrainerEngine:
             # overwrite these seeds at runtime registration
             # (self.symbols.update), matching CE's resolution order:
             # program registrations beat the userdefined symbol table.
-            for symbol, address in (plan.get("user_defined_symbols") or {}).items():
-                self.symbols[symbol.casefold()] = address
+            self._seed_user_defined_symbols()
             self.frozen: dict[int, tuple[int, bytes]] = {}
             # WP-50 (GC-E8): live bases written by a provider's record-Lua
             # into its symbol-null target; read fresh by the target's
@@ -1562,28 +1577,55 @@ class TrainerEngine:
         return scope.host
 
     def _cancel_lua_sessions(self) -> None:
+        # WP-54 (d): record sessions only.  The table scope's host retires
+        # through _retire_table_lua_scope — ordered after every record
+        # consumer has retired — so its timers and symbols live exactly as
+        # long as the attach.  The surviving entry is dropped there.
+        table_host = self.table_lua_scope[0] if self.table_lua_scope is not None else None
         for host, broker in self.lua_sessions:
+            if host is table_host:
+                continue
             broker.invalidate()
             host.cancel()
-        self.lua_sessions.clear()
+        self.lua_sessions = [entry for entry in self.lua_sessions
+                             if entry[0] is table_host]
 
     def _retire_table_lua_scope(self) -> None:
-        """WP-41: drop the bootstrap scope (idempotent).
+        """WP-41/WP-54: drop the bootstrap scope (idempotent).
 
-        Cancels the host (idempotent) and retires its broker generation, so
-        a re-attach starts from a fresh scope; safe to call after
-        ``_cancel_lua_sessions`` already retired every session.
+        WP-54 (d): the table scope retires only after every record consumer
+        scope has retired, so the table-owned symbols (WP-54 (b)) are
+        released exactly once at the end of the teardown — release, then
+        cancel the host (its timers die with it), then drop the scope.
+        Cancelling the host is idempotent, as is the owner's release, so a
+        re-attach starts from a fresh scope; safe to call after
+        ``_cancel_lua_sessions`` already retired every record session.
         """
         scope = self.table_lua_scope
         if scope is None:
             return
         host, broker = scope
+        broker.owner.release()
         broker.invalidate()
         host.cancel()
         self.lua_sessions = [(item_host, item_broker)
                              for item_host, item_broker in self.lua_sessions
                              if item_host is not host]
         self.table_lua_scope = None
+
+    def _seed_user_defined_symbols(self) -> None:
+        """WP-46 (part 1) + WP-54 (e): seed the runtime symbol table from the
+        plan's table-level <UserdefinedSymbols> map (casefolded keys).
+
+        Called at engine init and again on every confirmed attach: the
+        confirmed target-exit path clears ``self.symbols`` wholesale, so
+        without the reseed UDS-backed records would stop resolving after a
+        re-attach within one trainer session.  The call happens before any
+        wish restore and before the table-Lua bootstrap (a table-scope
+        registerSymbol then keeps CE order and overwrites the UDS seed).
+        """
+        for symbol, address in (self.plan.get("user_defined_symbols") or {}).items():
+            self.symbols[symbol.casefold()] = address
 
     def _run_table_lua_bootstrap(self) -> None:
         """WP-41: execute the table Lua exactly once per confirmed attach.
@@ -1994,11 +2036,14 @@ class TrainerEngine:
                     self.debug_log.log("target-exited",
                                        pid=getattr(self.memory, "pid", None),
                                        process_name=self.plan["process_name"])
+                    # WP-54 (d): record scopes retire leaves-first as before;
+                    # the table scope retires after every record consumer,
+                    # releasing its symbols exactly once at that point.
                     self._cancel_lua_sessions()
-                    self._retire_table_lua_scope()
                     for scope in self.lua_activations.values():
                         scope.finish_after_exit()
                     self.lua_activations.clear()
+                    self._retire_table_lua_scope()
                     for manager in list(self.hooks.values()) + self.retired_hooks:
                         manager.finish_after_exit()
                     self.hooks.clear()
@@ -2066,6 +2111,14 @@ class TrainerEngine:
                 if strings:
                     from .string_runtime import write_strings
                     write_strings(self,strings)
+                # WP-53 (GC-D7): drain the OS hotkey bridge queue (or the
+                # injected test source) and route every captured
+                # combination through the tested dispatch path (focus
+                # gate, first-wins dedupe, tone policy).  Dispatch runs
+                # before the steady liveness sync so bindings published
+                # by the just-fired toggle reconcile on this same tick.
+                for spec in self._hotkey_drain():
+                    self.dispatch_hotkey(spec)
                 self._hotkey_sync()
                 return self.status
             try:
@@ -2132,6 +2185,12 @@ class TrainerEngine:
                                pointer_size=getattr(memory, "pointer_size", None),
                                creation_time=getattr(memory, "creation_time", None))
             self._last_attach_failure = None
+            # WP-54 (e): the confirmed target-exit path cleared the runtime
+            # symbol table, so the table-level user-defined symbols are
+            # reseeded on every confirmed attach — before any wish restore
+            # and before the table-Lua bootstrap, whose table-scope
+            # registerSymbol then keeps CE order over the UDS seed.
+            self._seed_user_defined_symbols()
             # WP-41: the per-table Lua bootstrap runs exactly once per
             # confirmed attach, before any saved wish restore, so record
             # activations already see the final plan["table_lua"] state.
@@ -2485,6 +2544,18 @@ class TrainerEngine:
         if (entry.get("parent_activation") is not None
                 or entry.get("parent_mo_bind") is True):
             self._enable_parent(entry, persist)
+            return
+        if entry["kind"] == "heading":
+            # WP-53 (GC-D7): a plain group heading (no cascade flags)
+            # carries no effect of its own; activation flips the group's
+            # own active state only - no child propagation and no
+            # target-memory operation (CE parity).
+            if identifier in self.applied:
+                return
+            self.applied[identifier] = []
+            if persist:
+                self._save(self.desired | {identifier})
+            self._mirror_parent_state(identifier)
             return
         if entry.get("async") is True:
             self._enable_async(entry, persist)
@@ -3671,6 +3742,15 @@ class TrainerEngine:
                 or entry.get("parent_mo_bind") is True):
             self._disable_parent(entry, persist, run_lua_disable=run_lua_disable)
             return
+        if entry["kind"] == "heading":
+            # WP-53 (GC-D7): a plain group heading clears its own active
+            # state only (no cascade, no effect to restore).
+            if identifier in self.applied:
+                del self.applied[identifier]
+            if persist and identifier in self.desired:
+                self._save(self.desired - {identifier})
+            self._mirror_parent_state(identifier)
+            return
         if entry.get("async") is True and run_lua_disable:
             self._disable_async(entry, persist)
             return
@@ -3787,22 +3867,41 @@ class TrainerEngine:
         Flagged group headings (parent_activation/moBindActivation) route
         through the parent-activation lifecycle; WP-14 extends the lifecycle
         to script parents, which keep their script kind so entry validation
-        passes.  Everything else uses the ordinary script path.
+        passes.  Plain group headings (WP-53) route to the heading kind so
+        their own-state toggle works without a cascade; every other target
+        uses the ordinary script path.
         """
         entry = self.entries.get(identifier)
+        if isinstance(entry, dict) and entry.get("kind") == "heading":
+            return "heading"
         if isinstance(entry, dict) and (entry.get("parent_activation") is not None
                                         or entry.get("parent_mo_bind") is True):
             if entry.get("parent_activation") is not None and entry["kind"] == "script":
                 return "script"
-            return "heading"
         return "script"
+
+    def _toggle_direction(self, entry: dict) -> bool:
+        """Direction for a directionless toggle request.
+
+        Flagged group headings keep their own active state in the
+        parent-activation controller, never in ``self.applied``; every
+        other toggle target (scripts, plain headings - WP-53) derives the
+        direction from the applied set.
+        """
+        if (entry.get("parent_activation") is not None
+                or entry.get("parent_mo_bind") is True) \
+                and entry["kind"] == "heading":
+            if self.parent_policy is None:
+                raise NativeRuntimeError("Parent activation policy is unavailable")
+            return not self.parent_policy.query(entry["id"] + 1)["active"]
+        return entry["id"] not in self.applied
 
     @restoration_entry
     def toggle(self, identifier: int, enabled: bool | None = None) -> bool:
         if self.busy:
             raise NativeRuntimeError("Another trainer action is in progress")
         entry = self._entry(identifier, self._action_kind(identifier))
-        enabled = identifier not in self.applied if enabled is None else bool(enabled)
+        enabled = self._toggle_direction(entry) if enabled is None else bool(enabled)
         self.debug_log.log("toggle", identifier=identifier, label=entry["label"],
                            kind=entry["kind"], direction=enabled)
         self.busy = True
@@ -4194,10 +4293,13 @@ class TrainerEngine:
     def _hotkey_record_live(self, record_id: int) -> bool:
         """True while the record's hotkeys may be published.
 
-        Script records and flagged parent headings are live while applied
-        (their activation effect is present in the target).  Value records
-        are live while selected, supported and - when staged - every
-        provider effect is live; a staged-pending value row keeps its
+        Script records are live while applied (their activation effect is
+        present in the target).  Group-heading bindings register while the
+        session is attached (WP-53: CE registers group hotkeys at table
+        load) - neither the heading's own active state nor any
+        child-liveness requirement gates them.  Value records are live
+        while selected, supported and - when staged - every provider
+        effect is live; a staged-pending value row keeps its
         value-operation hotkeys unregistered until the provider activates
         (the steady poll re-syncs the controller).  No binding exists
         without an attached session.
@@ -4215,17 +4317,24 @@ class TrainerEngine:
                         return False
             return True
         if entry["kind"] in {"script", "heading"}:
+            if entry["kind"] == "heading":
+                return True
             return record_id in self.applied
         return False
 
     @staticmethod
     def _hotkey_toggleable(entry: dict) -> bool:
-        """Activation hotkeys exist only on script records and flagged parent headings."""
+        """Activation hotkeys exist on script records and every supported
+        group heading (WP-53).
+
+        Flagged headings run the existing parent-activation cascade over
+        their subtree; plain moHideChildren headings toggle their own
+        active state only, with no child propagation (CE parity).  Blocked
+        or non-toggleable rows keep the named refusal.
+        """
         return bool(entry.get("supported") and (
             entry["kind"] == "script"
-            or (entry["kind"] == "heading"
-                and (entry.get("parent_activation") is not None
-                     or entry.get("parent_mo_bind") is True))))
+            or entry["kind"] == "heading"))
 
     @staticmethod
     def _hotkey_value_actionable(entry: dict) -> bool:
@@ -4262,6 +4371,14 @@ class TrainerEngine:
                 continue
             key_text = format_hotkey_keys(keys)
             if action in VALUE_HOTKEY_ACTIONS:
+                if entry.get("kind") == "heading":
+                    # WP-53 (GC-D7): group headings carry no value of their
+                    # own; a value-operation hotkey on a heading is not
+                    # applicable rather than a registration failure (CE
+                    # parity: group rows only expose activation).  The
+                    # plan-level warning already names this at compile time,
+                    # so the runtime stays quiet.
+                    continue
                 if not self._hotkey_value_actionable(entry):
                     self._hotkey_warn(
                         f"Record {record_id} ('{label}'): hotkey {key_text} ({action}) "
@@ -4289,6 +4406,11 @@ class TrainerEngine:
                     f"Record {record_id} ('{label}'): hotkey {key_text} not registered: "
                     f"key already bound to record {winner.record_id} "
                     f"('{winner_label}') by first-wins")
+            else:
+                # WP-53 (GC-D7): mirror the published binding into the OS
+                # bridge (attached by the trainer on Windows); the binding
+                # is registered exactly once per unique combination.
+                self._hotkey_os_register(record_id, spec)
 
     def _hotkey_sync(self) -> None:
         """Reconcile the published hotkey bindings with the live record set.
@@ -4306,6 +4428,9 @@ class TrainerEngine:
                 if self._hotkey_record_live(record_id)}
         for record_id in sorted(self._hotkey_live - live):
             self.hotkey_controller.unregister(self._hotkey_owner, record_id)
+            # WP-53 (GC-D7): release the OS registrations the record had
+            # mirrored into the bridge, so no hotkey outlives its binding.
+            self._hotkey_os_release(record_id)
         newly = live - self._hotkey_live
         self._hotkey_live = live
         if not newly:
@@ -4314,6 +4439,63 @@ class TrainerEngine:
         rest = sorted(newly - set(activation_order))
         for record_id in activation_order + rest:
             self._hotkey_register_record(record_id)
+
+    def _hotkey_os_register(self, record_id: int, spec: HotKeySpec) -> None:
+        """WP-53 (GC-D7): mirror one published binding into the OS bridge.
+
+        A RegisterHotKey failure (another process owns the combination,
+        invalid parameter) is named and deduplicated in hotkey_warnings;
+        the binding stays published for the programmatic dispatch path.
+        A bridge-less session (non-Windows, tests) is a clean no-op.
+        """
+        bridge = self.hotkey_bridge
+        if bridge is None:
+            return
+        try:
+            bridge.register(spec)
+        except HotkeyRegistrationError as exc:
+            self._hotkey_warn(str(exc))
+            return
+        self._hotkey_os.setdefault(record_id, set()).add(spec)
+
+    def _hotkey_os_release(self, record_id: int) -> None:
+        """Release every OS registration one record published."""
+        bridge = self.hotkey_bridge
+        specs = self._hotkey_os.pop(record_id, None)
+        if bridge is None or not specs:
+            return
+        for spec in sorted(specs, key=lambda item: (item.key, sorted(item.modifiers))):
+            bridge.unregister(spec)
+
+    def _hotkey_release_all_os(self) -> None:
+        """Trainer close: release every OS registration and the window."""
+        bridge = self.hotkey_bridge
+        if bridge is None:
+            return
+        self._hotkey_os.clear()
+        bridge.close()
+        self.hotkey_bridge = None
+
+    def _hotkey_drain(self) -> tuple:
+        """WP-53 (GC-D7): the poll-tick drain of OS-captured hotkey specs.
+
+        The source is the attached bridge's queue; the pluggable
+        ``hotkey_spec_source`` attribute (test seam) takes precedence so
+        tests can inject fake specs without a real window.  Every item
+        must be a canonical HotKeySpec (named refusal otherwise).
+        """
+        if self.hotkey_spec_source is not None:
+            source = self.hotkey_spec_source
+        elif self.hotkey_bridge is not None:
+            source = self.hotkey_bridge.take_specs
+        else:
+            return ()
+        specs = list(source())
+        for spec in specs:
+            if not isinstance(spec, HotKeySpec):
+                raise NativeRuntimeError(
+                    "Hotkey spec source yielded a non-HotKeySpec item.")
+        return tuple(specs)
 
     def _hotkey_for_binding(self, entry: dict, spec: HotKeySpec) -> dict | None:
         """The record's declared hotkey carrying exactly this key combination."""
@@ -4636,8 +4818,11 @@ class TrainerEngine:
             if self.blocked or self.busy:
                 raise StateError(self.error or "An action is still in progress")
             self.store.guard()
+            # WP-54 (d): cancel the record sessions now (their callbacks
+            # must not fire during cleanup); the table scope retires only
+            # after the record scopes below, so table symbols outlive every
+            # record consumer.
             self._cancel_lua_sessions()
-            self._retire_table_lua_scope()
             if self.memory is not None:
                 if self.memory.is_alive():
                     require_target_architecture(self.plan, self.memory)
@@ -4684,6 +4869,10 @@ class TrainerEngine:
                 checkpoint()
                 self.store.release_session()
                 self.memory = None
+            # WP-54 (d): the table scope retires last — after every record
+            # scope above — so its symbols release exactly once, only after
+            # all record consumers have retired.
+            self._retire_table_lua_scope()
             # WP-50 (GC-E8): the live-base registry dies with the session;
             # provider deactivation already retired per-provider targets.
             self.dynamic_addresses.clear()
@@ -4708,6 +4897,7 @@ class TrainerEngine:
                 self.clock = None
             self.hotkey_controller.close(self._hotkey_owner)
             self._hotkey_live.clear()
+            self._hotkey_release_all_os()
             self.store.close()
             self.closed = True
             self.status = "Trainer closed; saved switches will restore on the next game launch"
@@ -4734,6 +4924,7 @@ class TrainerEngine:
                 self.clock = None
             self.hotkey_controller.close(self._hotkey_owner)
             self._hotkey_live.clear()
+            self._hotkey_release_all_os()
             self.closed = True
             self.debug_log.close()
             return False

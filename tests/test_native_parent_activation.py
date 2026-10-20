@@ -572,10 +572,27 @@ class ParentActivationEngineTests(unittest.TestCase):
         self.assertIn(5, self.engine.applied)
         self.assertEqual(self.engine.desired, {1})
 
-    def test_plain_group_heading_stays_a_navigation_noop(self):
+    def test_plain_group_heading_toggles_own_state_only(self):
+        # WP-53: a plain moHideChildren group is a toggle target now.
+        # The toggle flips the group's own active state (persisted with
+        # the wish store like the flagged-heading wish) but does NOT
+        # propagate into the children: no cascade, no effect on any
+        # child record (CE parity - only the cascade flags would pull
+        # children in).  The plan-level "Navigation heading" reason
+        # string stays byte-stable; only the engine behavior changed.
         engine = self.start_engine("plain.ct", "")
-        with self.assertRaisesRegex(NativeRuntimeError, "Navigation heading"):
-            engine.toggle(1, True)
+        self.assertTrue(engine.toggle(1, True))
+        self.assertIn(1, engine.applied)
+        self.assertEqual(engine.applied[1], [])
+        self.assertNotIn(2, engine.applied)
+        self.assertNotIn(4, engine.applied)
+        self.assertNotIn(5, engine.applied)
+        self.assertEqual(self.memory.read(0x1064, 4), bytes(4))
+        self.assertEqual(self.memory.read(0x1068, 4), bytes(4))
+        self.assertEqual(engine.desired, {1})
+        self.assertFalse(engine.toggle(1, False))
+        self.assertNotIn(1, engine.applied)
+        self.assertEqual(engine.desired, set())
 
     def start_script_parent_engine(self, name, options):
         # WP-14 (C2): the anchor provider is itself the flagged parent; its

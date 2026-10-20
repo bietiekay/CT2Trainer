@@ -155,27 +155,42 @@ class AutomaticLuaRecordTests(unittest.TestCase):
         finally:
             self._close_subtest_engine()
 
-    def test_table_lua_scheduler_work_runs_at_load_but_replay_blocks_activation(self):
-        # WP-41: a table that schedules work executes it once at load in the
-        # sandboxed bootstrap scope (no refusal; the scope retires with the
-        # table).  Record activations replay the table source through the
-        # helper contract, which refuses scheduler creation even under pcall,
-        # so the record fails fail-closed with the named helper error.
+    def test_table_lua_scheduler_work_runs_at_load_and_replay_is_inert(self):
+        # WP-41/WP-54 (a'): a table that schedules work executes it once at
+        # load in the sandboxed bootstrap scope — the real timer lives in the
+        # table scope for the attach lifetime and retires with it.  Record
+        # activations replay the table source through the helper contract
+        # with scheduler-free inert stubs, so the record activates normally
+        # and the replayed scheduler objects never fire in the record scope.
         try:
-            engine = self.make_engine(bootstrap='pcall(function() createTimer(nil,false) end)')
+            engine = self.make_engine(bootstrap='table_timer=createTimer(nil,true); '
+                                               'table_timer.OnTimer=function() '
+                                               'table_read=readInteger(0x10C0) end')
             self.assertEqual(engine.plan['table_lua'],
                              {'executed': True, 'reasons': [],
                               'record_scripts_inactive': 0})
             self.assertIsNotNone(engine.table_lua_scope)
+            table_host = engine.table_lua_scope[0]
             self.assertEqual(self.memory.read(0x1080, 4), bytes(4))
-            with self.assertRaises(NativeRuntimeError) as caught:
-                engine.toggle(1, True)
-            self.assertIn('forbidden mutation or scheduler', str(caught.exception))
+            self.memory.data[0x10C0 - self.memory.base:0x10C4 - self.memory.base] = (42).to_bytes(4, 'little')
+            table_host.tick(1000)
+            self.assertEqual(table_host.execute('return table_read'), 42)
+            self.assertTrue(engine.toggle(1, True))
+            scope = engine.lua_activations[1]
+            self.assertEqual(self.memory.read(0x1040, 4), bytes.fromhex('01000000'))
+            self.assertEqual(self.memory.read(0x1080, 4), bytes.fromhex('17000000'))
+            scope.host.tick(0)
+            self.assertEqual(self.memory.read(0x1080, 4), bytes.fromhex('18000000'))
+            # The table-scope timer keeps ticking for the attach lifetime;
+            # the record-scope replay established only the inert stub.
+            self.memory.data[0x10C0 - self.memory.base:0x10C4 - self.memory.base] = (43).to_bytes(4, 'little')
+            table_host.tick(1000)
+            self.assertEqual(table_host.execute('return table_read'), 43)
+            self.assertFalse(engine.toggle(1, False))
             self.assertEqual(self.memory.read(0x1040, 4), bytes(4))
             self.assertEqual(self.memory.read(0x1080, 4), bytes(4))
-            self.assertFalse(engine.applied)
-            self.assertFalse(engine.desired)
-            self.assertFalse(engine.lua_activations)
+            self.assertNotIn(1, engine.applied)
+            self.assertNotIn(1, engine.desired)
             self.assertFalse(engine.blocked)
         finally:
             self._close_subtest_engine()
