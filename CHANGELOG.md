@@ -63,6 +63,32 @@ Single maintained changelog for CT2Trainer releases.
   in-scope, weights 7475/7475.
 - Reference corpus (local-only assessment, not shipped): catalog
   re-run post W4 B4 2,698 / 117,624 blocked (−934 vs post B1–B3).
+- Post-release field fixes (2026-10-20 re-cut, from user testing of the
+  first 0.16 build):
+  - WP-58 UI startup crash: `TrainerWindow._button` hard-coded
+    `font=`/`height=`/`pady=` on top of the `**style` spread, so the
+    filter-chip call (height+font overrides) raised
+    `TypeError: tkinter.Button() got multiple values for keyword
+    argument 'height'` — every generated trainer crashed at startup.
+    The defaults now live in the style dict so caller kwargs override
+    them; a second latent WP-58 regression (pagination buttons passing
+    the tuple `padx=(0, 4)` as a widget option, TclError "bad screen
+    distance") moved the padding to `.pack()`. Regression test with
+    real tkinter widget construction for every call-site signature:
+    `tests/test_native_ui_button.py`.
+  - Sinking City 2 field case (the "1 Activate me! Attach game's
+    process" step and the multi-step pointer activation): the
+    `OpenProcess` attach call runs as the WP-56 identity no-op; the
+    chain (one-shot attach record → multi-match AOB pointer provider
+    with `registersymbol` → staged pointer value record) now has
+    end-to-end runtime proof on owned fake memory with the real Lua
+    host — first-match scan resolution, symbol registration, byte-exact
+    patch restore, the named staged gate, hex pointer-offset chase, and
+    the named refusal for a process-name mismatch:
+    `tests/test_native_sc2_attach_chain.py`. Field note: if a record
+    fails at runtime with "pattern not found", the table's AOB pattern
+    is missing from the installed game build (table/build mismatch —
+    fail-closed by design, cf. the 2026-10-18 Sinking City 2 analysis).
 
 ## 0.15 (2026-10-18)
 

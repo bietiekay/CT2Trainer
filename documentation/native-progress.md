@@ -8,6 +8,8 @@ about current status, check the tracker first.
 
 Status: **October 20, 2026** (0.16 released, build
 `native-20261020T103508Z-0e3f9d90` cut from `main` @ `809666a`;
+0.16 field-fix re-cut in progress on `native-0.16-fix`: WP-58 UI startup
+crash fixed + Sinking City 2 activation chain runtime-tested;
 reference-corpus closure cycle: **Wave 4 complete** — all twelve W4 lanes
 (WP-43/44/45/46p1/46p2/47/48/49/50/51/52/53/54/55/56/57 + WP-58 UI)
 merged into `main` @ `0a38213`, cases 26 + 27 + 31 + 28 + 29 + 30
@@ -91,8 +93,8 @@ code/build boundaries in
 | Item | Value |
 | --- | --- |
 | Repository baseline | `main` @ `b6c48cc` "initial 0.9 version" (self-contained clean-room tree) |
-| Version | `0.15` (root `VERSION` file; 0.9.0-rc2 was the last user-tested release) |
-| Test suite | **3393 OK / 25 expected skips, 0 failures** (full local dev suite on `main` after the W4 B4 merges and the case-28/29/30 pins, verified 2026-10-20 at the canonical path; previously 3233 on `main` after the W4 cycle merge and the case-26/27/31 pins, verified 2026-10-19 at the canonical path; previously 3057 on `native-0.15` after the W3 batch 1 + batch 2 + batch 3 + batch 4 merges (WP-39/40/38/41/37) and the case-23 + case-21 + case-22 + case-24 pins, verified 2026-10-18; previously 3046 after the W3 batch 3 merge (WP-41) and the case-22 pin; previously 3001 after the W3 batch 1 + batch 2 merges (WP-39/40/38) and the case-23 + case-21 pins, verified 2026-10-18 at the canonical path; previously 2943 after the 0.15 prefix-cut field fix at `d15268a`, 2026-10-17; previously 2932 on `native-0.14` after the per-wish restore isolation and program-scan debug logging, verified 2026-10-17 at the canonical path; previously 2927 on `native-0.13` after the optional debug-logging feature incl. attach-failure dedupe and the module-snapshot fallback, verified 2026-10-16; previously 2925 after the debug-logging feature; previously 2910 after the W2-C + W2-B merges and the case-15 part 2 + case-18 pins; previously 2840 after the W2-A merge and the case-20 + case-16 + case-17 + case-15 pins, verified 2026-10-14; previously 2805 after the W1-A + W1-E merges and the case-20 + case-16 + case-15 pins; previously 2769 after the W1-D + W1-C + W1-B integration; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2932/25 passed (0.14 build `native-20261017T115850Z-1ebb48b7`); previously 2927/25 (0.13 build `native-20261016T190005Z-b3139b30`); previously 2925/25 (superseded 0.13 build `native-20261016T181516Z-b8ae88de`); previously 2910/25 (0.12 build `native-20261016T163910Z-d047f2d2`); previously 2710/25 (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
+| Version | `0.16` (root `VERSION` file; 0.9.0-rc2 was the last user-tested release, 0.16 user-tested 2026-10-20 with the WP-58 startup crash, fix in the re-cut) |
+| Test suite | **3398 OK / 25 expected skips, 0 failures** (full local dev suite on `native-0.16-fix` after the 0.16 field fixes — WP-58 UI startup crash fix + Sinking City 2 runtime chain evidence (`tests/test_native_ui_button.py`, `tests/test_native_sc2_attach_chain.py`), verified 2026-10-20 at the canonical path with CT2TRAINER_NASM set; previously 3393 on `main` after the W4 B4 merges and the case-28/29/30 pins, verified 2026-10-20 at the canonical path; previously 3233 on `main` after the W4 cycle merge and the case-26/27/31 pins, verified 2026-10-19 at the canonical path; previously 3057 on `native-0.15` after the W3 batch 1 + batch 2 + batch 3 + batch 4 merges (WP-39/40/38/41/37) and the case-23 + case-21 + case-22 + case-24 pins, verified 2026-10-18; previously 3046 after the W3 batch 3 merge (WP-41) and the case-22 pin; previously 3001 after the W3 batch 1 + batch 2 merges (WP-39/40/38) and the case-23 + case-21 pins, verified 2026-10-18 at the canonical path; previously 2943 after the 0.15 prefix-cut field fix at `d15268a`, 2026-10-17; previously 2932 on `native-0.14` after the per-wish restore isolation and program-scan debug logging, verified 2026-10-17 at the canonical path; previously 2927 on `native-0.13` after the optional debug-logging feature incl. attach-failure dedupe and the module-snapshot fallback, verified 2026-10-16; previously 2925 after the debug-logging feature; previously 2910 after the W2-C + W2-B merges and the case-15 part 2 + case-18 pins; previously 2840 after the W2-A merge and the case-20 + case-16 + case-17 + case-15 pins, verified 2026-10-14; previously 2805 after the W1-A + W1-E merges and the case-20 + case-16 + case-15 pins; previously 2769 after the W1-D + W1-C + W1-B integration; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2932/25 passed (0.14 build `native-20261017T115850Z-1ebb48b7`); previously 2927/25 (0.13 build `native-20261016T190005Z-b3139b30`); previously 2925/25 (superseded 0.13 build `native-20261016T181516Z-b8ae88de`); previously 2910/25 (0.12 build `native-20261016T163910Z-d047f2d2`); previously 2710/25 (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
 | Feature matrix | **42/42 covered** (100% feature-weighted, 7475/7475 action-weighted; run `w4b4-case30-20261020081722Z`; previously 7446/7446, run `w4-case31-20261019061339`; previously 7426/7426, run `w3e-case24-20261018051230`; previously 7416/7416, run `w3d-case22-20261018040510`; previously 7413/7413, run `w3b-case21-20261018023823Z`; previously 7411/7411, run `w3-case23-20261018012531Z`) — `gap_inventory/feature-coverage.json` |
 | AP-11 manifest | 30 tables, 6143 expected actions, 0 confirmed, all consistency gates `all_ok` (run `w4b4-case30-20261020081722Z`; previously 27 tables / 6119 actions, previously 24 tables / 6100 actions, previously 23 tables / 6092 actions) — `gap_inventory/ap11-campaign.json` |
 | Latest verified build | `native-20261020T103508Z-0e3f9d90` (0.16) via `scripts/Build-Native.ps1` from `main` @ `809666a` (2026-10-20): both ZIPs (`CT2Trainer-0.16-source.zip` sha256 `370a2d73…`, `CT2Trainer-0.16-windows-portable.zip` sha256 `6db5bf69…`), in-build suite 3393 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; both ZIPs carry the changelog with the 0.16 + 0.15 + 0.14 entries. 0.16 ships the full Wave 4 feature set (WP-43…WP-57 + WP-58 UI) on top of the released 0.15 content. Previous: `native-20261018T055505Z-39f20180` (0.15) via `scripts/Build-Native.ps1` from `main` @ `ed0b97b` (2026-10-18): both ZIPs (`CT2Trainer-0.15-source.zip` sha256 `5d5a85f6…`, `CT2Trainer-0.15-windows-portable.zip` sha256 `cfcc8e06…`), in-build suite 3057 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; both ZIPs carry the elaborated release READMEs and the changelog with the 0.15 + 0.14 + 0.13 entries. 0.15 ships the prefix-cut byte-patch validation (the 0.14-ext2 Great Circle field finding: Stealth Mode and No Reload use `db 90 E9` over a 6-byte conditional jump, now proven at link time and re-verified at stage time) plus the full Wave 3 feature set on top of the 0.14 content. Previous: `native-20261017T115850Z-1ebb48b7` (0.14, in-build 2932/25); `native-20261016T190005Z-b3139b30` (0.13, in-build 2927/25); `native-20261016T181516Z-b8ae88de` (0.13 pre module-snapshot fallback, in-build 2925/25); `native-20261016T163910Z-d047f2d2` (0.12, in-build 2910/25); `native-20261016T161905Z-e8ef67a0` (0.12, byte-identical re-cut); `native-20261016T154141Z-2de774ab` (0.12 pre release-docs); `native-20261012T092729Z-2d8aaf12` (0.11, in-build 2710/25); `native-20261011T121914Z-bfc5fc11` (0.10, in-build 2671/25); `native-20261010T172336Z-ffe35eb0` (rc2, in-build 2617/25, `api-prototypes.json` present in both EXE payload inventories, user-tested portable) |
@@ -155,6 +157,60 @@ full local run: failure set identical to the pre-fix baseline
 (`native-20261018T055505Z-39f20180`) predate this fix; the re-cut
 build carries it. No table change required — the field table keeps the
 build-independent `db 90 E9` entries.
+
+### 0.16 field fixes: WP-58 UI startup crash + Sinking City 2 runtime chain (2026-10-20)
+
+Field report (user testing of the first 0.16 build, 2026-10-20; trainer
+`Indiana Jones and the Great Circle (0.16).exe` + debug log): every
+0.16-generated trainer crashed at startup with
+`TypeError: tkinter.Button() got multiple values for keyword argument
+'height'` — the engine init completed fine (providers listed, clean
+close), the crash is in WP-58 UI construction.
+
+Two WP-58 regressions in `src/ct2trainer/native/ui.py`:
+1. `TrainerWindow._button` hard-coded `font=`/`height=2`/`pady=4` as
+   literal `tk.Button` kwargs on top of the `**style` spread; the
+   `_chip` call (filter chips) passes `width=9, height=2,
+   font=("Segoe UI", 11)` → duplicate `height`/`font` keywords →
+   `TypeError` during `_build_filters` in `TrainerWindow.__init__`,
+   i.e. before the first render. Fix: defaults merged into the style
+   dict; caller kwargs now override them.
+2. The pagination buttons pass the tuple `padx=(0, 4)` as a widget
+   option (valid only for `pack`/`grid`) → `TclError: bad screen
+   distance "0 4"` — a second latent startup crash that only became
+   reachable after fix 1. Fix: padding moved to `.pack()`.
+
+Regression coverage: `tests/test_native_ui_button.py` (3 tests, real
+tkinter widget construction for every `_button` call-site signature —
+the mock-based UI tests never exercised widget construction). Full
+suite 3398 OK / 25 skips / 0 failures.
+
+Sinking City 2 "activate" step (user report: the activation chain
+"does not work correctly ... there are attach functions that are not
+supported yet"): plan-level re-measurement (headless
+`tools/native_corpus_audit.py` over the local-only table, 34 entries)
+shows **34/34 supported, 0 blocked, 9 actionable** — the `OpenProcess`
+attach call (record id 200) is supported since WP-56 as a truthy no-op
+with process-name identity verification (named mismatch refusal), the
+pointer record (id 1337270331) is a regular two-phase AOB provider
+(first-match per WP-55), and the "Talents" value (id 31) is staged
+behind it (WP-14 gate). The runtime chain is now proven end-to-end on
+owned fake memory with the real Lua host:
+`tests/test_native_sc2_attach_chain.py` (2 tests: one-shot attach
+record → multi-match AOB pointer provider → staged pointer value;
+byte-exact patch restore, symbol release, staged gate re-lock, named
+refusal on process-name mismatch). No new converter/engine capability
+required — the observed failure mode is the 0.16 UI startup crash (the
+trainer never reached the activation step) and/or pre-Wave-4 builds
+where `OpenProcess` was still unsupported. One `LuaRuntime` per
+activation keeps CE parity for record 198's compact mode (function
+defined in ENABLE, called in DISABLE). Field note: a runtime
+"pattern not found" means the table's AOB pattern is absent from the
+installed game build (table/build mismatch, fail-closed by design —
+cf. the 2026-10-18 Sinking City 2 analysis, Inf Items). Case-32 pin
+decision (root, cycle-end per WP-57 row): no new corpus pin — the
+chain's plan-level shapes are already pinned (case-31 + existing
+categories); the runtime combination is covered by the new engine test.
 
 ## 3. Deterministic measurement chain
 
