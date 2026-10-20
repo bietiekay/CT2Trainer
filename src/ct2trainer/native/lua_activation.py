@@ -400,7 +400,11 @@ class LuaActivation:
                 @property
                 def generation(self):
                     return original_broker.generation
-                def call(_self, name, arguments, *, generation, syntaxcheck):
+                def call(_self, name, arguments, *, generation, syntaxcheck,
+                         scope=None):
+                    # WP-50: the checking overlay never authorizes scope-bound
+                    # writes; the underlying read-only broker forces
+                    # scope=None anyway, so the token is accepted and dropped.
                     if name in {'getAddress', 'readInteger', 'readSmallInteger', 'readQword',
                                 'readFloat', 'readDouble', 'readPointer', 'readString', 'readBytes'} and arguments:
                         values = list(arguments)

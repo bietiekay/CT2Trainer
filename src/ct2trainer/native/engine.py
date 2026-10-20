@@ -279,27 +279,39 @@ def validate_plan(plan: dict) -> None:
                     validate_symbol(value)
             except AAError as exc:
                 raise NativeRuntimeError(str(exc)) from exc
-        # WP-38: the additive address_provider field is shape-checked here
-        # (it must ride on a supported addressless heading); the provider
-        # cross-checks run in the plan-wide pass below where the full ID
-        # map is available.
+        # WP-38/WP-50: the additive address_provider field is shape-checked
+        # here (a symbol marker rides on a supported addressless heading;
+        # a symbol-null marker rides on the supported addressless target
+        # itself, heading or script); the provider cross-checks run in the
+        # plan-wide pass below where the full ID map is available.
         marker = entry.get("address_provider")
         if marker is not None:
             from .compiler import _is_addressless_placeholder
             if (not isinstance(marker, dict) or set(marker) != {"provider_id", "symbol"}
                     or type(marker.get("provider_id")) is not int
                     or marker.get("provider_id", -1) < 0
-                    or not isinstance(marker.get("symbol"), str)):
+                    or (marker.get("symbol") is not None
+                        and not isinstance(marker["symbol"], str))):
                 raise NativeRuntimeError("Invalid dynamic address provider metadata.")
-            if (entry["kind"] != "heading" or not entry["supported"]
-                    or entry.get("address") != "" or entry.get("pointer_offsets") != []
-                    or _is_addressless_placeholder(entry)):
-                raise NativeRuntimeError(
-                    "Dynamic address provider requires a supported addressless heading.")
-            try:
-                validate_symbol(marker["symbol"])
-            except AAError as exc:
-                raise NativeRuntimeError(str(exc)) from exc
+            if marker["symbol"] is not None:
+                if (entry["kind"] != "heading" or not entry["supported"]
+                        or entry.get("address") != "" or entry.get("pointer_offsets") != []
+                        or _is_addressless_placeholder(entry)):
+                    raise NativeRuntimeError(
+                        "Dynamic address provider requires a supported addressless heading.")
+                try:
+                    validate_symbol(marker["symbol"])
+                except AAError as exc:
+                    raise NativeRuntimeError(str(exc)) from exc
+            else:
+                # WP-50 (GC-E8): direct address-write provider; the target is
+                # the addressless record the provider's Lua writes the live
+                # base into (group heading or addressless script).
+                if (entry["kind"] not in {"heading", "script"} or not entry["supported"]
+                        or entry.get("address") != "" or entry.get("pointer_offsets") != []
+                        or _is_addressless_placeholder(entry)):
+                    raise NativeRuntimeError(
+                        "Dynamic address provider requires a supported addressless target record.")
         if 'lua_program' in entry and (entry['kind'] != 'script' or not entry['supported']):
             raise NativeRuntimeError('Lua source profiles require a supported script record')
         if 'value_profile' in entry:
@@ -457,13 +469,17 @@ def validate_plan(plan: dict) -> None:
             try:
                 if entry.get('address_profile') == 'expression/v1':
                     from .address_expression import parse_expression, expression_symbols as expression_refs
-                    from .compiler import _dynamic_provider_binding
+                    from .compiler import (_dynamic_address_binding,
+                                          _dynamic_provider_binding)
                     parse_expression(entry['address'])
                     if entry['address'].lstrip().startswith(('+','-')):
-                        # WP-38: relative expression addresses are valid only
-                        # when the plan-level ancestor walk binds the dynamic
-                        # address provider of the nearest marked heading.
-                        if _dynamic_provider_binding(by_id, entry) is None:
+                        # WP-38/WP-50: relative expression addresses are
+                        # valid only when the plan-level ancestor walk binds
+                        # the dynamic address provider of the nearest marked
+                        # ancestor (a symbol provider heading, or a
+                        # symbol-null direct address-write target).
+                        if (_dynamic_provider_binding(by_id, entry) is None
+                                and _dynamic_address_binding(by_id, entry) is None):
                             raise NativeRuntimeError('Flattened address profiles require resolved inherited bases')
                     if entry.get('pointer_offsets') != [] or not isinstance(entry.get('source_address'),str):
                         raise NativeRuntimeError('Flattened address profiles require original source addresses and empty offsets')
@@ -533,13 +549,16 @@ def validate_plan(plan: dict) -> None:
         parent = entry.get("parent_id")
         if parent is not None and (type(parent) is not int or parent not in by_id or parent == entry["id"]):
             raise NativeRuntimeError("Invalid parent identity")
-        # WP-38: the address_provider field must name a supported addressless
-        # script that provides the symbol, and that provider must not sit
-        # below the heading it serves (provider-to-base cycle).  The
-        # relative-address allowance for provider-bound values was checked
-        # in the per-entry address validation above.
+        # WP-38/WP-50: the address_provider field must name a supported
+        # addressless script; a symbol marker's provider provides the symbol
+        # and must not sit below the heading it serves (provider-to-base
+        # cycle); a symbol-null marker's provider must statically name the
+        # target by exact description and neither side may sit below the
+        # other.  The relative-address allowance for provider-bound values
+        # was checked in the per-entry address validation above.
         marker = entry.get("address_provider")
         if marker is not None:
+            from .compiler import _is_descendant
             provider = by_id.get(marker["provider_id"])
             if provider is None:
                 raise NativeRuntimeError("Dynamic address provider references an unknown record.")
@@ -548,19 +567,31 @@ def validate_plan(plan: dict) -> None:
                     or provider.get("pointer_offsets")):
                 raise NativeRuntimeError(
                     "Dynamic address provider must name a supported addressless script record.")
-            if marker["symbol"].casefold() not in {name.casefold() for name in provider.get("provides", [])}:
-                raise NativeRuntimeError("Dynamic address provider does not provide the named symbol.")
-            seen = set()
-            current = provider
-            while current.get("parent_id") is not None:
-                parent_id = current["parent_id"]
-                if parent_id == entry["id"]:
+            if marker["symbol"] is not None:
+                if marker["symbol"].casefold() not in {name.casefold() for name in provider.get("provides", [])}:
+                    raise NativeRuntimeError("Dynamic address provider does not provide the named symbol.")
+                if _is_descendant(by_id, provider["id"], entry["id"]):
                     raise NativeRuntimeError(
                         "Dynamic address provider must not be a descendant of the heading it serves.")
-                if parent_id not in by_id or parent_id in seen or len(seen) >= 64:
-                    break
-                seen.add(parent_id)
-                current = by_id[parent_id]
+            else:
+                # WP-50 (GC-E8): symbol-null marker — the provider's
+                # embedded Lua must statically name the target record by
+                # exact description (re-derived from the embedded source,
+                # both idioms), and neither side may sit below the other
+                # (base/provider cycle).
+                from .lua_program import lua_dynamic_address_targets
+                lua_source = (provider.get("lua_program") or {}).get("source")
+                targets = (lua_dynamic_address_targets(lua_source)
+                           if isinstance(lua_source, str) else [])
+                if entry.get("label") not in targets:
+                    raise NativeRuntimeError(
+                        "Dynamic address provider does not write the target record's address.")
+                if _is_descendant(by_id, provider["id"], entry["id"]):
+                    raise NativeRuntimeError(
+                        "Dynamic address provider must not be a descendant of the target it serves.")
+                if _is_descendant(by_id, entry["id"], provider["id"]):
+                    raise NativeRuntimeError(
+                        "Dynamic address target must not be a descendant of its provider.")
         dropdown = entry.get("dropdown")
         if isinstance(dropdown, dict):
             link_target = dropdown.get("link_target_id")
@@ -613,7 +644,13 @@ def validate_plan(plan: dict) -> None:
             raise NativeRuntimeError("Symbol dependency chain exceeds 64 levels")
         visiting.add(identifier)
         entry = by_id[identifier]
+        # WP-49 (GC-E7): a record's own registration satisfies its own
+        # reference to a symbol it provides; no self-edge exists in the plan
+        # and the DFS must not fabricate one from the raw metadata.
+        own_provided = {name.casefold() for name in entry.get("provides", [])}
         for name in entry.get("requires", []):
+            if name.casefold() in own_provided:
+                continue
             provider = providers.get(name.casefold())
             if provider is None:
                 if name.casefold() in uds_available:
@@ -1249,6 +1286,10 @@ class TrainerEngine:
             for symbol, address in (plan.get("user_defined_symbols") or {}).items():
                 self.symbols[symbol.casefold()] = address
             self.frozen: dict[int, tuple[int, bytes]] = {}
+            # WP-50 (GC-E8): live bases written by a provider's record-Lua
+            # into its symbol-null target; read fresh by the target's
+            # expression-profile children at every activation.
+            self.dynamic_addresses: dict[int, int] = {}
             self.memory: Any = None
             self.status = "Waiting for " + plan["process_name"]
             self.error = ""
@@ -1989,6 +2030,8 @@ class TrainerEngine:
                     self.local_symbols.clear()
                     self.symbols.clear()
                     self.frozen.clear()
+                    # WP-50 (GC-E8): no live base survives the target exit.
+                    self.dynamic_addresses.clear()
                     self._hotkey_sync()
                     self.status = "Target ended; waiting for " + self.plan["process_name"]
                     return self.status
@@ -2882,6 +2925,45 @@ class TrainerEngine:
                 or identifier in self.hooks
                 or identifier in self.global_leases)
 
+    def _dynamic_targets_of(self, identifier: int) -> list[int]:
+        """WP-50 (GC-E8): plan targets this record serves as symbol-null
+        provider (re-derived from the entries' own markers, bounded)."""
+        return [entry["id"] for entry in self.entries.values()
+                if isinstance(entry.get("address_provider"), dict)
+                and entry["address_provider"].get("symbol") is None
+                and entry["address_provider"].get("provider_id") == identifier]
+
+    def set_dynamic_address(self, identifier: int, value: int | None, *,
+                            scope: int | None = None) -> None:
+        """WP-50 (GC-E8): record-Lua live-base write into a plan target.
+
+        Only the plan-named provider scope may write the target it serves
+        (the symbol-null marker's contract, re-checked against the plan at
+        every call, so a forged runtime write is refused by name).  ``None``
+        clears the live base; an integer must stay inside the target memory
+        range.  The write is effect-free beyond the live-base registry.
+        """
+        if type(identifier) is not int or identifier not in self.entries:
+            raise NativeRuntimeError("Dynamic address target is not a plan record.")
+        if value is not None:
+            if type(value) is not int:
+                raise NativeRuntimeError("Dynamic address must be an integer in address range.")
+            if self.memory is not None:
+                try:
+                    self.memory._range(value, 1)
+                except Exception as exc:
+                    raise NativeRuntimeError(
+                        "Dynamic address must be an integer in address range.") from exc
+        marker = self.entries[identifier].get("address_provider")
+        if (not isinstance(marker, dict) or marker.get("symbol") is not None
+                or type(marker.get("provider_id")) is not int
+                or scope != marker.get("provider_id")):
+            raise NativeRuntimeError("Dynamic address write outside the planned provider contract.")
+        if value is None:
+            self.dynamic_addresses.pop(identifier, None)
+            return
+        self.dynamic_addresses[identifier] = value
+
     def _mirror_parent_state(self, *identifiers: int) -> None:
         """Mirror engine-side effect and wish state into the parent-policy
         controller for the given records.
@@ -3666,6 +3748,11 @@ class TrainerEngine:
             self.symbols.pop(name, None)
         if self.global_pool is not None:
             self._refresh_global_symbols()
+        # WP-50 (GC-E8): deactivating the provider retires the live bases
+        # it wrote; the target's children now refuse with the provider
+        # phrase on every read/write.
+        for target_id in self._dynamic_targets_of(identifier):
+            self.dynamic_addresses.pop(target_id, None)
         if persist:
             self._save(self.desired - {identifier})
 
@@ -3778,25 +3865,40 @@ class TrainerEngine:
     def _value_address(self, entry: dict) -> int:
         if entry.get('address_profile') == 'expression/v1':
             from .address_expression import resolve_expression
+            from .compiler import (_dynamic_address_binding,
+                                   _dynamic_provider_binding)
             address = entry['address']
             if address.lstrip().startswith(('+','-')):
                 # WP-38: a relative expression address inherits its base from
                 # the dynamic address provider named by the nearest marked
                 # heading; the live base is read fresh from the runtime symbol
                 # table at every activation, never cached from attach time.
-                from .compiler import _dynamic_provider_binding
                 binding = _dynamic_provider_binding(self.entries, entry)
-                if binding is None:
-                    raise NativeRuntimeError('Flattened address profiles require resolved inherited bases')
-                provider_id, symbol = binding
-                symbol_key = symbol.casefold()
-                if (symbol_key not in self.symbols
-                        or not self._parent_effect_live(provider_id)):
-                    raise NativeRuntimeError(f"Address provider {provider_id} is not active.")
-                return resolve_expression(address, self.memory, self.symbols,
-                                          parent=self.symbols[symbol_key],
-                                          process_name=self.plan['process_name'],
-                                          pointer_size=self.memory.pointer_size)
+                if binding is not None:
+                    provider_id, symbol = binding
+                    symbol_key = symbol.casefold()
+                    if (symbol_key not in self.symbols
+                            or not self._parent_effect_live(provider_id)):
+                        raise NativeRuntimeError(f"Address provider {provider_id} is not active.")
+                    return resolve_expression(address, self.memory, self.symbols,
+                                              parent=self.symbols[symbol_key],
+                                              process_name=self.plan['process_name'],
+                                              pointer_size=self.memory.pointer_size)
+                # WP-50 (GC-E8): a symbol-null marker binds the base to the
+                # target record's live address, written at runtime by the
+                # provider's record-Lua; read fresh from the live-base
+                # registry and gated on the provider's liveness.
+                address_binding = _dynamic_address_binding(self.entries, entry)
+                if address_binding is not None:
+                    target_id, provider_id = address_binding
+                    if (target_id not in self.dynamic_addresses
+                            or not self._parent_effect_live(provider_id)):
+                        raise NativeRuntimeError(f"Address provider {provider_id} is not active.")
+                    return resolve_expression(address, self.memory, self.symbols,
+                                              parent=self.dynamic_addresses[target_id],
+                                              process_name=self.plan['process_name'],
+                                              pointer_size=self.memory.pointer_size)
+                raise NativeRuntimeError('Flattened address profiles require resolved inherited bases')
             return resolve_expression(entry['address'],self.memory,self.symbols,
                                       process_name=self.plan['process_name'],pointer_size=self.memory.pointer_size)
         return self.memory.resolve_pointer(entry["address"], entry.get("pointer_offsets", []), self.symbols)
@@ -4557,6 +4659,9 @@ class TrainerEngine:
                 checkpoint()
                 self.store.release_session()
                 self.memory = None
+            # WP-50 (GC-E8): the live-base registry dies with the session;
+            # provider deactivation already retired per-provider targets.
+            self.dynamic_addresses.clear()
             if self.one_shot is not None:
                 self.one_shot.detach()
                 self._persist_one_shot_markers()
