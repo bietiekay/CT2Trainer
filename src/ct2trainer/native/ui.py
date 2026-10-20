@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import math
+import sys
 from pathlib import Path
 import struct
 import tkinter as tk
@@ -982,6 +983,17 @@ def run_trainer(plan: dict | str | Path) -> int:
                     parent=root)
                 root.destroy()
                 return 1
+    # WP-53 (GC-D7): OS hotkey capture bridge (Windows only): the hidden
+    # message-only window starts with the trainer; the engine mirrors every
+    # published binding into it and drains its queue on the 250 ms poll
+    # tick.  Non-Windows platforms stay programmatic-only.  A failed
+    # window start is named and visible; the trainer continues without
+    # OS capture (dispatch stays programmatic).
+    try:
+        from .hotkey_bridge import HotkeyBridgeError, create_hotkey_bridge
+        engine.hotkey_bridge = create_hotkey_bridge()
+    except HotkeyBridgeError as exc:
+        print("CT2Trainer: " + str(exc), file=sys.stderr)
     TrainerWindow(root, engine)
     root.deiconify()
     root.mainloop()

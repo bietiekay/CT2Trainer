@@ -1639,11 +1639,12 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                     f"Record {entry['id']} ('{entry['label']}'): hotkey {key_text} ({action}) "
                     f"not registered: value row is not actionable.")
             elif action in ACTIVATION_HOTKEY_ACTIONS:
+                # WP-53: every supported group heading is toggleable -
+                # flagged headings run the parent-activation cascade,
+                # plain moHideChildren headings toggle their own state.
                 toggleable = entry["supported"] and (
                     entry["kind"] == "script"
-                    or (entry["kind"] == "heading"
-                        and (entry.get("parent_activation") is not None
-                             or entry.get("parent_mo_bind") is True)))
+                    or entry["kind"] == "heading")
                 if toggleable:
                     continue
                 reason = "record is blocked" if not entry["supported"] \
