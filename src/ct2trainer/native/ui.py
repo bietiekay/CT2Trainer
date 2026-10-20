@@ -1,4 +1,20 @@
-"""Touch-sized Tk frontend for the independent declarative trainer engine."""
+"""Touch-first canvas renderer for the trainer row grid (WP-58).
+
+Implements the compact row grid from ``documentation/trainer-ui-design.md``:
+one 64 px switch row, one 72/120 px value row and 48 px group section
+header per record, drawn on a single ``tk.Canvas`` instead of the old
+per-record cards.  The pure row model (row kinds, states, truncation, hit
+rectangles, page slicing) lives in ``ui_rows``; the window/chrome contract
+(row heights, touch minimum, ``layout_violations``) lives in
+``ui_layout``.  This module renders that model and forwards tap,
+long-press, drag and key input to the unchanged engine contract.
+
+Deliberately unchanged by the redesign: the audio tones
+(``play_toggle_sound``, 880/440 Hz), the amber banner strings (hotkey
+conflict, table-Lua bootstrap), the Info dialog content, the startup
+recovery dialogs in ``run_trainer`` and the dark high-contrast palette
+(constants extended for the row accents, not replaced).
+"""
 from __future__ import annotations
 
 import json
@@ -15,25 +31,19 @@ from .engine import (TrainerEngine, NativeRuntimeError, parse_value, format_valu
 from .about_ui import repo_link, trainer_title
 from .architecture import plan_architecture
 from .window_icon import window_icon_path
-from .ui_layout import (
-    BREADCRUMB_ROW_HEIGHT,
-    MIN_WINDOW_HEIGHT_WIDE,
-    address_provider_marker,
-    activation_set_summary,
-    breadcrumb_labels,
-    cards_area_height,
-    enter_group,
-    exit_group,
-    filtered_entries,
-    hotkey_binding_line,
-    hotkey_conflict_banner,
-    is_navigable_group,
-    level_entries,
-    page_size_for_cards,
-    staged_card_state,
-    staged_provider_labels,
-    STAGED_PENDING,
-)
+from .ui_layout import (NARROW_THRESHOLD, VIEWS, STAGED_PENDING, BANNER_HEIGHT,
+                        CHROME_HEADER, CHROME_FILTER, CHROME_FILTER_GRID,
+                        CHROME_PAGINATION, CHROME_SEARCH, CHROME_STATUS,
+                        MIN_WINDOW_WIDTH,
+                        address_provider_marker, activation_set_summary,
+                        hotkey_binding_line, hotkey_conflict_banner,
+                        initial_window_size, min_window_size, staged_card_state)
+from .ui_rows import (ACCENT_BAR_WIDTH, ACCENT_ERROR, ACCENT_OFF, ACCENT_ON,
+                      BADGE_FROZEN, GROUP_TOGGLE_H, GROUP_TOGGLE_W, INFO_CHIP,
+                      LABEL_GAP_AFTER_PILL, PILL_GAP_AFTER_BAR, PILL_H, PILL_W,
+                      ROW_HEIGHT_SECTION, SECTION_CHEVRON_W, SECTION_NAME_GAP,
+                      STATE_BLOCKED, STATE_ON, STATE_STAGED, TEXT_DIM,
+                      RowSnapshot, build_rows, find_row, slice_pages)
 
 
 # High-contrast dark palette: dark background, bright text.
@@ -84,102 +94,635 @@ def play_toggle_sound(on: bool) -> None:
         pass
 
 
+# Touch input and transient-reaction timing (D6/D8 of the design doc).
+DRAG_THRESHOLD_PX = 80   # B1-Motion drag distance that pages the row list
+LONGPRESS_MS = 400       # press duration that opens the Info dialog
+PULSE_MS = 300           # row pulse after a successful toggle / value write
+CONFIRM_MS = 2000        # transient "OK" chip duration
+POLL_MS = 250            # engine poll cadence (unchanged)
+
+
 class TrainerWindow:
+    """Canvas renderer over the pure row model; forwards input to the engine."""
+
     def __init__(self, root: tk.Tk, engine: TrainerEngine):
         self.root, self.engine = root, engine
         self.view = "Switches"
         self.page = 0
-        self.page_size = 4
-        # Hierarchical group navigation: group ids from the root down to the
-        # currently shown level (pure contract in ui_layout). Empty = root.
-        self.group_stack: list[int] = []
         self.drafts = {i: tk.StringVar(value=str(entry.get("value_default") or entry.get("default_value") or ""))
                        for i, entry in engine.entries.items() if entry["kind"] == "value"}
-        self.current_labels: dict[int, tk.Label] = {}
-        self.action_widgets: list[tk.Widget] = []
-        self.status_text = tk.StringVar(value=engine.status)
-        self.search_text = tk.StringVar()
-        self.page_text = tk.StringVar()
+        # Row-grid interaction state (the pure model mirrors it per render).
+        self.expanded_values: frozenset = frozenset()
+        self.collapsed_sections: frozenset = frozenset()
+        self._value_applied: set = set()      # ids written successfully this session
+        self._pulsing: set = set()            # transient 300 ms pulse rows
+        self._confirmed: set = set()          # transient 2 s "OK" chip rows
+        self._value_texts: dict = {}          # id -> current display text
+        self._rows: list = []
+        self._pages: list = []
+        self._page_offset = 0
+        self._embedded: list = []             # widgets embedded in the canvas
+        self._drag_anchor: int | None = None
+        self._longpress_job: int | None = None
+        self._status_text = tk.StringVar(value=engine.status)
+        self._search_text = tk.StringVar()
+        self._page_text = tk.StringVar()
         root.title(trainer_title(engine.plan["title"]))
-        width = min(1600, max(400, root.winfo_screenwidth() - 100))
-        height = min(900, max(620, root.winfo_screenheight() - 100))
+        width, height = initial_window_size(root.winfo_screenwidth(), root.winfo_screenheight())
         root.geometry(f"{width}x{height}")
-        root.minsize(400, 610)
+        root.minsize(*min_window_size(width))
         root.option_add("*Font", ("Segoe UI", 12))
         root.configure(bg=BG)
-        header = tk.Frame(root, bg=BG_HEADER, padx=12, pady=8)
-        header.pack(fill="x")
-        tk.Label(header, text=engine.plan["title"], bg=BG_HEADER, fg=FG, font=("Segoe UI", 20, "bold"), anchor="w").pack(side="left", fill="x", expand=True)
-        self._button(header, "Close", self.close, width=8, bg=BG_CLOSE, activebackground=BG_CLOSE_ACTIVE, fg=FG).pack(side="right")
-        repo_link(header, bg=BG_HEADER, fg=FG).pack(side="right")
-        status = tk.Frame(root, bg=BG, padx=12)
-        status.pack(fill="x")
-        self.status_frame = status
-        tk.Label(status, textvariable=self.status_text, anchor="w", justify="left", wraplength=900, bg=BG, fg=FG).pack(side="left", fill="x", expand=True)
-        self._button(status, "Status / help", self.show_status, width=12).pack(side="right")
-        # WP-40: trainer-wide hotkey warning banner (first-wins conflicts and
-        # named registration refusals). Packed only while warnings exist; the
-        # pure layout contract is untouched.
-        self.hotkey_banner = tk.Label(root, text="", anchor="w", justify="left",
-                                      wraplength=900, bg=BG, fg=FG_DIM)
-        # WP-41: while the table-Lua bootstrap did not run cleanly for the
-        # attached target, keep this banner row visible under the status line.
-        # It starts hidden; poll() packs it with the exact contract text while
-        # the attached plan reports a refused or failed bootstrap.
-        self.table_lua_banner = tk.Label(
-            root, bg=BANNER_BG, fg=BANNER_FG, anchor="w",
-            justify="left", wraplength=1100, padx=12, pady=4)
-        toolbar = tk.Frame(root, bg=BG, padx=12)
-        toolbar.pack(fill="x")
-        self.toolbar = toolbar
-        self.filter_buttons = []
-        for column, name in enumerate(("Switches", "On / Saved", "Values", "All")):
-            button = self._button(toolbar, name, lambda name=name: self.set_view(name))
-            button.grid(row=column // 2, column=column % 2, sticky="nsew", padx=3, pady=3)
-            self.filter_buttons.append(button)
-        toolbar.columnconfigure((0, 1), weight=1)
-        self.search_frame = tk.Frame(root, height=56, padx=12, pady=4, bg=BG)
-        self.search_frame.pack(fill="x")
-        self.search_frame.pack_propagate(False)
-        tk.Label(self.search_frame, text="Search", bg=BG, fg=FG_DIM).pack(side="left", padx=(0, 8))
-        tk.Entry(self.search_frame, textvariable=self.search_text, font=("Segoe UI", 16), bg=BG_CARD, fg=FG, insertbackground=FG, relief="solid", bd=1).pack(side="left", fill="both", expand=True)
-        self.search_text.trace_add("write", lambda *_: self.changed_filter())
-        # Interactive group-level row (back + breadcrumb segments); the pure
-        # contract counts its 56 px between the search field and the cards.
-        # Packed only while inside a group level.
-        self.breadcrumb = tk.Frame(root, height=BREADCRUMB_ROW_HEIGHT, padx=12, pady=4, bg=BG)
-        self.breadcrumb.pack(fill="x", after=self.search_frame)
-        self.breadcrumb.pack_propagate(False)
-        self.breadcrumb.pack_forget()
-        self.cards = tk.Frame(root, bg=BG, padx=12)
-        self.cards.pack(fill="both", expand=True)
-        self.cards.bind("<Configure>", self.resized)
-        nav = tk.Frame(root, bg=BG, padx=12, pady=6)
-        nav.pack(fill="x")
-        self._button(nav, "◀ Previous", lambda: self.move_page(-1), width=12).pack(side="left")
-        tk.Label(nav, textvariable=self.page_text, bg=BG, fg=FG_DIM).pack(side="left", expand=True)
-        self._button(nav, "Next ▶", lambda: self.move_page(1), width=12).pack(side="right")
+        self._build_header()
+        self._build_filters()
+        self._build_status_and_banners()
+        self._build_pagination()
+        self.canvas = tk.Canvas(root, bg=BG, highlightthickness=0)
+        self.canvas.pack(fill="both", expand=True)
         root.protocol("WM_DELETE_WINDOW", self.close)
-        root.bind("<Prior>", lambda _: self.move_page(-1))
-        root.bind("<Next>", lambda _: self.move_page(1))
+        root.bind("<Prior>", lambda event: self.move_page(-1))
+        root.bind("<Next>", lambda event: self.move_page(1))
         root.bind("<MouseWheel>", lambda event: self.move_page(-1 if event.delta > 0 else 1))
         root.bind("<Escape>", self.on_escape)
-        root.bind("<Configure>", self.resized)
+        root.bind("<Configure>", self.on_resize)
+        self.canvas.bind("<Configure>", self.on_resize)
+        self.canvas.bind("<Button-1>", self.on_press)
+        self.canvas.bind("<B1-Motion>", self.on_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.on_release)
         self.render()
-        root.after(100, self.poll)
+        self._update_banners()
+        root.after(POLL_MS, self.poll)
 
     @staticmethod
     def _button(parent, label, action, **kwargs):
         style = {"bg": BG_BUTTON, "fg": FG, "activebackground": BG_BUTTON_ACTIVE,
                  "activeforeground": FG, "disabledforeground": FG_DIM}
         style.update(kwargs)
-        return tk.Button(parent, text=label, command=action, font=("Segoe UI", 13), height=2, pady=5, **style)
+        return tk.Button(parent, text=label, command=action, font=("Segoe UI", 12), height=2, pady=4, **style)
+
+    # -- chrome rows (D7) ----------------------------------------------------
+
+    def _build_header(self):
+        self.header = tk.Frame(self.root, bg=BG_HEADER, height=CHROME_HEADER, padx=12)
+        self.header.pack(fill="x")
+        self.header.pack_propagate(False)
+        tk.Label(self.header, text=self.engine.plan["title"], bg=BG_HEADER, fg=FG,
+                 font=("Segoe UI", 13, "bold"), anchor="w").pack(side="left", fill="x", expand=True)
+        self._button(self.header, "Close", self.close,
+                     bg=BG_CLOSE, activebackground=BG_CLOSE_ACTIVE).pack(side="right")
+        repo_link(self.header, bg=BG_HEADER, fg=FG).pack(side="right")
+        self.conn_dot = tk.Label(self.header, text="●", bg=BG_HEADER, fg=FG_DIM,
+                                 font=("Segoe UI", 11))
+        self.conn_dot.pack(side="right", padx=(12, 2))
+        self.conn_label = tk.Label(self.header, bg=BG_HEADER, fg=FG_DIM,
+                                   font=("Segoe UI", 11))
+        self.conn_label.pack(side="right")
+        self._button(self.header, "Status / help", self.show_status,
+                     width=12).pack(side="right")
+
+    def _chip(self, parent, name):
+        return self._button(parent, name, lambda: self.set_view(name),
+                            width=9, height=2, font=("Segoe UI", 11))
+
+    def _build_filters(self):
+        # Wide mode: the five chips and the inline search share one 48 px row.
+        self.filter_wide = tk.Frame(self.root, bg=BG, height=CHROME_FILTER, padx=8)
+        self.filter_wide.pack(fill="x")
+        self.filter_wide.pack_propagate(False)
+        self._chips_wide = [self._chip(self.filter_wide, name) for name in VIEWS]
+        for chip in self._chips_wide:
+            chip.pack(side="left", padx=2)
+        tk.Entry(self.filter_wide, textvariable=self._search_text,
+                 font=("Segoe UI", 12), bg=BG_CARD, fg=FG, insertbackground=FG,
+                 relief="solid", bd=1).pack(side="left", fill="x", expand=True,
+                                            padx=(8, 0), ipady=8)
+        # Narrow mode (< 650 px): 2x3 chip grid, search on its own row.
+        self.filter_narrow = tk.Frame(self.root, bg=BG, height=CHROME_FILTER_GRID, padx=8)
+        self.filter_narrow.pack(fill="x")
+        self.filter_narrow.pack_propagate(False)
+        self._chips_narrow = []
+        for index, name in enumerate(VIEWS):
+            chip = self._chip(self.filter_narrow, name)
+            chip.grid(row=index // 2, column=index % 2, sticky="ew", padx=3, pady=2)
+            self._chips_narrow.append(chip)
+        self.filter_narrow.columnconfigure(0, weight=1)
+        self.filter_narrow.columnconfigure(1, weight=1)
+        self.search_row = tk.Frame(self.root, bg=BG, height=CHROME_SEARCH, padx=8)
+        self.search_row.pack(fill="x")
+        self.search_row.pack_propagate(False)
+        tk.Label(self.search_row, text="Search", bg=BG, fg=FG_DIM).pack(side="left", padx=(0, 8))
+        tk.Entry(self.search_row, textvariable=self._search_text,
+                 font=("Segoe UI", 12), bg=BG_CARD, fg=FG, insertbackground=FG,
+                 relief="solid", bd=1).pack(side="left", fill="both", expand=True)
+        self._search_text.trace_add("write", self._search_changed)
+        self._apply_filter_mode()
+
+    def _apply_filter_mode(self):
+        if self.root.winfo_width() >= NARROW_THRESHOLD:
+            self.filter_wide.pack(fill="x", after=self.header)
+            self.filter_narrow.pack_forget()
+            self.search_row.pack_forget()
+        else:
+            self.filter_wide.pack_forget()
+            self.filter_narrow.pack(fill="x", after=self.header)
+            self.search_row.pack(fill="x", after=self.filter_narrow)
+
+    def _build_status_and_banners(self):
+        self.status_frame = tk.Frame(self.root, bg=BG, height=CHROME_STATUS, padx=12)
+        self.status_frame.pack(fill="x")
+        self.status_frame.pack_propagate(False)
+        tk.Label(self.status_frame, textvariable=self._status_text, anchor="w",
+                 justify="left", wraplength=900, bg=BG, fg=FG,
+                 font=("Segoe UI", 11)).pack(side="left", fill="x", expand=True)
+        # WP-41: table-Lua bootstrap banner (exact contract string, amber strip).
+        self.table_lua_strip = tk.Frame(self.root, bg=BANNER_BG, height=BANNER_HEIGHT)
+        self.table_lua_strip.pack(fill="x")
+        self.table_lua_strip.pack_propagate(False)
+        self.table_lua_banner = tk.Label(self.table_lua_strip, text="", anchor="w",
+                                         justify="left", bg=BANNER_BG, fg=BANNER_FG,
+                                         font=("Segoe UI", 11), padx=12)
+        self.table_lua_banner.pack(fill="both")
+        # WP-40: trainer-wide hotkey conflict banner (same string as before).
+        self.hotkey_strip = tk.Frame(self.root, bg=BANNER_BG, height=BANNER_HEIGHT)
+        self.hotkey_strip.pack(fill="x")
+        self.hotkey_strip.pack_propagate(False)
+        self.hotkey_banner = tk.Label(self.hotkey_strip, text="", anchor="w",
+                                      justify="left", bg=BANNER_BG, fg=BANNER_FG,
+                                      font=("Segoe UI", 11), padx=12)
+        self.hotkey_banner.pack(fill="both")
+
+    def _build_pagination(self):
+        self.pagination = tk.Frame(self.root, bg=BG, height=CHROME_PAGINATION, padx=12)
+        self.pagination.pack(fill="x")
+        self.pagination.pack_propagate(False)
+        tk.Label(self.pagination, textvariable=self._page_text, bg=BG, fg=FG_DIM,
+                 font=("Segoe UI", 11)).pack(side="left")
+        self._button(self.pagination, "Next ▶", lambda: self.move_page(1),
+                     width=5).pack(side="right")
+        self._button(self.pagination, "◀ Previous", lambda: self.move_page(-1),
+                     width=5, padx=(0, 4)).pack(side="right")
+        self._button(self.pagination, "⤒", self.go_top,
+                     width=3, padx=(0, 4)).pack(side="right")
+
+    # -- view / search / page controls ----------------------------------------
+
+    def _search_changed(self, *_):
+        self.page = 0
+        self.render()
+
+    def set_view(self, name):
+        self.view = name
+        self.page = 0
+        self.render()
+
+    def move_page(self, delta):
+        if not self._pages:
+            return
+        self.page = min(len(self._pages) - 1, max(0, self.page + delta))
+        self.render()
+
+    def go_top(self):
+        self.page = 0
+        self.render()
+
+    # -- engine state snapshot for the pure row model -------------------------
+
+    def _snapshot(self) -> RowSnapshot:
+        parent_active = set()
+        for entry in self.engine.entries.values():
+            if entry.get("parent_activation") is not None:
+                try:
+                    if self.engine.parent_query(entry["id"])["active"]:
+                        parent_active.add(entry["id"])
+                except Exception:
+                    # No parent policy yet (pre-attach / refused query): the
+                    # section renders inactive; the engine is the authority.
+                    pass
+        return RowSnapshot(
+            applied=frozenset(self.engine.applied),
+            desired=frozenset(self.engine.desired),
+            frozen=frozenset(self.engine.frozen),
+            errors=dict(self.engine.entry_errors),
+            value_applied=frozenset(self._value_applied),
+            parent_active=frozenset(parent_active),
+            pulsing=frozenset(self._pulsing),
+            confirmed=frozenset(self._confirmed),
+            disconnected=self.engine.memory is None,
+        )
+
+    # -- rendering -------------------------------------------------------------
+
+    def _mark_chips(self):
+        for chips in (self._chips_wide, self._chips_narrow):
+            for name, chip in zip(VIEWS, chips):
+                if name == self.view:
+                    chip.configure(bg=BG_BUTTON_ACTIVE, activebackground=BG_BUTTON,
+                                   relief="sunken")
+                else:
+                    chip.configure(bg=BG_BUTTON, activebackground=BG_BUTTON_ACTIVE,
+                                   relief="raised")
+
+    def render(self):
+        for widget in self._embedded:
+            widget.destroy()
+        self._embedded = []
+        self.canvas.delete("all")
+        width = self.canvas.winfo_width()
+        if width < 320:
+            width = 320
+        area = self.canvas.winfo_height()
+        snapshot = self._snapshot()
+        rows = build_rows(self.engine.entries, self.view, self._search_text.get(),
+                          snapshot, width,
+                          expanded_values=self.expanded_values,
+                          collapsed_sections=self.collapsed_sections,
+                          values=self._value_texts)
+        pages = slice_pages(rows, area)
+        self._rows, self._pages = rows, pages
+        self._mark_chips()
+        if not rows:
+            self._page_offset = 0
+            self.page = 0
+            self._page_text.set("Page 1 / 1")
+            self.canvas.create_text(width / 2, 24,
+                                    text="No entries match this view or search.",
+                                    fill=FG_DIM, font=("Segoe UI", 12))
+            return
+        if self.page >= len(pages):
+            self.page = len(pages) - 1
+        self.page = max(0, self.page)
+        visible = pages[self.page]
+        self._page_offset = visible[0].y
+        for row in visible:
+            self._draw_row(row, width, self._page_offset)
+        self._page_text.set(f"Page {self.page + 1} / {len(pages)}")
+
+    def _draw_row(self, row, width, offset):
+        canvas = self.canvas
+        canvas.create_rectangle(0, row.y - offset, width, row.y + row.height - offset,
+                                fill=row.tint, outline="")
+        canvas.create_rectangle(0, row.y - offset, ACCENT_BAR_WIDTH,
+                                row.y + row.height - offset, fill=row.accent, outline="")
+        if row.kind == "section":
+            self._draw_section(row, offset)
+        elif row.kind == "switch":
+            self._draw_switch(row, offset)
+        else:
+            self._draw_value(row, offset)
+        if row.chip:
+            canvas.create_text(width - 44, row.y + row.height / 2 - offset,
+                               anchor="e", text=row.chip, fill=TEXT_DIM,
+                               font=("Segoe UI", 11))
+        if row.error_dot:
+            canvas.create_oval(width - 36, row.y + 16 - offset, width - 28,
+                               row.y + 24 - offset, fill=ACCENT_ERROR, outline="")
+        if row.info_hit is not None:
+            self._draw_info_chip(row.info_hit.x, row.info_hit.y - offset)
+        if row.confirmed:
+            canvas.create_text(width - 10, row.y + 8 - offset, anchor="ne",
+                               text="OK", fill=ACCENT_ON,
+                               font=("Segoe UI", 11, "bold"))
+
+    def _draw_info_chip(self, x, y):
+        canvas = self.canvas
+        canvas.create_oval(x, y, x + INFO_CHIP, y + INFO_CHIP, outline=TEXT_DIM)
+        canvas.create_text(x + INFO_CHIP / 2, y + INFO_CHIP / 2, text="i",
+                           fill=TEXT_DIM, font=("Segoe UI", 9, "bold"))
+
+    def _draw_switch(self, row, offset):
+        canvas = self.canvas
+        if row.pill is not None:
+            track = row.pill
+            track_y = track.y - offset
+            canvas.create_rectangle(track.x, track_y, track.x + PILL_W,
+                                    track_y + PILL_H,
+                                    fill=ACCENT_ON if row.pill_on else ACCENT_OFF,
+                                    outline="")
+            knob = PILL_H - 8
+            knob_x = track.x + 4 if not row.pill_on else track.x + PILL_W - knob - 4
+            canvas.create_oval(knob_x, track_y + 4, knob_x + knob, track_y + knob + 4,
+                               fill=FG if row.pill_on else FG_DIM, outline="")
+        label_x = ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + PILL_W + LABEL_GAP_AFTER_PILL + row.indent
+        canvas.create_text(label_x, row.y + 18 - offset, anchor="w", text=row.label,
+                           fill=FG, font=("Segoe UI", 12))
+        if row.sublabel:
+            canvas.create_text(label_x, row.y + 38 - offset, anchor="w",
+                               text=row.sublabel, fill=TEXT_DIM, font=("Segoe UI", 11))
+
+    def _draw_value(self, row, offset):
+        canvas = self.canvas
+        label_x = ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + row.indent
+        canvas.create_text(label_x, row.y + 18 - offset, anchor="w", text=row.label,
+                           fill=FG, font=("Segoe UI", 12))
+        if row.sublabel:
+            canvas.create_text(label_x, row.y + 40 - offset, anchor="w",
+                               text=row.sublabel, fill=TEXT_DIM, font=("Segoe UI", 11))
+        if row.expanded:
+            self._draw_value_line(row, offset, expanded=True)
+            self._draw_editor(row, offset)
+        else:
+            self._draw_value_line(row, offset, expanded=False)
+
+    def _draw_value_line(self, row, offset, expanded: bool):
+        canvas = self.canvas
+        width = self.canvas.winfo_width() or self.root.winfo_width()
+        canvas.create_text(width - 8, row.y + (18 if expanded else 22) - offset,
+                           anchor="e", text=row.value_text,
+                           fill=TEXT_DIM if expanded else FG, font=("Consolas", 12))
+        if row.frozen_badge:
+            badge_y = row.y + (12 if expanded else 34) - offset
+            canvas.create_rectangle(width - 8 - 14, badge_y, width - 8 - 4,
+                                    badge_y + 10, fill=BADGE_FROZEN, outline="")
+
+    def _draw_editor(self, row, offset):
+        canvas = self.canvas
+        entry = self.engine.entries[row.entry_id]
+        editor = row.editor
+        disabled = row.state in (STATE_STAGED, STATE_BLOCKED) or self.engine.memory is None
+
+        def rect(rect_):
+            return (rect_.x, rect_.y - offset, rect_.w, rect_.h)
+
+        x, y, w, h = rect(editor.input)
+        dropdown = entry.get("dropdown") or {}
+        choices = dropdown.get("choices", [])
+        if choices:
+            widget = ttk.Combobox(canvas, textvariable=self.drafts[row.entry_id],
+                                  values=[choice["value"] for choice in choices],
+                                  state="disabled" if disabled
+                                  else ("readonly" if dropdown.get("read_only") else "normal"),
+                                  font=("Segoe UI", 12))
+        else:
+            widget = tk.Entry(canvas, textvariable=self.drafts[row.entry_id],
+                              font=("Consolas", 12), bg=BG, fg=FG,
+                              insertbackground=FG, relief="solid", bd=1,
+                              state="disabled" if disabled else "normal")
+        canvas.create_window(x, y, window=widget, width=w, height=h, anchor="nw")
+        self._embedded.append(widget)
+        frozen = row.entry_id in self.engine.frozen
+        for label, rect_, callback in (
+                ("Apply", editor.apply, lambda: self._apply_value(row.entry_id)),
+                ("Unfreeze" if frozen else "Freeze", editor.freeze,
+                 lambda: self._value_freeze(row.entry_id)),
+                ("+", editor.plus, lambda: self._step_value(row.entry_id, 1)),
+                ("−", editor.minus, lambda: self._step_value(row.entry_id, -1)),
+                ("Reset", editor.reset,
+                 lambda: self._reset_value(row.entry_id)),
+        ):
+            if label in ("+", "−") and entry.get("value_profile", {}).get("kind") == "string":
+                continue
+            self._canvas_button(*rect(rect_), label, callback)
+
+    def _canvas_button(self, x, y, w, h, text, callback):
+        canvas = self.canvas
+        rect = canvas.create_rectangle(x, y, x + w, y + h, fill=BG_BUTTON, outline="")
+        label = canvas.create_text(x + w / 2, y + h / 2, text=text, fill=FG,
+                                   font=("Segoe UI", 11))
+        for item in (rect, label):
+            canvas.bind_tag(item, "<Button-1>",
+                            lambda event, callback=callback: self.action(callback))
+
+    def _draw_section(self, row, offset):
+        canvas = self.canvas
+        chevron = row.chevron
+        canvas.create_text(chevron.x + chevron.w / 2,
+                           chevron.y + chevron.h / 2 - offset,
+                           text="▾" if row.expanded else "▸", fill=TEXT_DIM,
+                           font=("Segoe UI", 12))
+        name_x = 16 + row.indent + SECTION_CHEVRON_W + SECTION_NAME_GAP
+        if row.sublabel:
+            canvas.create_text(name_x, row.y + 16 - offset, anchor="w", text=row.label,
+                               fill=FG, font=("Segoe UI", 13, "bold"))
+            canvas.create_text(name_x, row.y + 34 - offset, anchor="w",
+                               text=row.sublabel, fill=TEXT_DIM, font=("Segoe UI", 11))
+        else:
+            canvas.create_text(name_x, row.y + ROW_HEIGHT_SECTION / 2 - offset, anchor="w",
+                               text=row.label, fill=FG, font=("Segoe UI", 13, "bold"))
+        width = self.canvas.winfo_width() or self.root.winfo_width()
+        counter_x = width - 8 - (GROUP_TOGGLE_W + 8 if row.group_toggle else 0)
+        if row.counter:
+            canvas.create_text(counter_x, row.y + ROW_HEIGHT_SECTION / 2 - offset,
+                               anchor="e", text=row.counter, fill=TEXT_DIM,
+                               font=("Segoe UI", 11))
+        if row.group_toggle_hit is not None:
+            rect = row.group_toggle_hit
+            canvas.create_rectangle(rect.x, rect.y - offset,
+                                    rect.x + GROUP_TOGGLE_W, rect.y + GROUP_TOGGLE_H - offset,
+                                    fill=ACCENT_ON if row.state == STATE_ON else ACCENT_OFF,
+                                    outline="")
+            knob = 16
+            knob_x = rect.x + (GROUP_TOGGLE_W - knob) / 2
+            knob_y = rect.y - offset + (GROUP_TOGGLE_H - knob - 4 if row.state == STATE_ON else 4)
+            canvas.create_oval(knob_x, knob_y, knob_x + knob, knob_y + knob,
+                               fill=FG, outline="")
+
+    # -- touch input (D8): tap, long-press, drag paging -------------------------
+
+    def _row_at(self, x, y):
+        if not self._rows:
+            return None
+        return find_row(self._rows, y + self._page_offset)
+
+    def on_press(self, event):
+        self._drag_anchor = event.y
+        row = self._row_at(event.x, event.y)
+        if row is not None:
+            self._longpress_job = self.root.after(
+                LONGPRESS_MS, lambda: self._longpress(row.entry_id))
+        else:
+            self._longpress_job = None
+
+    def on_drag(self, event):
+        # Any motion cancels the pending long-press (the finger is moving).
+        if self._longpress_job is not None:
+            self.root.after_cancel(self._longpress_job)
+            self._longpress_job = None
+        if self._drag_anchor is None:
+            self._drag_anchor = event.y
+            return
+        delta = event.y - self._drag_anchor
+        if delta <= -DRAG_THRESHOLD_PX:
+            self.move_page(1)
+            self._drag_anchor = event.y
+        elif delta >= DRAG_THRESHOLD_PX:
+            self.move_page(-1)
+            self._drag_anchor = event.y
+
+    def _longpress(self, identifier):
+        if self._longpress_job is None:
+            return
+        self._longpress_job = None
+        entry = self.engine.entries.get(identifier)
+        if entry is not None:
+            self.info(entry)
+
+    def on_release(self, event):
+        was_tap = self._longpress_job is not None
+        if was_tap:
+            self.root.after_cancel(self._longpress_job)
+            self._longpress_job = None
+        self._drag_anchor = None
+        if was_tap:
+            self._tap(event.x, event.y)
+
+    def _tap(self, x, y):
+        row = self._row_at(x, y)
+        if row is None:
+            return
+        entry = self.engine.entries.get(row.entry_id)
+        if entry is None:
+            return
+        if row.kind == "section":
+            if row.group_toggle_hit is not None and row.group_toggle_hit.contains(x, y):
+                self.action(lambda: self._toggle_group(row.entry_id))
+            else:
+                self._toggle_section(row.entry_id)
+        elif row.kind == "switch":
+            if row.info_hit is not None and row.info_hit.contains(x, y):
+                self.info(entry)
+            else:
+                self.action(lambda i=row.entry_id: self._toggle(i))
+        elif row.kind == "value":
+            if row.editor is not None:
+                self._tap_editor(row, x, y)
+            elif row.info_hit is not None and row.info_hit.contains(x, y):
+                self.info(entry)
+            else:
+                self._toggle_value_editor(row.entry_id)
+        else:  # info row: no actions, only details
+            self.info(entry)
+
+    def _tap_editor(self, row, x, y):
+        editor = row.editor
+        identifier = row.entry_id
+        if editor.apply.contains(x, y):
+            self.action(lambda: self._apply_value(identifier))
+        elif editor.freeze.contains(x, y):
+            self.action(lambda: self._value_freeze(identifier))
+        elif editor.plus.contains(x, y):
+            self.action(lambda: self._step_value(identifier, 1))
+        elif editor.minus.contains(x, y):
+            self.action(lambda: self._step_value(identifier, -1))
+        elif editor.reset.contains(x, y):
+            self.action(lambda: self._reset_value(identifier))
+        # Taps inside the embedded input widget never reach the canvas;
+        # everything else on an expanded value row collapses the editor.
+        elif editor.input.contains(x, y):
+            return
+        else:
+            self._toggle_value_editor(identifier)
+
+    # -- row actions -----------------------------------------------------------
+
+    def _toggle(self, identifier):
+        if self.engine.memory is None:
+            # Pre-attach: the row tap manages the saved auto-on wish.
+            if identifier in self.engine.desired:
+                self.engine.clear_desired(identifier)
+            else:
+                self.engine.request_auto_on(identifier)
+        else:
+            self.engine.toggle(identifier)
+            play_toggle_sound(on=identifier in self.engine.applied)
+            self._flash(identifier)
+
+    def _toggle_section(self, identifier):
+        if identifier in self.collapsed_sections:
+            self.collapsed_sections.discard(identifier)
+        else:
+            self.collapsed_sections.add(identifier)
+        self.render()
+
+    def _toggle_group(self, identifier):
+        # Flagged group heading: runs the existing parent-activation cascade.
+        self.engine.toggle(identifier)
+
+    def _toggle_value_editor(self, identifier):
+        if identifier in self.expanded_values:
+            self.expanded_values = self.expanded_values - {identifier}
+        else:
+            self.expanded_values = self.expanded_values | {identifier}
+        self.render()
+
+    def _apply_value(self, identifier):
+        self.engine.set_value(identifier, self.drafts[identifier].get())
+        self._value_applied.add(identifier)
+        self._flash(identifier)
+
+    def _value_freeze(self, identifier):
+        self.engine.set_freeze(identifier, identifier not in self.engine.frozen)
+
+    def _reset_value(self, identifier):
+        entry = self.engine.entries[identifier]
+        self.drafts[identifier].set(
+            str(entry.get("value_default") or entry.get("default_value") or ""))
+
+    def _step_value(self, identifier, direction):
+        entry = self.engine.entries[identifier]
+        variable = self.drafts[identifier]
+        profile = entry.get("value_profile")
+        if profile is not None and profile["kind"] in {"byte_array", "string"}:
+            raise NativeRuntimeError("Edit this array as exact hex byte pairs")
+        current = bytes(profile["size"]) if profile is not None else None
+        literal = variable.get() or "0"
+        raw = parse_value(entry, literal, current)
+        displayed = format_value(entry, raw)
+        if entry["variable_type"] in {"Float", "Double"}:
+            candidate = str(float(displayed) + direction)
+        elif profile is not None and profile["display"] == "binary":
+            candidate = format(max(0, int(displayed, 2) + direction), "b")
+        elif entry.get("show_as_hex"):
+            candidate = format(max(0, int(displayed, 16) + direction), "X")
+        else:
+            candidate = str(int(displayed) + direction)
+        parse_value(entry, candidate, current)
+        variable.set(candidate)
+
+    def _flash(self, identifier):
+        first_pulse = identifier not in self._pulsing
+        first_confirm = identifier not in self._confirmed
+        self._pulsing.add(identifier)
+        self._confirmed.add(identifier)
+        if first_pulse:
+            self.root.after(PULSE_MS, lambda i=identifier: self._end_reaction(i, True))
+        if first_confirm:
+            self.root.after(CONFIRM_MS, lambda i=identifier: self._end_reaction(i, False))
+        self.render()
+
+    def _end_reaction(self, identifier, pulse):
+        (self._pulsing if pulse else self._confirmed).discard(identifier)
+        self.render()
+
+    def action(self, callback):
+        """Run an engine action; expected failures stay inline (no modal).
+
+        NativeRuntimeError: row error accent via engine.entry_errors plus the
+        reason in the status line. Unexpected exceptions keep the old modal
+        last resort and the debug-log entry.
+        """
+        error = None
+        try:
+            callback()
+        except NativeRuntimeError as exc:
+            error = str(exc)
+        except Exception as exc:
+            try:
+                self.engine.debug_log.error("ui-action-failed", exc,
+                                            trainer_id=self.engine.plan.get("trainer_id"))
+            except Exception:
+                pass
+            messagebox.showerror("Trainer action failed", str(exc), parent=self.root)
+        self._status_text.set(error if error is not None else self.engine.status)
+        self.render()
+        self._update_banners()
+
+    # -- dialogs (content unchanged by the redesign) ----------------------------
 
     def show_status(self):
         messagebox.showinfo("Trainer status", self.engine.status + "\n\n" + self.engine.error +
             f"\n\nTarget: {self.engine.plan['process_name']} ({plan_architecture(self.engine.plan)['machine']})\nTable SHA-256: {self.engine.plan['table_sha256']}" +
             "\n\nCurrent means a byte patch confirmed by this trainer. Auto-on on next game launch means a saved switch." +
-            "\nApply value changes memory; ▲ / ▼ / Reset edit the draft only. Freeze captures the current value for this session." +
+            "\nApply value changes memory; + / - / Reset edit the draft only. Freeze captures the current value for this session." +
             "\nDependencies are enabled before the requested entry. Disable their consumers first." +
             "\nAn uncertain or crashed session blocks writes and keeps its journal. Preserve the state files; restart the target before manual recovery." +
             f"\n\nState folder: {self.engine.store.directory}", parent=self.root)
@@ -205,323 +748,84 @@ class TrainerWindow:
             self.engine.entry_errors.get(entry["id"], "") +
             "\nRequired symbols: " + ", ".join(entry.get("requires", [])), parent=self.root)
 
-    def filtered(self):
-        """Thin wrapper over the pure view/search/level filter.
+    # -- polling, banners, lifecycle --------------------------------------------
 
-        Search is a table-wide escape hatch: a non-empty needle matches every
-        entry (the ancestor path stays in the haystack), so a group child is
-        reachable from any level. With an empty needle the current group level
-        is applied first and only its direct children are candidates.
-        """
-        return filtered_entries(self.engine.entries, self.view, self.search_text.get(),
-                                self.engine.applied, self.engine.desired, self.group_stack)
+    def _signature(self):
+        return (self.engine.connected, self.engine.blocked,
+                tuple(sorted(self.engine.applied)), tuple(sorted(self.engine.desired)),
+                tuple(sorted(self.engine.frozen)), tuple(sorted(self.engine.entry_errors)),
+                self.engine.memory is None)
 
-    def changed_filter(self):
-        self.page = 0
-        self.render()
-
-    def set_view(self, name):
-        self.view = name
-        self.changed_filter()
-
-    def move_page(self, delta):
-        maximum = max(0, (len(self.filtered()) - 1) // self.page_size)
-        self.page = min(maximum, max(0, self.page + delta))
-        self.render()
-
-    # Group navigation (pure contract in ui_layout; refusals surface through
-    # the standard action error box). Every navigation resets the page.
-    def open_group(self, entry):
-        self.group_stack = enter_group(self.group_stack, entry, self.engine.entries)
-        self.changed_filter()
-
-    def exit_level(self):
-        self.group_stack = exit_group(self.group_stack)
-        self.changed_filter()
-
-    def go_to_level(self, index):
-        self.group_stack = list(self.group_stack[:index])
-        self.changed_filter()
-
-    def on_escape(self, _event):
-        # Escape exits one level; at the root level it is a no-op.
-        if self.group_stack:
-            self.action(self.exit_level)
-
-    def resized(self, event):
-        if event.widget is self.root:
-            columns = 2 if event.width < 650 else 4
-            for index, button in enumerate(self.filter_buttons):
-                button.grid_configure(row=index // columns, column=index % columns)
-            for column in range(4):
-                self.toolbar.columnconfigure(column, weight=1 if column < columns else 0)
-            self.root.minsize(400, 720 if columns == 2 else 610)
-        elif event.widget is self.cards:
-            size = page_size_for_cards(self._cards_area_height(), self.view)
-            if size != self.page_size:
-                self.page_size = size
-                self.render()
-
-    def _cards_area_height(self):
-        """Card area height per the pure layout contract.
-
-        Inside a group level the breadcrumb row consumes its 56 px between
-        the search field and the cards. Before the first map the toplevel
-        reports 1 px; that pre-layout render then falls back to one row, as
-        the original card-height computation did.
-        """
-        height = self.root.winfo_height()
-        if height < MIN_WINDOW_HEIGHT_WIDE:
-            return 0
-        return cards_area_height(height, in_group=bool(self.group_stack))
-
-    def action(self, callback):
-        try:
-            callback()
-        except Exception as exc:
-            self.engine.debug_log.error("ui-action-failed", exc,
-                                        trainer_id=self.engine.plan.get("trainer_id"))
-            messagebox.showerror("Trainer action failed", str(exc), parent=self.root)
-        self.status_text.set(self.engine.status)
-        self.render()
-        self._update_hotkey_banner()
-
-    def step(self, entry, direction):
-        variable = self.drafts[entry["id"]]
-        try:
-            profile = entry.get('value_profile')
-            if profile is not None and profile['kind'] in {'byte_array','string'}:
-                raise NativeRuntimeError('Edit this array as exact hex byte pairs')
-            current = bytes(profile['size']) if profile is not None else None
-            literal = variable.get() or "0"
-            raw = parse_value(entry, literal, current)
-            displayed = format_value(entry, raw)
-            if entry["variable_type"] in {"Float", "Double"}:
-                candidate = str(float(displayed) + direction)
-            elif profile is not None and profile['display'] == 'binary':
-                candidate = format(max(0, int(displayed, 2) + direction), 'b')
-            elif entry.get("show_as_hex"):
-                candidate = format(max(0, int(displayed, 16) + direction), "X")
-            else:
-                candidate = str(int(displayed) + direction)
-            parse_value(entry, candidate, current)
-            variable.set(candidate)
-        except NativeRuntimeError as exc:
-            messagebox.showinfo("Value draft", str(exc), parent=self.root)
-
-    def _toggle_with_sound(self, identifier):
-        """Toggle a switch and play the appropriate tone on success."""
-        was_active = identifier in self.engine.applied
-        self.engine.toggle(identifier)
-        now_active = identifier in self.engine.applied
-        play_toggle_sound(on=now_active)
-
-    def _render_breadcrumb(self):
-        """Group-level row between the search field and the cards.
-
-        Shown only while a group level is active: a "Back" button exits one
-        level, and one segment per breadcrumb label (Root, then each group)
-        jumps to that level. Refusals surface through the standard action
-        error box.
-        """
-        for widget in self.breadcrumb.winfo_children():
-            widget.destroy()
-        if not self.group_stack:
-            self.breadcrumb.pack_forget()
-            return
-        self.breadcrumb.pack(fill="x", after=self.search_frame)
-        self._button(self.breadcrumb, "Back", lambda: self.action(self.exit_level), width=8).pack(side="left")
-        labels = breadcrumb_labels(self.engine.entries, self.group_stack)
-        for index, label in enumerate(labels):
-            self._button(self.breadcrumb, label,
-                         lambda i=index: self.action(lambda i=i: self.go_to_level(i)),
-                         width=8).pack(side="left", padx=(4, 0))
-
-    def render(self):
-        self.page_size = page_size_for_cards(self._cards_area_height(), self.view)
-        self._render_breadcrumb()
-        for widget in self.cards.winfo_children():
-            widget.destroy()
-        self.current_labels.clear()
-        self.action_widgets.clear()
-        entries = self.filtered()
-        maximum = max(0, (len(entries) - 1) // self.page_size)
-        self.page = min(self.page, maximum)
-        if self.group_stack:
-            group_label = breadcrumb_labels(self.engine.entries, self.group_stack)[-1]
-            self.page_text.set(f"{self.view} · {group_label} · {self.page + 1} / {maximum + 1} · {len(entries)} entries")
-        else:
-            self.page_text.set(f"{self.view} · {self.page + 1} / {maximum + 1} · {len(entries)} entries")
-        selected = entries[self.page * self.page_size:(self.page + 1) * self.page_size]
-        if not selected:
-            tk.Label(self.cards, text="No entries match this view or search.", bg=BG, fg=FG_DIM, pady=30).pack(fill="x")
-        for entry in selected:
-            identifier = entry["id"]
-            card = tk.Frame(self.cards, bg=BG_CARD, relief="solid", bd=1, padx=8, pady=5)
-            card.pack(fill="x", pady=4)
-            title_row = tk.Frame(card, bg=BG_CARD)
-            title_row.pack(fill="x")
-            full_label = entry["label"].replace("\n", " ")
-            visible_label = full_label[:85] + ("…" if len(full_label) > 85 else "")
-            title = tk.Label(title_row, text=visible_label, anchor="w", justify="left", wraplength=max(240, self.root.winfo_width() - 165), bg=BG_CARD, fg=FG, font=("Segoe UI", 16, "bold"))
-            title.pack(side="left", fill="x", expand=True)
-            self._button(title_row, "Info", lambda e=entry: self.info(e), width=5).pack(side="right")
-            if entry["kind"] == "heading" and is_navigable_group(entry, self.engine.entries):
-                # Navigable CE group: a button switches into the level.
-                # Refusals (pure contract) surface through the action error box.
-                children = len(level_entries(self.engine.entries, [identifier]))
-                self._button(card, "Open group",
-                             lambda e=entry: self.action(lambda e=e: self.open_group(e))
-                             ).pack(fill="x", pady=(4, 0))
-                tk.Label(card, text=f"{children} entries", anchor="w", bg=BG_CARD, fg=FG_DIM).pack(fill="x")
-                provider_marker = address_provider_marker(entry)
-                if provider_marker:
-                    tk.Label(card, text=provider_marker, anchor="w", bg=BG_CARD, fg=FG_DIM).pack(fill="x")
-                continue
-            if not entry["selected"] or not entry["supported"] or entry["kind"] in {"heading", "blocked"}:
-                reason = "Not included in this trainer" if not entry["selected"] else entry.get("reason") or "Navigation heading"
-                provider_marker = address_provider_marker(entry)
-                if provider_marker:
-                    reason = reason + " · " + provider_marker
-                visible_reason = reason[:140] + ("… (Info)" if len(reason) > 140 else "")
-                tk.Label(card, text=visible_reason, anchor="w", justify="left", bg=BG_CARD, fg=FG_DIM, wraplength=max(280, self.root.winfo_width() - 60)).pack(fill="x")
-                continue
-            if entry["kind"] == "script":
-                active = identifier in self.engine.applied
-                master = entry.get("activation_sets") is not None
-                current = ("Unknown" if self.engine.blocked else ("ON" if active else "OFF")) if self.engine.memory else "Disconnected"
-                if master and self.engine.memory is not None:
-                    current = "Set applied" if active else "Set not applied"
-                tk.Label(card, text=f"Current: {current}   Next game launch: {'ON' if identifier in self.engine.desired else 'OFF'}", anchor="w", bg=BG_CARD, fg=FG_DIM).pack(fill="x")
-                self._hotkey_card_line(card, identifier)
-                set_summary = activation_set_summary(entry, self.engine.entries)
-                if set_summary:
-                    tk.Label(card, text=set_summary, anchor="w", justify="left", bg=BG_CARD, fg=FG_DIM,
-                             wraplength=max(280, self.root.winfo_width() - 60)).pack(fill="x")
-                if self.engine.memory is None:
-                    if identifier in self.engine.desired:
-                        button = self._button(card, "Cancel auto-on on next game launch", lambda i=identifier: self.action(lambda: self.engine.clear_desired(i)))
-                    else:
-                        button = self._button(card, "Auto-on on next game launch", lambda i=identifier: self.action(lambda: self.engine.request_auto_on(i)))
-                    if self.engine.blocked:
-                        button.configure(state="disabled")
-                else:
-                    if master:
-                        label = "Clear set" if active else "Apply set"
-                    else:
-                        label = "ON" if active else "OFF"
-                    bg_color = ON_BG if active else OFF_BG
-                    fg_color = ON_FG if active else OFF_FG
-                    button = self._button(card, label, lambda i=identifier: self.action(lambda i=i: self._toggle_with_sound(i)),
-                                          bg=bg_color, fg=fg_color,
-                                          activebackground=BG_BUTTON_ACTIVE, activeforeground=FG)
-                    if not self.engine.connected:
-                        button.configure(state="disabled")
-                button.pack(fill="x")
-            else:
-                staged_pending = staged_card_state(entry, self.engine.applied) == STAGED_PENDING
-                if staged_pending:
-                    providers = ", ".join(staged_provider_labels(entry))
-                    tk.Label(card, text="Pending - unlocks when active: " + (providers or "unknown provider"),
-                             anchor="w", justify="left", bg=BG_CARD, fg=FG_DIM,
-                             wraplength=max(280, self.root.winfo_width() - 60)).pack(fill="x")
-                current = tk.Label(card, text="Current: unavailable" + (" - provider inactive" if staged_pending else ""),
-                                   anchor="w", bg=BG_CARD, fg=FG_DIM)
-                current.pack(fill="x")
-                self.current_labels[identifier] = current
-                self._hotkey_card_line(card, identifier)
-                row = tk.Frame(card, bg=BG_CARD)
-                row.pack(fill="x")
-                dropdown = entry.get("dropdown") or {}
-                choices = dropdown.get("choices", [])
-                if choices:
-                    editor = ttk.Combobox(row, textvariable=self.drafts[identifier], values=[choice["value"] for choice in choices],
-                                          state="readonly" if dropdown.get("read_only") else "normal", font=("Segoe UI", 16), width=10)
-                else:
-                    editor = tk.Entry(row, textvariable=self.drafts[identifier], font=("Segoe UI", 16), width=10,
-                                      bg=BG, fg=FG, insertbackground=FG)
-                editor.pack(side="left", fill="both", expand=True, padx=(0, 4))
-                button = self._button(row, "Apply", lambda i=identifier: self.action(lambda: self.engine.set_value(i, self.drafts[i].get())), width=6)
-                button.pack(side="left")
-                frozen = identifier in self.engine.frozen
-                freeze = self._button(row, "Unfreeze" if frozen else "Freeze", lambda i=identifier, f=frozen: self.action(lambda: self.engine.set_freeze(i, not f)), width=7)
-                freeze.pack(side="left", padx=(4, 0))
-                if staged_pending or not self.engine.connected:
-                    button.configure(state="disabled")
-                    freeze.configure(state="disabled")
-                draft_row = tk.Frame(card, bg=BG_CARD)
-                draft_row.pack(fill="x", pady=(4, 0))
-                for label, callback in (("▲", lambda e=entry: self.step(e, 1)), ("▼", lambda e=entry: self.step(e, -1)),
-                                        ("Reset", lambda i=identifier, e=entry: self.drafts[i].set(str(e.get("value_default") or e.get("default_value") or "")))):
-                    if label in {'▲','▼'} and entry.get('value_profile',{}).get('kind')=='string':continue
-                    draft_button = self._button(draft_row, label, callback)
-                    if staged_pending:
-                        draft_button.configure(state="disabled")
-                    draft_button.pack(side="left", fill="x", expand=True)
-
-    def _hotkey_card_line(self, card, identifier):
-        """WP-40: show the record's original hotkey bindings with live state.
-
-        One line per declared source binding (plan order); the engine
-        reports whether the first-wins policy currently publishes it.
-        """
-        hotkeys = self.engine.hotkey_registered_keys(identifier)
-        if not hotkeys:
-            return
-        tk.Label(card, text="Hotkeys: " + ", ".join(
-            hotkey_binding_line(text, registered) for text, registered in hotkeys),
-            anchor="w", justify="left", bg=BG_CARD, fg=FG_DIM,
-            wraplength=max(280, self.root.winfo_width() - 60)).pack(fill="x")
-
-    def _update_hotkey_banner(self):
-        """WP-40: render the trainer-wide hotkey warning banner.
-
-        The banner carries the engine's deduplicated registration warnings
-        (first-wins conflicts, named refusals) and is packed only while
-        non-empty so the pure layout contract stays untouched.
-        """
-        banner = hotkey_conflict_banner(self.engine.hotkey_warnings)
-        if banner:
-            if not self.hotkey_banner.winfo_ismapped():
-                self.hotkey_banner.pack(fill="x", after=self.status_frame)
-            self.hotkey_banner.configure(text=banner)
-        elif self.hotkey_banner.winfo_ismapped():
-            self.hotkey_banner.pack_forget()
-
-    def poll(self):
-        if self.engine.closed:
-            return
-        before = (self.engine.connected, self.engine.blocked, tuple(self.engine.applied),
-                  tuple(self.engine.desired), tuple(self.engine.hotkey_warnings))
-        self.engine.poll()
-        self.status_text.set(self.engine.status)
+    def _update_banners(self):
         table_lua = self.engine.plan.get("table_lua")
-        if (self.engine.memory is not None
-                and table_lua is not None
+        if (self.engine.memory is not None and table_lua is not None
                 and table_lua.get("executed") is False):
             self.table_lua_banner.configure(
                 text="Table Lua not executed on load — "
                      + str(table_lua.get("record_scripts_inactive", 0))
                      + " record scripts stay inactive")
-            self.table_lua_banner.pack(fill="x", before=self.toolbar)
-        else:
-            self.table_lua_banner.pack_forget()
-        after = (self.engine.connected, self.engine.blocked, tuple(self.engine.applied),
-                 tuple(self.engine.desired), tuple(self.engine.hotkey_warnings))
-        if before != after:
-            self.render()
-        self._update_hotkey_banner()
-        for identifier, label in self.current_labels.items():
+            if not self.table_lua_strip.winfo_ismapped():
+                self.table_lua_strip.pack(fill="x", after=self.status_frame)
+        elif self.table_lua_strip.winfo_ismapped():
+            self.table_lua_strip.pack_forget()
+        banner = hotkey_conflict_banner(self.engine.hotkey_warnings)
+        if banner:
+            self.hotkey_banner.configure(text=banner)
+            if not self.hotkey_strip.winfo_ismapped():
+                self.hotkey_strip.pack(fill="x", after=self.status_frame)
+        elif self.hotkey_strip.winfo_ismapped():
+            self.hotkey_strip.pack_forget()
+        connected = self.engine.memory is not None and self.engine.connected
+        self.conn_dot.configure(fg=ON_BG if connected else OFF_BG)
+        self.conn_label.configure(text=self.engine.plan["process_name"])
+
+    def _refresh_value_texts(self):
+        """Live-refresh the visible value rows between full re-renders."""
+        if not self._pages or self.page >= len(self._pages):
+            return
+        changed = False
+        for row in self._pages[self.page]:
+            if row.kind != "value" or row.state == STATE_BLOCKED:
+                continue
+            entry = self.engine.entries.get(row.entry_id)
+            if entry is None:
+                continue
+            staged_pending = staged_card_state(entry, self.engine.applied) == STAGED_PENDING
             try:
-                value = self.engine.read_value(identifier)
-                label.configure(text=f"Current: {value}   {'FROZEN' if identifier in self.engine.frozen else ''}")
+                text = self.engine.read_value(row.entry_id)
             except Exception:
-                entry = self.engine.entries.get(identifier) or {}
-                if entry.get("staged") and staged_card_state(entry, self.engine.applied) == STAGED_PENDING:
-                    label.configure(text="Current: unavailable — provider inactive")
-                else:
-                    label.configure(text="Current: unavailable — enable required symbols first")
-        self.root.after(250, self.poll)
+                text = "unavailable (provider inactive)" if staged_pending else "unavailable"
+            if self._value_texts.get(row.entry_id) != text:
+                self._value_texts[row.entry_id] = text
+                changed = True
+        if changed:
+            self.render()
+
+    def poll(self):
+        if self.engine.closed:
+            return
+        before = self._signature()
+        self.engine.poll()
+        self._status_text.set(self.engine.status)
+        self._update_banners()
+        if before != self._signature():
+            self.render()
+        else:
+            self._refresh_value_texts()
+        self.root.after(POLL_MS, self.poll)
+
+    def on_escape(self, _event):
+        # Escape closes the expanded value editor; nothing else to pop.
+        if self.expanded_values:
+            self.expanded_values = frozenset()
+            self.render()
+
+    def on_resize(self, event):
+        if event.widget is self.root:
+            self._apply_filter_mode()
+            self.root.minsize(*min_window_size(max(MIN_WINDOW_WIDTH, event.width)))
+        elif event.widget is self.canvas:
+            self.render()
 
     def close(self):
         clean = self.engine.close()

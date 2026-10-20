@@ -1,26 +1,48 @@
-"""Pure Touch-UI layout contract: sizes, rows, pages, no overlap, 56-px minimums."""
+"""Pure Touch-UI layout contract for the compact row grid (WP-58).
+
+Window clamping, the compact chrome row stack (48 px header / filter row
+with the five view chips, 32 px status, 28 px amber banners, 48 px
+pagination; a 2x3 chip grid plus dedicated search row under 650 px width),
+touch minimums, the row-area floor, the per-view page-size estimate and the
+no-overlap stack invariants. The row model itself (heights, truncation,
+hit areas, section counters) is covered in ``test_native_ui_rows`` and
+``test_native_ui_group_sections``.
+"""
 from __future__ import annotations
 
 import unittest
 
 from ct2trainer.native.ui_layout import (
-    CARD_HEIGHT_SWITCH,
-    CARD_HEIGHT_VALUE,
+    BANNER_HEIGHT,
+    CHROME_FILTER,
+    CHROME_FILTER_GRID,
+    CHROME_HEADER,
+    CHROME_PAGINATION,
+    CHROME_SEARCH,
+    CHROME_STATUS,
     LayoutError,
     MAX_PAGE_ROWS,
+    MIN_ROW_AREA,
+    MIN_WINDOW_HEIGHT_NARROW,
+    MIN_WINDOW_HEIGHT_WIDE,
     MIN_WINDOW_WIDTH,
+    NARROW_THRESHOLD,
+    ROW_HEIGHT_SECTION,
+    ROW_HEIGHT_SWITCH,
+    ROW_HEIGHT_VALUE,
+    ROW_HEIGHT_VALUE_EXPANDED,
     STAGED_PENDING,
+    TOUCH_MINIMUM,
+    VIEWS,
     activation_set_record_ids,
     activation_set_summary,
-    card_height,
-    cards_area_height,
     filter_change,
     initial_window_size,
     layout_violations,
     min_window_size,
     next_page,
-    page_count,
-    page_size_for_cards,
+    page_size_for_rows,
+    rows_area_height,
     staged_card_state,
     staged_provider_labels,
     window_columns,
@@ -45,105 +67,149 @@ class WindowSizeTests(unittest.TestCase):
                     initial_window_size(*pair)
 
     def test_column_mode_switches_at_650(self):
+        # Wide mode: five chips in one row. Narrow mode: 2x3 chip grid.
         self.assertEqual(window_columns(399), 2)
         self.assertEqual(window_columns(649), 2)
-        self.assertEqual(window_columns(650), 4)
-        self.assertEqual(window_columns(1920), 4)
+        self.assertEqual(window_columns(650), 5)
+        self.assertEqual(window_columns(1920), 5)
 
     def test_min_window_size_depends_on_column_mode(self):
-        self.assertEqual(min_window_size(400), (MIN_WINDOW_WIDTH, 720))
-        self.assertEqual(min_window_size(649), (MIN_WINDOW_WIDTH, 720))
-        self.assertEqual(min_window_size(650), (MIN_WINDOW_WIDTH, 610))
-        self.assertEqual(min_window_size(1600), (MIN_WINDOW_WIDTH, 610))
+        self.assertEqual(min_window_size(400), (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT_NARROW))
+        self.assertEqual(min_window_size(649), (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT_NARROW))
+        self.assertEqual(min_window_size(650), (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT_WIDE))
+        self.assertEqual(min_window_size(1600), (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT_WIDE))
         with self.assertRaises(LayoutError):
             min_window_size(399)
 
 
-class CardAndPageTests(unittest.TestCase):
-    def test_card_heights_per_view(self):
-        self.assertEqual(card_height("Switches"), CARD_HEIGHT_SWITCH)
-        self.assertEqual(card_height("On / Saved"), CARD_HEIGHT_SWITCH)
-        self.assertEqual(card_height("Values"), CARD_HEIGHT_VALUE)
-        self.assertEqual(card_height("All"), CARD_HEIGHT_VALUE)
-        with self.assertRaises(LayoutError):
-            card_height("Bogus")
+class RowAreaTests(unittest.TestCase):
+    """Density acceptance: the row grid shows >= 10 switch rows at 1600x900."""
 
-    def test_page_size_is_clamped_to_twelve_rows(self):
-        self.assertEqual(page_size_for_cards(9999, "Switches"), MAX_PAGE_ROWS)
-        self.assertEqual(page_size_for_cards(9999, "Values"), MAX_PAGE_ROWS)
-
-    def test_page_size_falls_back_to_one_row(self):
-        self.assertEqual(page_size_for_cards(100, "Values"), 1)
-        self.assertEqual(page_size_for_cards(0, "Switches"), 1)
-
-    def test_400x800_value_layout_shows_exactly_two_records(self):
-        # AGENTS contract: at 400x800 the value-operable Touch layout shows two records.
-        cards = cards_area_height(800)
-        self.assertEqual(cards, 540)
-        self.assertEqual(page_size_for_cards(cards, "Values"), 2)
-        self.assertEqual(layout_violations(400, 800, "Values"), [])
-
-    def test_720x640_wide_layout_fits_one_card(self):
-        self.assertEqual(layout_violations(720, 640, "Switches"), [])
-        self.assertEqual(layout_violations(720, 640, "Values"), [])
-        cards = cards_area_height(640)
-        self.assertEqual(cards, 380)
-        self.assertEqual(page_size_for_cards(cards, "Switches"), 1)
-        self.assertEqual(page_size_for_cards(cards, "Values"), 1)
-
-    def test_1920x1080_window_is_the_clamped_max_and_fits_more_switch_rows(self):
+    def test_reference_window_1600x900_fits_at_least_ten_switch_rows(self):
         width, height = initial_window_size(1920, 1080)
         self.assertEqual((width, height), (1600, 900))
-        cards = cards_area_height(height)
-        self.assertEqual(cards, 640)
-        self.assertEqual(page_size_for_cards(cards, "Switches"), 3)
-        self.assertEqual(page_size_for_cards(cards, "Values"), 2)
+        area = rows_area_height(height, width)
+        self.assertEqual(area, 724)  # 900 - 48 - 48 - 32 - 48
+        self.assertGreaterEqual(page_size_for_rows(area, "Switches"), 10)
+        self.assertEqual(page_size_for_rows(area, "Switches"), 11)
+        self.assertEqual(layout_violations(width, height, "Switches"), [])
+
+    def test_400x800_narrow_layout_shows_at_least_two_value_rows(self):
+        # AGENTS contract: at 400x800 the value-operable Touch layout shows
+        # at least two records; narrow chrome = 48 + 96 + 48 + 32 + 48 = 272.
+        area = rows_area_height(800, 400)
+        self.assertEqual(area, 528)
+        self.assertGreaterEqual(page_size_for_rows(area, "Values"), 2)
+        self.assertEqual(layout_violations(400, 800, "Values"), [])
+
+    def test_row_heights_carry_the_touch_minimum(self):
+        # Interactive rows keep the 56 px minimum; sections are display
+        # headers with a 40 px group toggle.
+        self.assertGreaterEqual(ROW_HEIGHT_SWITCH, 56)
+        self.assertGreaterEqual(ROW_HEIGHT_VALUE, 56)
+        self.assertGreaterEqual(ROW_HEIGHT_VALUE_EXPANDED, ROW_HEIGHT_VALUE)
+        self.assertEqual(ROW_HEIGHT_SECTION, 48)
+
+    def test_page_size_is_clamped_to_twelve_rows(self):
+        self.assertEqual(page_size_for_rows(99999, "Switches"), MAX_PAGE_ROWS)
+        self.assertEqual(page_size_for_rows(99999, "Values"), MAX_PAGE_ROWS)
+
+    def test_page_size_falls_back_to_one_row(self):
+        self.assertEqual(page_size_for_rows(100, "Values"), 1)
+        self.assertEqual(page_size_for_rows(0, "Switches"), 1)
+
+    def test_unknown_view_is_rejected(self):
+        with self.assertRaises(LayoutError):
+            page_size_for_rows(724, "Bogus")
+        with self.assertRaises(LayoutError):
+            layout_violations(800, 800, "Bogus")
+
+    def test_negative_dimensions_raise(self):
+        with self.assertRaises(LayoutError):
+            window_rows(-1, 900)
+        with self.assertRaises(LayoutError):
+            page_size_for_rows(-5, "Switches")
+        with self.assertRaises(LayoutError):
+            rows_area_height(-5, 1600)
 
 
 class RowContractTests(unittest.TestCase):
-    def test_rows_stack_without_overlap_and_fill_the_window(self):
-        rows = window_rows(800)
+    def test_wide_rows_stack_without_overlap_and_fill_the_window(self):
+        rows = window_rows(900, 1600)
         names = [row.name for row in rows]
-        self.assertEqual(names, ["header", "status", "toolbar", "search", "cards", "nav"])
+        self.assertEqual(names, ["header", "filter", "status", "pagination", "rows"])
         for left in range(len(rows)):
             for right in range(left + 1, len(rows)):
                 a, b = rows[left], rows[right]
                 self.assertFalse(a.top < b.bottom and b.top < a.bottom,
                                  (a.name, b.name))
         self.assertEqual(rows[0].top, 0)
+        self.assertEqual(rows[-1].bottom, 900)
+
+    def test_narrow_rows_insert_the_chip_grid_and_search_row(self):
+        rows = window_rows(800, 400)
+        names = [row.name for row in rows]
+        self.assertEqual(names, ["header", "chips", "search", "status",
+                                 "pagination", "rows"])
+        self.assertEqual(rows[1].height, CHROME_FILTER_GRID)
+        self.assertEqual(rows[2].height, CHROME_SEARCH)
+        for left in range(len(rows)):
+            for right in range(left + 1, len(rows)):
+                a, b = rows[left], rows[right]
+                self.assertFalse(a.top < b.bottom and b.top < a.bottom,
+                                 (a.name, b.name))
         self.assertEqual(rows[-1].bottom, 800)
 
-    def test_interactive_rows_meet_the_56px_touch_minimum(self):
-        for row in window_rows(720):
-            if row.name in {"header", "toolbar", "search", "nav"}:
-                self.assertGreaterEqual(row.height, 56, row.name)
-        self.assertEqual(window_rows(720)[3].name, "search")
-        self.assertEqual(window_rows(720)[3].height, 56)
+    def test_chrome_rows_carry_the_contract_heights(self):
+        rows = window_rows(900, 1600)
+        by_name = {row.name: row.height for row in rows}
+        self.assertEqual(by_name["header"], CHROME_HEADER)
+        self.assertEqual(by_name["filter"], CHROME_FILTER)
+        self.assertEqual(by_name["status"], CHROME_STATUS)
+        self.assertEqual(by_name["pagination"], CHROME_PAGINATION)
+
+    def test_banner_strips_stack_between_status_and_pagination(self):
+        rows = window_rows(900, 1600, banner_count=2)
+        names = [row.name for row in rows]
+        self.assertEqual(names, ["header", "filter", "status", "banner0",
+                                 "banner1", "pagination", "rows"])
+        for name in ("banner0", "banner1"):
+            self.assertEqual({row.name: row.height for row in rows}[name],
+                             BANNER_HEIGHT)
+        area = next(row for row in rows if row.name == "rows")
+        self.assertEqual(area.height, 900 - 48 - 48 - 32 - 2 * 28 - 48)
+
+    def test_interactive_chrome_meets_the_touch_minimum(self):
+        rows = window_rows(800, 400)
+        for row in rows:
+            if row.name in {"header", "filter", "chips", "search", "pagination"}:
+                self.assertGreaterEqual(row.height, TOUCH_MINIMUM, row.name)
 
     def test_min_height_contract_610_wide_720_narrow(self):
         # wide: 610 is enough; below it is a violation
         self.assertEqual(layout_violations(720, 610, "Switches"), [])
-        self.assertTrue(any("below minimum 610" in v for v in layout_violations(720, 609, "Switches")))
+        self.assertTrue(any("below minimum 610" in v
+                            for v in layout_violations(720, 609, "Switches")))
         # narrow: 720 is required
-        self.assertTrue(any("below minimum 720" in v for v in layout_violations(400, 719, "Switches")))
+        self.assertTrue(any("below minimum 720" in v
+                            for v in layout_violations(400, 719, "Switches")))
         self.assertEqual(layout_violations(400, 720, "Switches"), [])
 
-    def test_window_too_narrow_for_its_cards_reports_a_violation(self):
-        violations = layout_violations(400, 500, "Values")
+    def test_window_too_small_reports_both_violations(self):
+        # Narrow chrome is 272 px, so a 340 px window leaves a 68 px row
+        # area: below the 720 minimum and too small for one value row.
+        violations = layout_violations(400, 340, "Values")
         self.assertTrue(any("below minimum 720" in v for v in violations))
         self.assertTrue(any("fewer than one" in v for v in violations))
 
-    def test_unknown_view_is_rejected(self):
-        with self.assertRaises(LayoutError):
-            layout_violations(800, 800, "Bogus")
-        with self.assertRaises(LayoutError):
-            page_size_for_cards(540, "Bogus")
-
-    def test_negative_dimensions_raise(self):
-        with self.assertRaises(LayoutError):
-            window_rows(-1)
-        with self.assertRaises(LayoutError):
-            page_size_for_cards(-5, "Switches")
+    def test_row_area_floor_is_enforced(self):
+        # Wide chrome is 176 px, so a 231 px window leaves a 55 px row area:
+        # below the 56 px floor even though the chrome itself is intact.
+        violations = layout_violations(1600, 231, "Switches")
+        self.assertTrue(any("below the 56px minimum" in v for v in violations))
+        self.assertEqual(
+            next(row for row in window_rows(231, 1600) if row.name == "rows").height,
+            231 - 48 - 48 - 32 - 48)
 
 
 class NavigationAndDraftTests(unittest.TestCase):
@@ -160,11 +226,6 @@ class NavigationAndDraftTests(unittest.TestCase):
         with self.assertRaises(LayoutError):
             next_page(0, 1, 10, 0)
 
-    def test_page_count_counts_full_and_partial_pages(self):
-        self.assertEqual(page_count(25, "Values", 800), 13)  # 2 per page
-        self.assertEqual(page_count(4, "Values", 800), 2)
-        self.assertEqual(page_count(0, "Switches", 800), 1)
-
     def test_filter_change_resets_page_and_preserves_drafts(self):
         drafts = {2: "12.5", 3: "ff"}
         page, kept = filter_change(5, drafts)
@@ -174,7 +235,7 @@ class NavigationAndDraftTests(unittest.TestCase):
 
 
 class StagedCardStateTests(unittest.TestCase):
-    """WP-14 (C5): staged card state and master-toggle summary helpers."""
+    """WP-14 (C5): staged record state and master-toggle summary helpers."""
 
     def test_entry_without_staged_metadata_is_none(self):
         self.assertEqual(staged_card_state({"id": 1, "kind": "value"}, {2}), "none")

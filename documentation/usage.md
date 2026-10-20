@@ -90,7 +90,36 @@ and without the option no log file is created at all. The option does not
 change plan identity (trainer ID) or state directories, so a log-enabled
 trainer stays compatible with state created by a standard trainer.
 
-## 6. Final acceptance
+## 6. Trainer window (touch-first row grid)
+
+The generated trainer shows a compact row grid instead of per-record cards,
+designed for touch operation on a Steam Deck:
+
+- One row per record: 64 px switch rows, 72 px value rows (the row expands
+  to 120 px with its inline editor), 48 px group section headers.
+- Filter chips: **Switches / On / Saved / Values / All**, plus a literal
+  search field (name, ID or full parent path, case-insensitive).
+- **Tap anywhere on a switch row to toggle it**; the row flashes and shows
+  a short confirmation chip, and the toggle tone plays. Before the target
+  is attached, a tap manages the saved "auto-on for next game launch" wish.
+- **Tap a value row** to expand its inline editor (draft field plus
+  Apply / Freeze / +/- / Reset); draft editing never touches memory until
+  Apply.
+- **Group sections** are expanded by default, indented children, with an
+  "n/N on" counter; the chevron collapses a section, and flagged groups
+  (source activation semantics) carry a group toggle that runs the parent
+  cascade.
+- **Info** on a record: the small "i" chip at the row's right edge, or a
+  400 ms long-press anywhere on the row. `Status / help` shows the full
+  trainer state; the status line shows the engine status and the reason of
+  the last failed action (failed actions never open a modal dialog).
+- **Paging**: 80 px finger drag, mouse wheel, PageUp/PageDown or the
+  pagination buttons; Escape closes the expanded value editor. No hover
+  and no right-click anywhere; every interactive target is at least 48 px.
+- Amber banners report hotkey conflicts and a failed table-Lua bootstrap
+  (record scripts stay inactive then).
+
+## 7. Final acceptance
 
 Final acceptance is **separate on Windows and on a real Steam Deck under
 Proton with touch operation**; fixture tests and a green build do not

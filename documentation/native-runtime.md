@@ -96,7 +96,7 @@ A checksum records the chosen bytes; it is not a signature or a legal audit.
 | Recovery | Source CLI assessment and explicit dead-owner/dead-target recovery; exact FILETIME identities, immutable file evidence, held-file archive/readback and durable recovery fence |
 | Clock foundation | Independent integer scaling/epochs/leases and local v2 wrapper deadline/generation protocol, tested x64/x86; no installed speedhack claim |
 | Target architecture | Explicit source/selection/identity-bound x86/x64 plan, early mismatch refusal, AMD64 host proof, PE-checked WOW64 duplicate handling; frozen owned x86 gate passed |
-| Trainer/converter | Independent Tk UI; selected provider closure, source JSON and checked-template EXE generation, confirmed saved switches |
+| Trainer/converter | Independent Tk UI (compact touch-first row grid: one row per record with pill toggle, inline value editor, collapsible group sections with counters, 48–64 px rows, 2×3 chip fallback under 650 px width); selected provider closure, source JSON and checked-template EXE generation, confirmed saved switches |
 
 Static inspection never executes table Lua. Original table Lua is replayed only
 as private helpers for an owned Lua record activation, under a sticky read-only
