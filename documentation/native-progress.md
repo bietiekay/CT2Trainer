@@ -6,11 +6,12 @@ the measurement snapshot are tracked in one place:
 confirmed-state detail (builds, suites, acceptance records); when in doubt
 about current status, check the tracker first.
 
-Status: **October 19, 2026** (0.15 released; reference-corpus closure
-cycle: Wave 4 batches 1–3 complete — all six W4 lanes
-(WP-43/44/45/47/48/51/52/55/56) merged into `main` @ `0c9879e`, cases
-26 + 27 + 31 pinned as the 25th–27th corpus tables, 7446/7446
-action-weighted; plan
+Status: **October 20, 2026** (0.15 released; reference-corpus closure
+cycle: **Wave 4 complete** — all twelve W4 lanes
+(WP-43/44/45/46p1/46p2/47/48/49/50/51/52/53/54/55/56/57 + WP-58 UI)
+merged into `main` @ `0a38213`, cases 26 + 27 + 31 + 28 + 29 + 30
+pinned as the 25th–30th corpus tables, 7475/7475 action-weighted over
+6143 expected actions; 0.16 cycle-end build pending; plan
 `plans/reference-closure-continuation.md`). This is the binding result list:
 confirmed state, measured numbers, and the prioritized open work. The
 plan (work packages, protocol) lives in
@@ -27,12 +28,16 @@ code/build boundaries in
   by WP-30/36 (W2-C) on 2026-10-15 and by WP-28/29/31/35 (W2-B) on
   2026-10-16, extended by WP-39/40 (W3 batch 1), WP-38 (W3 batch 2),
   WP-41 (W3 batch 3) and WP-37 (W3 batch 4) on 2026-10-18, and by
-  WP-43/44/45/47/48/51/52/55/56 (Wave 4 batches 1–3) on 2026-10-19.**
+  WP-43/44/45/47/48/51/52/55/56 (Wave 4 batches 1–3) on
+  2026-10-19 and by WP-46 part 2, WP-49/50, WP-53/54, WP-57 +
+  WP-58 (Wave 4 batch 4) on 2026-10-20.**
   42/42
   in-scope features covered (39 gap classes + 3
-  gates); 100% feature-weighted; 7446/7446
-  action-weighted over the pinned 6119-action corpus (27
-  tables, run `w4-case31-20261019061339`). The 2026-10-18 state
+  gates); 100% feature-weighted; 7475/7475
+  action-weighted over the pinned 6143-action corpus (30
+  tables, run `w4b4-case30-20261020081722Z`). The 2026-10-19 state
+  (7446/7446 over the 6119-action corpus, 27 tables, run
+  `w4-case31-20261019061339`), the 2026-10-18 state
   (7426/7426 over the 6100-action corpus, 24 tables, run
   `w3e-case24-20261018051230`), the 2026-10-18 state (7416/7416 over
   the 6092-action corpus, 23 tables, run
@@ -59,7 +64,7 @@ code/build boundaries in
   `wp14-staged-20261011T093320Z`) and the 2026-10-10 39/39 over the 5967
   action corpus are superseded; the earlier 90% hurdle is subsumed.
 - **Gates 1–3 are closed with real, tested evidence:**
-  1. `gate:1` per-table completeness for all 27 pinned tables (Forms, Lua
+  1. `gate:1` per-table completeness for all 30 pinned tables (Forms, Lua
      lifecycle, Custom Types, Assets) —
      `tests/test_native_table_completeness.py`.
   2. `gate:2` Source-to-Frozen parity of the 0.9 feature set —
@@ -73,23 +78,23 @@ code/build boundaries in
      exact commands and pinned inputs —
      `tests/test_native_repro_chain.py` (denominator → feature matrix →
      AP-11 manifest, byte-identical per fixed run-id).
-- **AP-11 (observed real-game effect for all 6119 pinned actions)
+- **AP-11 (observed real-game effect for all 6143 pinned actions)
   remains a separate end goal** — 0 confirmed so far — and is excluded
   from the 100% feature metric.
 - **Final product acceptance** is separate on Windows (clean PC/VM, no
   CE/Python) and on a real Steam Deck under Proton with touch operation.
   `runtime_unverified` stays set until both pass.
 
-## 2. Confirmed state (0.9.0-rc2 + WP-14..52 + 0.15 build, 2026-10-19)
+## 2. Confirmed state (0.9.0-rc2 + WP-14..57 + WP-58 + 0.15 build, 2026-10-20)
 
 | Item | Value |
 | --- | --- |
 | Repository baseline | `main` @ `b6c48cc` "initial 0.9 version" (self-contained clean-room tree) |
 | Version | `0.15` (root `VERSION` file; 0.9.0-rc2 was the last user-tested release) |
-| Test suite | **3233 OK / 25 expected skips, 0 failures** (full local dev suite on `main` after the W4 cycle merge and the case-26/27/31 pins, verified 2026-10-19 at the canonical path; previously 3057 on `native-0.15` after the W3 batch 1 + batch 2 + batch 3 + batch 4 merges (WP-39/40/38/41/37) and the case-23 + case-21 + case-22 + case-24 pins, verified 2026-10-18; previously 3046 after the W3 batch 3 merge (WP-41) and the case-22 pin; previously 3001 after the W3 batch 1 + batch 2 merges (WP-39/40/38) and the case-23 + case-21 pins, verified 2026-10-18 at the canonical path; previously 2943 after the 0.15 prefix-cut field fix at `d15268a`, 2026-10-17; previously 2932 on `native-0.14` after the per-wish restore isolation and program-scan debug logging, verified 2026-10-17 at the canonical path; previously 2927 on `native-0.13` after the optional debug-logging feature incl. attach-failure dedupe and the module-snapshot fallback, verified 2026-10-16; previously 2925 after the debug-logging feature; previously 2910 after the W2-C + W2-B merges and the case-15 part 2 + case-18 pins; previously 2840 after the W2-A merge and the case-20 + case-16 + case-17 + case-15 pins, verified 2026-10-14; previously 2805 after the W1-A + W1-E merges and the case-20 + case-16 + case-15 pins; previously 2769 after the W1-D + W1-C + W1-B integration; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2932/25 passed (0.14 build `native-20261017T115850Z-1ebb48b7`); previously 2927/25 (0.13 build `native-20261016T190005Z-b3139b30`); previously 2925/25 (superseded 0.13 build `native-20261016T181516Z-b8ae88de`); previously 2910/25 (0.12 build `native-20261016T163910Z-d047f2d2`); previously 2710/25 (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
-| Feature matrix | **42/42 covered** (100% feature-weighted, 7446/7446 action-weighted; run `w4-case31-20261019061339`; previously 7426/7426, run `w3e-case24-20261018051230`; previously 7416/7416, run `w3d-case22-20261018040510`; previously 7413/7413, run `w3b-case21-20261018023823Z`; previously 7411/7411, run `w3-case23-20261018012531Z`) — `gap_inventory/feature-coverage.json` |
-| AP-11 manifest | 27 tables, 6119 expected actions, 0 confirmed, all consistency gates `all_ok` (run `w4-case31-20261019061339`; previously 24 tables / 6100 actions, previously 23 tables / 6092 actions) — `gap_inventory/ap11-campaign.json` |
-| Latest verified build | `native-20261017T115850Z-1ebb48b7` (0.14) via `scripts/Build-Native.ps1` from `main` @ `fca6b06` (2026-10-17): both ZIPs (`CT2Trainer-0.14-source.zip` sha256 `a5b075cf…`, `CT2Trainer-0.14-windows-portable.zip` sha256 `e57fe9b9…`), in-build suite 2932 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately set, source inputs unchanged; both ZIPs carry the elaborated release READMEs (portable guide includes the debug-logging section) and the changelog with the 0.14 + 0.13 + 0.12 entries. 0.14 adds per-wish restore isolation (a `ScanMiss` in one saved record no longer blocks the engine) and per-scan debug logging for program (AA script) preflight scans. Previous: `native-20261016T190005Z-b3139b30` (0.13, in-build 2927/25); `native-20261016T181516Z-b8ae88de` (0.13 pre module-snapshot fallback, in-build 2925/25); `native-20261016T163910Z-d047f2d2` (0.12, in-build 2910/25); `native-20261016T161905Z-e8ef67a0` (0.12, byte-identical re-cut); `native-20261016T154141Z-2de774ab` (0.12 pre release-docs); `native-20261012T092729Z-2d8aaf12` (0.11, in-build 2710/25); `native-20261011T121914Z-bfc5fc11` (0.10, in-build 2671/25); `native-20261010T172336Z-ffe35eb0` (rc2, in-build 2617/25, `api-prototypes.json` present in both EXE payload inventories, user-tested portable) |
+| Test suite | **3393 OK / 25 expected skips, 0 failures** (full local dev suite on `main` after the W4 B4 merges and the case-28/29/30 pins, verified 2026-10-20 at the canonical path; previously 3233 on `main` after the W4 cycle merge and the case-26/27/31 pins, verified 2026-10-19 at the canonical path; previously 3057 on `native-0.15` after the W3 batch 1 + batch 2 + batch 3 + batch 4 merges (WP-39/40/38/41/37) and the case-23 + case-21 + case-22 + case-24 pins, verified 2026-10-18; previously 3046 after the W3 batch 3 merge (WP-41) and the case-22 pin; previously 3001 after the W3 batch 1 + batch 2 merges (WP-39/40/38) and the case-23 + case-21 pins, verified 2026-10-18 at the canonical path; previously 2943 after the 0.15 prefix-cut field fix at `d15268a`, 2026-10-17; previously 2932 on `native-0.14` after the per-wish restore isolation and program-scan debug logging, verified 2026-10-17 at the canonical path; previously 2927 on `native-0.13` after the optional debug-logging feature incl. attach-failure dedupe and the module-snapshot fallback, verified 2026-10-16; previously 2925 after the debug-logging feature; previously 2910 after the W2-C + W2-B merges and the case-15 part 2 + case-18 pins; previously 2840 after the W2-A merge and the case-20 + case-16 + case-17 + case-15 pins, verified 2026-10-14; previously 2805 after the W1-A + W1-E merges and the case-20 + case-16 + case-15 pins; previously 2769 after the W1-D + W1-C + W1-B integration; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2932/25 passed (0.14 build `native-20261017T115850Z-1ebb48b7`); previously 2927/25 (0.13 build `native-20261016T190005Z-b3139b30`); previously 2925/25 (superseded 0.13 build `native-20261016T181516Z-b8ae88de`); previously 2910/25 (0.12 build `native-20261016T163910Z-d047f2d2`); previously 2710/25 (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
+| Feature matrix | **42/42 covered** (100% feature-weighted, 7475/7475 action-weighted; run `w4b4-case30-20261020081722Z`; previously 7446/7446, run `w4-case31-20261019061339`; previously 7426/7426, run `w3e-case24-20261018051230`; previously 7416/7416, run `w3d-case22-20261018040510`; previously 7413/7413, run `w3b-case21-20261018023823Z`; previously 7411/7411, run `w3-case23-20261018012531Z`) — `gap_inventory/feature-coverage.json` |
+| AP-11 manifest | 30 tables, 6143 expected actions, 0 confirmed, all consistency gates `all_ok` (run `w4b4-case30-20261020081722Z`; previously 27 tables / 6119 actions, previously 24 tables / 6100 actions, previously 23 tables / 6092 actions) — `gap_inventory/ap11-campaign.json` |
+| Latest verified build | `native-20261018T055505Z-39f20180` (0.15) via `scripts/Build-Native.ps1` from `main` @ `ed0b97b` (2026-10-18): both ZIPs (`CT2Trainer-0.15-source.zip` sha256 `5d5a85f6…`, `CT2Trainer-0.15-windows-portable.zip` sha256 `cfcc8e06…`), in-build suite 3057 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; both ZIPs carry the elaborated release READMEs and the changelog with the 0.15 + 0.14 + 0.13 entries. 0.15 ships the prefix-cut byte-patch validation (the 0.14-ext2 Great Circle field finding: Stealth Mode and No Reload use `db 90 E9` over a 6-byte conditional jump, now proven at link time and re-verified at stage time) plus the full Wave 3 feature set on top of the 0.14 content. Previous: `native-20261017T115850Z-1ebb48b7` (0.14, in-build 2932/25); `native-20261016T190005Z-b3139b30` (0.13, in-build 2927/25); `native-20261016T181516Z-b8ae88de` (0.13 pre module-snapshot fallback, in-build 2925/25); `native-20261016T163910Z-d047f2d2` (0.12, in-build 2910/25); `native-20261016T161905Z-e8ef67a0` (0.12, byte-identical re-cut); `native-20261016T154141Z-2de774ab` (0.12 pre release-docs); `native-20261012T092729Z-2d8aaf12` (0.11, in-build 2710/25); `native-20261011T121914Z-bfc5fc11` (0.10, in-build 2671/25); `native-20261010T172336Z-ffe35eb0` (rc2, in-build 2617/25, `api-prototypes.json` present in both EXE payload inventories, user-tested portable) |
 | User-tested portable | run `native-20261010T165731Z-3d1da645`: converter run + generated trainer verified by the user on a machine without CE/Python |
 | Reference-corpus assessment (2026-10-13) | 151 local-only reference tables: baseline 117,019 plan entries, 95,167 supported (incl. 46,987 staged), **21,852 blocked**, 4 whole-table compile errors (run `ref-assessment`); after W1-D (WP-25) + W1-C (WP-22/23): **21,851 of 117,255 blocked**, 3 whole-table compile errors — Octopath compiles (227 supported / 9 blocked, 24 duplicate-ID warnings), 20XX fully supported (10/10), SuperMeatBoy refused with a named legacy-binary error (catalog re-run 2026-10-13); after W1-B + W1-A + W1-E: **10,892 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy legacy binary only; AtomicHeart `$process` closed by WP-19, Cyberpunk `@@` by WP-20) (catalog re-run 2026-10-14); after W2-A (WP-27/32/33/34): **9,962 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy only; catalog re-run 2026-10-14, `blocked-catalog-w2a.json`; −930 blocked, 0 supported regressions, +197 previously masked records now surface the named missing-target reason); after W2-B + W2-C (WP-28/29/31/35 + WP-30/36): **7,577 of 117,624 blocked** (−2,385, 0 supported regressions; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-16, `blocked-catalog-w2final.json`); after W4 B1–B3 (WP-43/44, WP-46 part 1, WP-47/55, WP-45/56, WP-51/48, WP-52): **3,632 of 117,624 blocked** (−3,945, supported 113,992 incl. 58,018 staged; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-19, `blocked-catalog-w4final.json`); consolidated assessment `documentation/reference-gap-assessment.md`, closure plan `plans/reference-closure-continuation.md` (WP-19…WP-42) |
 
@@ -170,13 +175,14 @@ copy <scratch3>/ap11-campaign.json gap_inventory/ap11-campaign.json
 
 The committed artifacts are the reference; gate:3
 (`tests/test_native_repro_chain.py`) re-runs the full chain and compares.
-Corpus: 27 synthetic case tables (`TableReferences/case-01.ct` …
+Corpus: 30 synthetic case tables (`TableReferences/case-01.ct` …
 `case-14.ct`, `case-15.ct`, `case-16.ct`, `case-17.ct`, `case-18.ct`,
 `case-19.ct`, `case-20.ct`, `case-21.ct`, `case-22.ct`, `case-23.ct`,
-`case-24.ct`, `case-26.ct`, `case-27.ct`, `case-31.ct`; case-to-origin
-mapping in `TableReferences/README.md`), 143 distinct SHA-256 hashes
-collapsed to 27 pinned cases, 6119 expected actions (run
-`w4-case31-20261019061339`).
+`case-24.ct`, `case-26.ct`, `case-27.ct`, `case-28.ct`, `case-29.ct`,
+`case-30.ct`, `case-31.ct`; case-to-origin mapping in
+`TableReferences/README.md`), 143 distinct SHA-256 hashes collapsed
+to 30 pinned cases, 6143 expected actions (run
+`w4b4-case30-20261020081722Z`).
 
 ## 4. Prioritized open work
 
