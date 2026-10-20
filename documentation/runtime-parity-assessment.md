@@ -41,7 +41,8 @@ the census below was root-caused by targeted provider lookups.
 (GOAL-2 measurement, auto process-detection) stood at 7,577 /
 117,624 with one whole-table error (SuperMeatBoy legacy binary) at
 this assessment's cut (2026-10-18; the post-W4 re-run of 2026-10-19
-measures 3,632 / 117,624); the
+measures 3,632 / 117,624; the post-W4-B4 re-run of 2026-10-20
+measures 2,698 / 117,624); the
 two views differ only in process resolution of the 31 tables CE
 stores without a unique EXE name. The canonical catalog remains the
 authoritative closure metric; this census is the feature-planning
