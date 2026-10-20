@@ -44,7 +44,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(_PKG_DIR))
 REFERENCE_INVENTORY = os.path.join(REPO_ROOT, "tests", "fixtures",
                                    "reference-inventory.json")
 
-# Pinned start corpus (AP-10): 27 tables, 7 of them byte-pinned in
+# Pinned start corpus (AP-10): 30 tables, 7 of them byte-pinned in
 # tests/fixtures/reference-inventory.json. Paths relative to the corpus root, "/".
 PINNED = [
     "case-01.ct",
@@ -73,6 +73,9 @@ PINNED = [
     "case-24.ct",
     "case-26.ct",
     "case-27.ct",
+    "case-28.ct",
+    "case-29.ct",
+    "case-30.ct",
     "case-31.ct",
 ]
 

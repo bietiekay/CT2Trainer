@@ -91,7 +91,7 @@ class FeatureMatrixTests(unittest.TestCase):
     def test_denominator_facts_are_pinned(self):
         document = self._run_in_tmp()
         denom = self.report["denominator"]
-        self.assertEqual(denom["expected_actions"], 6119)
+        self.assertEqual(denom["expected_actions"], 6143)
         self.assertEqual(denom["confirmed_game_effect_actions"], 0)
         self.assertEqual(
             sum(denom["category_counts"].values()),
@@ -101,15 +101,15 @@ class FeatureMatrixTests(unittest.TestCase):
         self.assertTrue(by_name["expected_actions"]["ok"])
         self.assertTrue(by_name["confirmed_game_effect_zero"]["ok"])
         self.assertTrue(by_name["category_counts_sum"]["ok"])
-        # The pinned top gap is cross_record_symbol with 3387 records.
+        # The pinned top gap is cross_record_symbol with 3403 records.
         self.assertEqual(self.report["top_gaps_pinned"][0]["gap"],
                          "cross_record_symbol")
         self.assertEqual(self.report["top_gaps_pinned"][0]["affected_records"],
-                         3395)
+                         3403)
         self.assertTrue(by_name["top_gaps_pinned_match"]["ok"])
         matrix = document["feature_matrix"]
         self.assertEqual(matrix["cross_record_symbol"]["affected_records"],
-                         3395)
+                         3403)
 
     def test_feature_matrix_covers_every_gap_class_and_gate(self):
         document = self._run_in_tmp()
@@ -200,7 +200,7 @@ class FeatureMatrixTests(unittest.TestCase):
             coverage["feature_weighted_coverage_percent"], 90.0)
         self.assertTrue(coverage["goal_reached"])
         # The gap report's AP-11 runtime-confirmation flag is a separate
-        # end goal (0/6119 confirmed real-game actions) and stays
+        # end goal (0/6143 confirmed real-game actions) and stays
         # "NOT REACHED" until real-game evidence exists.
         self.assertEqual(self.report["denominator"]["goal_90_percent"],
                          "NOT REACHED")
@@ -209,15 +209,15 @@ class FeatureMatrixTests(unittest.TestCase):
         self.assertEqual(coverage["features_partial"], 0)
         self.assertEqual(coverage["features_missing"], 0)
         # Action weighting over the 39 non-AP-11 gap classes.
-        self.assertEqual(coverage["actions_weight_in_scope"], 7446)
+        self.assertEqual(coverage["actions_weight_in_scope"], 7475)
         self.assertEqual(coverage["actions_weight_ap11_excluded"], 0)
         self.assertEqual(
-            coverage["actions_weight_covered"], 7446)
+            coverage["actions_weight_covered"], 7475)
         self.assertAlmostEqual(
             coverage["feature_weighted_coverage_percent"], 100.0,
             delta=0.01)
         self.assertAlmostEqual(
-            coverage["action_weighted_coverage_percent"], 7446 / 7446 * 100,
+            coverage["action_weighted_coverage_percent"], 7475 / 7475 * 100,
             delta=0.01)
 
     def test_top10_priority_is_empty_when_all_in_scope_covered(self):

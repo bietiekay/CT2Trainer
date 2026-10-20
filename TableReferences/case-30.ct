@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-30 (WP-49/50 + UDS - cycle / dynamic-script-parent pack, AtomicHeart + Octopath2 style).
+     Module ct2synth30.exe.
+     Records 70/71 pin the WP-49 self-provision shape (AtomicHeart 239469/239470 style): 70 allocs a
+     cave, registers SynthCycBase30 and defines the same name as its own positional label; 71 is the
+     keep-loser duplicate provider (registers the same symbol from a second alloc). Pre-WP-49 the
+     WP-28 label re-declaration adds the symbol to 70's requires, keep-first blocks 71, and 70 is
+     left with a self-dependency -> both blocked (70: exact cycle reason, 71: duplicate reason) and
+     consumer 72 cascades with "Required symbol provider is blocked.". Post-WP-49 the self-edge is
+     excluded: 70 stays supported via self-provision, 71 stays blocked (duplicate), 72 gains a
+     dependency on 70.
+     Records 73/74 pin the TRUE cross-record cycle that must STAY blocked (each asserts into the
+     other's registered cave; exact cycle reason on both, no cascade because nothing else requires
+     their symbols).
+     Record 75 consumes the UDS-defined base SynthUdsBase30 (WP-46 part 1 shape, supported both
+     before and after).
+     Records 76-79 pin the WP-50 dynamic-script-parent shape (Octopath2 id=10050/23492 style):
+     script 76 (record-Lua preamble binding local mr = {AddressList['DynTarget30']}, ENABLE
+     mr[1].address = readQword(...), DISABLE mr[1].address = nil) writes heading 77's runtime
+     address; heading 77 is addressless (moHideChildren) with relative children 78/79 (+220/+240)
+     that are pre-WP-50 blocked with "Relative address has no address-bearing ancestor." and
+     post-WP-50 resolve through the generalized address_provider marker {provider_id: 76,
+     symbol: null} on the target. 
+Pinned at the W4 B4 integration. -->
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>70</ID>
+      <Description>"self-providing pointer script (kept)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(SynthCycCave70, 8)
+registersymbol(SynthCycBase30)
+SynthCycBase30:
+dq 0
+[DISABLE]
+unregistersymbol(SynthCycBase30)
+dealloc(SynthCycCave70)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>71</ID>
+      <Description>"duplicate provider (keep-first loser)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(SynthCycDup30, 8)
+label(SynthCycBase30)
+registersymbol(SynthCycBase30)
+SynthCycBase30:
+dq 0
+[DISABLE]
+unregistersymbol(SynthCycBase30)
+dealloc(SynthCycDup30)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>72</ID>
+      <Description>"self-provision consumer int"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>SynthCycBase30+4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>73</ID>
+      <Description>"cycle record C (requires D)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(SynthCycC30, 8)
+registersymbol(SynthCycC30)
+assert(SynthCycD30+4, 00 00 00 00)
+[DISABLE]
+unregistersymbol(SynthCycC30)
+dealloc(SynthCycC30)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>74</ID>
+      <Description>"cycle record D (requires C)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+alloc(SynthCycD30, 8)
+registersymbol(SynthCycD30)
+assert(SynthCycC30+4, 00 00 00 00)
+[DISABLE]
+unregistersymbol(SynthCycD30)
+dealloc(SynthCycD30)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>75</ID>
+      <Description>"UDS consumer int"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>SynthUdsBase30+4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>76</ID>
+      <Description>"dynamic base script (record Lua address write)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <Address/>
+      <AssemblerScript>{$lua}
+local mr = {AddressList['DynTarget30']}
+[ENABLE]
+mr[1].address = readQword('ct2synth30.exe+4200')
+[DISABLE]
+mr[1].address = nil
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>77</ID>
+      <Description>"DynTarget30"</Description>
+      <Options moHideChildren="1"/>
+      <Color>008080</Color>
+      <GroupHeader>1</GroupHeader>
+      <Address/>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>78</ID>
+          <Description>"dyn child m_nCharacterID"</Description>
+          <Color>0075EA</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>+220</Address>
+          <Value>0</Value>
+        </CheatEntry>
+        <CheatEntry>
+          <ID>79</ID>
+          <Description>"dyn child m_cMasterParameter.HP"</Description>
+          <Color>0075EA</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>+240</Address>
+          <Value>0</Value>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+  </CheatEntries>
+  <UserdefinedSymbols>
+    <SymbolEntry><Name>SynthUdsBase30</Name><Address>0x140006000</Address></SymbolEntry>
+  </UserdefinedSymbols>
+</CheatTable>

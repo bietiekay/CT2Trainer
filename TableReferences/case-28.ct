@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-28 (WP-46 part 2 - one-shot Lua provider pack, P3Reload style). Module ct2synth28.exe.
+     One-shot scan provider (createMemScan/firstScan/waitTillDone/Result/registerSymbol, empty
+     [DISABLE]) + two consumers (pre-WP-46p2: register-only one-shot evidence stays unproven ->
+     consumers blocked with the named no-unique-provider reason; post-WP-46p2: adopted -> supported
+     with dependency_ids on the one-shot owner, release-on-detach at owner-scope retirement);
+     Register.symbol helper-form one-shot provider + consumer (helper form unrecognized
+     pre-WP-46p2); contested one-shot provider pair (both adopted post-WP-46p2 -> ordinary
+     keep-first duplicate block on the later record, consumer binds to the kept one); and a
+     non-one-shot register-only record that must STAY unproven (fail-closed boundary, its consumer
+     stays blocked). WP-48/51/52 shapes were already covered by the B3 integration; this case pins
+     the WP-46 part 2 one-shot handover. 
+Pinned at the W4 B4 integration. -->
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>50</ID>
+      <Description>"one-shot scan provider"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+local scan = createMemScan()
+scan:firstScan('48 8B 9F ?? ?? 00 00')
+scan:waitTillDone()
+registerSymbol('SynthBase28', scan.Result.getAddress(0))
+{$asm}
+[DISABLE]
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>51</ID>
+      <Description>"scan consumer int"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>SynthBase28+4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>52</ID>
+      <Description>"scan consumer float"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Float</VariableType>
+      <Address>[SynthBase28]+8</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>53</ID>
+      <Description>"helper-form one-shot provider"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+Register.symbol('SynthHelper28', readQword('ct2synth28.exe+4100'))
+{$asm}
+[DISABLE]
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>54</ID>
+      <Description>"helper consumer int"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>SynthHelper28+2</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>55</ID>
+      <Description>"contested provider A"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+registerSymbol('SynthContest28', 0x140007000)
+{$asm}
+[DISABLE]
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>56</ID>
+      <Description>"contested provider B"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+registerSymbol('SynthContest28', 0x140007100)
+{$asm}
+[DISABLE]
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>57</ID>
+      <Description>"contested consumer int"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>SynthContest28+4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>58</ID>
+      <Description>"register-only provider (non-one-shot)"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+registerSymbol('SynthOnly28', 0x140007200)
+{$asm}
+alloc(synthOnlyCave28, 8)
+[DISABLE]
+dealloc(synthOnlyCave28)</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>59</ID>
+      <Description>"orphan consumer int"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>SynthOnly28+4</Address>
+      <Value>0</Value>
+    </CheatEntry>
+  </CheatEntries>
+</CheatTable>

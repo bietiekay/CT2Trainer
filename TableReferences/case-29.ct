@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Draft: case-29 (WP-53/54 - hotkeys + table-Lua phase 2 pack, Ace7 style). Module ct2synth29.exe.
+     Inert credits script (comments-only ENABLE; WP-44 demotion to supported no-action); plain
+     moHideChildren group heading with an Activate hotkey Alt+Insert (WP-53: pre-WP-53 the binding
+     is refused with the named no-activation-action reason, post-WP-53 it toggles the group's own
+     state WITHOUT child propagation - CE parity); flagged group (moActivateChildrenAsWell) with an
+     Activate hotkey Alt+Home (WP-53: cascades through the existing parent-activation path);
+     table-level LuaScript with a persistent createTimer (table lifetime), a table-scoped
+     registerSymbol (WP-54: pre-WP-54 named refusal 'Table Lua writes the symbol table', post-WP-54
+     admitted -> plan table_lua_symbols + consumer 66 supported) and a table global consumed by
+     dependent record script 65 (WP-54: pre-WP-54 the record-scope replay of the table source is
+     refused by the scheduler checkpoint, post-WP-54 scheduler-free replay via inert stubs). 
+Pinned at the W4 B4 integration. -->
+<CheatTable CheatEngineTableVersion="46">
+  <CheatEntries>
+    <CheatEntry>
+      <ID>60</ID>
+      <Description>"credits (inert, comments only)"</Description>
+      <Color>0075EA</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{ Synth credits header - no actions in this record. }
+[DISABLE]
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>61</ID>
+      <Description>"[Stats] plain group (moHideChildren only)"</Description>
+      <Options moHideChildren="1"/>
+      <Color>FF8000</Color>
+      <GroupHeader>1</GroupHeader>
+      <Hotkeys>
+        <Hotkey>
+          <Action>Activate</Action>
+          <Keys>
+            <Key>18</Key>
+            <Key>45</Key>
+          </Keys>
+          <ID>0</ID>
+          <ActivateSound>Activate</ActivateSound>
+        </Hotkey>
+      </Hotkeys>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>62</ID>
+          <Description>"stats child value"</Description>
+          <Color>0075EA</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>140003000</Address>
+          <Value>0</Value>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>63</ID>
+      <Description>"[Battle] flagged group (moActivateChildrenAsWell)"</Description>
+      <Options moActivateChildrenAsWell="1"/>
+      <Color>FF8000</Color>
+      <GroupHeader>1</GroupHeader>
+      <Hotkeys>
+        <Hotkey>
+          <Action>Activate</Action>
+          <Keys>
+            <Key>18</Key>
+            <Key>36</Key>
+          </Keys>
+          <ID>0</ID>
+          <ActivateSound>Activate</ActivateSound>
+        </Hotkey>
+      </Hotkeys>
+      <CheatEntries>
+        <CheatEntry>
+          <ID>64</ID>
+          <Description>"battle child value"</Description>
+          <Color>0075EA</Color>
+          <VariableType>4 Bytes</VariableType>
+          <Address>140003100</Address>
+          <Value>0</Value>
+        </CheatEntry>
+      </CheatEntries>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>65</ID>
+      <Description>"table-global consumer script"</Description>
+      <Color>FF8080</Color>
+      <VariableType>Auto Assembler Script</VariableType>
+      <AssemblerScript>[ENABLE]
+{$lua}
+local g = synthTableGlobal29
+local present = (g ~= nil)
+{$asm}
+[DISABLE]
+</AssemblerScript>
+    </CheatEntry>
+    <CheatEntry>
+      <ID>66</ID>
+      <Description>"table-symbol consumer int"</Description>
+      <Color>0075EA</Color>
+      <VariableType>4 Bytes</VariableType>
+      <Address>SynthTableSym29+8</Address>
+      <Value>0</Value>
+    </CheatEntry>
+  </CheatEntries>
+  <LuaScript>
+local timer29 = createTimer()
+timer29.onTimer = function(timer)
+  -- persistent table-scope timer (table lifetime)
+end
+timer29.interval = 500
+registerSymbol('SynthTableSym29', 0x140004000)
+synthTableGlobal29 = 'SynthTableGlobal29'
+</LuaScript>
+</CheatTable>

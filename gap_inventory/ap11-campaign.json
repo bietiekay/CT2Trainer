@@ -3,34 +3,34 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 27,
+    "actual": 30,
     "check": "pinned_table_count",
-    "expected": 27,
+    "expected": 30,
     "ok": true
    },
    {
-    "actual": 6119,
+    "actual": 6143,
     "check": "expected_actions",
-    "expected": 6119,
+    "expected": 6143,
     "ok": true
    },
    {
     "actual": {
      "custom_value": 4,
      "navigation": 2,
-     "one_shot": 1724,
-     "persistent_script": 466,
+     "one_shot": 1730,
+     "persistent_script": 472,
      "string_write": 732,
-     "value_freeze": 3193
+     "value_freeze": 3205
     },
     "check": "category_counts",
     "expected": {
      "custom_value": 4,
      "navigation": 2,
-     "one_shot": 1724,
-     "persistent_script": 466,
+     "one_shot": 1730,
+     "persistent_script": 472,
      "string_write": 732,
-     "value_freeze": 3193
+     "value_freeze": 3205
     },
     "ok": true
    },
@@ -149,6 +149,18 @@
       "ok": true
      },
      {
+      "name": "case-28.ct",
+      "ok": true
+     },
+     {
+      "name": "case-29.ct",
+      "ok": true
+     },
+     {
+      "name": "case-30.ct",
+      "ok": true
+     },
+     {
       "name": "case-31.ct",
       "ok": true
      }
@@ -168,6 +180,7 @@
      "1ab46a835ba1c8b016ff05e85aaab9678ed6f25c4bf7d96fe7ba38632435fcb0",
      "1f4ee77ea9b1e3d06ace85551fdbfd7e9662895485e5ea43dbd18559d3c5acbf",
      "2695fb5735c61f817358bf94ce1c893f30efd7342f9e8d44de979e1e5e3f0bb7",
+     "35a6000f317c23197dda3fcce9b525b21072b041df7dd5b04e58a56ef3a2098e",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
      "5bc013eb2a8215fecae039b4d514968a3ac8d75b22e236786e4a7f7a52cf881b",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
@@ -177,6 +190,7 @@
      "80690e8265e51cfe031ea02dbdd7bf2aeae898da034931f037044cbc930a3f7a",
      "80ecb65161b341a68f1f228504577ea9b70b381023187201f791c6ffac99249d",
      "893f961c5b36ad0c923bec3a3e138508086068a6cc970fc5f7fb6ff8487f0f49",
+     "89ff424316f7687a3fcd27509b21cdf747758a57e045c64300eb1f61ad1e5289",
      "a7f9c7aebe65fca7fe549bb5d00cf6a5e76643f528cbef7a04957662fa145ffb",
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
@@ -188,7 +202,8 @@
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
-     "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8"
+     "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8",
+     "f45e68378b3959cf43016ba4d94415af256c783e308c825152f0848f2d90ce07"
     ],
     "check": "inventory_covers_campaign_shas",
     "expected": [
@@ -198,6 +213,7 @@
      "1ab46a835ba1c8b016ff05e85aaab9678ed6f25c4bf7d96fe7ba38632435fcb0",
      "1f4ee77ea9b1e3d06ace85551fdbfd7e9662895485e5ea43dbd18559d3c5acbf",
      "2695fb5735c61f817358bf94ce1c893f30efd7342f9e8d44de979e1e5e3f0bb7",
+     "35a6000f317c23197dda3fcce9b525b21072b041df7dd5b04e58a56ef3a2098e",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
      "5bc013eb2a8215fecae039b4d514968a3ac8d75b22e236786e4a7f7a52cf881b",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
@@ -207,6 +223,7 @@
      "80690e8265e51cfe031ea02dbdd7bf2aeae898da034931f037044cbc930a3f7a",
      "80ecb65161b341a68f1f228504577ea9b70b381023187201f791c6ffac99249d",
      "893f961c5b36ad0c923bec3a3e138508086068a6cc970fc5f7fb6ff8487f0f49",
+     "89ff424316f7687a3fcd27509b21cdf747758a57e045c64300eb1f61ad1e5289",
      "a7f9c7aebe65fca7fe549bb5d00cf6a5e76643f528cbef7a04957662fa145ffb",
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
@@ -218,7 +235,8 @@
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
-     "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8"
+     "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8",
+     "f45e68378b3959cf43016ba4d94415af256c783e308c825152f0848f2d90ce07"
     ],
     "ok": true
    },
@@ -252,28 +270,28 @@
   "category_counts": {
    "custom_value": 4,
    "navigation": 2,
-   "one_shot": 1724,
-   "persistent_script": 466,
+   "one_shot": 1730,
+   "persistent_script": 472,
    "string_write": 732,
-   "value_freeze": 3193
+   "value_freeze": 3205
   },
   "confirmed_game_effect_actions": 0,
-  "expected_actions": 6119,
+  "expected_actions": 6143,
   "goal_90_percent": "NOT REACHED",
-  "unique_tables": 27
+  "unique_tables": 30
  },
- "generated": "run w4-case31-20261019061339",
+ "generated": "run w4b4-case30-20261020081722Z",
  "lane": "AP-11 game campaign plan (read-only, static)",
- "run_id": "w4-case31-20261019061339",
+ "run_id": "w4b4-case30-20261020081722Z",
  "schema": "ap11-campaign/v1",
  "source": {
   "corpus_root": "C:\\Users\\xboxl\\code\\CT2Trainer\\TableReferences",
   "feature_coverage": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\feature-coverage.json",
-  "feature_coverage_sha256": "23853435ac1c177eab98ab0850f7d8fdf751800fe4d50caf63c9ba3a1011dd86",
+  "feature_coverage_sha256": "4c1ca1856fc2c8b2b1f528b38377c8abd71476a5feba23f03968352c7d642340",
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "f20bbaf3694469a9375135a0db0f3417f98686b17b60f2c9e8c8ebd6267fb3e7",
+  "gap_report_sha256": "ac58b2a3ab18292518856905e1fc39b905688cde4bfd018c401db59f8697869d",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "b7bca856589b51aad42ddaec6d2f65fd222b92219000e03e3d4ef16f003584fd"
+  "inventory_sha256": "5b883c999929a0e31d7a16fd849dc6260addd78490bd6ed9e5dbc4ddedf1f802"
  },
  "tables": [
   {
@@ -6955,6 +6973,95 @@
   {
    "architecture": "unknown",
    "category_counts": {
+    "one_shot": 4,
+    "persistent_script": 1,
+    "value_freeze": 5
+   },
+   "ct_path": "case-28.ct",
+   "ct_sha256": "89ff424316f7687a3fcd27509b21cdf747758a57e045c64300eb1f61ad1e5289",
+   "expected_actions": 10,
+   "name": "case-28.ct",
+   "navigation_excluded": 0,
+   "priority_order": [
+    "value_freeze",
+    "one_shot",
+    "persistent_script"
+   ],
+   "process_candidates": [
+    "ct2synth28.exe"
+   ],
+   "records": {
+    "50": "one_shot",
+    "51": "value_freeze",
+    "52": "value_freeze",
+    "53": "one_shot",
+    "54": "value_freeze",
+    "55": "one_shot",
+    "56": "one_shot",
+    "57": "value_freeze",
+    "58": "persistent_script",
+    "59": "value_freeze"
+   }
+  },
+  {
+   "architecture": "unknown",
+   "category_counts": {
+    "one_shot": 2,
+    "value_freeze": 3
+   },
+   "ct_path": "case-29.ct",
+   "ct_sha256": "f45e68378b3959cf43016ba4d94415af256c783e308c825152f0848f2d90ce07",
+   "expected_actions": 5,
+   "name": "case-29.ct",
+   "navigation_excluded": 0,
+   "priority_order": [
+    "value_freeze",
+    "one_shot"
+   ],
+   "process_candidates": [
+    "ct2synth29.exe"
+   ],
+   "records": {
+    "60": "one_shot",
+    "62": "value_freeze",
+    "64": "value_freeze",
+    "65": "one_shot",
+    "66": "value_freeze"
+   }
+  },
+  {
+   "architecture": "unknown",
+   "category_counts": {
+    "persistent_script": 5,
+    "value_freeze": 4
+   },
+   "ct_path": "case-30.ct",
+   "ct_sha256": "35a6000f317c23197dda3fcce9b525b21072b041df7dd5b04e58a56ef3a2098e",
+   "expected_actions": 9,
+   "name": "case-30.ct",
+   "navigation_excluded": 0,
+   "priority_order": [
+    "value_freeze",
+    "persistent_script"
+   ],
+   "process_candidates": [
+    "ct2synth30.exe"
+   ],
+   "records": {
+    "70": "persistent_script",
+    "71": "persistent_script",
+    "72": "value_freeze",
+    "73": "persistent_script",
+    "74": "persistent_script",
+    "75": "value_freeze",
+    "76": "persistent_script",
+    "78": "value_freeze",
+    "79": "value_freeze"
+   }
+  },
+  {
+   "architecture": "unknown",
+   "category_counts": {
     "persistent_script": 2,
     "value_freeze": 2
    },
@@ -6982,12 +7089,12 @@
   "category_counts": {
    "custom_value": 4,
    "navigation": 2,
-   "one_shot": 1724,
-   "persistent_script": 466,
+   "one_shot": 1730,
+   "persistent_script": 472,
    "string_write": 732,
-   "value_freeze": 3193
+   "value_freeze": 3205
   },
-  "expected_actions": 6119,
-  "tables": 27
+  "expected_actions": 6143,
+  "tables": 30
  }
 }

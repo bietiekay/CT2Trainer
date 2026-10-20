@@ -1,7 +1,7 @@
 """AP-11 campaign plan and report ingestion tests.
 
 Covers the lane tool tools/corpus_denominator/ap11_campaign.py:
-  - manifest: byte-identical reruns, the 27 pinned tables, the 6119-action
+  - manifest: byte-identical reruns, the 30 pinned tables, the 6143-action
     denominator, category counts against the gap report, process
     candidates versus the owned process_detect on the actual CT bytes,
     the fixed priority convention, the per-record map, CT integrity
@@ -147,9 +147,9 @@ class ManifestTests(_Base):
     def test_manifest_contains_fourteen_pinned_tables(self):
         _, document = self._run_manifest(self.base / "out")
         report = _load(GAP_REPORT)
-        self.assertEqual(document["totals"]["tables"], 27)
-        self.assertEqual(document["denominator"]["unique_tables"], 27)
-        self.assertEqual(len(document["tables"]), 27)
+        self.assertEqual(document["totals"]["tables"], 30)
+        self.assertEqual(document["denominator"]["unique_tables"], 30)
+        self.assertEqual(len(document["tables"]), 30)
         self.assertEqual([t["name"] for t in document["tables"]],
                          [t["table"] for t in report["pinned_tables"]])
         for table, source in zip(document["tables"], report["pinned_tables"]):
@@ -161,10 +161,10 @@ class ManifestTests(_Base):
 
     def test_manifest_expected_actions_sum_is_6100(self):
         _, document = self._run_manifest(self.base / "out")
-        self.assertEqual(document["totals"]["expected_actions"], 6119)
-        self.assertEqual(document["denominator"]["expected_actions"], 6119)
+        self.assertEqual(document["totals"]["expected_actions"], 6143)
+        self.assertEqual(document["denominator"]["expected_actions"], 6143)
         self.assertEqual(document["denominator"]["confirmed_game_effect_actions"], 0)
-        self.assertEqual(sum(t["expected_actions"] for t in document["tables"]), 6119)
+        self.assertEqual(sum(t["expected_actions"] for t in document["tables"]), 6143)
 
     def test_manifest_category_counts_match_gap_report(self):
         _, document = self._run_manifest(self.base / "out")
@@ -172,8 +172,8 @@ class ManifestTests(_Base):
         denom = report["denominator"]["category_counts"]
         self.assertEqual(document["totals"]["category_counts"], denom)
         self.assertEqual(denom, {"custom_value": 4, "navigation": 2,
-                                 "one_shot": 1724, "persistent_script": 466,
-                                 "string_write": 732, "value_freeze": 3193})
+                                 "one_shot": 1730, "persistent_script": 472,
+                                 "string_write": 732, "value_freeze": 3205})
         for table, source in zip(document["tables"], report["pinned_tables"]):
             self.assertEqual(table["category_counts"],
                              {c: n for c, n in source["counts"]["categories"].items()
@@ -430,14 +430,14 @@ class ReportIngestionTests(_Base):
         self.assertEqual(trine["process_pid"], 4242)
         self.assertEqual(trine["game_build_id"], "Build367")
         overall = summary["overall"]
-        self.assertEqual(overall["expected_actions"], 6119)
+        self.assertEqual(overall["expected_actions"], 6143)
         self.assertEqual(overall["confirmed_actions"], 2)
-        self.assertEqual(overall["remaining_actions"], 6117)
+        self.assertEqual(overall["remaining_actions"], 6141)
         self.assertAlmostEqual(overall["confirmed_percent"],
-                               100.0 * 2 / 6119, places=2)
+                               100.0 * 2 / 6143, places=2)
         self.assertFalse(overall["goal_reached"])
         # Every campaign table stays visible with its own expected share.
-        self.assertEqual(len(summary["tables"]), 27)
+        self.assertEqual(len(summary["tables"]), 30)
         self.assertEqual(summary["tables"]["case-13.ct"]["expected_actions"], 1)
         self.assertEqual(summary["tables"]["case-23.ct"]["expected_actions"], 3)
         self.assertEqual(summary["tables"]["case-13.ct"]["confirmed_total"], 0)
@@ -457,6 +457,12 @@ class ReportIngestionTests(_Base):
         self.assertEqual(summary["tables"]["case-26.ct"]["confirmed_total"], 0)
         self.assertEqual(summary["tables"]["case-27.ct"]["expected_actions"], 9)
         self.assertEqual(summary["tables"]["case-27.ct"]["confirmed_total"], 0)
+        self.assertEqual(summary["tables"]["case-28.ct"]["expected_actions"], 10)
+        self.assertEqual(summary["tables"]["case-28.ct"]["confirmed_total"], 0)
+        self.assertEqual(summary["tables"]["case-29.ct"]["expected_actions"], 5)
+        self.assertEqual(summary["tables"]["case-29.ct"]["confirmed_total"], 0)
+        self.assertEqual(summary["tables"]["case-30.ct"]["expected_actions"], 9)
+        self.assertEqual(summary["tables"]["case-30.ct"]["confirmed_total"], 0)
         self.assertEqual(summary["tables"]["case-31.ct"]["expected_actions"], 4)
         self.assertEqual(summary["tables"]["case-31.ct"]["confirmed_total"], 0)
         self.assertEqual(summary["ingestion"]["observations_accepted"], 3)

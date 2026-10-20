@@ -21,21 +21,21 @@
   "all_ok": true,
   "checks": [
    {
-    "actual": 27,
+    "actual": 30,
     "check": "pinned_table_count",
-    "expected": 27,
+    "expected": 30,
     "ok": true
    },
    {
-    "actual": 6119,
+    "actual": 6143,
     "check": "expected_actions",
-    "expected": 6119,
+    "expected": 6143,
     "ok": true
    },
    {
-    "actual": 6121,
+    "actual": 6145,
     "check": "category_counts_sum",
-    "expected": 6121,
+    "expected": 6145,
     "ok": true
    },
    {
@@ -46,10 +46,10 @@
    },
    {
     "actual": [
-     3395,
-     1918,
-     1724,
-     227,
+     3403,
+     1925,
+     1730,
+     235,
      36,
      34,
      24,
@@ -59,10 +59,10 @@
     ],
     "check": "top_gaps_pinned_match",
     "expected": [
-     3395,
-     1918,
-     1724,
-     227,
+     3403,
+     1925,
+     1730,
+     235,
      36,
      34,
      24,
@@ -256,6 +256,7 @@
      "1ab46a835ba1c8b016ff05e85aaab9678ed6f25c4bf7d96fe7ba38632435fcb0",
      "1f4ee77ea9b1e3d06ace85551fdbfd7e9662895485e5ea43dbd18559d3c5acbf",
      "2695fb5735c61f817358bf94ce1c893f30efd7342f9e8d44de979e1e5e3f0bb7",
+     "35a6000f317c23197dda3fcce9b525b21072b041df7dd5b04e58a56ef3a2098e",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
      "5bc013eb2a8215fecae039b4d514968a3ac8d75b22e236786e4a7f7a52cf881b",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
@@ -265,6 +266,7 @@
      "80690e8265e51cfe031ea02dbdd7bf2aeae898da034931f037044cbc930a3f7a",
      "80ecb65161b341a68f1f228504577ea9b70b381023187201f791c6ffac99249d",
      "893f961c5b36ad0c923bec3a3e138508086068a6cc970fc5f7fb6ff8487f0f49",
+     "89ff424316f7687a3fcd27509b21cdf747758a57e045c64300eb1f61ad1e5289",
      "a7f9c7aebe65fca7fe549bb5d00cf6a5e76643f528cbef7a04957662fa145ffb",
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
@@ -276,7 +278,8 @@
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
-     "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8"
+     "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8",
+     "f45e68378b3959cf43016ba4d94415af256c783e308c825152f0848f2d90ce07"
     ],
     "check": "pinned_shas_in_inventory",
     "expected": [
@@ -286,6 +289,7 @@
      "1ab46a835ba1c8b016ff05e85aaab9678ed6f25c4bf7d96fe7ba38632435fcb0",
      "1f4ee77ea9b1e3d06ace85551fdbfd7e9662895485e5ea43dbd18559d3c5acbf",
      "2695fb5735c61f817358bf94ce1c893f30efd7342f9e8d44de979e1e5e3f0bb7",
+     "35a6000f317c23197dda3fcce9b525b21072b041df7dd5b04e58a56ef3a2098e",
      "43f28580204c7fb3c18f5a28b4db2d73b112520bda26445db0a886f849a50b1c",
      "5bc013eb2a8215fecae039b4d514968a3ac8d75b22e236786e4a7f7a52cf881b",
      "5d47aa28e1beef64c59665f49ba9e023602f94a8717405b6819cc12bd9f74727",
@@ -295,6 +299,7 @@
      "80690e8265e51cfe031ea02dbdd7bf2aeae898da034931f037044cbc930a3f7a",
      "80ecb65161b341a68f1f228504577ea9b70b381023187201f791c6ffac99249d",
      "893f961c5b36ad0c923bec3a3e138508086068a6cc970fc5f7fb6ff8487f0f49",
+     "89ff424316f7687a3fcd27509b21cdf747758a57e045c64300eb1f61ad1e5289",
      "a7f9c7aebe65fca7fe549bb5d00cf6a5e76643f528cbef7a04957662fa145ffb",
      "a8193c18cc14e2861563b1d9b043c00b49c0dec94e6a33257e0848584092c0a3",
      "b6775e1611e2436e6a7fcf22a0586e18eae2c541d2143329e715179ce668e526",
@@ -306,7 +311,8 @@
      "e7df5b8adfc58b438464045e1c350d9f0be322c51e92f6761101c6168b43364f",
      "f200052a6de08a0cbd3a7ce323710cca0c23444163f5dc87ef861f1e4f4bccf7",
      "f2d48c3b28856f257afd8c728cd1f306a5f176dd826ac13c418f92776353daf1",
-     "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8"
+     "f3f2bc5a4780199e66e34b140e89f556067ef4e811499633418585546e06f7d8",
+     "f45e68378b3959cf43016ba4d94415af256c783e308c825152f0848f2d90ce07"
     ],
     "ok": true
    }
@@ -325,9 +331,9 @@
  "coverage": {
   "action_weighted_coverage_percent": 100.0,
   "actions_weight_ap11_excluded": 0,
-  "actions_weight_covered": 7446,
-  "actions_weight_in_scope": 7446,
-  "actions_weight_total": 7446,
+  "actions_weight_covered": 7475,
+  "actions_weight_in_scope": 7475,
+  "actions_weight_total": 7475,
   "feature_weighted_coverage_percent": 100.0,
   "features_covered": 42,
   "features_excluded_ap11": 4,
@@ -622,7 +628,7 @@
    "status": "covered"
   },
   "cross_record_symbol": {
-   "affected_records": 3395,
+   "affected_records": 3403,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_compiler.py",
@@ -824,7 +830,7 @@
    "status": "covered"
   },
   "lua_host_profile": {
-   "affected_records": 1918,
+   "affected_records": 1925,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_lua.py",
@@ -918,7 +924,7 @@
    "status": "covered"
   },
   "lua_symbol_api": {
-   "affected_records": 227,
+   "affected_records": 235,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_lua.py",
@@ -994,7 +1000,7 @@
    "status": "covered"
   },
   "one_shot_save_contract": {
-   "affected_records": 1724,
+   "affected_records": 1730,
    "ap11_excluded": false,
    "evidence": [
     "tests/test_native_compiler.py",
@@ -1182,15 +1188,15 @@
    "status": "covered"
   }
  },
- "generated": "run w4-case31-20261019061339",
+ "generated": "run w4b4-case30-20261020081722Z",
  "lane": "AP-10 feature matrix and coverage metric (read-only, static)",
- "run_id": "w4-case31-20261019061339",
+ "run_id": "w4b4-case30-20261020081722Z",
  "schema": "corpus-feature-matrix/v1",
  "source": {
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "f20bbaf3694469a9375135a0db0f3417f98686b17b60f2c9e8c8ebd6267fb3e7",
+  "gap_report_sha256": "ac58b2a3ab18292518856905e1fc39b905688cde4bfd018c401db59f8697869d",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
-  "inventory_sha256": "b7bca856589b51aad42ddaec6d2f65fd222b92219000e03e3d4ef16f003584fd"
+  "inventory_sha256": "5b883c999929a0e31d7a16fd849dc6260addd78490bd6ed9e5dbc4ddedf1f802"
  },
  "top10_priority": []
 }
