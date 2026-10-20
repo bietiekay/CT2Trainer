@@ -30,8 +30,8 @@ from .aa_blocks import BlockStructureError, extract_label_definitions
 from .address_expression import (AddressExpressionError,
                                 expression_symbols as advanced_expression_symbols,
                                 parse_expression)
-from .lua_program import (LuaProgramError, has_lua_sections, lua_symbol_provides,
-                          prepare_lua_program, validate_lua_program)
+from .lua_program import (LuaProgramError, has_lua_sections, lua_dynamic_address_targets,
+                          lua_symbol_provides, prepare_lua_program, validate_lua_program)
 from .value_links import RecursiveSetValueError, recursive_write_closure
 from .value_types import (ValueTypeError, parse_profile_value,
                           prepare_value_profile, validate_value_profile)
@@ -498,11 +498,13 @@ def _validate_value_address(entry: dict, allow_empty: bool = False,
     elif profile == "expression/v1":
         parse_expression(entry.get("address"))
         if entry["address"].lstrip().startswith(("+", "-")):
-            # WP-38: a relative expression address is valid only when its
-            # plan-level ancestor walk binds the dynamic address provider of
-            # the nearest marked heading; everything else keeps the existing
-            # named refusal byte-for-byte.
-            if _dynamic_provider_binding(by_id or {}, entry) is None:
+            # WP-38/WP-50: a relative expression address is valid only when
+            # its plan-level ancestor walk binds the dynamic address provider
+            # of the nearest marked ancestor (a symbol provider, or a
+            # symbol-null direct address-write target); everything else keeps
+            # the existing named refusal byte-for-byte.
+            if (_dynamic_provider_binding(by_id or {}, entry) is None
+                    and _dynamic_address_binding(by_id or {}, entry) is None):
                 raise NativeCompileError("Expression-profile addresses must have resolved inherited bases.")
         if entry.get("pointer_offsets") != [] or not isinstance(entry.get("source_address"), str):
             raise NativeCompileError("Expression-profile values require flattened offsets and original address metadata.")
@@ -603,10 +605,15 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
         program = entry.get("program")
         if not isinstance(program, dict):
             continue
+        # WP-49 (GC-E7): a record's own registration satisfies its own
+        # reference to a symbol it provides (CE resolves symbol dependencies
+        # lazily at patch time), so its positional label is never re-declared
+        # as an external requirement — no self-edge, record stays supported.
+        own_provided = {name.casefold() for name in entry.get("provides", [])}
         known = {symbol.casefold() for symbol in entry["requires"]}
         for symbol in program.get("positional_labels", []):
             key = symbol.casefold()
-            if key in known:
+            if key in known or key in own_provided:
                 continue
             if any(provider["id"] != entry["id"] for provider in providers.get(key, [])):
                 entry["requires"].append(symbol)
@@ -617,9 +624,15 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
             if not entry["supported"] or entry["kind"] == "heading":
                 continue
             entry["dependency_ids"] = []
+            # WP-49 (GC-E7): a record's own registration satisfies its own
+            # reference to a symbol it provides; no self-edge is emitted and
+            # the record stays supported regardless of other providers.
+            own_provided = {name.casefold() for name in entry.get("provides", [])}
             for symbol in entry["requires"]:
+                if symbol.casefold() in own_provided:
+                    continue
                 supported = [candidate for candidate in providers.get(symbol.casefold(), [])
-                             if candidate["supported"]]
+                             if candidate["supported"] and candidate["id"] != entry["id"]]
                 # WP-45 (GC-E4): selection-aware provider resolution — a
                 # selected provider wins over the table-wide provider set, so
                 # an explicitly chosen variant serves its dependents.  When no
@@ -740,6 +753,52 @@ def _dynamic_provider_binding(by_id: dict[int, dict], entry: dict) -> tuple[int,
     return None
 
 
+def _dynamic_address_binding(by_id: dict[int, dict], entry: dict):
+    """WP-50: (target_id, provider_id) of a direct address-write binding.
+
+    The walk follows plan parent links to the nearest marked ancestor whose
+    ``address_provider`` marker carries ``symbol: null``; that entry is the
+    target T whose live base the named provider script S writes at runtime.
+    Returns None when the chain carries no such marker (including forged or
+    truncated ancestry).
+    """
+    current_id = entry["id"]
+    visited = {current_id}
+    while True:
+        parent_id = by_id[current_id].get("parent_id")
+        if (parent_id is None or not isinstance(parent_id, int)
+                or parent_id not in by_id or parent_id in visited
+                or len(visited) >= 64):
+            return None
+        visited.add(parent_id)
+        parent = by_id[parent_id]
+        marker = parent.get("address_provider")
+        if (isinstance(marker, dict) and marker.get("symbol") is None
+                and type(marker.get("provider_id")) is int):
+            return (parent["id"], marker["provider_id"])
+        current_id = parent_id
+
+
+def _is_descendant(by_id: dict[int, dict], descendant_id: int, ancestor_id: int) -> bool:
+    """True when descendant_id sits below ancestor_id in the plan tree.
+
+    Bounded parent walk (64 levels, cycle-safe); a missing or broken parent
+    link is not a descendant relation.
+    """
+    current_id = descendant_id
+    visited = {current_id}
+    while True:
+        parent_id = by_id[current_id].get("parent_id")
+        if (parent_id is None or not isinstance(parent_id, int)
+                or parent_id not in by_id or parent_id in visited
+                or len(visited) >= 64):
+            return False
+        visited.add(parent_id)
+        if parent_id == ancestor_id:
+            return True
+        current_id = parent_id
+
+
 def _address_provider_qualifies(provider: dict) -> bool:
     """A proven runtime base: supported addressless script, one export."""
     return (provider["kind"] == "script" and provider["supported"]
@@ -752,13 +811,25 @@ def _adopt_dynamic_address_providers(entries: list[dict], sources: dict[int, Ent
     """Bind blocked relative values to a proven runtime base, in place.
 
     Runs after dependency analysis so the provider's final supported state
-    is known.  Every eligible blocked relative value (the named skip
-    refusal, no source pointer offsets) whose plan ancestor chain reaches a
-    proven addressless provider script through at least one heading is
-    recompiled as an expression-profile value on its raw relative address;
-    the heading closest to the value records the provider binding.  The
-    provider is never auto-selected or auto-enabled: it keeps its ordinary
-    activation path, and the value path gates on its liveness at runtime.
+    is known.  Two proven base shapes are adopted:
+
+    - WP-38 (GC-B6): every eligible blocked relative value (the named skip
+      refusal, no source pointer offsets) whose plan ancestor chain reaches
+      a proven addressless provider script (exactly one proven symbol
+      export) through at least one heading; the heading closest to the
+      value records the symbol binding.
+    - WP-50 (GC-E8): every eligible blocked relative value (the named
+      no-address-bearing-ancestor refusal) whose nearest addressless
+      markable ancestor T (a supported addressless heading or script, never
+      a demoted placeholder) is named by exactly one supported addressless
+      script S whose embedded Lua statically writes T's address through the
+      two bounded AddressList idioms; T records the symbol-null binding.
+
+    The adopted value is recompiled as an expression-profile value on its
+    raw relative address and keeps ``requires: []`` /
+    ``dependency_ids: []``.  The provider is never auto-selected or
+    auto-enabled: it keeps its ordinary activation path, and the value path
+    gates on its liveness at runtime.
 
     Returns the named plan warnings produced by adopted records whose
     linked dropdown target cannot be resolved (WP-45 GC-E9 demotion: the
@@ -768,31 +839,103 @@ def _adopt_dynamic_address_providers(entries: list[dict], sources: dict[int, Ent
     all_sources = tuple(sources.values())
     adopted = []
     adopted_warnings = []
+    # WP-50: static dynamic-address extraction per supported addressless
+    # script record (cached; pure text, both AddressList idioms).
+    dynamic_targets: dict[int, list[str]] = {}
+    for entry in entries:
+        if (entry["supported"] and entry["kind"] == "script"
+                and not entry.get("address") and not entry.get("pointer_offsets")
+                and isinstance(entry.get("lua_program"), dict)
+                and isinstance(entry["lua_program"].get("source"), str)):
+            dynamic_targets[entry["id"]] = lua_dynamic_address_targets(
+                entry["lua_program"]["source"])
+
+    def _wp50_providers(target: dict) -> list[dict]:
+        """Supported addressless scripts whose extraction names the target.
+
+        Neither side may sit below the other (base/provider cycle), and the
+        target's label must be the exact (case-sensitive) description.
+        """
+        providers = []
+        for candidate in entries:
+            if (candidate["id"] == target["id"]
+                    or not candidate["supported"] or candidate["kind"] != "script"
+                    or candidate.get("address") or candidate.get("pointer_offsets")
+                    or target.get("label") not in dynamic_targets.get(candidate["id"], [])):
+                continue
+            if (_is_descendant(by_id, candidate["id"], target["id"])
+                    or _is_descendant(by_id, target["id"], candidate["id"])):
+                continue
+            providers.append(candidate)
+        return providers
+
     for entry in entries:
         if (entry["kind"] != "blocked" or entry.get("source_kind") != "value"
-                or entry.get("reason") != "Relative address cannot skip an addressless script/value ancestor."
                 or sources[entry["id"]].pointer_offsets):
             continue
-        heading = None
+        reason = entry.get("reason")
+        marker_target = None
         provider = None
-        current_id = entry["id"]
-        visited = {current_id}
-        while True:
-            parent_id = by_id[current_id].get("parent_id")
-            if (parent_id is None or not isinstance(parent_id, int)
-                    or parent_id not in by_id or parent_id in visited
-                    or len(visited) >= 64):
-                break
-            visited.add(parent_id)
-            parent = by_id[parent_id]
-            if parent["kind"] == "heading":
-                if heading is None:
-                    heading = parent
-            else:
-                provider = parent
-                break
-            current_id = parent_id
-        if heading is None or provider is None or not _address_provider_qualifies(provider):
+        symbol = None
+        if reason == "Relative address cannot skip an addressless script/value ancestor.":
+            # WP-38: the nearest heading records the binding; the provider
+            # must be exactly the first non-heading ancestor.
+            heading = None
+            current_id = entry["id"]
+            visited = {current_id}
+            while True:
+                parent_id = by_id[current_id].get("parent_id")
+                if (parent_id is None or not isinstance(parent_id, int)
+                        or parent_id not in by_id or parent_id in visited
+                        or len(visited) >= 64):
+                    break
+                visited.add(parent_id)
+                parent = by_id[parent_id]
+                if parent["kind"] == "heading":
+                    if heading is None:
+                        heading = parent
+                else:
+                    provider = parent
+                    break
+                current_id = parent_id
+            if heading is None or provider is None or not _address_provider_qualifies(provider):
+                continue
+            marker_target, symbol = heading, provider["provides"][0]
+        elif reason == "Relative address has no address-bearing ancestor.":
+            # WP-50: the target is the nearest addressless markable
+            # ancestor; exactly one supported script's static extraction
+            # must name it.
+            target = None
+            current_id = entry["id"]
+            visited = {current_id}
+            while True:
+                parent_id = by_id[current_id].get("parent_id")
+                if (parent_id is None or not isinstance(parent_id, int)
+                        or parent_id not in by_id or parent_id in visited
+                        or len(visited) >= 64):
+                    break
+                visited.add(parent_id)
+                parent = by_id[parent_id]
+                if (parent["kind"] in {"heading", "script"} and parent["supported"]
+                        and not parent.get("address") and not parent.get("pointer_offsets")
+                        and not _is_addressless_placeholder(parent)):
+                    target = parent
+                    break
+                current_id = parent_id
+            if target is None:
+                continue
+            providers = _wp50_providers(target)
+            if len(providers) != 1:
+                continue
+            provider, marker_target, symbol = providers[0], target, None
+        else:
+            continue
+        # One marker per marker record: an already-bound heading keeps its
+        # first binding (a colliding second shape would change the live
+        # base of the first shape's children); the identical marker is
+        # idempotent for sibling values.
+        desired_marker = {"provider_id": provider["id"], "symbol": symbol}
+        if marker_target.get("address_provider") not in (None, desired_marker):
             continue
         source = sources[entry["id"]]
         profile = None
@@ -846,8 +989,8 @@ def _adopt_dynamic_address_providers(entries: list[dict], sources: dict[int, Ent
             entry["dropdown"] = {"choices": [], "read_only": False}
             entry.pop("value_profile", None)
             continue
-        heading["address_provider"] = {"provider_id": provider["id"],
-                                       "symbol": provider["provides"][0]}
+        marker_target["address_provider"] = {"provider_id": provider["id"],
+                                             "symbol": symbol}
         adopted.append(entry["id"])
     if not adopted:
         return []
@@ -1626,23 +1769,35 @@ def validate_plan(plan: dict) -> None:
                     validate_symbol(symbol)
                 if len({symbol.casefold() for symbol in entry[key]}) != len(entry[key]):
                     raise NativeCompileError("Duplicate symbol requirement/provider.")
-            # WP-38: the additive address_provider field is shape-checked here
-            # (it must ride on a supported addressless heading); the provider
-            # cross-checks run in the plan-wide pass below where the full ID
-            # map is available.
+            # WP-38/WP-50: the additive address_provider field is shape-
+            # checked here (a symbol marker rides on a supported addressless
+            # heading; a symbol-null marker rides on the supported addressless
+            # target itself, heading or script); the provider cross-checks run
+            # in the plan-wide pass below where the full ID map is available.
             marker = entry.get("address_provider")
             if marker is not None:
                 if (not isinstance(marker, dict) or set(marker) != {"provider_id", "symbol"}
                         or type(marker.get("provider_id")) is not int
                         or marker.get("provider_id", -1) < 0
-                        or not isinstance(marker.get("symbol"), str)):
+                        or (marker.get("symbol") is not None
+                            and not isinstance(marker["symbol"], str))):
                     raise NativeCompileError("Invalid dynamic address provider metadata.")
-                if (entry["kind"] != "heading" or not entry["supported"]
-                        or entry.get("address") != "" or entry.get("pointer_offsets") != []
-                        or _is_addressless_placeholder(entry)):
-                    raise NativeCompileError(
-                        "Dynamic address provider requires a supported addressless heading.")
-                validate_symbol(marker["symbol"])
+                if marker["symbol"] is not None:
+                    if (entry["kind"] != "heading" or not entry["supported"]
+                            or entry.get("address") != "" or entry.get("pointer_offsets") != []
+                            or _is_addressless_placeholder(entry)):
+                        raise NativeCompileError(
+                            "Dynamic address provider requires a supported addressless heading.")
+                    validate_symbol(marker["symbol"])
+                else:
+                    # WP-50 (GC-E8): direct address-write provider; the target
+                    # is the addressless record the provider's Lua writes the
+                    # live base into (group heading or addressless script).
+                    if (entry["kind"] not in {"heading", "script"} or not entry["supported"]
+                            or entry.get("address") != "" or entry.get("pointer_offsets") != []
+                            or _is_addressless_placeholder(entry)):
+                        raise NativeCompileError(
+                            "Dynamic address provider requires a supported addressless target record.")
             if ('program' in entry or 'lua_program' in entry) and (not entry['supported'] or entry['kind'] != 'script'):
                 raise NativeCompileError("Executable source profiles require a supported script record.")
             if sum(key in entry for key in ('program','lua_program','global_program')) > 1:
@@ -1883,19 +2038,30 @@ def validate_plan(plan: dict) -> None:
                         or provider.get("pointer_offsets")):
                     raise NativeCompileError(
                         "Dynamic address provider must name a supported addressless script record.")
-                if marker["symbol"].casefold() not in {name.casefold() for name in provider.get("provides", [])}:
-                    raise NativeCompileError("Dynamic address provider does not provide the named symbol.")
-                seen = set()
-                current = provider
-                while current.get("parent_id") is not None:
-                    parent_id = current["parent_id"]
-                    if parent_id == entry["id"]:
+                if marker["symbol"] is not None:
+                    if marker["symbol"].casefold() not in {name.casefold() for name in provider.get("provides", [])}:
+                        raise NativeCompileError("Dynamic address provider does not provide the named symbol.")
+                    if _is_descendant(by_id, provider["id"], entry["id"]):
                         raise NativeCompileError(
                             "Dynamic address provider must not be a descendant of the heading it serves.")
-                    if parent_id not in ids or parent_id in seen or len(seen) >= 64:
-                        break
-                    seen.add(parent_id)
-                    current = by_id[parent_id]
+                else:
+                    # WP-50 (GC-E8): symbol-null marker — the provider's
+                    # embedded Lua must statically name the target record by
+                    # exact description (re-derived from the embedded source,
+                    # both idioms), and neither side may sit below the other
+                    # (base/provider cycle).
+                    lua_source = (provider.get("lua_program") or {}).get("source")
+                    targets = (lua_dynamic_address_targets(lua_source)
+                               if isinstance(lua_source, str) else [])
+                    if entry.get("label") not in targets:
+                        raise NativeCompileError(
+                            "Dynamic address provider does not write the target record's address.")
+                    if _is_descendant(by_id, provider["id"], entry["id"]):
+                        raise NativeCompileError(
+                            "Dynamic address provider must not be a descendant of the target it serves.")
+                    if _is_descendant(by_id, entry["id"], provider["id"]):
+                        raise NativeCompileError(
+                            "Dynamic address target must not be a descendant of its provider.")
             dropdown = entry.get("dropdown")
             if isinstance(dropdown, dict):
                 link_target = dropdown.get("link_target_id")
@@ -1957,6 +2123,12 @@ def validate_plan(plan: dict) -> None:
             if (not isinstance(dependencies, list) or len(dependencies) > MAX_OPERATIONS
                     or any(type(item) is not int or item not in ids for item in dependencies)):
                 raise NativeCompileError("Invalid record dependency IDs.")
+            # WP-49 (GC-E7): a self-edge is a cycle no one-pass plan can order;
+            # the compile-time DFS blocks it and the gate refuses a forged
+            # copy of it in the serialized dependency list.
+            if entry["id"] in dependencies:
+                raise NativeCompileError(
+                    "Record dependency IDs must not contain a self-edge.")
         selected = plan.get("selected_ids")
         if selected is None:
             raise NativeCompileError("Native plans require exact selected record IDs.")
