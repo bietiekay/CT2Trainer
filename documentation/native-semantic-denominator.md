@@ -1,10 +1,20 @@
 # Native semantic denominator (AP-10)
 
-**Run:** `wp14-staged-20261011T093320Z` · **Status:** 0.9.0-rc2 baseline
-extended by WP-14 (2026-10-11; the 2026-10-10 `wpB-cleanroom4-20261010T104008Z`
-run was 13 tables / 5 967 actions and is superseded)
-**Artifacts:** `gap_inventory/inventory.json` (14 pinned tables) and
-`gap_inventory/gap-report.json` (14 pinned tables, record-exact).
+**Current run:** `w4b4-case30-20261020081722Z` · **Status:** October 20, 2026
+(0.16). **Current artifacts:** `gap_inventory/inventory.json`,
+`gap_inventory/gap-report.json`, `gap_inventory/feature-coverage.json`, and
+`gap_inventory/ap11-campaign.json` (30 pinned synthetic tables; 6,143 expected
+actions). Feature coverage is 42/42 in-scope features (100%; 7,475/7,475
+action-weighted). AP-11 has 0 confirmed real-game actions. Runtime acceptance is
+`runtime_unverified: true`. The local-only full-reference static catalog still
+has 2,698 of 117,624 plan entries blocked. This metric is separate from the pinned
+synthetic denominator and its feature matrix.
+
+The detailed table list, count breakdown, and top-gap results in sections 2–3
+are the historical WP-14 snapshot from October 11, 2026 (14 tables / 6,011
+actions). They are retained as historical evidence and do not describe the
+current 30-table run.
+
 **Method:** pure static XML analysis (stdlib, Python 3.12) of the CT
 structure under `TableReferences/` (repo root) —
 strictly read-only, no execution of CT-Lua/AA, no target-process
@@ -43,7 +53,7 @@ expected_actions = records − navigation
   exclusively in the Windows/Deck tests (AP-11) and is by definition **0**
   in this lane.
 
-## 2. Start corpus: 14 pinned tables
+## 2. Historical start corpus: 14 pinned tables (October 11, 2026)
 
 SHA-256 (full values in `gap-report.json → pinned_tables[]`):
 
@@ -72,7 +82,7 @@ case-06, case-13, case-12, case-14) were verified against the corpus:
 **all 7 hash and entry-count checks passed**
 (`reference_verification_all_ok: true`).
 
-## 3. Count results
+## 3. Historical count results (October 11, 2026)
 
 Pinned start corpus (14 tables, 6 011 records, 0 navigation):
 
@@ -100,7 +110,7 @@ Top-10 gaps on the pinned denominator (share of 6 011):
 | 9 | `dropdown_link` | DropDown link | 9 | 0.15% | N-18 |
 | 10 | `managed_method_resolution` | Managed method resolution (IL2CPP) | 8 | 0.13% | N-12 / N-13 / N-14 |
 
-The rest corpus is empty in the current pinned 14-table corpus
+The rest corpus was empty in the historical pinned 14-table corpus
 (`corpus_rest` in the gap report reports zero tables); the table above
 covers the full pinned denominator.
 
@@ -193,16 +203,16 @@ covers the full pinned denominator.
 8. **No goal claim:** all numbers are upper bounds from static analysis.
    Without real game tests, the confirmed fulfillment stays **0%**.
 
-## 6. The 90% goal is NOT reached
+## 6. Historical AP-11 90% goal status (October 11, 2026)
 
-Explicitly: the required 90% fulfillment is **not** reached. Confirmed
-actions (with real game-effect evidence): **0 of 6 011**. Even the most
-generous `statically_assumed` reading (503 records, 8.4% of the pinned
-denominator) is not fulfillment — it has no runtime evidence.
+Historical status: the required 90% AP-11 fulfillment was **not** reached. Confirmed
+actions (with real game-effect evidence): **0 of 6 011** in this historical snapshot. Even the most
+generous `statically_assumed` reading (503 records, 8.4% of that historical pinned
+denominator) was not fulfillment — it had no runtime evidence.
 
 **Missing gates (each hard, not substitutable):**
 
-1. Real game installs/builds of the 14 pinned tables (no installation
+1. Real game installs/builds of the pinned tables (no installation
    exists in this repository).
 2. Actual game effect: ON/OFF, values, freeze, target/controller
    restart, saved wishes, errors/pending, cleanup — per concretely

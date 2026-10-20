@@ -1,11 +1,10 @@
 # CT2Trainer: independent runtime and redistribution
 
-Status: 11 October 2026 (0.9.0-rc2 baseline + WP-14 staged capabilities
-on `native-0.9-staged`).
+Status: October 20, 2026 (0.16; full Wave 4 feature set plus post-release field fixes).
 
 CT2Trainer independently implements the CT converter and Windows trainer.
 Its build and exported source use no CE implementation, patched Lua DLL, resources,
-stubs or drivers. 0.9.0-rc2 is the current baseline. Full CT
+stubs or drivers. 0.9.0-rc2 is a historical baseline. Full CT
 compatibility and Windows/game/Deck acceptance remain required work, not
 a reduced goal satisfied by fixture tests.
 
@@ -15,15 +14,16 @@ execution support. Measured attainment, open points and the verified
 integration boundary are summarized in
 [native-verification.md](native-verification.md) and
 [native-semantic-denominator.md](native-semantic-denominator.md).
-The current baseline integrates shared Restoration limits, String values/
-Freeze/UI, shared literal RW globals and ASCII instruction literals. Static
-IL2CPP file analysis is available in the source CLI (`ct2trainer native
+The 0.16 build includes the complete Wave 4 feature set and the post-release
+WP-58 UI startup fix and Sinking City 2 activation-chain evidence. Its full
+suite passed 3,398 tests with 25 expected skips. The 42/42 feature matrix is
+measured over the 30-table synthetic corpus; the separate local-only static
+catalog of the full real reference corpus has 2,698 of 117,624 plan entries blocked.
+Static IL2CPP file analysis is available in the source CLI (`ct2trainer native
 il2cpp`) and as a frozen binary adapter
 (`--il2cpp-static-pe/--il2cpp-static-metadata/--il2cpp-static-report`);
 both produce bounded read-only reports, and no live managed resolver is
-claimed. The full suite passes 2617 tests with 25 expected skips. Global
-and literal effects, strict recovery and managed game routes remain open
-acceptance work.
+claimed. The 2,617-test / 25-skip count is the historical 0.9.0-rc2 baseline.
 
 ## Permissive components and local maintenance
 
@@ -110,11 +110,15 @@ scan profile currently supports exact byte arrays, not every CE scan mode.
 
 ## Coverage and evidence
 
-The pinned 14-table synthetic corpus measures **6,011 expected actions**
-(records minus navigation; 1,282 groups counted separately) per
-`gap_inventory/gap-report.json`; per-record and per-gap detail is in
+The current 30-table synthetic corpus measures **6,143 expected actions**
+(records minus navigation; 1,291 groups counted separately) per
+`gap_inventory/gap-report.json`. The feature matrix covers 42/42 in-scope
+features (7,475/7,475 action-weighted), but the full real reference corpus is
+not fully supported: the local-only static catalog has 2,698 of 117,624 plan entries blocked. AP-11 has 0 confirmed real-game actions and runtime acceptance remains
+`runtime_unverified: true`. Per-record and per-gap detail is in
 [native-semantic-denominator.md](native-semantic-denominator.md). Static
-admission and synthetic linking do not demonstrate game behavior.
+admission and synthetic linking do not demonstrate game behavior. The October
+11, 2026 figures (14 tables / 6,011 actions) are historical.
 The new candidate is the promotional Lua dialog/browser record of
 case-10 (origin: Senua's Saga Hellblade 2) after EOF acceptance; it has
 no confirmed native GUI/browser API or cheat effect.

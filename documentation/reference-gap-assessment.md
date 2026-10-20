@@ -1,10 +1,18 @@
 # Reference-Table Gap Assessment (151-table reference corpus)
 
-Status: **2026-10-13** — consolidated from four read-only analysis lanes
-(A: dropdowns/values, B: address expressions, C: AA grammar/symbols, D:
-Lua/host/UX) plus root-owned recompilation and CE 7.5 source verification.
-Raw lane reports stay local-only under `reference-assessment/raw/`
-(gitignored); this document is the committed, consolidated assessment.
+Status: **historical baseline, 2026-10-13** — consolidated from four
+read-only analysis lanes plus root-owned recompilation and behavior
+reference verification. Its counts and proposed fixes below describe the
+pre-Wave-1 baseline and are retained as history. Current status
+(2026-10-20): Wave 4 is complete; the feature matrix is 42/42 (7,475/7,475);
+the reference-corpus catalog is 2,698 blocked of 117,624 plan entries
+(114,926 supported, including 58,950 staged; one whole-table error).
+`plans/TRACKING.md` is the current source of truth, and the
+[reference-table roadmap](../plans/reference-table-100-roadmap.md) tracks
+remaining catalog work. Sections 1–8 below are the 2026-10-13 baseline;
+findings and proposed dispositions there are historical unless explicitly
+reconfirmed by the current tracker. Raw lane reports stay local-only under
+`reference-assessment/raw/` (gitignored).
 
 ## 1. Scope and method
 
@@ -21,7 +29,7 @@ blocked with its exact block reason, plus per-table `reason_counts`
 (authoritative totals; the saved entry list is capped at 500/table and is
 used for examples only).
 
-**Machine-level totals (run `ref-assessment`, 2026-10-13):**
+**Historical machine-level totals (run `ref-assessment`, 2026-10-13):**
 
 | Metric | Value |
 | --- | ---: |
@@ -46,8 +54,9 @@ implementation stays clean-room. Verified claims below cite that source.
 
 ## 2. The four whole-table compile failures
 
-One malformed record or table defect currently kills the entire table; the
-whole table's records vanish from supported/blocked accounting.
+At the 2026-10-13 baseline, one malformed record or table defect could
+abort compilation of the entire table, removing its records from the
+supported/blocked accounting.
 
 | Table | Entries | Error | Root cause (verified) |
 | --- | ---: | --- | --- |
@@ -178,9 +187,9 @@ ambiguity resolution) tracked together with the ownership-handover WP.
 
 | Class | Items | Disposition |
 | --- | --- | --- |
-| **True product gaps (fix this cycle)** | `$process` in `validate_plan`; `@@` containment; offset constant-folding; digit-leading module names; `::` managed labels; separator-row dropdown policy; profile-aware linked dropdowns; positional `return` scoping; allocation-only profile; Lua-owned symbol handover; bounded address-expression profile; `dq`/`resb` spans; small grammar items; Lua directive/phase handling; addressless-value demotion; hex-float bit patterns | WPs in `plans/reference-closure-continuation.md` |
+| **True product gaps (fix this cycle)** | `$process` in `validate_plan`; `@@` containment; offset constant-folding; digit-leading module names; `::` managed labels; separator-row dropdown policy; profile-aware linked dropdowns; positional `return` scoping; allocation-only profile; Lua-owned symbol handover; bounded address-expression profile; `dq`/`resb` spans; small grammar items; Lua directive/phase handling; addressless-value demotion; hex-float bit patterns | WPs in `plans/archive/reference-closure-continuation.md` |
 | **Capability design (later milestone)** | runtime dynamic address provider (Octopath2, 327); table-Lua execution on load (49 tables); embedded Forms rendering; `createthread` opening | design-first WPs |
-| **Malformed / authoring defects (keep fail-closed)** | dotted-ident offsets (18), cast/deref offsets (2), symbol-expression offsets (3), SOTTR addressless trees (10), empty-address template records after demotion, comma-decimal dropdown values (25), `??` placeholders (12), hex-styled choice lists (1), out-of-range choices (3), dotted aobscan symbol names (5), string junk in Witcher3 expressions (4), hex-float bit patterns *if* kept (see hex-float WP), unterminated block comment (1), duplicate-ID *re-keying* | current reasons are correct; message polish where noted |
+| **Malformed / authoring defects (keep fail-closed)** | dotted-ident offsets (18), cast/deref offsets (2), symbol-expression offsets (3), SOTTR addressless trees (10), empty-address template records after demotion, comma-decimal dropdown values (25), `??` placeholders (12), hex-styled choice lists (1), out-of-range choices (3), dotted aobscan symbol names (5), string junk in Witcher3 expressions (4), hex-float bit patterns *if* kept (see hex-float WP), unterminated block comment (1), duplicate-ID *re-keying* | baseline disposition; current status is tracked in `plans/TRACKING.md` |
 | **Scope boundaries (declared, no change)** | Forms API / debugger / `createMemoryRecord` Lua APIs; binary CT tables; non-XML content | named fail-closed errors; creator-UI surfacing |
 
 ## 5. Quantified impact summary (if all in-cycle WPs land)

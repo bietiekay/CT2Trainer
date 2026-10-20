@@ -1,6 +1,15 @@
 # CT2Trainer — "Staged Capabilities" Work Package (PRAGMATA-class tables)
 
-**Status:** Plan (2026-10-10) · Baseline: `main` @ `b6c48cc` (0.9.0-rc2, suite
+**ARCHIVED** — Historical plan retained for reference.
+
+
+**Historical plan — WP-14 complete.** Released in 0.10; the original design,
+measurements, and session notes below are retained as history. Current
+project status is maintained in [TRACKING.md](../TRACKING.md). Future
+reference-table work will be scoped in the active
+[reference-table-100-roadmap.md](../reference-table-100-roadmap.md).
+
+Original baseline: `main` @ `b6c48cc` (0.9.0-rc2, suite
 2617 OK / 25 skips) · Working branch for this cycle: **`native-0.9-staged`**
 (created from latest `main`; the `analysis-ce75` branch and untracked
 `analysis/` dir referenced here belonged to the user's local CE7.5
@@ -12,13 +21,13 @@ the session). The user-provided text below is preserved as given; the tail of
 the test plan is truncated in the transmitted copy (see note before §16) and
 §16 is reconstructed from the repository's own documented commands.
 
-## 0. How to use this document
+## 0. Historical notes and original read order
 
 - Read order for the receiving session: `AGENTS.md` →
-  `plans/native-implementation-continuation.md` → this plan →
+  `plans/archive/native-implementation-continuation.md` → this plan →
   `documentation/native-progress.md`, `native-runtime.md`,
   `native-verification.md`, `build.md`.
-- Every number below was **measured** against the current code (2026-10-10)
+- Every number below was **measured** against the code state on 2026-10-10
   and is reproducible with the commands in §16.
 - Clean-room rule (non-negotiable): no CE implementation code may be
   referenced, copied or ported into CT2Trainer sources, tests, docs or
@@ -33,7 +42,7 @@ the test plan is truncated in the transmitted copy (see note before §16) and
   `TableReferences/` contains synthetic tables with documentation-level
   origin mapping only).
 
-## 1. Problem statement
+## 1. Original problem statement (resolved by WP-14)
 
 PRAGMATA.CT (opencheattables.com, CE 7.6+, 7526 lines, **595 `CheatEntry`
 nodes**) is a "multi-step" table: most elements are only usable **after** an
@@ -259,7 +268,7 @@ Corpus plumbing updates (same lane, one commit):
 5. `tools/corpus_denominator/classify.py` — the three new gap-label
    detections (§5).
 
-## 7. Work packages (scope, files, acceptance)
+## 7. Completed work packages (original scope, files, acceptance)
 
 Shared-file rule (AGENTS.md §4): `engine.py`, `compiler.py`, `memory.py`,
 `hooks.py`, `lua_host.py`, `ui.py` may be written by **one** agent at a time.
@@ -452,7 +461,7 @@ Steps:
 6. Docs: `documentation/native-runtime.md` (staged contract, script-parent
    cascade contract, activation-set contract, signed-offset contract),
    `documentation/native-verification.md` (new gate evidence),
-   `plans/native-implementation-continuation.md` (§2 table rows, §5 new
+   `plans/archive/native-implementation-continuation.md` (§2 table rows, §5 new
    package status `WP-14`, §8 log entry), `documentation/native-progress.md`
    (ledger entry with measured numbers: 162/595 → new split), `AGENTS.md`
    (corpus 13 → 14 tables, feature matrix 39 → 42), `CHANGELOG.md`
@@ -474,7 +483,7 @@ Steps:
 | Trainer: "Toggle scripts" master record | n/a | master switch card applying the extracted enable/disable ID set through the engine (dependency order); `Info` shows the set + source |
 | Saved wishes | confirmed ON scripts only | unchanged; a staged child is never a wish, so it is not persisted/replayed independently — its availability always follows the provider |
 
-## 9. Test plan (complete list of new/changed tests)
+## 9. Historical test plan (tests completed with WP-14)
 
 | Test file | Change | Proves |
 | --- | --- | --- |
@@ -490,33 +499,60 @@ Steps:
 > point. Sections §10–§15 are not present in the received text (they are
 > referenced from §5–§7 as §10/§11). The implementing session follows the
 > acceptance criteria in §7–§9 plus the repository's standing protocol
-> (`plans/native-implementation-continuation.md`). §16 below is reconstructed
+> (`plans/archive/native-implementation-continuation.md`). §16 below is reconstructed
 > from the repository's own documented commands.
 
-## 16. Reproducible commands (reconstructed from repository documentation)
+## 16. Historical reproducibility commands (reconstructed from repository documentation)
 
 ```powershell
 # Dev environment (once, offline from dependencies/)
+
+
+
 & .tools\python\python.exe -m venv .tools\native-build-env
 & .tools\native-build-env\Scripts\python.exe -m pip install --no-index --find-links dependencies\native\lupa --find-links dependencies\native\iced-x86 lupa==2.8 iced-x86==1.21.0
 & .tools\native-build-env\Scripts\python.exe tools\native_build.py restore-nasm --output .tools\native-tools
 
 # PRAGMATA reference run (reference input only, outside the repo)
+
+
+
 $env:PYTHONPATH = (Resolve-Path src).Path
 & .tools\native-build-env\Scripts\python.exe -m ct2trainer.native prepare 'C:\Users\xboxl\Downloads\PRAGMATA.CT' --process 'PRAGMATA.exe' --architecture x64 --output <temp-dir>
 
 # Full local test suite
+
+
+
 $env:PYTHONPATH = (Resolve-Path src).Path + ";" + (Resolve-Path tests).Path
 $env:PYTHONIOENCODING = "utf-8"
 $env:CT2TRAINER_NASM = (Resolve-Path .tools\native-tools\nasm.exe).Path
 & .tools\native-build-env\Scripts\python.exe -m unittest discover -s tests -p 'test_native_*.py'
 
 # Denominator chain with a fresh run id (WP-14-E step 4).
+
+
+
 # Stages 2 and 3 refuse to write into the directory that contains their
+
+
+
 # input artifacts, so each stage writes to its own output directory and the
+
+
+
 # result is copied into gap_inventory/. Stage 3 must reference the
+
+
+
 # committed gap_inventory/feature-coverage.json path so the committed
+
+
+
 # manifest's provenance matches the test-side byte-reproducibility rerun.
+
+
+
 & .tools\native-build-env\Scripts\python.exe tools\corpus_denominator\__main__.py --corpus TableReferences --output gap_inventory --run-id <fresh>
 & .tools\native-build-env\Scripts\python.exe tools\corpus_denominator\feature_matrix.py --gap-report gap_inventory\gap-report.json --inventory gap_inventory\inventory.json --output <tmp2> --run-id <fresh>
 Copy-Item <tmp2>\feature-coverage.json gap_inventory\feature-coverage.json

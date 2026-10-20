@@ -1,10 +1,9 @@
 # CT2Trainer usage guide
 
-Status: October 10, 2026.
+Status: October 20, 2026 (0.16).
 
 This guide describes the product behavior of CT2Trainer, the independent
-CT converter and Windows trainer, for private own use. It is
-self-contained: no development ledgers are referenced.
+CT converter and Windows trainer, for private own use. The 0.16 feature matrix covers 42/42 in-scope features over 30 pinned synthetic tables (6,143 expected actions); this does not establish support for the full real reference corpus, where 2,698 of 117,624 plan entries remain blocked in the local-only static catalog. AP-11 has 0 confirmed real-game actions, and runtime acceptance remains `runtime_unverified: true`. It is self-contained: no development ledgers are referenced.
 
 ## 1. Required inputs
 

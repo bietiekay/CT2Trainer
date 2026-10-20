@@ -1,6 +1,17 @@
 # CT2Trainer: `$process` AOB Module Token + Trailing `@F` Resolution (WP-18)
 
-## 1. Current state (verified 2026-10-11)
+**ARCHIVED** — Historical plan retained for reference.
+
+
+**Historical plan — WP-18 complete.** Merged into `main` at `9a76eb8` on
+2026-10-12. The design and pre-implementation investigation below are
+historical; the PRAGMATA reference was subsequently measured at 595/595
+supported, 0 blocked. Current project status is in
+[TRACKING.md](../TRACKING.md); future reference-table work will be scoped in
+the active
+[reference-table-100-roadmap.md](../reference-table-100-roadmap.md).
+
+## 1. Pre-implementation state (verified 2026-10-11)
 
 Reference table `PRAGMATA.CT` (user-owned, `side/reference/PRAGMATA.CT`,
 never committed to the repo): 595 records, 586 supported, 9 blocked.
@@ -112,7 +123,7 @@ fail-closed discipline:
    shape without a resolvable forward target keeps its exact named error;
    the existing pin tests must stay green unchanged.
 
-## 4. Lane ownership
+## 4. Historical lane ownership
 
 Files the lane owns (exactly):
 
@@ -132,7 +143,7 @@ The lane may read `side/reference/PRAGMATA.CT` (read-only, user reference
 table) to verify fixture-shape fidelity, but must never copy table
 content into the repo, tests or commits.
 
-## 5. Tests (minimum, `tests/test_native_process_aob_label.py`)
+## 5. Historical tests (implemented in `tests/test_native_process_aob_label.py`)
 
 1. Program path accepts the token: `prepare_program` on
    `aobscanmodule(L, $process, <pattern>)` + `readmem` save + `dealloc`
@@ -168,7 +179,7 @@ content into the repo, tests or commits.
    `@@` and a forward named label resolves to the `@@` (regression guard
    for the unchanged old semantics).
 
-## 6. Acceptance
+## 6. Historical acceptance criteria (satisfied at integration)
 
 - Focused file green; full suite green at the lane base (2698 OK / 25
   skips) plus the new tests, zero failures — except the three known
@@ -181,10 +192,10 @@ content into the repo, tests or commits.
 - Integration (root agent): canonical-path full suite,
   `documentation/native-progress.md` note (PRAGMATA reference table fully
   supported, no corpus/matrix change), WP-18 row in
-  `plans/native-implementation-continuation.md` §5, worktree/branch
+  `plans/archive/native-implementation-continuation.md` §5, worktree/branch
   cleanup, push.
 
-## 7. Known worktree caveat
+## 7. Historical worktree caveat
 
 Off-canonical worktrees fail exactly three provenance byte-identity tests
 (`test_committed_manifest_is_byte_reproducible`,

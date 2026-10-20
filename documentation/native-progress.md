@@ -15,11 +15,11 @@ reference-corpus closure cycle: **Wave 4 complete** — all twelve W4 lanes
 (WP-43/44/45/46p1/46p2/47/48/49/50/51/52/53/54/55/56/57 + WP-58 UI)
 merged into `main` @ `0a38213`, cases 26 + 27 + 31 + 28 + 29 + 30
 pinned as the 25th–30th corpus tables, 7475/7475 action-weighted over
-6143 expected actions; plan
-`plans/reference-closure-continuation.md`). This is the binding result list:
+6143 expected actions; historical plan
+`plans/archive/reference-closure-continuation.md`). This is the binding result list:
 confirmed state, measured numbers, and the prioritized open work. The
-plan (work packages, protocol) lives in
-[`plans/native-implementation-continuation.md`](../plans/native-implementation-continuation.md);
+active plan lives in
+[`plans/reference-table-100-roadmap.md`](../plans/reference-table-100-roadmap.md);
 code/build boundaries in
 [`native-runtime.md`](native-runtime.md) and
 [`native-verification.md`](native-verification.md).
@@ -100,7 +100,7 @@ code/build boundaries in
 | AP-11 manifest | 30 tables, 6143 expected actions, 0 confirmed, all consistency gates `all_ok` (run `w4b4-case30-20261020081722Z`; previously 27 tables / 6119 actions, previously 24 tables / 6100 actions, previously 23 tables / 6092 actions) — `gap_inventory/ap11-campaign.json` |
 | Latest verified build | `native-20261020T150115Z-c426fb92` (0.16 field-fix re-cut) via `scripts/Build-Native.ps1` from `main` @ `7616edb` (2026-10-20): both ZIPs (`CT2Trainer-0.16-source.zip` sha256 `35717144…`, `CT2Trainer-0.16-windows-portable.zip` sha256 `24050f69…`), in-build suite 3398 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; both ZIPs carry the changelog with the 0.16 entry incl. the post-release field fixes + 0.15 + 0.14. 0.16 ships the full Wave 4 feature set (WP-43…WP-57 + WP-58 UI) plus the post-release field fixes (WP-58 UI startup crash fix + Sinking City 2 activation-chain runtime evidence) on top of the released 0.15 content. Superseded 0.16 run: `native-20261020T103508Z-0e3f9d90` (cut from `main` @ `809666a`, in-build 3393/25, user-tested, shipped with the WP-58 UI startup crash). Previous: `native-20261018T055505Z-39f20180` (0.15) via `scripts/Build-Native.ps1` from `main` @ `ed0b97b` (2026-10-18): both ZIPs (`CT2Trainer-0.15-source.zip` sha256 `5d5a85f6…`, `CT2Trainer-0.15-windows-portable.zip` sha256 `cfcc8e06…`), in-build suite 3057 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; both ZIPs carry the elaborated release READMEs and the changelog with the 0.15 + 0.14 + 0.13 entries. 0.15 ships the prefix-cut byte-patch validation (the 0.14-ext2 Great Circle field finding: Stealth Mode and No Reload use `db 90 E9` over a 6-byte conditional jump, now proven at link time and re-verified at stage time) plus the full Wave 3 feature set on top of the 0.14 content. Previous: `native-20261017T115850Z-1ebb48b7` (0.14, in-build 2932/25); `native-20261016T190005Z-b3139b30` (0.13, in-build 2927/25); `native-20261016T181516Z-b8ae88de` (0.13 pre module-snapshot fallback, in-build 2925/25); `native-20261016T163910Z-d047f2d2` (0.12, in-build 2910/25); `native-20261016T161905Z-e8ef67a0` (0.12, byte-identical re-cut); `native-20261016T154141Z-2de774ab` (0.12 pre release-docs); `native-20261012T092729Z-2d8aaf12` (0.11, in-build 2710/25); `native-20261011T121914Z-bfc5fc11` (0.10, in-build 2671/25); `native-20261010T172336Z-ffe35eb0` (rc2, in-build 2617/25, `api-prototypes.json` present in both EXE payload inventories, user-tested portable) |
 | User-tested portable | run `native-20261010T165731Z-3d1da645`: converter run + generated trainer verified by the user on a machine without CE/Python |
-| Reference-corpus assessment (2026-10-13) | 151 local-only reference tables: baseline 117,019 plan entries, 95,167 supported (incl. 46,987 staged), **21,852 blocked**, 4 whole-table compile errors (run `ref-assessment`); after W1-D (WP-25) + W1-C (WP-22/23): **21,851 of 117,255 blocked**, 3 whole-table compile errors — Octopath compiles (227 supported / 9 blocked, 24 duplicate-ID warnings), 20XX fully supported (10/10), SuperMeatBoy refused with a named legacy-binary error (catalog re-run 2026-10-13); after W1-B + W1-A + W1-E: **10,892 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy legacy binary only; AtomicHeart `$process` closed by WP-19, Cyberpunk `@@` by WP-20) (catalog re-run 2026-10-14); after W2-A (WP-27/32/33/34): **9,962 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy only; catalog re-run 2026-10-14, `blocked-catalog-w2a.json`; −930 blocked, 0 supported regressions, +197 previously masked records now surface the named missing-target reason); after W2-B + W2-C (WP-28/29/31/35 + WP-30/36): **7,577 of 117,624 blocked** (−2,385, 0 supported regressions; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-16, `blocked-catalog-w2final.json`); after W4 B1–B3 (WP-43/44, WP-46 part 1, WP-47/55, WP-45/56, WP-51/48, WP-52): **3,632 of 117,624 blocked** (−3,945, supported 113,992 incl. 58,018 staged; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-19, `blocked-catalog-w4final.json`); after W4 B4 (WP-46 part 2, WP-49/50, WP-53/54, WP-57, WP-58): **2,698 of 117,624 blocked** (−934, supported 114,926 incl. 58,950 staged; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-20, `blocked-catalog-w4b4.json`); consolidated assessment `documentation/reference-gap-assessment.md`, closure plan `plans/reference-closure-continuation.md` (WP-19…WP-42) |
+| Reference-corpus assessment (2026-10-13) | 151 local-only reference tables: baseline 117,019 plan entries, 95,167 supported (incl. 46,987 staged), **21,852 blocked**, 4 whole-table compile errors (run `ref-assessment`); after W1-D (WP-25) + W1-C (WP-22/23): **21,851 of 117,255 blocked**, 3 whole-table compile errors — Octopath compiles (227 supported / 9 blocked, 24 duplicate-ID warnings), 20XX fully supported (10/10), SuperMeatBoy refused with a named legacy-binary error (catalog re-run 2026-10-13); after W1-B + W1-A + W1-E: **10,892 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy legacy binary only; AtomicHeart `$process` closed by WP-19, Cyberpunk `@@` by WP-20) (catalog re-run 2026-10-14); after W2-A (WP-27/32/33/34): **9,962 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy only; catalog re-run 2026-10-14, `blocked-catalog-w2a.json`; −930 blocked, 0 supported regressions, +197 previously masked records now surface the named missing-target reason); after W2-B + W2-C (WP-28/29/31/35 + WP-30/36): **7,577 of 117,624 blocked** (−2,385, 0 supported regressions; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-16, `blocked-catalog-w2final.json`); after W4 B1–B3 (WP-43/44, WP-46 part 1, WP-47/55, WP-45/56, WP-51/48, WP-52): **3,632 of 117,624 blocked** (−3,945, supported 113,992 incl. 58,018 staged; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-19, `blocked-catalog-w4final.json`); after W4 B4 (WP-46 part 2, WP-49/50, WP-53/54, WP-57, WP-58): **2,698 of 117,624 blocked** (−934, supported 114,926 incl. 58,950 staged; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-20, `blocked-catalog-w4b4.json`); consolidated assessment `documentation/reference-gap-assessment.md`, closure plan `plans/archive/reference-closure-continuation.md` (WP-19…WP-42) |
 
 ### Portable frozen-build fix (2026-10-10)
 
@@ -244,41 +244,30 @@ to 30 pinned cases, 6143 expected actions (run
 
 ## 4. Prioritized open work
 
-1. **Reference-corpus closure campaign (active since 2026-10-13, cycle
-   branch `native-0.12`).** The 151-table local-only reference corpus
-   leaves **2,698 of 117,624 entries blocked**
-   (114,926 supported incl. 58,950 staged;
-   1 whole-table compile error; after W4 B4,
-   2026-10-20; previously 3,632 after W4 B1–B3,
-   2026-10-19; previously 7,577 after W2-B + W2-C,
-   2026-10-16; baseline 21,852 of 117,019 with 4) — consolidated
-   assessment: `documentation/reference-gap-assessment.md`; work
-   packages WP-19…WP-42 (waves, dependencies, derivative corpus cases
-   case-15…case-25, catalog-re-run acceptance protocol):
-   `plans/reference-closure-continuation.md`. Best-case closure ≈ 85 %
-   of the blocked entries; residue is documented fail-closed.
-2. **AP-11 real-game campaign (the end goal).** Runbook:
-   [`native-ap11-campaign.md`](native-ap11-campaign.md). Manifest + report
-   ingestion tooling are ready (`ap11_campaign.py`). Suggested start:
-   the small tables — case-05 (9, clock), case-03 (32, mono), case-04
-   (25, IL2CPP), case-08 (16, typed calls) — before case-07 (5152
-   actions). Each confirmed observation moves the campaign counter; the
-   denominator document and campaign state stay under `gap_inventory/`.
-3. **Final acceptance Windows (clean PC/VM, no CE/Python):** portable
-   converter start, new trainer, Unicode paths, settings/state,
-   notices/rights/UAC, debugger conflicts; full toggle/freeze/one-shot/
-   value roundtrips including controller restart and saved-wish replay.
-4. **Final acceptance Steam Deck:** real Proton prefix, touch operation,
-   x86/x64 targets, screen keyboard, hotkeys, state/freeze/clock, exit
-   behavior (protocol: `tests/deck/compatibility-matrix.md`).
-5. **Release closure (0.11 current)** after (2)–(4): the 0.11 build
-   `native-20261012T092729Z-2d8aaf12` is cut from `main`; record
-   the observed build (versions, hashes, setup, result) from the
-   acceptance runs in this ledger and `native-verification.md`, then flip
-   `runtime_unverified`.
-6. **Maintenance:** keep `runtime_unverified` honest; record every
-   Windows/Deck observation with build id, hashes, setup and result
-   before raising the status.
+The active outcome is [100% original reference-table support](../plans/reference-table-100-roadmap.md).
+The old 85% closure estimate and 0.11 release step were superseded by the
+0.16 Wave-4 release and the new target. Priorities are:
+
+1. **RT-1 and RT-2:** freeze the 151-path/143-hash local manifest and
+   process bindings, reproduce the 0.16 catalog, then attribute every
+   remaining blocker to an upstream cause. The latest snapshot has
+   **2,698/117,624 blocked entries**, 114,926 supported (58,950 staged),
+   and one legacy-binary load error. This is static evidence only.
+2. **RT-3 through RT-5:** close the binary-format, provider, address,
+   AA, Lua host, and runtime behavior gaps with independent synthetic
+   cases and owned-target tests. Pure visual Forms rendering (WP-42)
+   is outside the requested trainer-behavior scope; any form control
+   that causes a game-facing action remains in scope.
+3. **RT-6 and AP-11:** verify original-table behavior against pinned game
+   builds and run the 6,143-action synthetic campaign. The campaign has
+   **0 confirmed effects**; its runbook is
+   [`native-ap11-campaign.md`](native-ap11-campaign.md).
+4. **Platform acceptance:** complete Windows clean-machine and real
+   Steam Deck/Proton/touch protocols. Record build ID, ZIP hashes, setup,
+   observations and failures before changing `runtime_unverified`.
+5. **RT-7 release:** build offline with `scripts/Build-Native.ps1`, audit
+   source/frozen parity and CE-free payload, then publish a release only
+   after the documented gates pass.
 
 ## 5. Maintenance protocol
 

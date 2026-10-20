@@ -1,9 +1,17 @@
 # CT2Trainer — Reference-Corpus Blocked & Missing Feature Assessment (Wave 4)
 
-**Date:** 2026-10-18 · **Base:** `main` @ `2fe08f9` (0.15, build
-`native-20261018T055505Z-39f20180`) · **Status:** root-owned analysis,
-closes the "identify all blocked and missing features in all reference
-tables" request; feeds the Wave-4 work packages (WP-43…WP-57).
+**Analysis snapshot:** 2026-10-18 · **Base:** `main` @ `2fe08f9` (0.15,
+build `native-20261018T055505Z-39f20180`). This is a historical analysis
+that informed Wave 4. **Current status (2026-10-20):** Wave 4 is complete
+(WP-43…WP-58); the 0.16 field-fix re-cut is
+`native-20261020T150115Z-c426fb92`, based on `main` @ `7616edb`. The
+authoritative current reference catalog is 2,698 blocked of 117,624 plan
+entries (114,926 supported, including 58,950 staged; one whole-table
+error, SuperMeatBoy legacy binary), from `blocked-catalog-w4b4.json`.
+Current goals and planned follow-up live in [`plans/TRACKING.md`](../plans/TRACKING.md)
+and the [reference-table roadmap](../plans/reference-table-100-roadmap.md).
+Tables and wave plans below describe the 2026-10-18 snapshot unless
+explicitly marked current.
 
 ## 1. Scope and method
 
@@ -40,7 +48,7 @@ the census below was root-caused by targeted provider lookups.
 **4,727 blocked** (4.0 %), 12,908 headings. The canonical catalog
 (GOAL-2 measurement, auto process-detection) stood at 7,577 /
 117,624 with one whole-table error (SuperMeatBoy legacy binary) at
-this assessment's cut (2026-10-18; the post-W4 re-run of 2026-10-19
+this assessment's cut (2026-10-18; the post-W4 B1–B3 re-run of 2026-10-19
 measures 3,632 / 117,624; the post-W4-B4 re-run of 2026-10-20
 measures 2,698 / 117,624); the
 two views differ only in process resolution of the 31 tables CE
@@ -284,7 +292,7 @@ product-supported via WP-31) — tooling follow-up owned by root.
 
 ## 5. Feature decisions
 
-**Implement (Wave 4):** WP-43 (single-quote strings), WP-44 (pre-ENABLE
+**Historical implementation scope (Wave 4, now complete):** WP-43 (single-quote strings), WP-44 (pre-ENABLE
 registerSymbol + inert-script demotion), WP-45 (dedupe/offsets/
 dropdown/indirection), WP-46 (UDS + Lua-literal provides + one-shot
 handover), WP-47 (allocation-only engine enable), WP-48 (luaCall
@@ -315,7 +323,7 @@ Each fix produces synthetic `.ct` files under `TableReferences/`
 | case-29 | Ace7-style: inert credits script (comments-only ENABLE), group-heading hotkey (`moHideChildren` + `<Hotkey>`) | WP-44 (inert), WP-53 |
 | case-30 | AtomicHeart-style: interdependent pointer-script providers (cycle) + UDS-defined base + consumer children | WP-46 (UDS), WP-49 |
 
-## 7. Wave-4 execution plan
+## 7. Wave-4 execution plan (historical; completed 2026-10-20)
 
 ### Batch 1 (two parallel lanes)
 

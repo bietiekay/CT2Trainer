@@ -1,19 +1,28 @@
 # CT2Trainer: Named Table-Lua Tabs (WP-16, L5-19)
 
-**Status:** Implemented (2026-10-11) on branch `wp16-tablua` @ `38a830d`
+**ARCHIVED** — Historical plan retained for reference.
+
+
+**Historical plan — WP-16 complete.** Implemented (2026-10-11) on branch `wp16-tablua` @ `38a830d`
 (commits `3a81af0`, `38a830d`) — Baseline: `main` @ `af7f099` (0.10, suite
 2671 OK / 25 expected skips)
 
-Closes **L5-19** from the CE7.5 comparison: the table-Lua section can hold
-several **named script tabs** in addition to the main body, combined at
-load time. Today the product *detects* any descendant text of
-`<LuaScript>` (`table.py:457`, `itertext()`) but the compiler only prepares
-the **direct section text** (`compiler.py:397`,
-`root.findtext('LuaScript')`) — so named tabs in real-world tables are
-silently dropped. The pinned corpus has no such tab, so there is no corpus
-impact today; this closes a real load-path gap for real tables.
+The design and pre-implementation investigation below are retained as
+history. Current project status is maintained in
+[TRACKING.md](../TRACKING.md); future reference-table work will be scoped in
+the active
+[reference-table-100-roadmap.md](../reference-table-100-roadmap.md).
 
-## 1. Current state (verified 2026-10-11)
+WP-16 closed **L5-19** from the comparison: the table-Lua section can hold
+several **named script tabs** in addition to the main body, combined at
+load time. Before WP-16, detection included descendant text of
+`<LuaScript>` (`table.py:457`, `itertext()`), but compilation prepared only
+the **direct section text** (`compiler.py:397`,
+`root.findtext('LuaScript')`), dropping named tabs in real-world tables.
+The pinned corpus had no such tab; the implementation closed a load-path
+gap for real tables.
+
+## 1. Pre-implementation state (verified 2026-10-11)
 
 - `table.py:456-457`: `lua = root.find("LuaScript")`;
   `has_table_lua = lua is not None and bool("".join(lua.itertext()).strip())`
@@ -61,7 +70,7 @@ impact today; this closes a real load-path gap for real tables.
 4. Zero corpus impact: no `gap_inventory/*` changes, feature matrix and
    AP-11 manifest unchanged.
 
-## 4. Lane ownership
+## 4. Historical lane ownership
 
 - Branch `wp16-tablua` cut from `native-l5-19`; worktree
   `C:\Users\xboxl\AppData\Local\Temp\opencode\wp16-tablua`.
@@ -75,7 +84,7 @@ impact today; this closes a real load-path gap for real tables.
   STOP and report instead of touching it).
 - No new third-party dependencies; no pushes; no commit to `main`.
 
-## 5. Acceptance
+## 5. Historical acceptance criteria (satisfied at integration)
 
 - New `tests/test_native_table_lua_tabs.py` (synthetic tables, no corpus):
   - main-body-only table → bootstrap source **byte-identical** to today's
@@ -93,7 +102,7 @@ impact today; this closes a real load-path gap for real tables.
 - `git diff --stat` against the branch base shows **no** `gap_inventory/*`
   changes and no `TableReferences/*` changes.
 
-## 6. Known worktree caveat
+## 6. Historical worktree caveat
 
 In any non-canonical worktree, exactly three tests fail because the
 committed artifacts embed the canonical absolute paths:

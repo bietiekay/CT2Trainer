@@ -1,15 +1,21 @@
 # CT2Trainer: AP-11 Game Campaign Plan and Report Ingestion
 
-Status: 10 October 2026 (campaign tooling stable since 03.10; committed
-baseline refreshed for the synthetic clean-room corpus under run
-`wpB-cleanroom4-20261010T104008Z`). Lane: AP-11 (real games) preparation
-on the repository machine.
+Status: **2026-10-20 current manifest** — 30 pinned synthetic tables,
+6,143 expected actions, 0 confirmed real-game effects (run
+`w4b4-case30-20261020081722Z`; `gap_inventory/ap11-campaign.json`). The
+feature matrix is complete at 42/42 and 7,475/7,475 action-weighted;
+AP-11 remains a separate open goal. The 13-table/5,967-action plan and
+its older run-specific details below are historical snapshots, retained
+for audit context; the committed manifest is authoritative for current
+counts. Wave 4 is complete and the 0.16 field-fix re-cut is recorded in
+[`plans/TRACKING.md`](../plans/TRACKING.md). The next reference-corpus
+work is tracked in the
+[reference-table roadmap](../plans/reference-table-100-roadmap.md).
 
-AP-11 (real-game confirmation) later runs on the user's machine. This lane
-prepares it here: an executable, deterministic campaign plan over the 13
-pinned start tables of the AP-10 gap inventory (5967 expected actions),
-plus a validating report tool for the later real-game
-observations. This lane touches no game and no process: everything here is
+AP-11 (real-game confirmation) runs on the user's machine. This runbook
+prepares it here: an executable, deterministic campaign plan over the
+pinned synthetic corpus, plus a validating report tool for the later
+real-game observations. This lane touches no game and no process: everything here is
 static analysis of committed artifacts and read-only CT bytes under
 `TableReferences/` (bytes are hashed and tokenized for process-name
 candidates only). No CE implementation inputs or binaries are used.
@@ -59,20 +65,26 @@ The case numbers map to the synthetic clean-room corpus
 provenance); the tables themselves are independently authored and contain
 no game content.
 
-Totals: 5967 expected actions — value_freeze 3098, one_shot 1722,
-string_write 731, persistent_script 413, custom_value 3.
+Historical totals for the 13-table snapshot: 5,967 expected actions —
+value_freeze 3,098, one_shot 1,722, string_write 731,
+persistent_script 413, custom_value 3. Current category totals from the
+30-table manifest are: value_freeze 3,205, one_shot 1,730,
+string_write 732, persistent_script 472, custom_value 4
+(6,143 executable actions). Two navigation rows are listed for corpus completeness but are not
+counted as AP-11 actions or reportable observations.
 
 The manifest carries a consistency section with eight gates; any failure
 is exit 2 and the artifact must not be consumed as evidence:
-`pinned_table_count`, `expected_actions` (sum vs 5967),
-`category_counts`, `confirmed_game_effect_zero`, `per_table_counts`
-(per table: category sum == expected_actions == record count,
-categories within the five), `ct_sha_integrity` (computed CT SHA-256 vs
+`pinned_table_count`, `expected_actions` (sum vs the pinned manifest
+denominator), `category_counts`, `confirmed_game_effect_zero`,
+`per_table_counts` (per table: action-category sum == expected_actions,
+record count == expected_actions + navigation exclusions, and the action
+categories are within the five), `ct_sha_integrity` (computed CT SHA-256 vs
 pinned; a tampered CT fails here and the mismatch is written into the
 artifact), `inventory_covers_campaign_shas`, and
 `feature_coverage_agrees` (feature-coverage `all_ok`, its
-`expected_actions` check equals 5967, its pinned SHA list equals the
-campaign's).
+`expected_actions` check agrees with the pinned campaign denominator, its
+pinned SHA list equals the campaign's).
 
 Exit codes: 0 ok, 1 input error (missing/invalid inputs, failed report
 validation, progress state from a different campaign), 2 consistency
@@ -234,7 +246,7 @@ The tool writes into `--output`:
 - `ap11-summary.json` (`ap11-summary/v1`) — every campaign table with
   `confirmed_by_category` and `confirmed_total` against
   `expected_actions`, the ingestion statistics, and `overall`
-  progress: `confirmed_actions` vs the 5967 denominator,
+  progress: `confirmed_actions` vs the current 6143-action denominator,
   `confirmed_percent`, `remaining_actions`, `goal_percent` 90.0 and
   `goal_reached`.
 
@@ -243,14 +255,15 @@ report is ingested, `confirmed_game_effect_actions` moves off zero for
 the first time; until then the denominator document stays
 `confirmed_game_effect_actions: 0`.
 
-## Verification and open limits
+## Historical verification and current open limits
 
-- Focused suite: 28 tests OK, including byte-identical double runs,
+- Historical focused suite (2026-10-10 baseline): 28 tests OK, including
+  byte-identical double runs,
   byte-identical committed baseline regeneration, CT tamper/missing
   integrity, write refusal, report validation/dedup/replacement/state-
   binding (see the focused-suite log of the latest green build run).
-- Full suite: no failures in this lane's files in the latest build run
-  (2617 OK / 25 expected skips overall).
+- Current 0.16 build suite: 3,398 OK / 25 expected skips; see
+  [`plans/TRACKING.md`](../plans/TRACKING.md) for pinned build evidence.
 - This lane proves nothing about actual game behavior: no game, process
   or trainer EXE was started here. The AP-11 campaign remains at
-  0/5967 confirmed actions. The manifest is a plan, not evidence.
+  0/6143 confirmed actions. The manifest is a plan, not evidence.
