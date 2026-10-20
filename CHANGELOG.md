@@ -2,6 +2,68 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.16 (2026-10-20)
+
+- Wave 4 reference-corpus closure features (all W4 lanes integrated in
+  the `native-0.16` cycle, merged into `main`; corpus cases 26…31
+  pinned, gate:1 → 30 tables):
+  - AA / table grammar (WP-43/44/45/46): single-quoted string data
+    literals (both dialects, shared literal path); pre-`[ENABLE]`
+    `registerSymbol` + inert comments-only scripts demoted to
+    supported no-action; selection-aware provider dedupe, decimal and
+    signed `<Offset>` values, missing dropdown-link demotion,
+    indirection bound 2 → 6; `<UserdefinedSymbols>` interpretation
+    (table-level static symbols, hex-only fail-closed, script
+    providers keep winning) + empty-section warning suppression; Lua
+    literal `registerSymbol` provides extraction + one-shot provider
+    handover (release-on-detach at owner-scope retirement).
+  - Symbol cycles and dynamic providers (WP-48/49/50): self-provision
+    exclusion in the compiler dependency pass (a record's own
+    registration satisfies its own reference; true cross-record
+    cycles stay fail-closed with the exact reason); dynamic
+    script-parent address providers (record-Lua `AddressList`
+    providers with the `address_provider {provider_id, symbol: null}`
+    marker, bounded static extraction, engine `dynamic_addresses`
+    state); `luaCall(lua_aobscan(…))` / Lua-internal static symbol
+    provision.
+  - Engine / runtime (WP-47/51/52/55/56): allocation-only engine
+    enable (no game write, symbol-only publish); Lua-assembled AA
+    program admission at plan level (provable `autoAssemble` call);
+    Lua broker scan/utility surface (`memscan.Result`/`OnlyOneResult`,
+    `firstScan` nil rounding, found-list `getCount()`/`getAddress(i)`,
+    `createStringlist`); AOB multi-match → first (lowest-address)
+    match semantics per the CE `aobscan` family + match count/offsets
+    in the debug log; record-Lua CE-global stubs (`OpenProcess` no-op
+    success, `syntaxcheck` false, `ShellExecute` safe stub, no-op
+    menu surface, named refusal for remaining missing globals).
+  - Hotkeys and table-Lua phase 2 (WP-53/54): Windows OS hotkey
+    capture bridge (message-only window, `RegisterHotKey`/`WM_HOTKEY`
+    → queue, named refusal + programmatic-only fallback) +
+    group-heading hotkeys (plain `moHideChildren` headings toggle
+    their own applied state without child propagation, flagged groups
+    cascade via the parent-activation path); persistent table-scope
+    `createTimer` (record replay scheduler-free via inert stubs),
+    table-scoped `registerSymbol` via `TableSymbolOwner` into plan
+    field `table_lua_symbols` (supported record providers always
+    win), consumer resolution through table symbols without
+    `dependency_ids`, inverted teardown (table scope retires last,
+    symbols released exactly once), UDS reseed on every confirmed
+    attach.
+  - Placeholder-token AOB (WP-57): `s1`/`s1.2` 2-byte tokens treated
+    as wildcard displacements with the matched bytes captured at link
+    time and persisted for the `[DISABLE]` restore; external region
+    symbols get a named fail-closed reason.
+  - Trainer UI (WP-58): compact touch-first row grid (canvas list,
+    64/72 px rows, pill toggle + full-row tap, group sections
+    replacing breadcrumb drill-down, inline value editor, state
+    accent + transient reaction feedback); plan output byte-stable.
+- Pinned corpus: cases 26/27/31 (W4 B1–B3) and 28/29/30 (W4 B4) pinned
+  as the 25th–30th tables; chain `w4b4-case30-20261020081722Z`: 30
+  tables, 6145 records, 6143 expected actions, feature matrix 42/42
+  in-scope, weights 7475/7475.
+- Reference corpus (local-only assessment, not shipped): catalog
+  re-run post W4 B4 2,698 / 117,624 blocked (−934 vs post B1–B3).
+
 ## 0.15 (2026-10-18)
 
 - Prefix-cut byte-patch validation (field fix from the 0.14-ext2 Great
