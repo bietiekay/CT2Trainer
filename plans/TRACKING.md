@@ -1,7 +1,7 @@
 # CT2Trainer — Central Gap & Goal Tracking
 
-**Status: 2026-10-20** (baseline `main` @ `0a38213`, 0.15, build
-`native-20261018T055505Z-39f20180`; **Wave 4 complete**: all twelve
+**Status: 2026-10-20** (baseline `main` @ `809666a`, 0.16, build
+`native-20261020T103508Z-0e3f9d90`; **Wave 4 complete**: all twelve
 lanes (B1–B3: WP-43/44, WP-46 part 1, WP-45, WP-47/55, WP-48,
 WP-51/48, WP-52, WP-55/56; B4: WP-46 part 2, WP-49, WP-50, WP-57,
 WP-53, WP-54, WP-58 UI; cycle `native-0.16` @ `c2e99d8`) merged into
@@ -17,8 +17,8 @@ entries blocked, 32 reason classes, every major class root-caused with
 probe evidence, plus the user-reported `UserdefinedSymbols` gap);
 WP-43…WP-57 planned in §3.4, all integrated (B4 design gates cleared
 2026-10-19, plan §10; root real-table check round post-merge: 4
-reference tables, all OK, zero regressions); 0.16 cycle-end build
-pending on `main`.
+reference tables, all OK, zero regressions); 0.16 cycle-end build cut
+from `main` @ `809666a` (in-build suite 3393/25, `ce_inputs: []`).
 
 This is the **single central tracking document** for every gap and every goal
 of the project. It is maintained by the root agent on every integration and is
@@ -318,7 +318,7 @@ assertion updated accordingly):
 | Pinned-corpus feature matrix | 42/42 in-scope covered, 7475/7475 action-weighted (previously 7446/7446, run `w4-case31-20261019061339`) | `w4b4-case30-20261020081722Z` |
 | Reference-corpus blocked entries | 2,698 / 117,624 (114,926 supported incl. 58,950 staged; 1 whole-table error: SuperMeatBoy legacy binary) | catalog re-run 2026-10-20 post W4 B4 merge (previously 3,632 post W4 B1–B3; previously 7,577 post W2-B + W2-C; previously 9,962 post W2-A; previously 10,892 post W1-A + W1-E; interim: 21,959 / 117,604 post W1-D + W1-C + W1-B; baseline: `ref-assessment` 21,852 / 117,019, 4 errors) |
 | AP-11 confirmed actions | 0 / 6143 | `w4b4-case30-20261020081722Z` |
-| Latest build | `native-20261018T055505Z-39f20180` (0.15) | in-build suite 3057/25 |
+| Latest build | `native-20261020T103508Z-0e3f9d90` (0.16) | in-build suite 3393/25 (previously 3057/25, build `native-20261018T055505Z-39f20180`) |
 | Local dev suite | 3393 OK / 25 expected skips | post W4 B4 merge + case-28/29/30 pin (canonical path; previously 3233 post W4 cycle merge + case-26/27/31 pin) |
 
 Update protocol: after each merged WP — re-run the blocked catalog on the

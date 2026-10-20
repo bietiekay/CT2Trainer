@@ -5,16 +5,17 @@
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-20, 0.15 released with the 0.15 prefix-cut
-field fix shipped on top (`d15268a`) and the part-3 fast-path fix on
-`main` (`d068c44`); Wave 4 of the reference-corpus closure cycle
-complete — all twelve W4 lanes
+**CT2Trainer (status 2026-10-20, 0.16 released (build
+`native-20261020T103508Z-0e3f9d90` cut from `main` @ `809666a`) with the
+full Wave 4 feature set on top of the released 0.15 (prefix-cut field
+fix `d15268a`, part-3 fast-path fix `d068c44`); Wave 4 of the
+reference-corpus closure cycle complete — all twelve W4 lanes
 (WP-43/44/45/46p1/46p2/47/48/49/50/51/52/53/54/55/56/57 + WP-58 UI)
 merged into `main` @ `0a38213`, cases 26/27/31 + 28/29/30 pinned
 (30 pinned corpus tables, 6,143 AP-11 actions, weights
 7,475/7,475 over run `w4b4-case30-20261020081722Z`); 0.9.0-rc2 was the
-last user-tested release; `main` tracks the milestone until the 0.16
-release build):**
+last user-tested release; `main` tracks the milestone between
+releases):**
 the
 repository is a
 self-contained, clean-room development base for an independently designed,
@@ -116,10 +117,22 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261018T055505Z-39f20180` (0.15,
-cut from `main` @ `ed0b97b`; in-build suite 3057 OK / 25 regular skips,
+**Latest verified build:** `native-20261020T103508Z-0e3f9d90` (0.16,
+cut from `main` @ `809666a`; in-build suite 3393 OK / 25 regular skips,
 `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; source
-ZIP `CT2Trainer-0.15-source.zip` sha256
+ZIP `CT2Trainer-0.16-source.zip` sha256
+`370a2d73c597de283e4b0db9a7c5c8d68d542fba6d9516d9314c2bfc9cb1118e`,
+portable ZIP `CT2Trainer-0.16-windows-portable.zip` sha256
+`6db5bf69052767cf07529458c45d3f1c5f5089e8934c74ef2ce053b27dd23b8b`).
+0.16 ships the full Wave 4 feature set (WP-43…WP-57 + WP-58 UI, see
+changelog) on top of the released 0.15 content; 30 pinned corpus
+tables, 6,143 AP-11 actions, weights 7,475/7,475 over run
+`w4b4-case30-20261020081722Z`; both ZIPs carry the changelog with the
+0.16 + 0.15 + 0.14 entries. Previous release build:
+`native-20261018T055505Z-39f20180` (0.15, cut from `main` @ `ed0b97b`;
+in-build suite 3057 OK / 25 regular skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.15-source.zip` sha256
 `5d5a85f63f0b0948b05e06bfba8f40fa91e7bf75e5d981da22b33a3a5f522581`,
 portable ZIP `CT2Trainer-0.15-windows-portable.zip` sha256
 `cfcc8e06f65d0b3c6ec1ef4671f2be520c45c1c6c85572f1dbe6e69d15ea8414`).
