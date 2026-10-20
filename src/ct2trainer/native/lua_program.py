@@ -714,17 +714,108 @@ def _parse(source: str) -> tuple[list[_Part], str, bool]:
     return parts, static_source, static_body
 
 
-def lua_symbol_provides(source: str) -> list[str]:
+def lua_symbol_provides(source: str, *, one_shot: bool | None = None) -> list[str]:
     """WP-37: the symbol names a record's embedded Lua proves to own.
 
     Pure-text re-derivation of the WP-14 C1 extraction (``registerSymbol`` /
-    ``symbol='...'`` in the ENABLE Lua, ``unregisterSymbol`` in the DISABLE
-    Lua) so the table compiler can separate Lua-owned providers from static
-    AA registrations without re-preparing the record's whole Lua program.
+    ``Register.symbol`` / ``symbol='...'`` in the ENABLE Lua,
+    ``unregisterSymbol`` in the DISABLE Lua) so the table compiler can
+    separate Lua-owned providers from static AA registrations without
+    re-preparing the record's whole Lua program.  ``one_shot`` defaults to
+    the record's own one-shot classification; a caller with a prepared
+    program passes its canonical flag to stay byte-consistent with the
+    entry's ``provides`` (WP-46 part 2).
     """
     parts, _static_source, _static_body = _parse(source)
-    from .lua_symbol_providers import extract_lua_symbol_providers
-    return extract_lua_symbol_providers(parts)
+    from .lua_symbol_providers import extract_lua_symbol_providers, parts_are_one_shot
+    if one_shot is None:
+        one_shot = parts_are_one_shot(parts)
+    return extract_lua_symbol_providers(parts, one_shot=one_shot)
+
+
+# WP-50 (GC-E8): bounded static extraction of the direct address-write
+# idioms by which a record's Lua publishes a live base into a sibling
+# record's address field (``AddressList['<label>'].address = <expr>`` or a
+# constant-index array bound to such elements, ``mr[K].address = <expr>``).
+# Bounded safety valve: more distinct targets than this are unproven (empty
+# result), never truncated.
+MAX_DYNAMIC_ADDRESS_TARGETS = 64
+
+_AL_DIRECT = re.compile(
+    r"\bAddressList\s*\[\s*(['\"])([^'\"]+)\1\s*\]\s*\.\s*address\s*=")
+_AL_ARRAY = re.compile(
+    r"\blocal\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\{([^{}]+)\}")
+_AL_ELEMENT = re.compile(
+    r"\s*AddressList\s*\[\s*(['\"])([^'\"]+)\1\s*\]\s*")
+_AL_INDEX_WRITE = re.compile(
+    r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*(\d+)\s*\]\s*\.\s*address\s*=")
+
+
+_AL_WS = re.compile(r"\s*")
+
+
+def _constant_addresslist_labels(body: str) -> list[str] | None:
+    """Exact constant ``AddressList['label']`` elements only, or None."""
+    labels: list[str] = []
+    cursor, length = 0, len(body)
+    while True:
+        cursor = _AL_WS.match(body, cursor).end()
+        if cursor >= length:
+            break
+        element = _AL_ELEMENT.match(body, cursor)
+        if element is None:
+            return None
+        labels.append(element.group(2))
+        cursor = _AL_WS.match(body, element.end()).end()
+        if cursor >= length:
+            break
+        if body[cursor] != ",":
+            return None
+        cursor += 1
+    return labels or None
+
+
+def lua_dynamic_address_targets(source: str) -> list[str]:
+    """Record descriptions a record's embedded Lua writes a live address to.
+
+    Pure-text, bounded, case-sensitive.  Admits exactly two idioms:
+
+    (a) direct writes:  ``AddressList['<label>'].address = <expr>``
+    (b) constant arrays: ``local <name> = { AddressList['<label>'], ... }``
+        (constant string elements only) followed by
+        ``<name>[K].address = <expr>`` with a constant 1-based K.
+
+    ``= nil`` counterparts (the expected DISABLE clearing) match too; their
+    absence does not invalidate the extraction because clearing also
+    happens at scope retirement.  Returns a sorted label list, or an empty
+    list when nothing is proven (unparseable source, non-constant elements,
+    out-of-range K, or more than the bound).
+    """
+    targets: set[str] = set()
+    try:
+        parts, _static_source, _static_body = _parse(source)
+    except LuaProgramError:
+        return []
+    from .lua_symbol_providers import _without_comments
+    arrays: dict[str, list[str]] = {}
+    for part in parts:
+        if part.kind != "lua" or not part.text:
+            continue
+        text = _without_comments(part.text)
+        targets.update(match.group(2) for match in _AL_DIRECT.finditer(text))
+        for definition in _AL_ARRAY.finditer(text):
+            name, body = definition.group(1), definition.group(2)
+            labels = _constant_addresslist_labels(body)
+            if labels is not None:
+                arrays.setdefault(name, []).extend(labels)
+        for assignment in _AL_INDEX_WRITE.finditer(text):
+            name, index = assignment.group(1), int(assignment.group(2))
+            labels = arrays.get(name, [])
+            if 1 <= index <= len(labels):
+                targets.add(labels[index - 1])
+    if len(targets) > MAX_DYNAMIC_ADDRESS_TARGETS:
+        return []
+    return sorted(targets)
 
 
 def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
@@ -790,10 +881,8 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
             auto_assemble = _auto_assemble_proof(parts, process_name, bitness)
         except AutoAssembleProofError:
             pass
-    one_shot = (all(part.phase != 'disable' or part.kind == 'phase'
-                    or (part.kind == 'lua' and not part.text.strip())
-                    for part in parts)
-                and any(part.phase == 'enable' and part.kind != 'phase' for part in parts))
+    from .lua_symbol_providers import parts_are_one_shot
+    one_shot = parts_are_one_shot(parts)
     if static_program is not None:
         one_shot = one_shot and bool(static_program.get('one_shot', False))
     result = {'schema': SCHEMA, 'source': source,
@@ -807,8 +896,11 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
     # the embedded Lua (registerSymbol / symbol='...' table field) and
     # release them on disable; static proof of that pair makes the record
     # a provider for staged dependency analysis.  Pure text, no execution.
+    # WP-46 part 2 (GC-E12): one-shot records adopt the ENABLE registration
+    # without a matching unregister (the owner scope releases the symbol at
+    # detach); the canonical one_shot flag above drives that branch.
     from .lua_symbol_providers import extract_lua_symbol_providers
-    lua_provides = extract_lua_symbol_providers(parts)
+    lua_provides = extract_lua_symbol_providers(parts, one_shot=one_shot)
     if lua_provides:
         result['provides'] = sorted(set(result['provides']) | set(lua_provides),
                                     key=str.casefold)

@@ -157,7 +157,7 @@ class CustomTypeWiringLuaHostTests(unittest.TestCase):
         class Broker:
             generation = 0
 
-            def call(self, name, args, *, generation, syntaxcheck):
+            def call(self, name, args, *, generation, syntaxcheck, scope=None):
                 raise error
 
         host = LuaHost(Broker())
@@ -178,7 +178,7 @@ class CustomTypeWiringLuaHostTests(unittest.TestCase):
 
         class Broker:
             generation = 0
-            def call(self, name, args, *, generation, syntaxcheck):
+            def call(self, name, args, *, generation, syntaxcheck, scope=None):
                 return None
 
         host = LuaHost(Broker())
@@ -193,7 +193,7 @@ class CustomTypeWiringLuaHostTests(unittest.TestCase):
     def test_normal_error_has_no_abort_payload(self):
         class Broker:
             generation = 0
-            def call(self, name, args, *, generation, syntaxcheck):
+            def call(self, name, args, *, generation, syntaxcheck, scope=None):
                 raise ValueError("boom")
 
         host = LuaHost(Broker())

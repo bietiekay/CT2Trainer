@@ -506,6 +506,25 @@ function writeBytes(address,...)
   return call('writeBytes',address,values)
 end
 function getAddressList() return proxy('addresslist',0) end
+-- WP-50 (GC-E8): the built-in AddressList global: a read-only map from the
+-- exact record description to that record's proxy.  A script-defined
+-- AddressList table shadows the index in its own scope (ordinary Lua
+-- assignment); element reads resolve through the description lookup and
+-- element writes are refused by the index itself (the record proxy's
+-- ``address`` setter carries the provider contract instead).
+local function addresslist_entry(name)
+  local identifier=call('addresslist.getMemoryRecordByDescription',name)
+  if identifier==nil then error('AddressList entry not found: '..tostring(name),2) end
+  return proxy('record',identifier)
+end
+AddressList=setmetatable({},{
+  __index=function(_,name)
+    if type(name)~='string' then error('AddressList keys are record descriptions',2) end
+    return addresslist_entry(name)
+  end,
+  __newindex=function() error('AddressList is a read-only index',2) end,
+  __metatable='CT2Trainer AddressList index'
+})
 function autoAssemble(source,targetSelf,disableInfo)
   if targetSelf then error('Local process assembly is outside this profile',2) end
   local result=call('autoAssemble',source,disableInfo)
@@ -757,7 +776,7 @@ class _ReadOnlyBroker:
         self.allow_assembler = allow_assembler
 
     def call(self, name: str, arguments: tuple, *, generation: int,
-             syntaxcheck: bool) -> Any:
+             syntaxcheck: bool, scope: int | None = None) -> Any:
         if self.parent.cancelled or generation != self.generation:
             raise LuaHostError('Lua syntax checking was cancelled or became stale')
         if name in {'print', 'showMessage'}:
@@ -766,8 +785,10 @@ class _ReadOnlyBroker:
                          getattr(self.parent.broker, 'syntaxcheck_assembler', False) is True)
         if name not in self._READS and not dry_assembler:
             raise LuaHostError('Syntax checking cannot call mutation API: ' + str(name))
+        # Syntax checking has no owning record scope; table/record-scoped
+        # writes are refused by the downstream contract, not by position.
         return self.parent.broker.call(name, arguments, generation=self.generation,
-                                       syntaxcheck=True)
+                                       syntaxcheck=True, scope=None)
 
 
 class LuaHost:
@@ -962,7 +983,9 @@ class LuaHost:
                     result = _ReadOnlyBroker(self, allow_assembler=False).call(
                         name, args, generation=self.generation, syntaxcheck=True)
                 else:
-                    result = self.broker.call(name, args, generation=self.generation, syntaxcheck=self._checking)
+                    result = self.broker.call(name, args, generation=self.generation,
+                                              syntaxcheck=self._checking,
+                                              scope=self.owner_record_id)
             except CustomTypeError as exc:
                 # Convert before the exception crosses the Lua boundary, where
                 # its type identity is lost. The pending slot carries the stable
@@ -1286,7 +1309,8 @@ class EngineLuaBroker:
     def invalidate(self) -> None:
         self.generation += 1
 
-    def call(self, name: str, arguments: tuple, *, generation: int, syntaxcheck: bool) -> Any:
+    def call(self, name: str, arguments: tuple, *, generation: int, syntaxcheck: bool,
+             scope: int | None = None) -> Any:
         broker_checkpoint()
         e = self.engine
         if generation != self.generation:
@@ -1562,8 +1586,17 @@ class EngineLuaBroker:
         if name == 'record.get':
             identifier,key=arguments
             entry=e.entries[identifier]
-            if key in {'ID','Description','Address'}:
-                return {'ID':identifier,'Description':entry['label'],'Address':entry.get('source_address',entry.get('address',''))}[key]
+            if key in {'ID','id'}:
+                return identifier
+            if key in {'Description','description'}:
+                return entry['label']
+            if key in {'Address','address'}:
+                # WP-50 (GC-E8): a live base the provider's record-Lua wrote
+                # into this record shadows the static address text while set.
+                dynamic=getattr(e,'dynamic_addresses',{}).get(identifier)
+                if dynamic is not None:
+                    return dynamic
+                return entry.get('source_address',entry.get('address',''))
             if key=='Type':
                 if entry['kind']=='script': return 11
                 values={'Byte':0,'2 Bytes':1,'4 Bytes':2,'8 Bytes':3,'Float':4,'Double':5,
@@ -1591,6 +1624,11 @@ class EngineLuaBroker:
                 entry=e.entries[identifier]
                 return e.toggle(identifier,value) if entry['kind']=='script' else e.set_freeze(identifier,value)
             if key=='Value': return e.set_value(identifier,str(value))
+            if key in {'address','Address'}:
+                # WP-50 (GC-E8): the provider scope's live-base write into its
+                # plan target; the engine re-checks the marker contract.
+                e.set_dynamic_address(identifier,value,scope=scope)
+                return None
             raise LuaHostError('Unsupported MemoryRecord mutation: '+str(key))
         if name == 'autoAssemble':
             if self.assembler_handler is None:
@@ -1698,11 +1736,13 @@ class TableLuaBroker:
         self.inner.invalidate()
 
     def call(self, name: str, arguments: tuple, *, generation: int,
-             syntaxcheck: bool) -> Any:
+             syntaxcheck: bool, scope: int | None = None) -> Any:
         if name in self._reads:
+            # Table scope has no owning record; record-proxy address writes
+            # are refused by the plan marker contract downstream.
             return self.inner.call(name, arguments,
                                    generation=self.inner.generation,
-                                   syntaxcheck=syntaxcheck)
+                                   syntaxcheck=syntaxcheck, scope=None)
         reason = self._refusal_reason(name)
         if len(self.reasons) < self._max_reasons:
             self.reasons.append(reason)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 
-from .patterns import normalize_pattern, pattern_matches
+from .patterns import normalize_pattern, pattern_byte_length, pattern_matches
 from .lua_work_budget import broker_checkpoint
 
 SCHEMA = 'ct2trainer-aa-process-scan/v1'
@@ -52,7 +52,7 @@ def validate_result(result, source_sha256=None, node=None):
         raise AOBScanError('Process scan receipt differs from its source hash/node/pattern.')
     target, width, address = result['target'], result['pointer_size'], result['address']
     limit = 0xFFFFFFFF if width == 4 else 0x7FFFFFFFFFFF
-    size = len(result['node']['pattern'].split())
+    size = pattern_byte_length(result['node']['pattern'])
     if (type(target) is not list or len(target) != 2
             or any(type(value) is not int or value <= 0 for value in target)
             or target[0] > 0xFFFFFFFF or target[1] > 0xFFFFFFFFFFFFFFFF
@@ -81,7 +81,8 @@ def capture_scan(node, source_sha256, memory):
     broker_checkpoint()
     address = method(node['pattern'])
     broker_checkpoint()
-    size = len(node['pattern'].split())
+    # WP-57: placeholder spans count their definition bytes, not one token.
+    size = pattern_byte_length(node['pattern'])
     limit = 0xFFFFFFFF if width == 4 else 0x7FFFFFFFFFFF
     if type(address) is not int or not 0 < address <= limit or size - 1 > limit - address:
         raise AOBScanError('The process scan address exceeds its target width.')

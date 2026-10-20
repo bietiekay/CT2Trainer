@@ -505,8 +505,9 @@ How to use it
    supported, staged, or blocked (with a named reason). Select the
    records you want.
 5. Build the trainer EXE. Start the game, then run the generated
-   trainer: it attaches to the verified process and shows one switch
-   card per record. Toggle switches on and off.
+   trainer: it attaches to the verified process and shows a compact
+   touch-first row grid - one row per record with a pill toggle, inline
+   value editors, and collapsible group sections with n/N counters.
 6. Saved toggles: only confirmed ON-switches are persisted, and they are
    automatically re-enabled after a successful re-attach (game or
    trainer restart, on a freshly verified target). A failed enable

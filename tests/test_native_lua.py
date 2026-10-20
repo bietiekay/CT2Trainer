@@ -17,7 +17,9 @@ class Broker:
         self.calls = []
         self.value = 1234
 
-    def call(self, name, args, *, generation, syntaxcheck):
+    def call(self, name, args, *, generation, syntaxcheck, scope=None):
+        # scope is the WP-50 record-Lua ownership token; this double does not
+        # model per-scope contracts, so it only accepts and ignores it.
         self.calls.append((name,args,generation,syntaxcheck))
         if name == 'getAddress': return 0x123456789AB
         if name == 'readInteger': return self.value

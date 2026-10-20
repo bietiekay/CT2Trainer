@@ -373,8 +373,9 @@ class GlobalScanCapture:
         if self.capturing:
             method={'scan':'scan_module','scan_process':'scan_process','scan_region':'scan_region'}[op]
             address=getattr(self.memory,method)(*args)
-            size=len(args[-1].split());raw=self.memory.read(address,size)
-            from .patterns import pattern_matches
+            # WP-57: placeholder spans count their definition bytes, not tokens.
+            from .patterns import pattern_byte_length, pattern_matches
+            size=pattern_byte_length(args[-1]);raw=self.memory.read(address,size)
             if len(self.records)>=64 or sum(len(x['bytes']) for x in self.records)+size>262144:
                 raise GlobalError('Original shared scan captures exceed their count/byte bound.')
             if type(address) is not int or not 0<address<(1<<(self.width*8)) or not pattern_matches(args[-1],raw):

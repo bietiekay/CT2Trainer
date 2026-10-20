@@ -11,7 +11,8 @@ from __future__ import annotations
 import re
 
 from .address_expression import CAST_TYPES, AddressExpressionError, parse_expression
-from .patterns import normalize_pattern as _normalize_byte_pattern
+from .patterns import (is_placeholder_token,
+                       normalize_pattern as _normalize_byte_pattern)
 
 
 MAX_SCRIPT_BYTES = 1024 * 1024
@@ -181,6 +182,11 @@ def normalize_pattern(pattern: str) -> str:
 
 
 def _exact_bytes(text: str) -> str:
+    # WP-57: placeholder tokens keep the data-literal path hex-only; a
+    # placeholder anywhere in an assertion is a named refusal, never a
+    # wildcard span (asserts keep their exact-bytes capture semantics).
+    if any(is_placeholder_token(token) for token in text.split()):
+        raise AAError("Placeholder tokens are not supported in assertions or data literals.")
     pattern = normalize_pattern(text)
     if "?" in pattern:
         raise AAError("Assertions require exact bytes; wildcards are unsupported.")
@@ -235,6 +241,10 @@ def _data_bytes(directive: str, text: str) -> str:
                 raise AAError("Quoted data literals must not contain backslash escapes.")
             data.extend(token[1:-1].encode("ascii"))
             continue
+        # WP-57: the classic data-literal path stays hex-only; placeholder
+        # tokens (definition or reference form) are a named refusal.
+        if is_placeholder_token(token):
+            raise AAError("Placeholder tokens are not supported in assertions or data literals.")
         if len(token) > 32 or re.fullmatch(r"-?(?:(?:0x|\$)?[0-9A-Fa-f]+|#[0-9]+)", token) is None:
             raise AAError(f"Unsupported {directive} integer literal: {token!r}.")
         sign = -1 if token.startswith("-") else 1
