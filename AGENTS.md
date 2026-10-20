@@ -5,10 +5,13 @@
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-20, 0.16 released (build
-`native-20261020T103508Z-0e3f9d90` cut from `main` @ `809666a`) with the
-full Wave 4 feature set on top of the released 0.15 (prefix-cut field
-fix `d15268a`, part-3 fast-path fix `d068c44`); Wave 4 of the
+**CT2Trainer (status 2026-10-20, 0.16 released (field-fix re-cut build
+`native-20261020T150115Z-c426fb92` cut from `main` @ `7616edb`; first
+run `native-20261020T103508Z-0e3f9d90` @ `809666a` superseded) with the
+full Wave 4 feature set plus the post-release field fixes (WP-58 UI
+startup crash fix, Sinking City 2 activation-chain runtime evidence)
+on top of the released 0.15 (prefix-cut field fix `d15268a`, part-3
+fast-path fix `d068c44`); Wave 4 of the
 reference-corpus closure cycle complete — all twelve W4 lanes
 (WP-43/44/45/46p1/46p2/47/48/49/50/51/52/53/54/55/56/57 + WP-58 UI)
 merged into `main` @ `0a38213`, cases 26/27/31 + 28/29/30 pinned
@@ -117,18 +120,29 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261020T103508Z-0e3f9d90` (0.16,
-cut from `main` @ `809666a`; in-build suite 3393 OK / 25 regular skips,
-`ce_inputs: []`, `runtime_unverified` deliberately kept per gate; source
-ZIP `CT2Trainer-0.16-source.zip` sha256
-`370a2d73c597de283e4b0db9a7c5c8d68d542fba6d9516d9314c2bfc9cb1118e`,
+**Latest verified build:** `native-20261020T150115Z-c426fb92` (0.16
+field-fix re-cut, cut from `main` @ `7616edb`; in-build suite 3398 OK /
+25 regular skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+per gate; source ZIP `CT2Trainer-0.16-source.zip` sha256
+`35717144ed8c74fb1c690c8e692a0d53225b86401190b524715559bc13577ade`,
 portable ZIP `CT2Trainer-0.16-windows-portable.zip` sha256
-`6db5bf69052767cf07529458c45d3f1c5f5089e8934c74ef2ce053b27dd23b8b`).
+`24050f691603981ff0c33e2550adc885581a5131cd5a8123d0050618ca18178d`).
 0.16 ships the full Wave 4 feature set (WP-43…WP-57 + WP-58 UI, see
-changelog) on top of the released 0.15 content; 30 pinned corpus
-tables, 6,143 AP-11 actions, weights 7,475/7,475 over run
+changelog) plus the post-release field fixes on top of the released 0.15
+content (WP-58 UI startup crash: `_button` widget defaults merged into
+the style dict + pagination tuple `padx` moved to `.pack()`, regression
+test `tests/test_native_ui_button.py`; Sinking City 2 activation-chain
+runtime evidence `tests/test_native_sc2_attach_chain.py`); 30 pinned
+corpus tables, 6,143 AP-11 actions, weights 7,475/7,475 over run
 `w4b4-case30-20261020081722Z`; both ZIPs carry the changelog with the
-0.16 + 0.15 + 0.14 entries. Previous release build:
+0.16 + 0.15 + 0.14 entries. Superseded 0.16 run:
+`native-20261020T103508Z-0e3f9d90` (0.16, cut from `main` @ `809666a`;
+in-build suite 3393 OK / 25 regular skips, `ce_inputs: []`; source ZIP
+sha256 `370a2d73c597de283e4b0db9a7c5c8d68d542fba6d9516d9314c2bfc9cb1118e`,
+portable ZIP sha256
+`6db5bf69052767cf07529458c45d3f1c5f5089e8934c74ef2ce053b27dd23b8b`;
+user-tested, shipped with the WP-58 UI startup crash). Previous release
+build:
 `native-20261018T055505Z-39f20180` (0.15, cut from `main` @ `ed0b97b`;
 in-build suite 3057 OK / 25 regular skips, `ce_inputs: []`,
 `runtime_unverified` deliberately kept per gate; source ZIP
