@@ -58,6 +58,14 @@ game-facing action.
 - Latest verified release: 0.16 field-fix re-cut, build
   `native-20261020T150115Z-c426fb92`, in-build suite 3,398 OK / 25
   expected skips, `ce_inputs: []`.
+- 0.16 field-fix round 2 (2026-10-21, branch `native-0.16-lock-selfheal`):
+  state-lock self-repair and reliable restart — close() completes when
+  blocked and the target is gone (lock/session released, wishes kept),
+  atexit session/lock release on a provably gone target, actionable
+  stale-lock refusal with assessment reasons and one probe retry; 7 new
+  regression tests, local suite 3,405 OK / 25 expected skips. Re-cut
+  build pending; the field finding "Inf Items" is a table/build
+  mismatch (no code change).
 
 ## Historical evidence
 

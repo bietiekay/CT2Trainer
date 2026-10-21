@@ -1,8 +1,10 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-20. **Latest verified release:** 0.16 field-fix
+**Updated:** 2026-10-21. **Latest verified release:** 0.16 field-fix
 re-cut, build `native-20261020T150115Z-c426fb92` (built from `main` at
-`7616edb`). This page is a short explanation of the evidence in
+`7616edb`); second field-fix round (state-lock self-repair, reliable
+restart) merged 2026-10-21, re-cut build pending. This page is a short
+explanation of the evidence in
 [central tracking](plans/TRACKING.md) and the
 [progress ledger](documentation/native-progress.md).
 
@@ -23,7 +25,7 @@ defines the work and completion gates.
 | Synthetic feature coverage | **42/42** declared feature classes and **7,475/7,475** action weight covered across **30 synthetic tables**. | This metric does not establish support for every original table or a real game effect. Add synthetic cases when a new behavior is found. |
 | Original reference tables | The latest local static catalog classifies **114,926 supported**, including **58,950 staged**, out of **117,624 plan entries**. | **2,698 entries are blocked** and one legacy-binary table does not load. Staged entries still need their runtime conditions proved. Re-run the catalog on a frozen input/process manifest. |
 | Observed game effects | Owned fixtures and selected runtime chains have tests. | The AP-11 campaign has **0 of 6,143** game effects confirmed. Original-table behavior must be checked against pinned game builds or explicitly equivalent owned targets. |
-| Final platforms | The 0.9.0-rc2 portable converter and a generated trainer were user-tested without CE or Python; later fixture tests cover many runtime paths. | The fixed 0.16 re-cut has no recorded full clean-machine acceptance. Clean Windows and real Steam Deck/Proton/touch acceptance remain open. `runtime_unverified` stays set. |
+| Final platforms | The 0.9.0-rc2 portable converter and a generated trainer were user-tested without CE or Python; later fixture tests cover many runtime paths. The 0.16 re-cut was field-tested 2026-10-21 (new WP-58 UI confirmed good; one cheat = table/build mismatch, no fix; the state-lock orphan after a blocked close was fixed in code the same day, see the ledger). | The 0.16 re-cut has no recorded full clean-machine acceptance. Clean Windows and real Steam Deck/Proton/touch acceptance remain open. `runtime_unverified` stays set. |
 
 **The 42/42 result is real, but it measures the synthetic feature matrix.**
 The 2,698 blocked entries, staged runtime behavior, and absent game-effect

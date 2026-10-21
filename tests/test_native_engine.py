@@ -470,7 +470,13 @@ class NativeEngineTests(unittest.TestCase):
         self.assertTrue(other.blocked)
         self.assertEqual(winner.read_bytes(), owner)
         self.assertEqual(self.memory.writes, [])
-        self.assertFalse(other.close())
+        # The variant could not attach, so it owns no session or patches:
+        # its close releases only its own state lock, while the shared
+        # target lock stays with the attached engine. (2026-10-20 field
+        # case: the blanket block-refusal orphaned such locks and the
+        # trainer could not be restarted.)
+        self.assertTrue(other.close())
+        self.assertFalse((self.directory / "variant" / "state.lock").exists())
         self.assertEqual(winner.read_bytes(), owner)
         self.assertTrue(engine.close())
         self.assertFalse(winner.exists())
