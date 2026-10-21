@@ -33,7 +33,7 @@ GOAL-4/5/6 remain open; GOAL-7 is historical release work.
 
 | Package | Owner | State | Next concrete output |
 | --- | --- | --- | --- |
-| RT-1 full-corpus rebaseline | root | ready | Freeze 151 path/143-hash manifest and process bindings, rerun on 0.16 source, reconcile entry totals and errors; repair stale 15/27-table prose fields in `gap-report.json`. |
+| RT-1 full-corpus rebaseline | root | done (2026-10-21) | Frozen manifest `gap_inventory/reference-manifest.json` (151 paths, 143 hashes, exact EXE bindings); catalog re-run on the 0.16 source (`blocked-catalog-rt1`) identical per table to the 2026-10-20 run (2,698 / 117,624, 1 legacy-binary load error); stale 15/27-table prose in `gap-report.json`/`feature-coverage.json` repaired at the tool source and regenerated under the pinned run id. |
 | RT-2 residual attribution | root | ready | Group all 2,698 blocked rows by upstream cause, inspect leading tables, assign code packages after synthetic cases. |
 | RT-3 legacy binary load | unassigned | design | Determine independently implementable format contract and table-level completeness test. |
 | RT-4 high-volume semantics | unassigned | design | Addressless ancestor, provider cascades, offsets, duplicate provider and AA residuals. |
@@ -52,7 +52,9 @@ game-facing action.
   parity.
 - Local original reference catalog: 151 paths, 143 distinct hashes,
   114,926 supported (58,950 staged) and 2,698 blocked of 117,624 plan
-  entries; one legacy-binary load error (post-Wave-4 catalog, 2026-10-20).
+  entries; one legacy-binary load error (post-Wave-4 catalog, 2026-10-20;
+  RT-1 re-run on the 0.16 source, 2026-10-21, reproduces all counts per
+  table — frozen manifest `gap_inventory/reference-manifest.json`).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
 - Latest verified release: 0.16 field-fix re-cut 2, build

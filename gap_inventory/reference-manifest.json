@@ -1,0 +1,1369 @@
+{
+  "schema": "ct2trainer-reference-manifest/v1",
+  "reference_dir": "reference-table-input-do-not-add-to-git (local-only corpus directory; never added to git or releases)",
+  "file_count": 151,
+  "distinct_hash_count": 143,
+  "generated": "2026-10-21T13:38:35Z",
+  "source_revision": "ea233c269f2d9c3fd8e3a88a353282e02ff3910e",
+  "entries": [
+    {
+      "file": "1FRVisage-Win64-Shipping.CT",
+      "sha256": "19307470dea655f74b86c520f038a5fd287b1014d145edc24fb46371da3f93a6",
+      "bytes": 20853,
+      "format": "ct",
+      "process": "Visage-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "20XX v1.42.12 EGS.CT",
+      "sha256": "eae62fd77ef9d4550b0f07aa2a5d60643f7132df5e54da74b48449feda4d7969",
+      "bytes": 83448,
+      "format": "ct",
+      "process": "20XX.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "ACE COMBAT 7 SKIES UNKNOWN [Tv3.3][ColonelRVH].CT",
+      "sha256": "a01c78c2b6018413f12d3e75cee8bcd5328dd2ebfb0913ba061ee469ce8900c0",
+      "bytes": 47427,
+      "format": "ct",
+      "process": "Ace7Game.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Ace7Gamefrf.CT",
+      "sha256": "bf42fb3513f544453ff4e59e727dab99a342d04c1f2fb74d264cd21083e25f4e",
+      "bytes": 2653,
+      "format": "ct",
+      "process": "Ace7Game.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Alien Isolation.CT",
+      "sha256": "d413b6e1a3921379feb18be5ca281dc7e8d4a1d1b6dca12ef75e13930ca3de94",
+      "bytes": 5977,
+      "format": "ct",
+      "process": "AI.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "APlagueTaleInnocence_x64.CT",
+      "sha256": "8310c118c53967b5a7819a9f163de5f6571908f20284967ce0da56513387db25",
+      "bytes": 59923,
+      "format": "ct",
+      "process": "APlagueTaleInnocence_x64.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "APlagueTaleRequiem_x64.CT",
+      "sha256": "c8ca4cd5a58cef0ad012c9bd23b4e5b68a9560b1c49885b219afe1018526176c",
+      "bytes": 5591,
+      "format": "ct",
+      "process": "APT2_WinStore.x64.Submission.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Atomfall_dx12.CT",
+      "sha256": "84555805b09aa65aa3f605ae77e886a8e052fb86461d092d4e7398995c466a3d",
+      "bytes": 14764,
+      "format": "ct",
+      "process": "atomfall_dx12.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "AtomicHeart-Win64-Shipping.CT",
+      "sha256": "3b4eaeba98612788ee620d075c62026a0ff34e3c49dcb44270281bff67fa4d1f",
+      "bytes": 39754,
+      "format": "ct",
+      "process": "AtomicHeart-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "AtomicHeart-Win64-Shipping_v1.2.CT",
+      "sha256": "d9ecd7b8be48f2dab5dfa1412f32dcaf15d29338be0d24ac06b6c77c4682ef0e",
+      "bytes": 7150459,
+      "format": "ct",
+      "process": "AtomicHeart-Win64-Shipping.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "AtomicHeart.CT",
+      "sha256": "aa3801aa3dd6e82cf0e578def495380a84b86b35c8bbefae1751ad18c4111eab",
+      "bytes": 44988,
+      "format": "ct",
+      "process": "Genesis-Win64-Shipping.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "BatmanAK.CT",
+      "sha256": "e03d273ac73ef24b8d107f97021af4bc00a173d0103766a22584a911be92bcba",
+      "bytes": 46351,
+      "format": "ct",
+      "process": "BatmanAK.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "BioShock Infinite.CT",
+      "sha256": "53b918f54b886871ba17043166411a8ac7a4dc4a68a5af12563399fdca1dc2c2",
+      "bytes": 10757,
+      "format": "ct",
+      "process": "BioShockInfinite.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Bioshock2HDfrf.CT",
+      "sha256": "f1ba05dab26a3e4232af4ae89e5040cd0b0a6f153b1e64fd6d930236a8cb273b",
+      "bytes": 2040,
+      "format": "ct",
+      "process": "Bioshock2HD.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "BioshockHDfrf.CT",
+      "sha256": "e696ce41d78e0c9e01c4db1368d6bde730a4a8d170ef63a5eec89e39362ceba7",
+      "bytes": 1310,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "Borderlands3-V10.CT",
+      "sha256": "bb1250ac2cb72460acf25d9e4db87a05df1fa933f968b50327ebf81ef4abdcfe",
+      "bytes": 7876138,
+      "format": "ct",
+      "process": "Borderlands3.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Borderlands3.CT",
+      "sha256": "f511a4beb053511afad2aa5f8c7d2568f605d32aa55e41ee6ae30eb93bf07e40",
+      "bytes": 127858,
+      "format": "ct",
+      "process": "Borderlands3.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Callisto Protocol V1.1.CT",
+      "sha256": "0e500b9e3ada4c839a39dd498005f8bb8edcf8ac23f68bef98dc14d180d7a3c7",
+      "bytes": 30125,
+      "format": "ct",
+      "process": "TheCallistoProtocol-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Cronos - The New Dawn v2.CT",
+      "sha256": "b39326f5f4eb9a34b8273a65ef36834e320216af25b30a84a025a52ad1457a0a",
+      "bytes": 253778,
+      "format": "ct",
+      "process": "Cronos-Win64-Shipping.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "Cronos_The_New_Dawn.CT",
+      "sha256": "10bd0ca964a059cd1815c9c086596fc1d89950ca325be040f20e0a1d9a7faac3",
+      "bytes": 194167,
+      "format": "ct",
+      "process": "Cronos-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Cronos_The_New_Dawn2.CT",
+      "sha256": "719d7d8d7cea19654fd0605ef20443f0b45779ffcc58ecd68974724033162246",
+      "bytes": 194146,
+      "format": "ct",
+      "process": "Cronos-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "ctts-Win64-Shipping.CT",
+      "sha256": "f7e0cc3473ec0d210e92279099b13b3814fb57c6d40178688208d14b2dacf98c",
+      "bytes": 33234,
+      "format": "ct",
+      "process": "ctts-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Cyberpunk2077.CT",
+      "sha256": "c3a64eca58672e8f8ffc3b2147cfe5598cc3f2f2b9a4081cf0f0e55c2a3c24f0",
+      "bytes": 325380,
+      "format": "ct",
+      "process": "Cyberpunk2077.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Cygni-Win64-Shipping.CT",
+      "sha256": "ef3649704312702b6403d62853a5dcb50da8e3b9978de4cd8ed46c69d8373526",
+      "bytes": 67156,
+      "format": "ct",
+      "process": "Cygni-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "DeadIsland-Win64-Shipping-v2.CT",
+      "sha256": "b25682b3f13361ab3991c0c2e2c6f310393aa010ca37cc11c42a5f687798ed78",
+      "bytes": 105716,
+      "format": "ct",
+      "process": "DeadIsland-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "DeadIsland-Win64-Shipping.CT",
+      "sha256": "7ed4b3c83976b3543b9d465a19e97d95717d10c17e9ff868d928a29ee702dc8a",
+      "bytes": 100966,
+      "format": "ct",
+      "process": "DeadIsland-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "DEATH STRANDING DIRECTOR'S CUT.CT",
+      "sha256": "ee93ac58bd1c087d220a082d64a89593636462cc269b24dd9ca73bf93c4a94d4",
+      "bytes": 2437,
+      "format": "ct",
+      "process": "ds.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "DeathStrandingDC_Update31_for_v1.001.CT",
+      "sha256": "24ea1ed8526435d05c42f3e00bf838d371629e4cc6bc627ef3830cce98036af6",
+      "bytes": 2432159,
+      "format": "ct",
+      "process": "ds.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "DeathStrandingDC_Update31_for_v1.001_compatibility.CT",
+      "sha256": "7eeb09e8899c2bca93c3a3ebdd8c4716c933ca72154287bb090b5945a9d69777",
+      "bytes": 2427241,
+      "format": "ct",
+      "process": "ds.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Directive8020-Win64-Shippingfrf.CT",
+      "sha256": "16b633d0665ad0681cae287e8771e509d1abd1ecc9156223d02ede5090159400",
+      "bytes": 4387,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "Disco Elysium (version 2024-06-24).CT",
+      "sha256": "8756f8d2f1d32cf8c8e6ac6f6f3f7f5339a846bdff3953e87c4042c9397a6f67",
+      "bytes": 208301,
+      "format": "ct",
+      "process": "disco.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "disco.CT",
+      "sha256": "49e320b41632d5c1326723971f8d573997f1e55663de031f8e1fc1ea34f5094c",
+      "bytes": 51441,
+      "format": "ct",
+      "process": "disco.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "ds.CT",
+      "sha256": "62130f7cda3b7f3e2989da39583903e2542c9d8085490441f0a59c82c97e1d10",
+      "bytes": 128568,
+      "format": "ct",
+      "process": "ds.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "DS2 v8.ct",
+      "sha256": "91127c2d9850d92c58623631cb64b0a97aa0b3dcf82ab94fd1faf7e3e4592734",
+      "bytes": 37297,
+      "format": "ct",
+      "process": "DS2.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "DS2.CT",
+      "sha256": "e0d7b37739280110a5b34ce276deaa6edcc484d1346aee8f6f1c3a2210b324a2",
+      "bytes": 368613,
+      "format": "ct",
+      "process": "DS2.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "DXMD.CT",
+      "sha256": "99b627c00fca0b1c710a04c4fcdf90e3598942d6b69ec137079bf4345ea31f12",
+      "bytes": 22074,
+      "format": "ct",
+      "process": "DXMD.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Fallout4.CT",
+      "sha256": "40cda8272dabaf5e97291d1710cdd4c5c9102cf273da1a7cd8cab55ebe382b14",
+      "bytes": 159357,
+      "format": "ct",
+      "process": "Fallout4.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "ForgottonAnne.CT",
+      "sha256": "d70bb1b2dd301a5514118a88c896988fa138a977b71843e2618e5b094e9264f3",
+      "bytes": 486552,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "game.CT",
+      "sha256": "b0487235d9f443ca7b366990e7cf153e2fb51028922ada20c0f7a4c0e5c6bf58",
+      "bytes": 1104,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "GhostOfTsushima.CT",
+      "sha256": "ec41a2d3a27146ea84de4cdfe162cdc1e2bb2923d31f01163a9f2b2257bc4500",
+      "bytes": 229709,
+      "format": "ct",
+      "process": "GhostOfTsushima.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "GhostwireTokyo (Build.9397770).CT",
+      "sha256": "3e86859fba4350632892fcaa26afecd65967cf4d78b358d0375c3cb0f0722871",
+      "bytes": 1862,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "GhostwireTokyo v1.0.2.CT",
+      "sha256": "3e86859fba4350632892fcaa26afecd65967cf4d78b358d0375c3cb0f0722871",
+      "bytes": 1862,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "GhostwireTokyo.CT",
+      "sha256": "3e86859fba4350632892fcaa26afecd65967cf4d78b358d0375c3cb0f0722871",
+      "bytes": 1862,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "Giana Sisters.CT",
+      "sha256": "90c20eb9fbc833b7169048d9cc15d7231bc26a7f8127e66c1982baf170054b32",
+      "bytes": 2329,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "GingaForce_x64_Release.CT",
+      "sha256": "afb14bbf83e8b88384b9636890a3caa03af53a54ea72f5ec67c08f2557bb1378",
+      "bytes": 26350,
+      "format": "ct",
+      "process": "GingaForce_x64_Release.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "GoW.CT",
+      "sha256": "0966c5430ecf277c036221af3bd3aa820f98441fced2d262348ba22804cd43bd",
+      "bytes": 58426,
+      "format": "ct",
+      "process": "GoW.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Hellblade2-Win64-Shippingfrf.CT",
+      "sha256": "d65385d0f55fe49845d9581424a01c920743cb753cb1e3bad28689d761965558",
+      "bytes": 2029,
+      "format": "ct",
+      "process": "Hellblade2-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Hellblade2-Win64-Shippingfrf_old.CT",
+      "sha256": "d65385d0f55fe49845d9581424a01c920743cb753cb1e3bad28689d761965558",
+      "bytes": 2029,
+      "format": "ct",
+      "process": "Hellblade2-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "HellPie-Win64-Shipping_v1.0.CT",
+      "sha256": "bcb0be96bf4a883c7ed16dc33f8d9daf039a954b359def3c1df495e5f40c4a1f",
+      "bytes": 2528171,
+      "format": "ct",
+      "process": "HellPie-Win64-Shipping.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "HorizonForbiddenWest (1).CT",
+      "sha256": "029274a1bbdb67dc0bcaafbed8fef3e8ef00832dea2233108cd59a17306e1976",
+      "bytes": 322193,
+      "format": "ct",
+      "process": "HorizonForbiddenWest.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "HorizonForbiddenWest.CT",
+      "sha256": "029274a1bbdb67dc0bcaafbed8fef3e8ef00832dea2233108cd59a17306e1976",
+      "bytes": 322193,
+      "format": "ct",
+      "process": "HorizonForbiddenWest.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "HorizonZeroDawn.CT",
+      "sha256": "f5221f0137171a896f5f8c93aafca8d84394afa3ba45f9c40be4475c05916169",
+      "bytes": 62157,
+      "format": "ct",
+      "process": "HorizonZeroDawn.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "JustCause4-EpicGames.CT",
+      "sha256": "faa2e214f469dc09cb90c151fb0a69cbe9b9ed988472223b351a1f65f3fdbf31",
+      "bytes": 62561,
+      "format": "ct",
+      "process": "JustCause4.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Kena-Win64-Shipping.CT",
+      "sha256": "13d1e11509f8e14fd4e73f09c389e40797af5efb74274c88d386ee86025af533",
+      "bytes": 337746,
+      "format": "ct",
+      "process": "Kena-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "LikeADragon8-v7.CT",
+      "sha256": "070fbb992c6788f9d61e6dba7b85c0559612cdf06b2e20077869e1b611043df3",
+      "bytes": 165207,
+      "format": "ct",
+      "process": "likeadragon8.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "LikeADragonGaiden-v3.CT",
+      "sha256": "65dd777e81e7fb2bd73a0c544049b1747c2edb818a926dd24a7da0cb78ae8786",
+      "bytes": 95524,
+      "format": "ct",
+      "process": "likeadragongaiden.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "LikeaDragonIshin-Win64-Shipping-v6.CT",
+      "sha256": "835b40ab9635b686f5e617c5db1770d23773d40679e6587fc2a798ff00f23c54",
+      "bytes": 281530,
+      "format": "ct",
+      "process": "LikeaDragonIshin-Win64-Shipping.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "LikeaDragonIshin-Win64-Shipping.exe.CT",
+      "sha256": "f7f665124420d0c1a0865c6bcf9b25ea7f654f2b48a7f84247b056a0233dde58",
+      "bytes": 7969,
+      "format": "ct",
+      "process": "LikeaDragonIshin-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "LittleNightmaresfrf.CT",
+      "sha256": "cc2c9302b3434e64378162519049494f7bb42c0bc6d3afe09c264b703dcb3dcc",
+      "bytes": 1279,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "Lust from Beyond -F.CT",
+      "sha256": "081e08c84dc89b96d41b5304cf9b7750a30ba57cdcd0f3d2e75f149a5988e582",
+      "bytes": 321768,
+      "format": "ct",
+      "process": "Beyond.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "LustForDarkness.CT",
+      "sha256": "3b94c6408ae89ae549c751519a48b5108f819606a739b5611569e81efe172ca1",
+      "bytes": 42756,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "METAPHORv9(STEAM).CT",
+      "sha256": "92829d5a050c57c7ae2a7b83b86c0a4b0437b1ced5f10e66ec01a64e1ece78de",
+      "bytes": 4961187,
+      "format": "ct",
+      "process": "METAPHOR.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "Metro Exodus.CT",
+      "sha256": "41904c31d0b10deba0b2dc98507a4ddfb067ab05836d3ec22b20780249170989",
+      "bytes": 122296,
+      "format": "ct",
+      "process": "MetroExodus.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "My Friend Pedro - Blood Bullets Bananas v1.03.CT",
+      "sha256": "758ca93fbe56e3629a0586cbf89238c1976aa4a2dd621dee2223a4a69b96cf00",
+      "bytes": 17185,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "Natsuki Chronicles v1.0.1.1(U1).CT",
+      "sha256": "3e86859fba4350632892fcaa26afecd65967cf4d78b358d0375c3cb0f0722871",
+      "bytes": 1862,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "Natsuki Chronicles v1.0.1.1.CT",
+      "sha256": "3e86859fba4350632892fcaa26afecd65967cf4d78b358d0375c3cb0f0722871",
+      "bytes": 1862,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "nex_machina.CT",
+      "sha256": "9aef3b776f5096464b561994d010ae4b4a5f8c05b6fa8363ae5af5b0f7cabb1a",
+      "bytes": 4457,
+      "format": "ct",
+      "process": "nex_machina.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Octopath_Traveler-Win64-Shipping.CT",
+      "sha256": "01204ff1d32f82c076ce0506707e2a905f9be0dfdfc19b6a81dbbdf0e1a067b5",
+      "bytes": 191198,
+      "format": "ct",
+      "process": "Octopath_Traveler-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Octopath_Traveler2-Win64-Shipping.CT",
+      "sha256": "739a10b736b9d17eb0ac6d76bf2c8fc09807f809456bcde62993c134738d11b0",
+      "bytes": 528216,
+      "format": "ct",
+      "process": "Octopath_Traveler2-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Oregon-Win64-Shipping_v1.1.CT",
+      "sha256": "3eece236a2fb678796121fca810b619395b01b4c2e730a695184e2f4f660ae51",
+      "bytes": 2807173,
+      "format": "ct",
+      "process": "Oregon-Win64-Shipping.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "P3R  Basic Table.CT",
+      "sha256": "d880a4c0c2d207b6dcc20a0ca372c08253c636ea54e36e8baf3ad99402245dac",
+      "bytes": 1408,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "P3R-v4.CT",
+      "sha256": "8bbe284a345aa991264cafa35f9e0c8aa3c496117fe573e820542a27dd823ffc",
+      "bytes": 4882441,
+      "format": "ct",
+      "process": "P3R.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "P3R-v5.CT",
+      "sha256": "ac589b2053d60a8fc9532b7534ea0e2322cf5aebb1f59ca683ebabbd916809d9",
+      "bytes": 4688479,
+      "format": "ct",
+      "process": "P3R.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "P3R.CT",
+      "sha256": "b00a6787033dd5015804f6bfcdb70638b093492af2c7e347de28d686baf6b33c",
+      "bytes": 3924337,
+      "format": "ct",
+      "process": "P3R.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "P3Reload Cheat Scripts v1.5.1.CT",
+      "sha256": "817bc79a6d38a2f1cf2355358bb426542d4e1d7e5b8e55f9cca37fe6674ad719",
+      "bytes": 1709804,
+      "format": "ct",
+      "process": "P3R.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "P4G.CT",
+      "sha256": "bef05134f3191d3526b64e71588fa0a67a8176184fecc7c46e2f9db45574ded7",
+      "bytes": 4212529,
+      "format": "ct",
+      "process": "P4G.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "P5Strikers (copy).CT",
+      "sha256": "b30124889a3436cf5c56d8824b218a0bbac80b124442db333ff7e42b0b91f750",
+      "bytes": 464268,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "P5Strikers.CT",
+      "sha256": "1e2fd31f808cf365cab6e14a6f43f7db0d3f98dd3367d5deda045e9c051f4180",
+      "bytes": 464265,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "PennysBigBreakaway.CT",
+      "sha256": "225d8660fe4b492b362d581488855f6f6e908944e230827effc86c176f0a63c8",
+      "bytes": 7704,
+      "format": "ct",
+      "process": "PennysBigBreakaway.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "qt-ds-1.CT",
+      "sha256": "75863a743cfac145b431af14947acee0cde91c38721eeea8e69565892f580d1c",
+      "bytes": 26169,
+      "format": "ct",
+      "process": "ds.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "qt-ds-2.CT",
+      "sha256": "af9ce6088fd5a246a4b4f37eb196dd3ca3a23fe373ad3f9bde1d6c901f47fecf",
+      "bytes": 27485,
+      "format": "ct",
+      "process": "ds.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "qt-ds.CT",
+      "sha256": "ded39e1c418381a6ac5485050b53d469e009b2663421fd600b5a461688a84589",
+      "bytes": 12400,
+      "format": "ct",
+      "process": "ds.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Quantum Break - 1.0.118.7029.CT",
+      "sha256": "ede23ae7a860ea478f20eb77eb8428fe43d5e5465fdcbe0a4f08d88fda45584c",
+      "bytes": 5587,
+      "format": "ct",
+      "process": "QuantumBreak.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Radiant Silvergun.CT",
+      "sha256": "15120c3f2b2a54b7e0995c062bb75aa85c45f9fddb20b8fcf718aac1472d664d",
+      "bytes": 3422,
+      "format": "ct",
+      "process": "RS.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Rage.ct",
+      "sha256": "cf31cfe772ddf7a190046af4cdbc3e931d6f982611fb5aee605a93c3a8a5ca48",
+      "bytes": 14104,
+      "format": "ct",
+      "process": "Rage.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "RAGE2frf.ct",
+      "sha256": "a7e5fc07f93dedbb464a5ceabdd7bd5437ca9e2c4bc4a8947b556fd9bda660e3",
+      "bytes": 3814,
+      "format": "ct",
+      "process": "RAGE2.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "raymanlegends_dvt.CT",
+      "sha256": "a6327941692b3b95b691133f021a060161640bd61d45f15c70c90a3c9f323267",
+      "bytes": 3110,
+      "format": "ct",
+      "process": "Legends.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "RDR2-alternate.CT",
+      "sha256": "46968da2bbc2ed5a96769c7a72b33031db8bd8c3b4ce56f540cd31e5f9dd2524",
+      "bytes": 22090,
+      "format": "ct",
+      "process": "RDR2.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "RDR2.CT",
+      "sha256": "615baf32f4ce06affc38ae720fcce5b216d33141cf4a23fdc0c1bf58b6940745",
+      "bytes": 82633,
+      "format": "ct",
+      "process": "RDR2.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "re2.CT",
+      "sha256": "99dcd6784ca5365e02c73e7c67b46e2e4ef9e10354d3bec0a78e6d65ef6e1f9e",
+      "bytes": 287750,
+      "format": "ct",
+      "process": "re2.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "re2_testicles.CT",
+      "sha256": "51f7d21d1d97120a099303129dfaf7c9c42fcd7e847d566966c04f0b174f47e9",
+      "bytes": 286980,
+      "format": "ct",
+      "process": "re2.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "re4.CT",
+      "sha256": "2621c99ac6929155478563c79ce2fcc5f7858aa3ea9ebb7ab644abd65f733e37",
+      "bytes": 2076,
+      "format": "ct",
+      "process": "re4.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "recolored-Win64-Shipping.CT",
+      "sha256": "b67c5c1b1cece1ed1f485d634c3b4ceaeb73a04c6f6e12901f821d768760ba5e",
+      "bytes": 6563,
+      "format": "ct",
+      "process": "recolored-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Resonance_v1.1_Released.CT",
+      "sha256": "c60000426ee6df1c49e5f476b56486a2e97da243cf1066985b9c64c89532e8e0",
+      "bytes": 159161,
+      "format": "ct",
+      "process": "Resonance.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Returnal-Win64-Shipping.CT",
+      "sha256": "306193bbfaf96ec76d539633a72debe609f49e8493458b4c8fe6d1109f1e9685",
+      "bytes": 4562,
+      "format": "ct",
+      "process": "Returnal-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Returnal-Win64-Shipping_195864.CT",
+      "sha256": "2f00cb4a91987f3a741fa94def60e1359381502d7294d6ec03e83f2f0b7baff1",
+      "bytes": 46054,
+      "format": "ct",
+      "process": "Returnal-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Returnal-Win64-Shippingfrf.CT",
+      "sha256": "8720d42203f7ce9afc3e7f09f27f2bbf079322a22d1618a8d4a471177980801b",
+      "bytes": 1814,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "REZ.CT",
+      "sha256": "4bf4d88586a8dd6d5101d71139f63c593d72f67bb10d1e43a3750cddd0c5ae66",
+      "bytes": 8790,
+      "format": "ct",
+      "process": "REZ.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "RiftApart.CT",
+      "sha256": "e4e460ca1c88b0bf97c5433670123004f3f7b299d95741c271b0699487c6a4be",
+      "bytes": 40509,
+      "format": "ct",
+      "process": "RiftApart.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "ROTTR.CT",
+      "sha256": "5cb3f72539a53dd4800696977a78c39850bb759366da314527a7d835eb6b8abc",
+      "bytes": 7759,
+      "format": "ct",
+      "process": "ROTTR.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "RS.CT",
+      "sha256": "996ec6a8bf05a7ab6aaa5ef3a7a6f441bd0ca970a8c0de1e8a6165596078d7a1",
+      "bytes": 730,
+      "format": "ct",
+      "process": "RS.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "S.M.B.3Dfrf.CT",
+      "sha256": "79801f7f8de0dbac51cf7146748c98f7a7df1282ddb53a34eef0d5ec572c7eee",
+      "bytes": 7115,
+      "format": "ct",
+      "process": "SMB-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Sackboy A Big Adventure_Table v1.0_ColonelRVH.CT",
+      "sha256": "5a51902abb5658411e11141c8bffbb6cdedd6f62b924cc02b3f63548d46f5281",
+      "bytes": 45176,
+      "format": "ct",
+      "process": "Sackboy-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "SandFallFinalFRF.ct",
+      "sha256": "5f4bb5c6483fc1cf683c79bf5936d0aa3f311295fc9b58266e9979ea56f7fefc",
+      "bytes": 17724,
+      "format": "ct",
+      "process": "SandFallEos-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "SandFallFinalFRF_V2.ct",
+      "sha256": "df7abfc449ad5bf533dcaa6e5b31bf7dc5624c98219ea75b4462808c154025d4",
+      "bytes": 17963,
+      "format": "ct",
+      "process": "SandFallEos-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "SandFallFinalFRF_V3.ct",
+      "sha256": "c1205d24af74a4bb6564b6cc5be4b01e92a3a20ad15d54b55769b276ddd35d01",
+      "bytes": 18190,
+      "format": "ct",
+      "process": "SandFallEos-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "SandFallFinalFRF_V4.ct",
+      "sha256": "ae38550b1404ee1c181cfb5af48522f95404f0b77cd3ea4100a2938a705c0ea6",
+      "bytes": 20721,
+      "format": "ct",
+      "process": "SandFallEos-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "SandFallFinalFRF_V5.ct",
+      "sha256": "5c9f1fef9268384434ffa5f0abe0cdecae67b782dac7cc4ad55393e915bb2ba7",
+      "bytes": 22712,
+      "format": "ct",
+      "process": "SandFallEos-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Scorn-Win64-Shipping_v1.0.CT",
+      "sha256": "9d7859e578eb9ff9716bc9375dedd3d3d826b80d9d51647192d243ca626d3e6e",
+      "bytes": 1333091,
+      "format": "ct",
+      "process": "Scorn-Win64-Shipping.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "Shinkansen Ikaruga V1000.CT",
+      "sha256": "856eda60f040beb46609c9ddd47b99d06d3a3e0c477eefeb801cde443976dc28",
+      "bytes": 10748,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "Shinkansen Sunless Sea V1005.CT",
+      "sha256": "65b467f0eec0a0561d39fbfc3233afb359f1106ed032bb591aa2396cfdffacd3",
+      "bytes": 550471,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "Shinkansen Yooka-Laylee V1001.CT",
+      "sha256": "f0e086223534e5e47e2cbcb8b63c85f6bcda042ef64debcc877d5312e8869440",
+      "bytes": 93628,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "SHProto-Win64-Shipping-v1.2.CT",
+      "sha256": "563a343cdfe1e92ce64cd2b335a2299494906bd0ab7a540dbbf2447baa36137d",
+      "bytes": 20364,
+      "format": "ct",
+      "process": "SHProto-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "SILENT HILL Townfall Cheat Table (Made For Steam).CT",
+      "sha256": "329fb2ef1f344478d19bf08860784d7b5b38bdc0157d204ed588cbaa3cdd3a43",
+      "bytes": 35095,
+      "format": "ct",
+      "process": "Townfall-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "silent hill townfall rml.CT",
+      "sha256": "19b34a49b5cbc7558e85c04037c48709f1ae08ff6bc8e045f559e9ad06772c99",
+      "bytes": 47187,
+      "format": "ct",
+      "process": "Townfall-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "SonicFrontiers.CT",
+      "sha256": "758959ff37bb2d69656d778aaa1b765445cf7ae87081073346b2a08dc354205b",
+      "bytes": 209069,
+      "format": "ct",
+      "process": "SonicFrontiers.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "SOTTR.CT",
+      "sha256": "42ec27e533a4b96605e47e60656c2bb30b0c41c5cfe701bd758b14d894f9f28c",
+      "bytes": 679099,
+      "format": "ct",
+      "process": "SOTTR.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Starfield.CT",
+      "sha256": "9b96338bb3496f51c85367184edb70a130e55b62ef57a8a14a8a00949d58ce36",
+      "bytes": 199232,
+      "format": "ct",
+      "process": "Starfield.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Subnautica.CT",
+      "sha256": "429ef955856b92bc0959053f84e7e007238a9a6a55ab3f56d956415f7e5e585d",
+      "bytes": 1023834,
+      "format": "ct",
+      "process": "Subnautica.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Subnautica_e67616.CT",
+      "sha256": "b47188c363f850ca56563d1b97f7673f47f0109e6d3f6f7836f18796528c4a2c",
+      "bytes": 88547,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "Sunless Skies.CT",
+      "sha256": "e4d12a687aa9319ed6d706ea43c937bebb3b3913ea7badc4c704e0e55ce936ad",
+      "bytes": 25808,
+      "format": "ct",
+      "process": "Skies.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "SuperMeatBoy.CT",
+      "sha256": "6ea211241aa62707b4df8ea8fb71a67386b8482c43d32956fe6bc91d722c3ac1",
+      "bytes": 10328,
+      "format": "legacy-binary",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "T.E.C v1.0.11.CT",
+      "sha256": "3e86859fba4350632892fcaa26afecd65967cf4d78b358d0375c3cb0f0722871",
+      "bytes": 1862,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "teardownfrf.CT",
+      "sha256": "6229138a57c819c40d284d00f3582f8ce57ab68f9e49400f9521854a03d29b39",
+      "bytes": 2810,
+      "format": "ct",
+      "process": "teardown.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "TheCallistoProtocol-Win64-Shipping.CT",
+      "sha256": "440af6abd31fb79e2cd64903696b7e487da4524fb1699723e54aca812493f4f1",
+      "bytes": 14375,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "TheCallistoProtocol-Win64-Shipping_1.CT",
+      "sha256": "1f9d1e5bbd996a26b4c2f9114b47075747019f456ea329197a11e029abf23ef3",
+      "bytes": 13417,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "TheCallistoProtocol-Win64-Shipping_v1.2-Steam.CT",
+      "sha256": "747de95f2106c1a5a1b72d666378035c4b9ef12028037ab8ff7da0c0a663073f",
+      "bytes": 2247421,
+      "format": "ct",
+      "process": "TheCallistoProtocol-Win64-Shipping.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "TheSinkingCity_Rem_v1.2_Released.CT",
+      "sha256": "faf30da704c4588a1a4a79d32020d1d7918d77dca9e36a785361c33f4f84b5e8",
+      "bytes": 204689,
+      "format": "ct",
+      "process": "TheSinkingCityRemastered-Win64-Shipping.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "TheThaumaturge-Win64-Shipping.CT",
+      "sha256": "1d4f75f9b8801d9637363385cbf5d71ed950d10aa946de201494bed5752a8620",
+      "bytes": 34924,
+      "format": "ct",
+      "process": "TheThaumaturge-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "TheThaumaturge.CT",
+      "sha256": "e1dd4eeca1d03cd97d09526de2c4e0573f63109b65c39d98b4f6cc5149ed1d28",
+      "bytes": 27203,
+      "format": "ct",
+      "process": "TheThaumaturge-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "TheThaumaturgefrf.CT",
+      "sha256": "e696ce41d78e0c9e01c4db1368d6bde730a4a8d170ef63a5eec89e39362ceba7",
+      "bytes": 1310,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "Tomb Raider v1.1.5 (Final).CT",
+      "sha256": "d643d7b5d12742c177828044cd7eef5e8f3c262ed38d0e17b11b197e462e81d5",
+      "bytes": 24767,
+      "format": "ct",
+      "process": "tombraider.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "trine1_32bit.CT",
+      "sha256": "f8ee8f36a274e403bf794c05c4a936f639a7bff3fa10f685b2b83cb9e2a61eda",
+      "bytes": 7787,
+      "format": "ct",
+      "process": "trine1_32bit.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x86"
+    },
+    {
+      "file": "trine2_32bit.CT",
+      "sha256": "56e56c59f428bccee7f0e6e7c4bb38161b4529abc80ab516fb81359217adbf58",
+      "bytes": 97706,
+      "format": "ct",
+      "process": "trine2_32bit.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x86"
+    },
+    {
+      "file": "trine3_64bit.CT",
+      "sha256": "d9f6de32bdc7fc121c7a5fa5ce5752fea69e77a456fc507f4bf1306958e561b6",
+      "bytes": 20941,
+      "format": "ct",
+      "process": "trine3_64bit.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "trine4.CT",
+      "sha256": "afda7c801a065e303736457a192ed5ee53ce09a4476c37a713a596ba23fc5253",
+      "bytes": 1041819,
+      "format": "ct",
+      "process": "trine4.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "trine5frf.CT",
+      "sha256": "b9ba80025039c72db63adda8c7b296ca953f505d895f5a0ffec65465c0e84fab",
+      "bytes": 1746,
+      "format": "ct",
+      "process": "trine5.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "TSCGame-Win64-Shippingfrf.ct",
+      "sha256": "40e9b994688351669362a9aa69c67b6e3e1049e728d2145d384a321cd6231b0f",
+      "bytes": 2907,
+      "format": "ct",
+      "process": "TSCGame-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Witcher3_Complete_Edition_or GOTY_4.02HF1_G25v2.CT",
+      "sha256": "3dfa8d725b00e7fec56611a2c7ea0c4c8b4bbc048ff96ba7ce1aaa9ed844b699",
+      "bytes": 195450,
+      "format": "ct",
+      "process": "witcher3.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Witcher3_Complete_Edition_or GOTY_4.03_G25v2.CT",
+      "sha256": "33d325d92492f4e5fefd6d7df6043affbbe4e57ab9db1bd6f9e4cd54a5e0c0af",
+      "bytes": 180054,
+      "format": "ct",
+      "process": "witcher3.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "working.ct",
+      "sha256": "da37e3934f969439603e40b928805c7e9359027f03d65ba75a51a0619b02ea14",
+      "bytes": 43796,
+      "format": "ct",
+      "process": "TheCallistoProtocol-Win64-Shipping.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "Yakuza_Kiwami_Remastered_Item_v2.13_en.CT",
+      "sha256": "c1262bc318317d9ad1bbcde70495b25be37c0cf31ea6d153c260546d4bff98d6",
+      "bytes": 35509,
+      "format": "ct",
+      "process": "YakuzaKiwami_R.exe",
+      "process_source": "ct-suggestion-first-of-multiple",
+      "architecture": "x64"
+    },
+    {
+      "file": "YakuzaKiwami (1).CT",
+      "sha256": "84724016e8be213c637b1f0e7b903b96d017c9325deddc3ac10a0ea69568e847",
+      "bytes": 7844,
+      "format": "ct",
+      "process": "YakuzaKiwami.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "YakuzaKiwami2_R.CT",
+      "sha256": "ee3e9ada1bf8a99ad5a5099f6c5855fb405647eeaf749fab514fbe07a2b33f69",
+      "bytes": 122314,
+      "format": "ct",
+      "process": "yakuzakiwami2_r.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "YakuzaKiwami2frf.ct",
+      "sha256": "6e66b8354f7f4b2b16644cbb48645029d7ad1bf21e2d74b70525cc7461372ea6",
+      "bytes": 2803,
+      "format": "ct",
+      "process": "YakuzaKiwami2.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "YakuzaKiwami3frf.CT",
+      "sha256": "1fbc96c2abf41b35213765c704d028624426f59c19111cd2473b7f10be2bed95",
+      "bytes": 3356,
+      "format": "ct",
+      "process": "YakuzaKiwami3.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "YakuzaLikeADragon-NEW-June2024.CT",
+      "sha256": "6cf5c53f885f8a207de6e90628b239042ecf9510caca4b1acad383bc3f1495e5",
+      "bytes": 1140,
+      "format": "ct",
+      "process": "game.exe",
+      "process_source": "default",
+      "architecture": "x64"
+    },
+    {
+      "file": "YakuzaLikeADragonScript.CT",
+      "sha256": "6be19bcfb1d4eac525fbc722bb902954225530a747c39614ed292980a4aea570",
+      "bytes": 9443,
+      "format": "ct",
+      "process": "YakuzaLikeADragon.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "YLILWin64 (1).ct",
+      "sha256": "01debb5607e33c43e6b5add941fc28c2de284cc91c31aeaaaeedd1762d519ff7",
+      "bytes": 398636,
+      "format": "ct",
+      "process": "YLILWin64.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "YLILWin64.ct",
+      "sha256": "ca277a97c4615290f6199939ee7a73ca35e5031919f45727e27ac09f3efa17a0",
+      "bytes": 79641,
+      "format": "ct",
+      "process": "YLILWin64.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    },
+    {
+      "file": "小猫咪，大城市 V1.CT",
+      "sha256": "7f349845d970d7ff8769f8b354b6e19aad7c9bdaf85d1d9766deac0ad139604c",
+      "bytes": 7836,
+      "format": "ct",
+      "process": "City.exe",
+      "process_source": "ct-suggestion",
+      "architecture": "x64"
+    }
+  ]
+}

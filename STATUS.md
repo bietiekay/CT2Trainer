@@ -23,7 +23,7 @@ defines the work and completion gates.
 | --- | --- | --- |
 | Independently built product | 0.16 source and Windows portable ZIPs passed the offline build with **3,405 tests OK, 25 expected skips**, and `ce_inputs: []`. | Keep the clean-room build and release checks green after each change. |
 | Synthetic feature coverage | **42/42** declared feature classes and **7,475/7,475** action weight covered across **30 synthetic tables**. | This metric does not establish support for every original table or a real game effect. Add synthetic cases when a new behavior is found. |
-| Original reference tables | The latest local static catalog classifies **114,926 supported**, including **58,950 staged**, out of **117,624 plan entries**. | **2,698 entries are blocked** and one legacy-binary table does not load. Staged entries still need their runtime conditions proved. Re-run the catalog on a frozen input/process manifest. |
+| Original reference tables | Local static catalog (RT-1 rebaseline, 2026-10-21, frozen manifest `gap_inventory/reference-manifest.json`; re-run on the 0.16 source identical per table to the 2026-10-20 run) classifies **114,926 supported**, including **58,950 staged**, out of **117,624 plan entries**. | **2,698 entries are blocked** and one legacy-binary table does not load. Staged entries still need their runtime conditions proved. |
 | Observed game effects | Owned fixtures and selected runtime chains have tests. | The AP-11 campaign has **0 of 6,143** game effects confirmed. Original-table behavior must be checked against pinned game builds or explicitly equivalent owned targets. |
 | Final platforms | The 0.9.0-rc2 portable converter and a generated trainer were user-tested without CE or Python; later fixture tests cover many runtime paths. The 0.16 re-cut was field-tested 2026-10-21 (new WP-58 UI confirmed good; one cheat = table/build mismatch, no fix; the state-lock orphan after a blocked close was fixed in code the same day, see the ledger). | The 0.16 re-cut has no recorded full clean-machine acceptance. Clean Windows and real Steam Deck/Proton/touch acceptance remain open. `runtime_unverified` stays set. |
 
@@ -33,16 +33,20 @@ evidence are why the overall 100% reference-table goal is still open.
 "Supported" in the static catalog means plan admission, not confirmed
 effect in a game.
 
-**Measurement caveat:** the committed `gap-report.json` has the current
-structured totals (30 tables, 6,143 actions) but still contains stale
-prose fields naming older 15/27-table baselines. RT-1 must reconcile or
-regenerate those fields before using them as current guidance.
+**Measurement note:** the committed `gap-report.json` carries the
+current structured totals (30 tables, 6,143 actions); the stale
+15/27-table prose fields were repaired in the RT-1 rebaseline
+(2026-10-21) at the tool source, with the committed artifacts
+regenerated under the pinned run id
+`w4b4-case30-20261020081722Z`.
 
 ## What happens next
 
-1. **Reproduce the full-corpus baseline (RT-1):** lock the 151 paths,
-   hashes and exact target EXE names; rerun the catalog against the
-   current source and reconcile counts.
+1. **Full-corpus baseline (RT-1, done 2026-10-21):** 151 paths /
+   143 hashes frozen in `gap_inventory/reference-manifest.json` with
+   exact EXE bindings; the catalog re-run on the 0.16 source reproduces
+   the 2026-10-20 counts exactly (2,698 / 117,624, 1 legacy-binary load
+   error).
 2. **Explain every remaining block (RT-2):** trace provider cascades to
    their root cause. Current leading reasons include the `Esau_base`
    provider, addressless-ancestor relative addresses and pointer offsets.

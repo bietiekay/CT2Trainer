@@ -1,7 +1,7 @@
 {
  "ap11_exclusions": [
   {
-   "gate": "Real game installs/builds for the 27 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 30 pinned tables (user question unanswered)",
    "reason": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists."
   },
   {
@@ -563,9 +563,9 @@
    "affected_records": null,
    "ap11_excluded": true,
    "evidence": [],
-   "gate": "Real game installs/builds for the 27 pinned tables (user question unanswered)",
+   "gate": "Real game installs/builds for the 30 pinned tables (user question unanswered)",
    "kind": "missing_gate",
-   "label": "Real game installs/builds for the 27 pinned tables (user question unanswered)",
+   "label": "Real game installs/builds for the 30 pinned tables (user question unanswered)",
    "modules": [],
    "note": "AP-11: real game installs/builds of the pinned tables are only available on the user's machine; no in-machine proof exists.",
    "requirement": "AP-11 game gate",
@@ -698,7 +698,7 @@
     "src/ct2trainer/native/compiler.py",
     "src/ct2trainer/table.py"
    ],
-   "note": "Demonstrated for all 27 pinned tables: every source record is preserved (no silent drops), and each table-level construct — Forms, the table-Lua lifecycle, Custom types and embedded Assets — is handled or surfaced fail-closed (ignored_sections / lua_bootstrap / blocked-with-reason). A synthetic embedded-Files case proves the Assets path.",
+   "note": "Demonstrated for all 30 pinned tables: every source record is preserved (no silent drops), and each table-level construct — Forms, the table-Lua lifecycle, Custom types and embedded Assets — is handled or surfaced fail-closed (ignored_sections / lua_bootstrap / blocked-with-reason). A synthetic embedded-Files case proves the Assets path.",
    "requirement": "AP-10 missing gate (in-scope)",
    "status": "covered"
   },
@@ -1194,7 +1194,7 @@
  "schema": "corpus-feature-matrix/v1",
  "source": {
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "ac58b2a3ab18292518856905e1fc39b905688cde4bfd018c401db59f8697869d",
+  "gap_report_sha256": "d83a1968475dc2f83f269b41432e9380ad69c7d92dbd124068d7c7afaec7bd83",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
   "inventory_sha256": "5b883c999929a0e31d7a16fd849dc6260addd78490bd6ed9e5dbc4ddedf1f802"
  },

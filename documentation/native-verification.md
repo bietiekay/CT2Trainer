@@ -8,7 +8,7 @@ reproduced, and what remains open. Per-run evidence lives in the local
 build run folders (`build/runs/native-<UTC-timestamp>-<id>/`) and is not
 committed.
 
-The feature matrix covers 42/42 in-scope features over the 30-table synthetic corpus; that result does not establish support for the full real reference corpus or real-game behavior. The local-only full-reference static catalog still has 2,698 of 117,624 plan entries blocked. AP-11 has 0 confirmed real-game actions, and runtime acceptance remains `runtime_unverified: true`.
+The feature matrix covers 42/42 in-scope features over the 30-table synthetic corpus; that result does not establish support for the full real reference corpus or real-game behavior. The local-only full-reference static catalog (RT-1 rebaseline 2026-10-21: frozen 151-path manifest committed, catalog re-run on the 0.16 source identical per table) still has 2,698 of 117,624 plan entries blocked. AP-11 has 0 confirmed real-game actions, and runtime acceptance remains `runtime_unverified: true`.
 
 ## 1. Current baseline
 

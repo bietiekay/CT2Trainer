@@ -84,6 +84,12 @@ closure rate.
 
 ## Immediate investigation queue
 
+Update (2026-10-21, RT-1): the re-run on the 0.16 source (frozen manifest
+`gap_inventory/reference-manifest.json` committed, catalog
+`blocked-catalog-rt1`) reproduces the 2026-10-20 counts exactly per table
+(2,698 / 117,624, 1 legacy-binary load error); the queue below therefore
+remains valid.
+
 The 2026-10-20 catalog's leading reasons are `Esau_base` provider (600),
 addressless-script/value-ancestor relative addresses (331), `mouse_ovr`
 provider (84), `BaseAddress` provider (80), `loot_ptr` provider (62), and

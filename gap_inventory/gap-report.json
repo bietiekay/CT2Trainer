@@ -36,7 +36,7 @@
   "group_toggle_actions": 4,
   "groups_total": 1291,
   "missing_gates": [
-   "Real game installs/builds for the 27 pinned tables (user question unanswered)",
+   "Real game installs/builds for the 30 pinned tables (user question unanswered)",
    "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
    "VM/Clean-PC gate without CE/Python",
    "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -52,7 +52,7 @@
    "value": 3207
   },
   "records_total": 6145,
-  "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
+  "scope": "30 pinned corpus tables (hash-deduplicated, static)",
   "separation": {
    "locked": "requires a missing API/feature; not fulfillable without it",
    "real_game_effect": "0 actions with observed real game effect",

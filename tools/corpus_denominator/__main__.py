@@ -123,7 +123,7 @@ GAP_LABELS = {
 }
 
 MISSING_GATES = [
-    "Real game installs/builds for the 27 pinned tables (user question unanswered)",
+    "Real game installs/builds for the 30 pinned tables (user question unanswered)",
     "Actual game effect (ON/OFF, values, freeze, target/controller restart)",
     "VM/Clean-PC gate without CE/Python",
     "Real Steam Deck with Proton prefix (touch/screenkeyboard/state/freeze/clock)",
@@ -614,7 +614,7 @@ def run(args):
     pinned_expected = len(pinned_records) - pinned_nav
 
     denominator = {
-        "scope": "15 pinned start-corpus tables (hash-deduplicated, static)",
+        "scope": "30 pinned corpus tables (hash-deduplicated, static)",
         "unique_tables": len(pinned_info),
         "records_total": len(pinned_records),
         "navigation_excluded": pinned_nav,
