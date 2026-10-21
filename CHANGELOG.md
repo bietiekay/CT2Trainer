@@ -2,6 +2,32 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.16.1 (2026-10-21)
+
+- Sinking City 2 field fix — the table-load warnings are now accurate
+  instead of reading like failures (the table loaded and worked; the
+  three warning lines were stale or confusing review notes):
+  - The local CE table-version reference moved 45 → 46. CE 7.5 (the
+    behavior reference) writes 45; 46 is issued by newer CE builds and
+    is field-verified (The Sinking City 2 table) to load and compile
+    unchanged, so v46 tables no longer warn. Genuinely newer versions
+    still warn.
+  - The `{$LUA}` warning now states the supported behavior: the
+    embedded Lua runs in the trainer's built-in Lua runtime when the
+    record activates.
+  - The external-action warning is split per API: `ShellExecute` is
+    documented as the safe no-op the native trainer performs (WP-56),
+    while `messageDialog` — which the native Lua runtime does not
+    implement — keeps a real review flag naming the activation
+    failure.
+- RT-1 measurement content: the shipped `feature-coverage.json` now
+  carries the repaired table-count prose (stale 15/27-table fields
+  fixed at the tool source, artifacts regenerated under pinned run id
+  `w4b4-case30-20261020081722Z`).
+- Versioning rule (user decision 2026-10-21): every build gets a new
+  version number; bug-fix builds bump the patch (0.16 → 0.16.1 →
+  0.16.2), feature releases bump the minor (0.16 → 0.17).
+
 ## 0.16 (2026-10-20)
 
 - Wave 4 reference-corpus closure features (all W4 lanes integrated in

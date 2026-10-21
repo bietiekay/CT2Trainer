@@ -137,6 +137,12 @@ PRAGMATA behaviour derivative (staged capabilities, signed offsets,
 activation sets). It is strictly read-only input; distributed releases
 never contain original game tables.
 
+**Versioning rule (2026-10-21, user decision):** every build gets a
+new version number. Feature releases bump the minor (0.16 → 0.17);
+bug-fix builds bump the patch (0.16 → 0.16.1 → 0.16.2). Bump the root
+`VERSION` file in the same change as the content change that triggers
+the build, and add a `CHANGELOG.md` entry per shipped version.
+
 **Distributed-release naming:** fresh builds produce
 `CT2Trainer-<version>-source.zip` and
 `CT2Trainer-<version>-windows-portable.zip` (version = content of the

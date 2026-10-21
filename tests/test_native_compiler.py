@@ -414,9 +414,9 @@ class NativeCompilerTests(unittest.TestCase):
         self.assertIn("Table Lua can run when Cheat Engine loads the table.", plan["warnings"])
         self.assertIn("Table Lua is not executed on load. Read-only helpers replay in each Lua activation; top-level writes, callbacks and unsupported APIs block activation.", plan["warnings"])
         # The compile helper pins CheatEngineTableVersion 52, which is newer
-        # than the local CE reference (45), so the reader's version warning
+        # than the local CE reference (46), so the reader's version warning
         # must be forwarded as well.
-        self.assertIn("Table version 52 is newer than the local CE reference (45); CE loading is unverified.", plan["warnings"])
+        self.assertIn("Table version 52 is newer than the local CE reference (46); CE loading is unverified.", plan["warnings"])
 
     def test_entry_node_maps_resolve_duplicate_ids_keep_first(self):
         # WP-25 follow-up (b): duplicate IDs resolve keep-first, so the body

@@ -72,6 +72,16 @@ game-facing action.
   `native-20261021T123801Z-8c5c4e1e` (in-build 3,405/25, `ce_inputs:
   []`); the field finding "Inf Items" is a table/build mismatch (no
   code change).
+- 0.16.1 field-fix round (2026-10-21, branch `native-0.16.1-sc2-warnings`):
+  Sinking City 2 table-load warnings made accurate — table-version
+  reference 45 → 46 (CE 7.5 writes 45; v46 field-verified, 13 of the 30
+  pinned tables are v46), `{$LUA}` warning now states the built-in Lua
+  runtime path, external-action warning split per API (ShellExecute =
+  documented safe no-op, messageDialog = real review flag);
+  `tests/test_native_sc2_table_warnings.py` (7 tests) + version
+  assertion moved to reference 46. Versioning rule (user decision):
+  every build gets a new version number, bug fixes bump the patch —
+  VERSION 0.16 → 0.16.1 (first build under the rule).
 
 ## Historical evidence
 
