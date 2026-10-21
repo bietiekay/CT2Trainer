@@ -48,9 +48,14 @@ regenerated under the pinned run id
    exact EXE bindings; the catalog re-run on the 0.16 source reproduces
    the 2026-10-20 counts exactly (2,698 / 117,624, 1 legacy-binary load
    error).
-2. **Explain every remaining block (RT-2):** trace provider cascades to
-   their root cause. Current leading reasons include the `Esau_base`
-   provider, addressless-ancestor relative addresses and pointer offsets.
+2. **Explain every remaining block (RT-2, done 2026-10-21):** all 2,698
+   blocked rows traced to terminal causes - 1,931 cascade rows (963
+   hidden in-table registrations, 110 Lua-runtime symbols, 91
+   no-registration triage, 128 legacy built-ins, 12 API exports, 624
+   duplicate-provider cascades, 3 wildcard-cleanup conflicts) and 767
+   direct rows in 27 classes; per-class contracts, risks, expected
+   deltas and the RT-4 package split (P1-P8, sums to 2,698) are in the
+   roadmap's RT-2 root-cause map.
 3. **Implement the missing behavior (RT-3 to RT-5):** handle the legacy
    binary table and the proven address, AA, Lua and runtime gaps with
    independently authored synthetic cases and owned-target tests.

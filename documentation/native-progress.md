@@ -332,6 +332,51 @@ First roadmap package of the 100% reference-table cycle:
    (`tests/test_native_repro_chain.py`) stays byte-identical and the
    feature-matrix and AP-11 tests pass.
 
+### RT-2: residual attribution of all 2,698 blocked rows (2026-10-21)
+
+Second roadmap package of the 100% reference-table cycle. A subagent lane
+performed the attribution on the RT-1 catalog (`blocked-catalog-rt1`)
+against the frozen manifest and the local-only reference corpus; the root
+integrator re-verified every class sum and per-table sum in both
+directions (each totals exactly 2,698) and independently re-ran the
+lane's corrected UNDEFINED-split logic. Final classification: the
+lane's `rt2_final2` run.
+
+**Decomposition:** 2,698 = 1,931 provider-cascade rows + 767 direct
+rows. Cascade terminals: 1,304 undefined-symbol rows - 963 AA_HIDDEN
+(in-table registration the analyzer misses), 110 LUA_RUNTIME (table Lua
+`registerSymbol` providers), 91 NO_REG (no static registration evidence;
+runtime host/user-provided or authoring gap, per-symbol triage), 128
+LEGACY_SYM (CE built-ins/keywords such as BaseAddress, Inf, assembly
+mnemonics, table-local bases), 12 API_EXPORT (Win32 exports) - plus 624
+duplicate-provider cascades (600 = five shared UE5 template tables x 120
+`character_pointer`) and 3 wildcard-cleanup conflicts. The 2026-10-20
+queue's leading reason occurrences decompose exactly: `Esau_base` (600)
+-> duplicate-provider cascades; `mouse_ovr` (84) + `loot_ptr` (62) ->
+AA_HIDDEN in the Witcher3 pair; `BaseAddress` (80) -> LEGACY_SYM across
+the five UE5 template tables; pointer offsets (53) -> direct
+hex-literal refusals.
+
+**Per-class testable contract, risk and expected delta** are recorded in
+the [RT-2 root-cause map](../plans/reference-table-100-roadmap.md)
+(section "RT-2 root-cause map"), with the RT-4 package split summing
+exactly to 2,698: P1 duplicate-provider/duplicate-label policy 814,
+P2 hidden in-table registration cascades 963, P3 Lua runtime symbol
+providers + no-registration triage + Lua-only enables 203, P4 relative-address base
+propagation 341, P5 legacy built-ins + API exports 140, P6 AA
+expression/directive grammar & format tolerance 122, P7 AA
+ownership/cleanup envelope & table-level constructs 43, P8 value/display
+semantics 64, documented authoring/scope refusals 8. Headline parity
+findings: dropdown overflow - CE 7.5 truncates (verified at
+`MemoryRecordUnit.pas:3500`), CT2Trainer refuses (30 rows, P3R family);
+module references without `.exe` do not resolve in CE either (module
+list stores names with the extension, `symbolhandler.pas:5753`); IL2CPP
+`Type:Member` has no native static resolution in CE (pipe-server
+commands only, `PipeServer.h:194-367`) and belongs to the RT-5 runtime
+path.
+
+Static evidence only; no code change in this package.
+
 ### 0.16.1: Sinking City 2 table-load warnings + versioning rule (2026-10-21)
 
 Field finding: loading `TheSinkingCity2.CT` (CheatEngineTableVersion 46)
@@ -412,11 +457,14 @@ The active outcome is [100% original reference-table support](../plans/reference
 The old 85% closure estimate and 0.11 release step were superseded by the
 0.16 Wave-4 release and the new target. Priorities are:
 
-1. **RT-1 and RT-2:** freeze the 151-path/143-hash local manifest and
-   process bindings, reproduce the 0.16 catalog, then attribute every
-   remaining blocker to an upstream cause. The latest snapshot has
-   **2,698/117,624 blocked entries**, 114,926 supported (58,950 staged),
-   and one legacy-binary load error. This is static evidence only.
+1. **RT-3 and RT-4 (RT-1/RT-2 done 2026-10-21):** the 151-path/143-hash
+   manifest is frozen and the 0.16 catalog reproduced; every remaining
+   blocker is attributed to an upstream cause with per-class contracts,
+   risks and expected deltas (RT-2 root-cause map in the roadmap). Next:
+   the legacy-binary table (RT-3) and executing the RT-4 packages P1-P8
+   (sums to 2,698). The latest snapshot has **2,698/117,624 blocked
+   entries**, 114,926 supported (58,950 staged), and one legacy-binary
+   load error. This is static evidence only.
 2. **RT-3 through RT-5:** close the binary-format, provider, address,
    AA, Lua host, and runtime behavior gaps with independent synthetic
    cases and owned-target tests. Pure visual Forms rendering (WP-42)
