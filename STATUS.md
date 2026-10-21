@@ -1,9 +1,10 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-21. **Latest verified release:** 0.16 field-fix
-re-cut 2, build `native-20261021T123801Z-8c5c4e1e` (built from `main` at
-`108170b`); second field-fix round (state-lock self-repair, reliable
-restart) built 2026-10-21. This page is a short explanation of the
+**Updated:** 2026-10-21. **Latest verified release:** 0.16.1, build
+`native-20261021T161241Z-b0566a25` (built from `main` at `d1c61f2`);
+Sinking City 2 table-load warnings made accurate + new versioning rule
+(every build gets a new version number, bug fixes bump the patch) built
+2026-10-21. This page is a short explanation of the
 evidence in
 [central tracking](plans/TRACKING.md) and the
 [progress ledger](documentation/native-progress.md).
@@ -21,7 +22,7 @@ defines the work and completion gates.
 
 | Area | Achieved | Still needed |
 | --- | --- | --- |
-| Independently built product | 0.16 source and Windows portable ZIPs passed the offline build with **3,405 tests OK, 25 expected skips**, and `ce_inputs: []`. | Keep the clean-room build and release checks green after each change. |
+| Independently built product | 0.16.1 source and Windows portable ZIPs passed the offline build with **3,412 tests OK, 25 expected skips**, and `ce_inputs: []`. | Keep the clean-room build and release checks green after each change. |
 | Synthetic feature coverage | **42/42** declared feature classes and **7,475/7,475** action weight covered across **30 synthetic tables**. | This metric does not establish support for every original table or a real game effect. Add synthetic cases when a new behavior is found. |
 | Original reference tables | Local static catalog (RT-1 rebaseline, 2026-10-21, frozen manifest `gap_inventory/reference-manifest.json`; re-run on the 0.16 source identical per table to the 2026-10-20 run) classifies **114,926 supported**, including **58,950 staged**, out of **117,624 plan entries**. | **2,698 entries are blocked** and one legacy-binary table does not load. Staged entries still need their runtime conditions proved. |
 | Observed game effects | Owned fixtures and selected runtime chains have tests. | The AP-11 campaign has **0 of 6,143** game effects confirmed. Original-table behavior must be checked against pinned game builds or explicitly equivalent owned targets. |

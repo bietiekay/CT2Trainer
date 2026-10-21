@@ -57,12 +57,15 @@ game-facing action.
   table — frozen manifest `gap_inventory/reference-manifest.json`).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
-- Latest verified release: 0.16 field-fix re-cut 2, build
-  `native-20261021T123801Z-8c5c4e1e` (cut from `main` @ `108170b`),
-  in-build suite 3,405 OK / 25 expected skips, `ce_inputs: []`;
-  superseded re-cut `native-20261020T150115Z-c426fb92` (in-build
-  3,398/25, user-tested, field findings: one cheat = table/build
-  mismatch, state-lock orphan after a blocked close).
+- Latest verified release: 0.16.1, build
+  `native-20261021T161241Z-b0566a25` (cut from `main` @ `d1c61f2`),
+  in-build suite 3,412 OK / 25 expected skips, `ce_inputs: []`;
+  superseded 0.16 field-fix re-cut 2
+  `native-20261021T123801Z-8c5c4e1e` (in-build 3,405/25, user-tested,
+  field finding: Sinking City 2 table-load warnings) and re-cut
+  `native-20261020T150115Z-c426fb92` (in-build 3,398/25, user-tested,
+  field findings: one cheat = table/build mismatch, state-lock orphan
+  after a blocked close).
 - 0.16 field-fix round 2 (2026-10-21, branch `native-0.16-lock-selfheal`):
   state-lock self-repair and reliable restart — close() completes when
   blocked and the target is gone (lock/session released, wishes kept),
@@ -81,7 +84,9 @@ game-facing action.
   `tests/test_native_sc2_table_warnings.py` (7 tests) + version
   assertion moved to reference 46. Versioning rule (user decision):
   every build gets a new version number, bug fixes bump the patch —
-  VERSION 0.16 → 0.16.1 (first build under the rule).
+  VERSION 0.16 → 0.16.1 (first build under the rule). Built as
+  `native-20261021T161241Z-b0566a25` (in-build 3,412/25, `ce_inputs:
+  []`).
 
 ## Historical evidence
 
