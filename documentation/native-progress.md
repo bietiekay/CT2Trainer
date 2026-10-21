@@ -299,6 +299,37 @@ Full local dev suite after the change (CT2TRAINER_NASM set):
 **3405 OK / 25 expected skips, 0 failures** (previously 3398/25 after
 the round-1 field fixes).
 
+### RT-1: full-corpus rebaseline (2026-10-21)
+
+First roadmap package of the 100% reference-table cycle:
+
+1. **Frozen input manifest** `gap_inventory/reference-manifest.json`
+   (committed; dev material, not shipped): all 151 local-only
+   reference-table paths with SHA-256 (143 distinct hashes), byte size,
+   format (`ct` vs `legacy-binary`), the exact target EXE binding
+   (ct-suggestion from `process_detect.find_candidates`, `game.exe`
+   default when the table carries none) and the architecture inference.
+   Snapshot stamp 2026-10-21, source revision `ea233c2`.
+2. **Catalog re-run on the current 0.16 source** (local-only artifacts
+   `blocked-catalog-rt1.json` / `.md` in the refassess scratch dir):
+   151 tables, 117,624 plan entries, 114,926 supported (58,950 staged),
+   **2,698 blocked**, one whole-table load error (SuperMeatBoy.CT legacy
+   binary) — **identical per table to the 2026-10-20 post-Wave-4 run**
+   (zero drift in entries, supported/staged/blocked, reason counts and
+   process bindings), so the 0.16 lock self-repair change has no catalog
+   effect.
+3. **Stale prose repair** in the committed `gap_inventory/` baseline:
+   the `15 pinned start-corpus tables` scope string and the
+   `27 pinned tables` gate/note strings were stale since the 25th-30th
+   corpus pin. Fixed at the tool source
+   (`tools/corpus_denominator/__main__.py`,
+   `tools/corpus_denominator/feature_matrix.py`) and the committed
+   `gap-report.json` / `feature-coverage.json` / `ap11-campaign.json`
+   regenerated under the pinned run id
+   `w4b4-case30-20261020081722Z`; the repro chain
+   (`tests/test_native_repro_chain.py`) stays byte-identical and the
+   feature-matrix and AP-11 tests pass.
+
 ## 3. Deterministic measurement chain
 
 All committed `gap_inventory/` artifacts are reproducible byte-identically

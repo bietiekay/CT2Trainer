@@ -287,9 +287,9 @@
  "source": {
   "corpus_root": "C:\\Users\\xboxl\\code\\CT2Trainer\\TableReferences",
   "feature_coverage": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\feature-coverage.json",
-  "feature_coverage_sha256": "4c1ca1856fc2c8b2b1f528b38377c8abd71476a5feba23f03968352c7d642340",
+  "feature_coverage_sha256": "99e15841fff3fb80c04514972f22bf93542f416896fe9b0d571745164e8a99e1",
   "gap_report": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\gap-report.json",
-  "gap_report_sha256": "ac58b2a3ab18292518856905e1fc39b905688cde4bfd018c401db59f8697869d",
+  "gap_report_sha256": "d83a1968475dc2f83f269b41432e9380ad69c7d92dbd124068d7c7afaec7bd83",
   "inventory": "C:\\Users\\xboxl\\code\\CT2Trainer\\gap_inventory\\inventory.json",
   "inventory_sha256": "5b883c999929a0e31d7a16fd849dc6260addd78490bd6ed9e5dbc4ddedf1f802"
  },
