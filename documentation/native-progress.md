@@ -330,6 +330,49 @@ First roadmap package of the 100% reference-table cycle:
    (`tests/test_native_repro_chain.py`) stays byte-identical and the
    feature-matrix and AP-11 tests pass.
 
+### 0.16.1: Sinking City 2 table-load warnings + versioning rule (2026-10-21)
+
+Field finding: loading `TheSinkingCity2.CT` (CheatEngineTableVersion 46)
+surfaced three plan warnings that read like failures although the table
+loads and works (34/34 supported, 0 blocked in the static compile):
+
+1. **"Table version 46 is newer than the local CE reference (45)…"** —
+   stale reference constant. CE 7.5, the behavior reference, writes
+   `_CurrentTableVersion = 45` (`OpenSave.pas`); 46 is issued by newer CE
+   builds. Field verification: the SC2 table compiles clean, and 13 of
+   the 30 pinned corpus tables are already v46. Fix:
+   `LOCAL_CE_TABLE_VERSION` 45 → 46 in `src/ct2trainer/table.py`;
+   genuinely newer versions (e.g. 47) still warn. The pinned v52 test
+   table keeps its warning, now against reference 46
+   (`tests/test_native_compiler.py`).
+2. **"At least one Auto Assembler script contains {$LUA}."** — reworded
+   to state the supported behavior: the embedded Lua runs in the
+   trainer's built-in Lua runtime when the record activates (the WP-56
+   record-Lua path is the designed execution path, not a defect flag).
+3. **"At least one script invokes a dialog or external action and needs
+   review."** — split per API: `ShellExecute` (the SC2 support-link
+   record) now reports the documented safe no-op (WP-56, no external
+   program or URL is launched); `messageDialog` — not implemented by the
+   native Lua runtime — keeps a real review flag naming the activation
+   failure. `Entry.external_action_apis` carries the matched API names;
+   `capability.py`'s machine-readable risk names are unchanged.
+
+Regression tests: `tests/test_native_sc2_table_warnings.py` (7 tests:
+the SC2-shape v46 table carries exactly the two informational warnings
+with 0 blocked records; v46 emits no version warning; v47 warns against
+46; `{$LUA}` informational wording; ShellExecute no-op wording;
+messageDialog gap wording; both-API case).
+
+Versioning rule (user decision 2026-10-21): every build gets a new
+version number — feature releases bump the minor, bug-fix builds bump
+the patch (0.16 → 0.16.1 → 0.16.2). Recorded in `AGENTS.md`; `VERSION`
+and `__version__` bumped together to 0.16.1
+(`tests/test_native_version_display.py` enforces the match).
+
+Full local dev suite after the change (CT2TRAINER_NASM set):
+**3,412 OK / 25 expected skips, 0 failures** (previously 3,405/25 after
+the 0.16 field-fix round 2).
+
 ## 3. Deterministic measurement chain
 
 All committed `gap_inventory/` artifacts are reproducible byte-identically

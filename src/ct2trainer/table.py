@@ -24,7 +24,13 @@ HOTKEY_ACTION_DEFAULT = "Toggle Activation"
 # Legacy pre-XML binary tables (CE 5.x era) start with this magic header;
 # they are refused with a named, distinct error (WP-25).
 LEGACY_BINARY_CT_HEADER = b"CHEATENGINE\t"
-LOCAL_CE_TABLE_VERSION = 45
+# Newest table version verified in the field.  CE 7.5 (the behavior
+# reference) writes 45 (OpenSave.pas _CurrentTableVersion); 46 is issued
+# by newer CE builds and is field-verified to load and compile unchanged
+# (The Sinking City 2 table, 2026-10-21; 13 of the 30 pinned corpus
+# tables are already v46).  Tables newer than this keep the
+# unverified-reference warning.
+LOCAL_CE_TABLE_VERSION = 46
 ADVANCED_VALUE_TYPES = frozenset({"Array of byte", "Binary", "Custom"})
 SIMPLE_VALUE_TYPES = frozenset({"Byte", "2 Bytes", "4 Bytes", "8 Bytes", "Float", "Double"})
 HEX_INTEGER_TYPES = frozenset({"Byte", "2 Bytes", "4 Bytes", "8 Bytes"})
@@ -107,6 +113,7 @@ class Entry:
     show_as_signed: bool | None
     custom_type_name: str | None
     script_external_action: bool
+    external_action_apis: tuple[str, ...] = ()
     custom_type_known: bool = False
     dropdown_link_empty: bool = False
     # WP-14 static review signals (derived from the record's own script text;
@@ -272,8 +279,27 @@ def _deactivates_children(element: ET.Element) -> bool:
                                        ("moDeactivateChildrenAsWell", "moBindActivation"))
 
 
+_EXTERNAL_ACTION_API_NAMES = {
+    "shellexecute": "shellExecute",
+    "messagedialog": "messageDialog",
+}
+
+
+def _script_external_action_apis(script: str) -> tuple[str, ...]:
+    """Named external-action APIs a record script invokes.
+
+    ``shellExecute`` is implemented by the native trainer as a safe no-op
+    (WP-56); ``messageDialog`` is not implemented and fails activation
+    with a named refusal.  The split keeps the table-level warnings
+    accurate instead of one blanket "needs review" line.
+    """
+    return tuple(sorted({_EXTERNAL_ACTION_API_NAMES[match.group(1).casefold()]
+                         for match in re.finditer(
+                             r"\b(shellExecute|messageDialog)\s*\(", script, re.IGNORECASE)}))
+
+
 def _script_has_external_action(script: str) -> bool:
-    return bool(re.search(r"\b(?:shellExecute|messageDialog)\s*\(", script, re.IGNORECASE))
+    return bool(_script_external_action_apis(script))
 
 
 def _script_registers_symbols(script: str) -> bool:
@@ -533,6 +559,7 @@ def read_table(path: str | Path) -> Table:
         ) if dropdown is not None else ()
         dropdown_link = element.findtext("DropDownListLink")
         options_element = element.find("Options")
+        external_action_apis = _script_external_action_apis(script)
         entries.append(Entry(
             id=entry_id,
             label=label,
@@ -566,7 +593,8 @@ def read_table(path: str | Path) -> Table:
                             element.findtext("ShowAsSigned") == "1"),
             custom_type_name=element.findtext("CustomType"),
             custom_type_known=(element.findtext("CustomType") in known_custom_types),
-            script_external_action=_script_has_external_action(script),
+            script_external_action=bool(external_action_apis),
+            external_action_apis=external_action_apis,
             registers_symbols=_script_registers_symbols(script),
             activation_set_lua=_script_activation_set_lua(script),
         ))
@@ -596,7 +624,7 @@ def read_table(path: str | Path) -> Table:
     if has_table_lua:
         warnings.append("Table Lua can run when Cheat Engine loads the table.")
     if any(entry.has_assembler_lua for entry in entries):
-        warnings.append("At least one Auto Assembler script contains {$LUA}.")
+        warnings.append("At least one Auto Assembler script contains {$LUA}; the embedded Lua runs in the trainer's built-in Lua runtime when the record activates.")
     if any(entry.kind == "unsupported" for entry in entries):
         warnings.append("Some entries have no supported control type.")
     if root.find("Forms") is not None:
@@ -612,7 +640,11 @@ def read_table(path: str | Path) -> Table:
         else:
             warnings.append("Custom Type records need a CE runtime test; definitions may come from table Lua.")
     if any(entry.script_external_action for entry in entries):
-        warnings.append("At least one script invokes a dialog or external action and needs review.")
+        apis = {api for entry in entries for api in entry.external_action_apis}
+        if "shellExecute" in apis:
+            warnings.append("At least one script calls ShellExecute; the native trainer runs it as a safe no-op (no external program or URL is launched).")
+        if "messageDialog" in apis:
+            warnings.append("At least one script calls messageDialog, which the native Lua runtime does not implement; affected records fail at activation with a named refusal.")
     for entry_id, names in duplicate_names.items():
         warnings.append(
             f"Duplicate CheatEntry ID: {entry_id} (kept first occurrence; "
