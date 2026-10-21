@@ -33,11 +33,13 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-20, 0.16 released (field-fix re-cut build
-`native-20261020T150115Z-c426fb92` cut from `main` @ `7616edb`; first
-run `native-20261020T103508Z-0e3f9d90` @ `809666a` superseded) with the
-full Wave 4 feature set plus the post-release field fixes (WP-58 UI
-startup crash fix, Sinking City 2 activation-chain runtime evidence)
+**CT2Trainer (status 2026-10-21, 0.16 released (field-fix re-cut 2 build
+`native-20261021T123801Z-8c5c4e1e` cut from `main` @ `108170b`; previous
+field-fix re-cut `native-20261020T150115Z-c426fb92` @ `7616edb` and
+first run `native-20261020T103508Z-0e3f9d90` @ `809666a` superseded) with
+the full Wave 4 feature set plus the post-release field fixes (WP-58 UI
+startup crash fix, Sinking City 2 activation-chain runtime evidence,
+state-lock self-repair and reliable restart)
 on top of the released 0.15 (prefix-cut field fix `d15268a`, part-3
 fast-path fix `d068c44`); Wave 4 of the
 reference-corpus closure cycle complete — all twelve W4 lanes
@@ -150,24 +152,37 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261020T150115Z-c426fb92` (0.16
-field-fix re-cut, cut from `main` @ `7616edb`; in-build suite 3398 OK /
+**Latest verified build:** `native-20261021T123801Z-8c5c4e1e` (0.16
+field-fix re-cut 2, cut from `main` @ `108170b`; in-build suite 3405 OK /
 25 regular skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
 per gate; source ZIP `CT2Trainer-0.16-source.zip` sha256
-`35717144ed8c74fb1c690c8e692a0d53225b86401190b524715559bc13577ade`,
+`8b3158d019c8757aa78932cff7b3ddfb7ac107531d33115c925e40781d0e7228`,
 portable ZIP `CT2Trainer-0.16-windows-portable.zip` sha256
-`24050f691603981ff0c33e2550adc885581a5131cd5a8123d0050618ca18178d`).
+`4e13213c0db7026e8109df13fbc9575e30df1706fadb19f1f369c80cf6b01748`).
 0.16 ships the full Wave 4 feature set (WP-43…WP-57 + WP-58 UI, see
 changelog) plus the post-release field fixes on top of the released 0.15
 content (WP-58 UI startup crash: `_button` widget defaults merged into
 the style dict + pagination tuple `padx` moved to `.pack()`, regression
 test `tests/test_native_ui_button.py`; Sinking City 2 activation-chain
-runtime evidence `tests/test_native_sc2_attach_chain.py`); 30 pinned
-corpus tables, 6,143 AP-11 actions, weights 7,475/7,475 over run
+runtime evidence `tests/test_native_sc2_attach_chain.py`; state-lock
+self-repair and reliable restart: close-after-blocked exit cleanup when
+the target is gone, atexit session/lock release on a provably gone
+target, actionable stale-lock refusal with assessment reasons and one
+probe retry, regression tests
+`tests/test_native_stale_lock_selfheal.py`); 30 pinned corpus tables,
+6,143 AP-11 actions, weights 7,475/7,475 over run
 `w4b4-case30-20261020081722Z`; both ZIPs carry the changelog with the
-0.16 + 0.15 + 0.14 entries. Superseded 0.16 run:
-`native-20261020T103508Z-0e3f9d90` (0.16, cut from `main` @ `809666a`;
-in-build suite 3393 OK / 25 regular skips, `ce_inputs: []`; source ZIP
+0.16 + 0.15 + 0.14 entries. Superseded 0.16 runs:
+`native-20261020T150115Z-c426fb92` (0.16 field-fix re-cut, cut from
+`main` @ `7616edb`; in-build suite 3398 OK / 25 regular skips,
+`ce_inputs: []`; source ZIP sha256
+`35717144ed8c74fb1c690c8e692a0d53225b86401190b524715559bc13577ade`,
+portable ZIP sha256
+`24050f691603981ff0c33e2550adc885581a5131cd5a8123d0050618ca18178d`;
+user-tested, field findings: one cheat = table/build mismatch, state-lock
+orphan after a blocked close) and `native-20261020T103508Z-0e3f9d90`
+(0.16, cut from `main` @ `809666a`; in-build suite 3393 OK / 25 regular
+skips, `ce_inputs: []`; source ZIP
 sha256 `370a2d73c597de283e4b0db9a7c5c8d68d542fba6d9516d9314c2bfc9cb1118e`,
 portable ZIP sha256
 `6db5bf69052767cf07529458c45d3f1c5f5089e8934c74ef2ce053b27dd23b8b`;

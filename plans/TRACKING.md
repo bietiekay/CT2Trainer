@@ -55,17 +55,21 @@ game-facing action.
   entries; one legacy-binary load error (post-Wave-4 catalog, 2026-10-20).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
-- Latest verified release: 0.16 field-fix re-cut, build
-  `native-20261020T150115Z-c426fb92`, in-build suite 3,398 OK / 25
-  expected skips, `ce_inputs: []`.
+- Latest verified release: 0.16 field-fix re-cut 2, build
+  `native-20261021T123801Z-8c5c4e1e` (cut from `main` @ `108170b`),
+  in-build suite 3,405 OK / 25 expected skips, `ce_inputs: []`;
+  superseded re-cut `native-20261020T150115Z-c426fb92` (in-build
+  3,398/25, user-tested, field findings: one cheat = table/build
+  mismatch, state-lock orphan after a blocked close).
 - 0.16 field-fix round 2 (2026-10-21, branch `native-0.16-lock-selfheal`):
   state-lock self-repair and reliable restart — close() completes when
   blocked and the target is gone (lock/session released, wishes kept),
   atexit session/lock release on a provably gone target, actionable
   stale-lock refusal with assessment reasons and one probe retry; 7 new
-  regression tests, local suite 3,405 OK / 25 expected skips. Re-cut
-  build pending; the field finding "Inf Items" is a table/build
-  mismatch (no code change).
+  regression tests, local suite 3,405 OK / 25 expected skips. Built as
+  `native-20261021T123801Z-8c5c4e1e` (in-build 3,405/25, `ce_inputs:
+  []`); the field finding "Inf Items" is a table/build mismatch (no
+  code change).
 
 ## Historical evidence
 
