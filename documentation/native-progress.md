@@ -213,6 +213,90 @@ decision (root, cycle-end per WP-57 row): no new corpus pin — the
 chain's plan-level shapes are already pinned (case-31 + existing
 categories); the runtime combination is covered by the new engine test.
 
+### 0.16 field fixes (round 2): state-lock self-repair and reliable restart (2026-10-21)
+
+Field report (user testing of the 0.16 field-fix re-cut
+`native-20261020T150115Z-c426fb92`, 2026-10-21; trainer
+"The Sinking City 2 (0.16).exe" plus debug log, 48 events, state dir
+`4b6b2825f4296e83`, table sha256 `f52e0d06…`, target
+`TheSinkingCity2.exe` pid 15404): the re-cut mostly worked — the new
+WP-58 UI was confirmed good, attach (19:00:33) and 5 restored wishes
+plus toggles 200/18/198 were fine. Two findings:
+
+1. **One cheat did not work: Inf Items (record id 15, symbol `IITEMS`,
+   AOB `8B 42 48 41 2B C0`)** — `ScanMiss` twice in the debug log
+   (19:01:23, 19:01:46). The table targets "Steam version 1.0
+   Build.24671220"; the installed build does not contain that pattern.
+   Table/build mismatch, fail-closed by design — correct behavior, no
+   code fix (same record already identified in the 2026-10-18 SC2
+   analysis).
+2. **Trainer could not be restarted after closing** — "state.lock
+   already exists" (three attempts at 19:18:13 / 19:18:20 / 19:18:24,
+   plain `StateError` from engine.py line 866). Root-cause chain from
+   the log:
+   - 19:15:53 the target exited while the poll tick was verifying hook
+     receipts: `ReadProcessMemory` failed with Win32 error 299
+     (`ERROR_INVALID_STARTING_ADDRESS` while the process unmapped) →
+     `PatchConflict` → engine blocked. The blocked poll early-returns
+     (`engine.py` poll guard), so the target-exit cleanup path never ran.
+   - 19:16:15 the user closed the trainer: `close()` hit the blanket
+     `if self.blocked or self.busy: raise` guard and refused → the
+     state lock was orphaned.
+   - The atexit net could not release it either: `_StateStore.close()`
+     refuses while `session_bytes` is set ("Cannot release state
+     ownership while a process session remains"), and the exception was
+     swallowed.
+   - At the 19:18 restarts the stale-lock probe classified the lock as
+     the generic "delete that folder" refusal: the owner (pid 9304) was
+     proven dead, but the full `assess_recovery` was not eligible — all
+     recorded identities (owner *and* the session target) must be
+     proven dead in two observations, and `MAX_ASSESS_SECONDS = 15`
+     leaves no room to explain the reason to the user. A transient
+     "unknown" probe flake had earlier produced the same plain refusal
+     (18:58:12 plain → 18:58:20 recoverable on the same lock, 8 s
+     apart).
+
+Fixes in `src/ct2trainer/native/engine.py` (this change):
+
+1. `TrainerEngine.close()`: the block guard now refuses only while the
+   target is still alive (`self.memory is not None and
+   self.memory.is_alive()`). With the target gone — or never attached —
+   the normal exit cleanup runs (finish-after-exit for all scopes,
+   session and lock released, `state.json` wishes preserved), logged
+   as `close-after-blocked`. A still-alive target keeps the fail-closed
+   refusal, because its still-applied patches must stay recoverable.
+2. `_atexit_close`: when the store still owns lock plus session at
+   interpreter exit and the memory handle proves the target gone, the
+   session is released before the lock. While the target is alive (or
+   unknown) the state is preserved untouched for the verified
+   stale-state recovery on the next start.
+3. `_stale_lock_probe`: a single transient "unknown" owner observation
+   is retried once after 1.5 s before the conservative refusal. When
+   the owner is proven dead but the full assessment is not eligible
+   (most commonly: the previous session's target is still running), the
+   refusal now carries the top assessment reasons plus an actionable
+   hint (close the previous target, then restart — the verified
+   recovery dialog is offered once every recorded process is proven
+   dead) instead of the generic "delete that folder" line.
+
+Regression coverage: `tests/test_native_stale_lock_selfheal.py`
+(7 tests: blocked close with gone target completes and releases
+lock/session while preserving `state.json`; blocked close with alive
+target stays refused; atexit net releases session+lock on a provably
+gone target and preserves everything on an alive target; stale-lock
+probe retries a transient "unknown" owner probe and recovers; a
+persistently unproven owner still gets the conservative refusal; an
+ineligible assessment — owner dead, target alive — yields an
+actionable refusal naming the reason and the state directory).
+`tests/test_native_engine.py::test_different_trainer_variants_cannot_share_one_live_target`
+updated: a never-attached blocked variant now releases only its own
+state lock on close (it owns no session or patches) while the shared
+target lock stays with the attached engine.
+
+Full local dev suite after the change (CT2TRAINER_NASM set):
+**3405 OK / 25 expected skips, 0 failures** (previously 3398/25 after
+the round-1 field fixes).
+
 ## 3. Deterministic measurement chain
 
 All committed `gap_inventory/` artifacts are reproducible byte-identically

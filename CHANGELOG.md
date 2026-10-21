@@ -89,6 +89,29 @@ Single maintained changelog for CT2Trainer releases.
     fails at runtime with "pattern not found", the table's AOB pattern
     is missing from the installed game build (table/build mismatch —
     fail-closed by design, cf. the 2026-10-18 Sinking City 2 analysis).
+  - State-lock self-repair and reliable restart (2026-10-21, user
+    testing of the 0.16 re-cut, Sinking City 2): a target exit racing a
+    hook-receipt read (Win32 299) blocked the engine; `close()` then
+    refused permanently on the block flag and orphaned `state.lock`
+    (the atexit net could not release it while a process session
+    remained), so the trainer could not be restarted ("state.lock
+    already exists"). Fixes in `src/ct2trainer/native/engine.py`:
+    (1) `close()` now completes the exit cleanup when blocked but the
+    target is gone — saved wishes survive in `state.json`; a
+    still-alive target keeps the fail-closed refusal; (2) the atexit
+    net releases the session and the lock when the target is provably
+    gone; (3) the stale-lock startup probe retries a transient
+    "unknown" owner observation once and, when the owner is proven dead
+    but the full assessment is not eligible (most commonly: the
+    previous session's target is still running), surfaces the concrete
+    assessment reasons in an actionable refusal instead of the generic
+    "delete that folder" line. Regression tests:
+    `tests/test_native_stale_lock_selfheal.py` (7 tests) plus the
+    updated never-attached-variant close assertion in
+    `tests/test_native_engine.py`. Field note: the one non-working
+    cheat in the field log (Inf Items, record id 15) is a table/build
+    mismatch — the AOB pattern is absent from the installed build
+    (ScanMiss logged twice), fail-closed by design, no code fix.
 
 ## 0.15 (2026-10-18)
 

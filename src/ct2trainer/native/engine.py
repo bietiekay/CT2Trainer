@@ -908,9 +908,16 @@ class _StateStore:
 
         A proven-dead owner yields the recoverable stale-state handle; a
         proven-alive owner yields a LiveStateConflict (a user-confirmed
-        takeover candidate); anything unverifiable returns None, keeping the
-        conservative refusal so a second running instance can never be
-        displaced silently.
+        takeover candidate); anything still unverifiable after one retry
+        returns None, keeping the conservative refusal so a second running
+        instance can never be displaced silently. A single "unknown" probe
+        is treated as a transient failure and retried once (field case
+        2026-10-20: first startup attempt plain refusal, eight seconds
+        later the same lock classified recoverable). A proven-dead owner
+        whose full assessment is not eligible (most commonly: the previous
+        session's target process still running) yields an actionable
+        StateError carrying the assessment reasons instead of falling back
+        to the generic "delete that folder" line.
         """
         if not (isinstance(exc, StateError) and isinstance(exc.__cause__, FileExistsError)):
             return None
@@ -933,6 +940,13 @@ class _StateStore:
             if identity is None or identity.created is None:
                 return None
             observation = probe(identity)
+            if observation.status == "unknown":
+                # Transient probe failure: one retry before falling back to
+                # the conservative refusal (field case 2026-10-20: first
+                # startup attempt plain refusal, eight seconds later the
+                # same lock classified recoverable).
+                time.sleep(1.5)
+                observation = probe(identity)
             if observation.status == "alive":
                 return LiveStateConflict(identity.pid, identity.created, self.directory,
                                          detail=observation.detail)
@@ -944,7 +958,24 @@ class _StateStore:
         except Exception:
             return None
         if not assessment.eligible:
-            return None
+            # Owner is proven dead but the full assessment is not eligible
+            # (most commonly: the previous session's target process is still
+            # alive, so its still-applied patches must stay recoverable).
+            # Surface the concrete reasons so the startup refusal is
+            # actionable instead of a generic "delete that folder" line.
+            reasons = "\n".join("  - " + reason for reason in assessment.reasons[:3]) \
+                      or "  - (assessment produced no reason)"
+            return StateError(
+                "state.lock already exists; the previous trainer process "
+                f"(PID {identity.pid}) is verified as terminated, but automatic "
+                "recovery is not possible yet:\n"
+                + reasons + "\n"
+                + "Action: if the previous session's target process is still "
+                "running, close it and start the trainer again - once every "
+                "recorded process is verified as terminated, the state is "
+                "offered as verified recovery. As a last resort, delete the "
+                "state folder to start fresh.\n"
+                f"State directory: {self.directory}")
         return StaleStateRecoverable(assessment, self.directory, self.process_lock_dir,
                                      self.directory.parent / "archives",
                                      self.plan["trainer_id"], self.plan["table_sha256"])
@@ -4815,8 +4846,22 @@ class TrainerEngine:
         if self.closed:
             return not self.blocked
         try:
-            if self.blocked or self.busy:
-                raise StateError(self.error or "An action is still in progress")
+            if self.busy:
+                raise StateError("An action is still in progress")
+            if self.blocked:
+                # A blocked engine cannot verify or restore its owned
+                # receipts. While the target is still alive that refusal
+                # stands (fail-closed: the state stays recoverable after a
+                # target restart). If the target is gone, nothing is left
+                # to restore, so the exit cleanup below completes instead
+                # of dead-ending the shutdown and orphaning state.lock
+                # (field case 2026-10-20, Sinking City 2 0.16: the target
+                # exit raced a hook-receipt read -> PatchConflict -> engine
+                # blocked -> close refused -> state.lock orphaned -> the
+                # trainer could not be restarted).
+                if self.memory is not None and self.memory.is_alive():
+                    raise StateError(self.error or "An action is still in progress")
+                self.debug_log.log("close-after-blocked", error=self.error)
             self.store.guard()
             # WP-54 (d): cancel the record sessions now (their callbacks
             # must not fire during cleanup); the table scope retires only
@@ -4945,6 +4990,19 @@ class TrainerEngine:
         try:
             store = getattr(self, "store", None)
             if store is not None and store.owned:
+                if store.session_bytes is not None:
+                    # The session still holds the lock because close() was
+                    # refused or never completed. It may only be released
+                    # once the target is provably gone: while the target is
+                    # alive, its still-applied patches must stay
+                    # recoverable, so the state is preserved for the
+                    # verified stale-state recovery on the next start
+                    # (field case 2026-10-20: a blocked close left session
+                    # plus lock behind because store.close() refuses while
+                    # a session remains).
+                    memory = getattr(self, "memory", None)
+                    if memory is not None and not memory.is_alive():
+                        store.release_session()
                 store.close()
         except Exception:
             pass
