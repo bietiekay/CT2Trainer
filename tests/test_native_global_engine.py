@@ -141,12 +141,13 @@ class Tests(unittest.TestCase):
         self.assertEqual(p['entries'][2]['dependency_ids'],[1])
         validate_plan(p)
         both=self.table((source(),ordinary),('shared',),selected=[1,2,3])
-        # WP-37 keep-first: the document-order-first supported provider (the
-        # global one) stays; the later ordinary duplicate is blocked with
-        # the named reason and the consumer binds to the kept provider.
+        # WP-37 / RT-4.1 keep-first: the document-order-first supported
+        # provider (the global one) stays the visible provider; the later
+        # ordinary duplicate stays supported (its registration is a
+        # runtime no-op behind the kept one) and the consumer binds to the
+        # kept provider.
         self.assertTrue(both['entries'][0]['supported'])
-        self.assertFalse(both['entries'][1]['supported'])
-        self.assertIn('Symbol provider duplicate: shared (kept provider 1)',both['entries'][1]['reason'])
+        self.assertTrue(both['entries'][1]['supported'], both['entries'][1]['reason'])
         self.assertTrue(both['entries'][2]['supported'])
         self.assertEqual(both['entries'][2]['dependency_ids'],[1])
         validate_plan(both)

@@ -87,19 +87,17 @@ class NativeCompilerTests(unittest.TestCase):
         self.assertTrue(all("Required symbol" in entry["reason"] for entry in plan["entries"]))
 
     def test_ambiguous_providers_resolve_keep_first_and_consumer_binds_to_kept(self):
-        # WP-37: two supported providers of the same symbol resolve
-        # keep-first (document order); the later duplicate is blocked with
-        # the named reason and dependents bind to the kept provider.  The
-        # scan-based provider is not a handover mechanism, so no
+        # WP-37 / RT-4.1 (CE dupIgnore): two supported providers of the
+        # same symbol resolve keep-first (document order); the later
+        # duplicate stays supported (its registration is a runtime no-op
+        # behind the kept one) and dependents bind to the kept provider.
+        # The scan-based provider is not a handover mechanism, so no
         # external-ownership map is emitted.
         locator = "[ENABLE]\naobscanmodule(Anchor,Target.exe,54 46)\nregistersymbol(Anchor)\n[DISABLE]\nunregistersymbol(Anchor)"
         plan = self.compile(script_record(0, locator) + script_record(1, locator) + value_record(2, "Anchor+4"))
-        self.assertEqual(plan["counts"]["blocked"], 1)
+        self.assertEqual(plan["counts"]["blocked"], 0)
         self.assertTrue(plan["entries"][0]["supported"])
-        self.assertFalse(plan["entries"][1]["supported"])
-        self.assertEqual(plan["entries"][1]["reason"],
-                         "Symbol provider duplicate: anchor (kept provider 0); "
-                         "a later registration would shadow the kept one at runtime.")
+        self.assertTrue(plan["entries"][1]["supported"], plan["entries"][1]["reason"])
         self.assertTrue(plan["entries"][2]["supported"], plan["entries"][2]["reason"])
         self.assertEqual(plan["entries"][2]["dependency_ids"], [0])
         self.assertNotIn("external_owned_providers", plan)

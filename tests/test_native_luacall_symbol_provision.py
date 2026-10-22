@@ -16,8 +16,9 @@ provider-refusal behavior stays pinned:
 - in-record conflicting AOB definitions (same symbol, different
   arguments) merge nothing; the record keeps ``requires`` and is blocked
   downstream by the exact named provider refusal;
-- cross-record duplicate providers keep the existing keep-first block
-  (first supported provider wins, later ones blocked by name);
+- cross-record duplicate providers resolve keep-first (the first
+  supported provider wins and the later duplicate stays supported
+  with a runtime no-op registration, RT-4.1);
 - the pinned corpus tables whose ``luaCall`` lines use non-AOB functions
   (case-05/06/07: ``speedhack_setSpeed``, ``synTick*``) derive an empty
   symbol set, so their plans stay byte-identical to the pre-WP-48
@@ -143,14 +144,18 @@ class LuacallSymbolProvisionTests(unittest.TestCase):
         self.assertNotIn('alpha', entry['requires'])
         self.assertNotIn('zeta', entry['requires'])
 
-    def test_cross_record_keep_first_duplicate_block_is_unchanged(self):
+    def test_cross_record_keep_first_duplicate_stays_supported(self):
+        # RT-4.1 (CE dupIgnore): the cross-record duplicate provider stays
+        # supported behind the kept first provider; a consumer of the
+        # symbol binds to the kept provider only.
         plan = self._compile(record(1, '"AOB first"', PROVIDER_SCRIPT)
-                             + record(2, '"AOB second"', PROVIDER_SCRIPT))
-        first, second = plan['entries']
+                              + record(2, '"AOB second"', PROVIDER_SCRIPT)
+                              + record(3, '"Consumer"', CONSUMER_SCRIPT))
+        first, second, consumer = plan['entries']
         self.assertTrue(first['supported'], first.get('reason'))
-        self.assertFalse(second['supported'])
-        self.assertIn('Symbol provider duplicate: anchor (kept provider 1)',
-                      second['reason'])
+        self.assertTrue(second['supported'], second.get('reason'))
+        self.assertTrue(consumer['supported'], consumer.get('reason'))
+        self.assertEqual(consumer['dependency_ids'], [1])
 
     def test_mode_section_domain_exclusion_keeps_named_refusal(self):
         script = ('[ENABLE]\n'

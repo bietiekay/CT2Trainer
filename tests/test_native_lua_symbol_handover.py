@@ -8,10 +8,12 @@ themselves; the owning record becomes their activation dependency and
 releases each symbol exactly once on its own deactivation.
 
 Covered plan-level: the ``external_owned_providers`` map construction,
-consumer dependency wiring, keep-first duplicate-provider resolution with
-the named reason, foreign-release refusals surfaced by the wave-B1
-re-derivation, the wildcard-cleanup combination guard (wave B2), table-Lua
-exclusion, and forged-map rejection by both ``validate_plan`` gates.
+consumer dependency wiring, keep-first duplicate-provider resolution
+(RT-4.1: the duplicate stays supported, the kept provider is the visible
+one), foreign-release refusals surfaced by the wave-B1 re-derivation,
+wildcard-cleanup scoping to the program's own names alongside an external
+require (RT-4.1), table-Lua exclusion, and forged-map rejection by both
+``validate_plan`` gates.
 
 Covered engine-level with a fake-memory/coordinator scaffold: the
 dependent/consumer guards that keep the owning record's Lua DISABLE phase
@@ -122,11 +124,13 @@ class ExternalOwnedPlanTests(unittest.TestCase):
         plan = compile_table_in(self.root, script_record(0, source)
                                 + script_record(1, source)
                                 + value_record(2, "HandoverSym+4"))
-        self.assertEqual(plan["counts"]["blocked"], 1)
+        self.assertEqual(plan["counts"]["blocked"], 0)
         self.assertTrue(plan["entries"][0]["supported"])
-        self.assertEqual(plan["entries"][1]["reason"],
-                         "Symbol provider duplicate: handoversym (kept provider 0); "
-                         "a later registration would shadow the kept one at runtime.")
+        # RT-4.1 (CE dupIgnore): the duplicate Lua provider stays
+        # supported; its registration is a runtime no-op behind the
+        # kept provider.
+        self.assertTrue(plan["entries"][1]["supported"],
+                        plan["entries"][1]["reason"])
         self.assertTrue(plan["entries"][2]["supported"], plan["entries"][2]["reason"])
         self.assertEqual(plan["entries"][2]["dependency_ids"], [0])
         # Two raw providers make the symbol contested: it stays out of the
@@ -181,7 +185,11 @@ class ExternalOwnedPlanTests(unittest.TestCase):
                          "externally owned symbol HandoverSym.")
         self.assertEqual(plan["external_owned_providers"], {"handoversym": 0})
 
-    def test_wildcard_cleanup_with_external_require_is_blocked(self):
+    def test_wildcard_cleanup_scopes_to_owned_names_with_external_require(self):
+        # RT-4.1: the wildcard sweep expands to the program's own
+        # phase-owned names only, so it stays supported alongside an
+        # externally owned symbol it requires; the external symbol is
+        # never released by the sweep.
         consumer = ("[ENABLE]\n"
                     "alloc(OwnedData,16)\n"
                     "registersymbol(OwnedData)\n"
@@ -193,11 +201,13 @@ class ExternalOwnedPlanTests(unittest.TestCase):
                                 script_record(0, lua_provider("HandoverSym"))
                                 + script_record(1, consumer))
         self.assertTrue(plan["entries"][0]["supported"])
-        self.assertFalse(plan["entries"][1]["supported"])
-        self.assertEqual(plan["entries"][1]["reason"],
-                         "Program cannot combine wildcard cleanup with "
-                         "externally owned symbol HandoverSym.")
-        self.assertEqual(plan["external_owned_providers"], {"handoversym": 0})
+        self.assertTrue(plan["entries"][1]["supported"],
+                        plan["entries"][1]["reason"])
+        self.assertEqual(plan["entries"][1]["dependency_ids"], [0])
+        # The supported consumer also publishes its own allocation, in the
+        # same shape as the no-external-require wildcard test below.
+        self.assertEqual(plan["external_owned_providers"],
+                         {"handoversym": 0, "owneddata": 1})
 
     def test_wildcard_cleanup_without_external_require_stays_supported(self):
         consumer = ("[ENABLE]\n"

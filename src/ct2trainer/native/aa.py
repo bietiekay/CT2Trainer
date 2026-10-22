@@ -397,8 +397,11 @@ def _section(lines: list[str], inherited: set[str]) -> tuple[list[dict], set[str
             elif name == "label":
                 symbol = _arguments(args, 1)[0]
                 validate_symbol(symbol)
-                if symbol.casefold() in declared:
-                    raise AAError(f"Duplicate label declaration: {symbol}.")
+                # RT-4.1 (CE label() semantics, autoassembler.pas:2577-2603,
+                # read-only): a repeated label() declaration is tolerated -
+                # CE's duplicate-declaration check is disabled (2585-2586).
+                # A name that is never defined by a known data cursor is
+                # still refused by the declared - defined check below.
                 declared.add(symbol.casefold())
             else:
                 raise AAError(f"Unsupported AA directive: {name}.")

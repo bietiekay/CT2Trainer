@@ -129,8 +129,10 @@ class OneShotProviderPlanTests(unittest.TestCase):
 
     def test_case28_plan_matches_expected_state(self):
         plan = compile_case28(self.root)
-        self.assertEqual(plan["counts"], {"total": 10, "supported": 8,
-                                          "actionable": 8, "blocked": 2,
+        # RT-4.1: the contested one-shot duplicate provider (56) stays
+        # supported, so the plan gains one supported/actionable entry.
+        self.assertEqual(plan["counts"], {"total": 10, "supported": 9,
+                                          "actionable": 9, "blocked": 1,
                                           "headings": 0})
         e = by_id(plan)
         # One-shot scan provider: registration adopted without unregister.
@@ -175,11 +177,10 @@ class OneShotProviderPlanTests(unittest.TestCase):
         plan = compile_case28(self.root)
         e = by_id(plan)
         self.assertTrue(e[55]["supported"], e[55]["reason"])
-        self.assertFalse(e[56]["supported"])
-        self.assertEqual(
-            e[56]["reason"],
-            "Symbol provider duplicate: synthcontest28 (kept provider 55); "
-            "a later registration would shadow the kept one at runtime.")
+        # RT-4.1 (CE dupIgnore): the duplicate one-shot provider stays
+        # supported; its registration is a runtime no-op behind the
+        # kept provider.
+        self.assertTrue(e[56]["supported"], e[56]["reason"])
         self.assertTrue(e[57]["supported"], e[57]["reason"])
         self.assertEqual(e[57]["dependency_ids"], [55])
         # Two raw providers keep the symbol out of the handover map.
