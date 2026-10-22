@@ -2,6 +2,37 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.16.2 (2026-10-22)
+
+- Sinking City 2 startup block field fix: a trainer left behind by a
+  prior session (crash, kill, or orphaned lock after a blocked close)
+  could not start whenever any hook journal in `state/hooks/` carried
+  `captured_placeholders` (WP-57, shipped in 0.16) — the recovery
+  assessment rejected the field as an unknown schema field, and the
+  refusal repeated on every startup attempt. The field is now an
+  optional journal field validated with the writer-side contract
+  (`patterns.validate_placeholder_captures`: at most 16 captures,
+  `s<N>` names, 1-2 hex bytes per value); malformed captures still
+  block with the named refusal "Hook journal placeholder captures are
+  invalid". Regression tests: `tests/test_native_recovery.py` (+2).
+  Field workaround until this build: with the game closed and the
+  previous trainer process verified terminated, delete the state folder
+  (`%LOCALAPPDATA%\CT2Trainer\native\<trainer_id>`).
+- RT-4.1 symbol provider fidelity (reference-corpus closure cycle):
+  duplicate provider entries are no longer blocked wholesale — the
+  first registration wins, the duplicate registration is shadowed, and
+  every non-duplicate registration in the same entry still takes
+  effect (CE `dupIgnore` alignment; documented safe narrowing vs CE's
+  last-wins runtime registration); repeated names inside one `label()`
+  list are now tolerated (CE's duplicate-declaration check is disabled;
+  multiple `name:` definitions and undefined names stay refused); the
+  wildcard-cleanup static guard is removed (the wildcard sweep is
+  scoped at runtime to the program's own phase-owned symbols). Full
+  suite: 3,415 OK / 25 expected skips. Original-table catalog remeasure:
+  2,698 -> 1,858 blocked of 117,624 plan entries (842 unblocked, 2
+  explained Cyberpunk shared-global regressions per the pinned
+  contract, zero unexplained supported regressions).
+
 ## 0.16.1 (2026-10-21)
 
 - Sinking City 2 field fix — the table-load warnings are now accurate

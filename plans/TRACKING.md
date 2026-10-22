@@ -60,10 +60,17 @@ game-facing action.
   2026-10-21).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
-- Latest verified release: 0.16.1, build
-  `native-20261021T161241Z-b0566a25` (cut from `main` @ `d1c61f2`),
-  in-build suite 3,412 OK / 25 expected skips, `ce_inputs: []`;
-  superseded 0.16 field-fix re-cut 2
+- Latest verified release: 0.16.2, build
+  `native-20261022T160328Z-0423fb21` (cut from `main` @ `68eeb00`),
+  in-build suite 3,415 OK / 25 expected skips, `ce_inputs: []`;
+  ships the Sinking City 2 startup-block field fix (recovery
+  assessment accepts the WP-57 hook-journal `captured_placeholders`
+  field) and RT-4.1 symbol provider fidelity (catalog remeasure
+  2,698 -> 1,858 blocked of 117,624, zero unexplained supported
+  regressions); superseded 0.16.1
+  `native-20261021T161241Z-b0566a25` (in-build 3,412/25, user-tested,
+  field finding: Sinking City 2 startup block) and superseded 0.16
+  field-fix re-cut 2
   `native-20261021T123801Z-8c5c4e1e` (in-build 3,405/25, user-tested,
   field finding: Sinking City 2 table-load warnings) and re-cut
   `native-20261020T150115Z-c426fb92` (in-build 3,398/25, user-tested,

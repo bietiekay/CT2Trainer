@@ -36,14 +36,18 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-21, 0.16.1 released (build
-`native-20261021T161241Z-b0566a25` cut from `main` @ `d1c61f2`; previous
+**CT2Trainer (status 2026-10-22, 0.16.2 released (build
+`native-20261022T160328Z-0423fb21` cut from `main` @ `68eeb00`; previous
+0.16.1 `native-20261021T161241Z-b0566a25` @ `d1c61f2`, previous
 0.16 field-fix re-cut 2 `native-20261021T123801Z-8c5c4e1e` @ `108170b`,
 re-cut 1 `native-20261020T150115Z-c426fb92` @ `7616edb` and first
 0.16 run `native-20261020T103508Z-0e3f9d90` @ `809666a` superseded) with
-the full Wave 4 feature set plus the post-release field fixes (WP-58 UI
+the full Wave 4 feature set, RT-4.1 symbol provider fidelity (catalog
+remeasure 2,698 -> 1,858 blocked of 117,624, zero unexplained supported
+regressions) and the post-release field fixes (WP-58 UI
 startup crash fix, Sinking City 2 activation-chain runtime evidence,
-state-lock self-repair and reliable restart)
+state-lock self-repair and reliable restart, SC2 startup-block
+journal-field fix)
 on top of the released 0.15 (prefix-cut field fix `d15268a`, part-3
 fast-path fix `d068c44`); Wave 4 of the
 reference-corpus closure cycle complete — all twelve W4 lanes
@@ -162,20 +166,29 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261021T161241Z-b0566a25` (0.16.1,
-first build under the new versioning rule — every build gets a new
-version number, bug fixes bump the patch — cut from `main` @ `d1c61f2`;
-in-build suite 3412 OK / 25 regular skips, `ce_inputs: []`,
-`runtime_unverified` deliberately kept per gate; source ZIP
-`CT2Trainer-0.16.1-source.zip` sha256
-`13e2e1f6148359b77388df7db7bf2bec198b6b51c2f29515327157dc25d10b64`,
-portable ZIP `CT2Trainer-0.16.1-windows-portable.zip` sha256
-`5d8f0d47aa88c138ba96122eb24ae36aac4069211385ccd6e31418665e83c96f`).
-0.16.1 ships the Sinking City 2 table-load warning fixes (table-version
-reference 45 → 46 field-verified; `{$LUA}` warning states the built-in
-Lua runtime path; external-action warning split per API — ShellExecute
-safe no-op, messageDialog review flag) on top of the 0.16 content;
-regression tests `tests/test_native_sc2_table_warnings.py`.
+**Latest verified build:** `native-20261022T160328Z-0423fb21` (0.16.2,
+cut from `main` @ `68eeb00`; in-build suite 3415 OK / 25 regular
+skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; source ZIP `CT2Trainer-0.16.2-source.zip` sha256
+`1e284d2a8d632ceb38a6861e097192b9a3d64076bfdcf60b4c08d6323ef45ef6`,
+portable ZIP `CT2Trainer-0.16.2-windows-portable.zip` sha256
+`9c8ccc9e1e9cb19780306bb410b5d09d0b43a47359982a993c3be618679de6da`).
+0.16.2 ships the Sinking City 2 startup-block field fix (recovery
+assessment accepts the WP-57 hook-journal `captured_placeholders`
+field; regression tests `tests/test_native_recovery.py`) and RT-4.1
+symbol provider fidelity (keep-first duplicate-provider policy,
+`label()` duplicate-name tolerance, wildcard-cleanup scoping; catalog
+remeasure 2,698 -> 1,858 blocked of 117,624, zero unexplained supported
+regressions) on top of the 0.16.1 content. Superseded 0.16.1 build:
+`native-20261021T161241Z-b0566a25` (0.16.1, first build under the new
+versioning rule, cut from `main` @ `d1c61f2`; in-build suite 3412 OK /
+25 regular skips, `ce_inputs: []`, user-tested, field finding: Sinking
+City 2 startup block) — Sinking City 2 table-load warning fixes
+(table-version reference 45 → 46 field-verified; `{$LUA}` warning
+states the built-in Lua runtime path; external-action warning split
+per API — ShellExecute safe no-op, messageDialog review flag) on top
+of the 0.16 content, regression tests
+`tests/test_native_sc2_table_warnings.py`.
 0.16 ships the full Wave 4 feature set (WP-43…WP-57 + WP-58 UI, see
 changelog) plus the post-release field fixes on top of the released 0.15
 content (WP-58 UI startup crash: `_button` widget defaults merged into
