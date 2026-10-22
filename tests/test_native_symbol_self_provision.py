@@ -6,9 +6,10 @@ label satisfies its own reference through its own registration.  Pre-WP-49
 the WP-28 label re-declaration added the symbol to the record's own
 requires whenever a second record provided it, and the fixed-point pass
 then emitted a self dependency edge that the DFS marked as a cycle.
-Post-WP-49 the record stays supported without a self-edge, the duplicate
-provider is kept blocked with the exact keep-first reason, its consumer
-resolves to the kept self-provider, and true cross-record cycles stay
+Post-WP-49 the record stays supported without a self-edge; the duplicate
+provider stays supported (RT-4.1, CE dupIgnore - its registration is a
+runtime no-op), its consumer resolves to the kept self-provider, and
+true cross-record cycles stay
 fail-closed with the exact cycle reason.  A forged self-edge in the
 serialized dependency_ids is still refused by both plan gates.
 """
@@ -26,8 +27,6 @@ from ct2trainer.native.engine import (NativeRuntimeError, TrainerEngine,
 from test_native_engine_code import CodeMemory, Coordinator
 
 CYCLE = "Symbol dependency cycle is unsupported."
-DUPLICATE_71 = ("Symbol provider duplicate: synthcycbase30 (kept provider 70); "
-                "a later registration would shadow the kept one at runtime.")
 SELF_EDGE = "Record dependency IDs must not contain a self-edge."
 
 SELF_PROVISION = (
@@ -161,11 +160,13 @@ class SelfProvisionPlanTests(unittest.TestCase):
         self.assertNotIn(70, row["dependency_ids"])
         self.assertEqual(row["dependency_ids"], [])
 
-    def test_duplicate_provider_stays_blocked_with_the_exact_reason(self):
+    def test_duplicate_provider_stays_supported_behind_the_kept_one(self):
+        # RT-4.1 (CE dupIgnore): the duplicate provider stays supported;
+        # the kept provider (70) is the only visible provider for the
+        # symbol and the duplicate's registration is a runtime no-op.
         row = self.by_id[71]
-        self.assertFalse(row["supported"])
-        self.assertEqual(row["kind"], "blocked")
-        self.assertEqual(row["reason"], DUPLICATE_71)
+        self.assertTrue(row["supported"], row["reason"])
+        self.assertEqual(row["kind"], "script")
 
     def test_consumer_resolves_to_the_kept_self_provider(self):
         row = self.by_id[72]
@@ -240,6 +241,13 @@ class SelfProvisionRuntimeTests(unittest.TestCase):
         self.assertEqual(engine.set_value(72, "1234"), "1234")
         self.assertEqual(self.memory.read(cave + 4, 4), struct.pack("<I", 1234))
         self.assertEqual(engine.read_value(72), "1234")
+        # RT-4.1 (CE dupIgnore): the duplicate provider (71) activates
+        # without a collision; its registration of the already-owned
+        # symbol is a silent no-op, and its disable releases nothing.
+        self.assertTrue(engine.toggle(71, True), engine.error)
+        self.assertEqual(engine.symbols["synthcycbase30"], cave)
+        engine.toggle(71, False)
+        self.assertEqual(engine.symbols["synthcycbase30"], cave)
         # The true cross-record cycle pair is still un-toggleable.
         for record_id in (73, 74):
             with self.subTest(record_id=record_id):

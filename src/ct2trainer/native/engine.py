@@ -616,19 +616,24 @@ def validate_plan(plan: dict) -> None:
                 raise NativeRuntimeError("Recursive value metadata does not match the record structure")
         if entry["selected"] and entry["supported"] and entry["kind"] == "script":
             for name in entry.get("provides", []):
-                if name.casefold() in providers:
-                    from .global_alloc import shared_provider_compatible
-                    if shared_provider_compatible([by_id[providers[name.casefold()]],entry],name.casefold()):
-                        continue
-                    raise NativeRuntimeError("Ambiguous selected symbol providers")
-                providers[name.casefold()] = entry["id"]
-    for entry in entries:
-        if entry['selected'] and entry['supported']:
-            for name in entry.get('requires',[]):
-                candidates=[x for x in entries if x['selected'] and x['supported'] and x['kind']=='script'
-                            and name.casefold() in {p.casefold() for p in x.get('provides',[])}]
-                if len(candidates)>1:
-                    raise NativeRuntimeError('An external global consumer requires one unambiguous selected declarer')
+                key = name.casefold()
+                if key in providers:
+                    # RT-4.1 (CE dupIgnore narrowing): the plan may carry
+                    # multiple selected providers of one symbol.  The
+                    # runtime resolves keep-first through
+                    # TrainerEngine.registered_by (first activated
+                    # registrant owns the symbol; later duplicates are
+                    # silent no-ops), so the ambiguity is no longer a
+                    # plan defect.  The map keeps the first occurrence in
+                    # plan order so the dependency walk below agrees with
+                    # the compiler's keep-first resolution.
+                    continue
+                providers[key] = entry["id"]
+    # RT-4.1 (CE dupIgnore narrowing): multiple selected providers of one
+    # symbol are legal.  The runtime resolves keep-first through
+    # TrainerEngine.registered_by, so a consumer no longer requires one
+    # unambiguous selected declarer.  The provider map above keeps the
+    # first occurrence in plan order for deterministic dependency walks.
     visiting, completed = set(), set()
     # WP-46 (part 1): table-level <UserdefinedSymbols> provide required
     # symbols without owning a record.  The engine seeds them into the
@@ -1276,18 +1281,18 @@ class TrainerEngine:
         self.hotkey_bridge = None
         self.hotkey_spec_source = None
         self._hotkey_os: dict[int, set[HotKeySpec]] = {}
+        # RT-4.1 (CE dupIgnore narrowing): multiple selected providers of
+        # one symbol are legal; the runtime resolves keep-first through
+        # registered_by at activation.  The map keeps the first selected
+        # provider in plan order for the auto-enable dependency walk,
+        # matching the compiler's keep-first resolution.
         self.providers: dict[str, int] = {}
         for entry in plan["entries"]:
             if entry["selected"] and entry["supported"] and entry["kind"] == "script":
                 for name in entry.get("provides", []):
                     key = name.casefold()
-                    if key in self.providers:
-                        from .global_alloc import shared_provider_compatible
-                        previous=self.entries[self.providers[key]]
-                        if shared_provider_compatible([previous,entry],key):
-                            continue
-                        raise NativeRuntimeError(f"Multiple providers for symbol {name}")
-                    self.providers[key] = entry["id"]
+                    if key not in self.providers:
+                        self.providers[key] = entry["id"]
         if memory_factory is None:
             from .memory import ProcessMemory
             memory_factory = ProcessMemory
@@ -1323,6 +1328,14 @@ class TrainerEngine:
             self.applied: dict[int, list[_Patch]] = {}
             self.local_symbols: dict[int, dict[str, int]] = {}
             self.symbols: dict[str, int] = {}
+            # RT-4.1 (CE dupIgnore narrowing, WP-37 keep-first): per-entry
+            # ownership of the symbols each entry actually registered.
+            # A symbol owned by one active entry keeps that binding when a
+            # later duplicate registers it; the duplicate registers a
+            # silent no-op and releases nothing on disable.  Table-level
+            # seeds (UDS, table-Lua) are not entry-owned, so a record
+            # registration still overwrites them (WP-46/WP-54 seed policy).
+            self.registered_by: dict[int, set[str]] = {}
             # WP-57: scan-time captured placeholder bytes per active entry
             # (classic dialect bookkeeping + program-dialect disable restore
             # input); dropped with the entry on disable.
@@ -2110,6 +2123,7 @@ class TrainerEngine:
                     self.applied.clear()
                     self.local_symbols.clear()
                     self.symbols.clear()
+                    self.registered_by.clear()
                     self.frozen.clear()
                     # WP-50 (GC-E8): no live base survives the target exit.
                     self.dynamic_addresses.clear()
@@ -2692,12 +2706,31 @@ class TrainerEngine:
             return
         self._enable_byte_patch(entry, persist, one_shot=False)
 
+    def _owned_symbols(self, identifier: int, registered: set[str]) -> set[str]:
+        """RT-4.1 keep-first ownership for one entry's registration.
+
+        A symbol owned by another active entry (``registered_by``) keeps
+        that entry's binding: the duplicate registration is a silent
+        no-op and ownership never transfers (CE dupIgnore narrowing on
+        top of the WP-37 keep-first policy — static resolution and
+        runtime registration agree on the first registrant).  Table-level
+        seeds (UDS/table-Lua) are not entry-owned, so a record
+        registration still overwrites them (WP-46/WP-54 seed policy).
+        Re-enabling an already-active entry keeps its existing ownership.
+        """
+        if identifier in self.registered_by:
+            return set(self.registered_by[identifier])
+        entry_owned = {key for keys in self.registered_by.values() for key in keys}
+        return {key for key in registered if key not in entry_owned}
+
     def _enable_byte_patch(self, entry: dict, persist: bool, *, one_shot: bool) -> None:
         identifier = entry["id"]
         symbols, registered, patches = self._operations(entry, "enable")
-        for key in registered:
-            if key in self.symbols:
-                raise NativeRuntimeError(f"Symbol {key} already belongs to another active entry")
+        # RT-4.1 (CE dupIgnore narrowing, WP-37 keep-first): a symbol
+        # another active entry already registered keeps that entry's
+        # binding; this entry's duplicate registration is a silent no-op
+        # while its non-duplicate registrations still take effect.
+        owned = self._owned_symbols(identifier, registered)
         for existing in self.applied.values():
             for ours in patches:
                 if any(ours.address < other.address + len(other.changed) and other.address < ours.address + len(ours.changed) for other in existing):
@@ -2732,7 +2765,8 @@ class TrainerEngine:
             self._write_transaction(patches)
         self.local_symbols[identifier] = symbols
         self.applied[identifier] = patches
-        self.symbols.update({key: symbols[key] for key in registered})
+        self.symbols.update({key: symbols[key] for key in owned})
+        self.registered_by[identifier] = owned
         if persist:
             self._save(self.desired | {identifier})
 
@@ -2766,7 +2800,10 @@ class TrainerEngine:
         self.hooks[entry['id']] = manager
         self.applied[entry['id']] = [_Patch(b['address'], bytes.fromhex(b['original']), bytes.fromhex(b['bytes'])) for b in live]
         self.local_symbols[entry['id']] = linked['symbols']
-        self.symbols.update({k.casefold(): v for k, v in linked['exports'].items()})
+        exports = {k.casefold(): v for k, v in linked['exports'].items()}
+        owned = self._owned_symbols(entry['id'], set(exports))
+        self.symbols.update({k: exports[k] for k in owned})
+        self.registered_by[entry['id']] = owned
         if persist:
             self._save(self.desired | {entry['id']})
 
@@ -3301,7 +3338,18 @@ class TrainerEngine:
             self.hooks[entry['id']]=manager
             self.applied[entry['id']]=[_Patch(b['address'],bytes.fromhex(b['original']),bytes.fromhex(b['bytes'])) for b in live]
             self.local_symbols[entry['id']]=linked['symbols']
-            self.symbols.update({k.casefold():v for k,v in linked['exports'].items()})
+            exports={k.casefold():v for k,v in linked['exports'].items()}
+            # RT-4.1: globalalloc names are pool-managed (their
+            # self.symbols entries are the aliases refreshed from the pool
+            # on every change), but they are claimed in keep-first order
+            # like any other registration so the disable dependency
+            # checks and the released set match the other enable paths;
+            # the alias survives other active leases via _refresh_global
+            # _symbols after the lease release below.
+            globals_names={g['name'].casefold() for g in profile['globals']}
+            owned=self._owned_symbols(entry['id'],set(exports)|globals_names)
+            self.symbols.update({k:exports[k] for k in owned if k in exports})
+            self.registered_by[entry['id']]=owned
             self._refresh_global_symbols()
             if persist:self._save(self.desired|{entry['id']})
         except Exception as exc:
@@ -3499,6 +3547,9 @@ class TrainerEngine:
             scope.start_program(entry['lua_program'])
             self.applied[identifier] = []
             self.local_symbols[identifier] = dict(scope.symbols)
+            # RT-4.1: scope-registered symbols are entry-owned, so a later
+            # record registering the same name is a keep-first no-op.
+            self.registered_by[identifier] = {name.casefold() for name in scope.symbols}
             if persist:
                 self._save(self.desired | {identifier})
         except Exception as exc:
@@ -3649,9 +3700,11 @@ class TrainerEngine:
         if (self._hook_lifetime_count + len(sizes) > 128
                 or self._hook_lifetime_bytes + sum(sizes) > 16 * 1024 * 1024):
             raise NativeRuntimeError('The target-lifetime executable allocation budget is exhausted; restart the target')
-        for name in program['provides']:
-            if name.casefold() in self.symbols:
-                raise NativeRuntimeError('An exported symbol already belongs to an active record: ' + name)
+        # RT-4.1 (CE dupIgnore narrowing): exported symbols that another
+        # active record (or table-level seed) already holds are not a
+        # publication conflict anymore.  Entry-level keep-first ownership
+        # is settled afterwards in _enable_* via _owned_symbols; the
+        # duplicate registration becomes a silent no-op there.
         owned_data_ranges, executable_data = self._owned_provider_data()
         captured_scans = tuple(preflight['scan_results'])
         def recheck_scans():
@@ -3807,8 +3860,22 @@ class TrainerEngine:
         provided = {name.casefold() for name in entry.get("provides", [])}
         if identifier in self.lua_activations:
             provided.update(self.lua_activations[identifier].symbols)
-        dependents = [i for i in self.applied if i != identifier and provided.intersection(name.casefold() for name in self.entries[i].get("requires", []))]
-        dependents += [i for i in self.frozen if provided.intersection(name.casefold() for name in self.entries[i].get("requires", []))]
+        # RT-4.1 (CE dupIgnore ownership narrowing): only the symbols this
+        # entry actually registered are released on disable; a shadowed
+        # duplicate keeps the kept provider's binding.  Entries enabled
+        # through a path without ownership tracking (record-Lua scopes)
+        # fall back to the plan's provides set.  The ownership record is
+        # popped with the symbols at the end so a partially failed disable
+        # stays retryable with the same released set.
+        owned = self.registered_by.get(identifier)
+        if owned is None:
+            released = provided
+        else:
+            released = set(owned)
+            if identifier in self.lua_activations:
+                released.update(self.lua_activations[identifier].symbols)
+        dependents = [i for i in self.applied if i != identifier and released.intersection(name.casefold() for name in self.entries[i].get("requires", []))]
+        dependents += [i for i in self.frozen if released.intersection(name.casefold() for name in self.entries[i].get("requires", []))]
         if dependents:
             raise NativeRuntimeError("Disable dependent entries first: " + ", ".join(map(str, sorted(set(dependents)))))
         consumers = self._owner_consumers(identifier)
@@ -3880,8 +3947,9 @@ class TrainerEngine:
         self.local_symbols.pop(identifier, None)
         # WP-57: placeholder captures live with the entry.
         self.placeholder_captures.pop(identifier, None)
-        for name in provided:
+        for name in released:
             self.symbols.pop(name, None)
+        self.registered_by.pop(identifier, None)
         if self.global_pool is not None:
             self._refresh_global_symbols()
         # WP-50 (GC-E8): deactivating the provider retires the live bases

@@ -6,11 +6,15 @@ the measurement snapshot are tracked in one place:
 confirmed-state detail (builds, suites, acceptance records); when in doubt
 about current status, check the tracker first.
 
-Status: **October 22, 2026** (0.16.2 field fix on `main` — WP-57 hook
-journal `captured_placeholders` accepted by the recovery assessment,
-field finding from the 0.16.1 Sinking City 2 startup block; 0.16.1
-released, build `native-20261021T161241Z-b0566a25` cut from `main` @
-`d1c61f2`; previous 0.16 field-fix re-cut 2
+Status: **October 22, 2026** (RT-4.1 symbol provider fidelity on
+`main` — keep-first duplicate-provider policy, `label()`
+duplicate-name tolerance, wildcard-cleanup scoping; catalog remeasure
+2,698 -> 1,858 blocked of 117,624, zero unexplained supported
+regressions; 0.16.2 field fix on `main` — WP-57 hook journal
+`captured_placeholders` accepted by the recovery assessment, field
+finding from the 0.16.1 Sinking City 2 startup block; 0.16.1 released,
+build `native-20261021T161241Z-b0566a25` cut from `main` @ `d1c61f2`;
+previous 0.16 field-fix re-cut 2
 `native-20261021T123801Z-8c5c4e1e` @ `108170b`,
 re-cut `native-20261020T150115Z-c426fb92` @ `7616edb` and first
 0.16 run `native-20261020T103508Z-0e3f9d90` @ `809666a` superseded —
@@ -102,12 +106,12 @@ code/build boundaries in
 | --- | --- |
 | Repository baseline | `main` @ `b6c48cc` "initial 0.9 version" (self-contained clean-room tree) |
 | Version | `0.16` (root `VERSION` file; 0.9.0-rc2 was the last user-tested release, 0.16 user-tested 2026-10-20 with the WP-58 startup crash, fix in the re-cut) |
-| Test suite | **3414 OK / 25 expected skips, 0 failures** (full local dev suite on `main` after the 0.16.2 field fix — WP-57 hook journal `captured_placeholders` accepted by the recovery assessment (`tests/test_native_recovery.py`, +2 tests), verified 2026-10-22 at the canonical path with CT2TRAINER_NASM set; previously 3412 OK / 25 expected skips, 0 failures (full local dev suite on `main` after the 0.16.1 SC2 table-load warning fix — table-version reference 45 → 46 + accurate `{$LUA}`/external-action warnings (`tests/test_native_sc2_table_warnings.py`, version assertion in `tests/test_native_compiler.py`), verified 2026-10-21 at the canonical path with CT2TRAINER_NASM set; previously 3405 on `main` after the 0.16 field-fix round 2 — state-lock self-repair and reliable restart (`tests/test_native_stale_lock_selfheal.py`, updated variant-close assertion in `tests/test_native_engine.py`), verified 2026-10-21 at the canonical path with CT2TRAINER_NASM set; previously 3398 on `main` after the 0.16 field-fix cycle — WP-58 UI startup crash fix + Sinking City 2 runtime chain evidence (`tests/test_native_ui_button.py`, `tests/test_native_sc2_attach_chain.py`), verified 2026-10-20 at the canonical path with CT2TRAINER_NASM set; previously 3393 on `main` after the W4 B4 merges and the case-28/29/30 pins, verified 2026-10-20 at the canonical path; previously 3233 on `main` after the W4 cycle merge and the case-26/27/31 pins, verified 2026-10-19 at the canonical path; previously 3057 on `native-0.15` after the W3 batch 1 + batch 2 + batch 3 + batch 4 merges (WP-39/40/38/41/37) and the case-23 + case-21 + case-22 + case-24 pins, verified 2026-10-18; previously 3046 after the W3 batch 3 merge (WP-41) and the case-22 pin; previously 3001 after the W3 batch 1 + batch 2 merges (WP-39/40/38) and the case-23 + case-21 pins, verified 2026-10-18 at the canonical path; previously 2943 after the 0.15 prefix-cut field fix at `d15268a`, 2026-10-17; previously 2932 on `native-0.14` after the per-wish restore isolation and program-scan debug logging, verified 2026-10-17 at the canonical path; previously 2927 on `native-0.13` after the optional debug-logging feature incl. attach-failure dedupe and the module-snapshot fallback, verified 2026-10-16; previously 2925 after the debug-logging feature; previously 2910 after the W2-C + W2-B merges and the case-15 part 2 + case-18 pins; previously 2840 after the W2-A merge and the case-20 + case-16 + case-17 + case-15 pins, verified 2026-10-14; previously 2805 after the W1-A + W1-E merges and the case-20 + case-16 + case-15 pins; previously 2769 after the W1-D + W1-C + W1-B integration; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2932/25 passed (0.14 build `native-20261017T115850Z-1ebb48b7`); previously 2927/25 (0.13 build `native-20261016T190005Z-b3139b30`); previously 2925/25 (superseded 0.13 build `native-20261016T181516Z-b8ae88de`); previously 2910/25 (0.12 build `native-20261016T163910Z-d047f2d2`); previously 2710/25 (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
+| Test suite | **3415 OK / 25 expected skips, 0 failures** (full local dev suite on `main` after the RT-4.1 symbol provider fidelity merge — keep-first duplicate-provider policy, `label()` duplicate-name tolerance, wildcard-cleanup scoping (nine focused modules, 167 tests, incl. `tests/test_native_provider_selection_dedupe.py`), verified 2026-10-22 at the canonical path with CT2TRAINER_NASM set; previously 3414 OK / 25 expected skips, 0 failures (full local dev suite on `main` after the 0.16.2 field fix — WP-57 hook journal `captured_placeholders` accepted by the recovery assessment (`tests/test_native_recovery.py`, +2 tests), verified 2026-10-22 at the canonical path with CT2TRAINER_NASM set; previously 3412 OK / 25 expected skips, 0 failures (full local dev suite on `main` after the 0.16.1 SC2 table-load warning fix — table-version reference 45 → 46 + accurate `{$LUA}`/external-action warnings (`tests/test_native_sc2_table_warnings.py`, version assertion in `tests/test_native_compiler.py`), verified 2026-10-21 at the canonical path with CT2TRAINER_NASM set; previously 3405 on `main` after the 0.16 field-fix round 2 — state-lock self-repair and reliable restart (`tests/test_native_stale_lock_selfheal.py`, updated variant-close assertion in `tests/test_native_engine.py`), verified 2026-10-21 at the canonical path with CT2TRAINER_NASM set; previously 3398 on `main` after the 0.16 field-fix cycle — WP-58 UI startup crash fix + Sinking City 2 runtime chain evidence (`tests/test_native_ui_button.py`, `tests/test_native_sc2_attach_chain.py`), verified 2026-10-20 at the canonical path with CT2TRAINER_NASM set; previously 3393 on `main` after the W4 B4 merges and the case-28/29/30 pins, verified 2026-10-20 at the canonical path; previously 3233 on `main` after the W4 cycle merge and the case-26/27/31 pins, verified 2026-10-19 at the canonical path; previously 3057 on `native-0.15` after the W3 batch 1 + batch 2 + batch 3 + batch 4 merges (WP-39/40/38/41/37) and the case-23 + case-21 + case-22 + case-24 pins, verified 2026-10-18; previously 3046 after the W3 batch 3 merge (WP-41) and the case-22 pin; previously 3001 after the W3 batch 1 + batch 2 merges (WP-39/40/38) and the case-23 + case-21 pins, verified 2026-10-18 at the canonical path; previously 2943 after the 0.15 prefix-cut field fix at `d15268a`, 2026-10-17; previously 2932 on `native-0.14` after the per-wish restore isolation and program-scan debug logging, verified 2026-10-17 at the canonical path; previously 2927 on `native-0.13` after the optional debug-logging feature incl. attach-failure dedupe and the module-snapshot fallback, verified 2026-10-16; previously 2925 after the debug-logging feature; previously 2910 after the W2-C + W2-B merges and the case-15 part 2 + case-18 pins; previously 2840 after the W2-A merge and the case-20 + case-16 + case-17 + case-15 pins, verified 2026-10-14; previously 2805 after the W1-A + W1-E merges and the case-20 + case-16 + case-15 pins; previously 2769 after the W1-D + W1-C + W1-B integration; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2932/25 passed (0.14 build `native-20261017T115850Z-1ebb48b7`); previously 2927/25 (0.13 build `native-20261016T190005Z-b3139b30`); previously 2925/25 (superseded 0.13 build `native-20261016T181516Z-b8ae88de`); previously 2910/25 (0.12 build `native-20261016T163910Z-d047f2d2`); previously 2710/25 (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
 | Feature matrix | **42/42 covered** (100% feature-weighted, 7475/7475 action-weighted; run `w4b4-case30-20261020081722Z`; previously 7446/7446, run `w4-case31-20261019061339`; previously 7426/7426, run `w3e-case24-20261018051230`; previously 7416/7416, run `w3d-case22-20261018040510`; previously 7413/7413, run `w3b-case21-20261018023823Z`; previously 7411/7411, run `w3-case23-20261018012531Z`) — `gap_inventory/feature-coverage.json` |
 | AP-11 manifest | 30 tables, 6143 expected actions, 0 confirmed, all consistency gates `all_ok` (run `w4b4-case30-20261020081722Z`; previously 27 tables / 6119 actions, previously 24 tables / 6100 actions, previously 23 tables / 6092 actions) — `gap_inventory/ap11-campaign.json` |
 | Latest verified build | `native-20261021T161241Z-b0566a25` (0.16.1, first build under the new versioning rule) via `scripts/Build-Native.ps1` from `main` @ `d1c61f2` (2026-10-21): both ZIPs (`CT2Trainer-0.16.1-source.zip` sha256 `13e2e1f6…`, `CT2Trainer-0.16.1-windows-portable.zip` sha256 `5d8f0d47…`), in-build suite 3412 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; both ZIPs carry the changelog with the 0.16.1 entry (Sinking City 2 table-load warnings made accurate + versioning rule) + 0.16 + 0.15 + 0.14. 0.16.1 ships the SC2 table-load warning fixes (table-version reference 45 → 46 field-verified; `{$LUA}` warning states the built-in Lua runtime path; external-action warning split per API — ShellExecute safe no-op, messageDialog review flag) on top of the 0.16 content. 0.16 ships the full Wave 4 feature set (WP-43…WP-57 + WP-58 UI) plus the post-release field fixes (WP-58 UI startup crash fix + Sinking City 2 activation-chain runtime evidence + state-lock self-repair and reliable restart) on top of the released 0.15 content. Superseded 0.16 runs: `native-20261021T141051Z-17d53c1d` (0.16, cut from `main` @ `e9f06fb` after the RT-1 rebaseline, in-build 3405/25, `ce_inputs: []`, superseded by the 0.16.1 cut before its evidence was recorded), `native-20261021T123801Z-8c5c4e1e` (0.16 field-fix re-cut 2, cut from `main` @ `108170b`, in-build 3405/25, user-tested, field finding: Sinking City 2 table-load warnings), `native-20261020T150115Z-c426fb92` (cut from `main` @ `7616edb`, in-build 3398/25, user-tested, field findings: one cheat = table/build mismatch, state-lock orphan after a blocked close) and `native-20261020T103508Z-0e3f9d90` (cut from `main` @ `809666a`, in-build 3393/25, user-tested, shipped with the WP-58 UI startup crash). Previous: `native-20261018T055505Z-39f20180` (0.15) via `scripts/Build-Native.ps1` from `main` @ `ed0b97b` (2026-10-18): both ZIPs (`CT2Trainer-0.15-source.zip` sha256 `5d5a85f6…`, `CT2Trainer-0.15-windows-portable.zip` sha256 `cfcc8e06…`), in-build suite 3057 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; both ZIPs carry the elaborated release READMEs and the changelog with the 0.15 + 0.14 + 0.13 entries. 0.15 ships the prefix-cut byte-patch validation (the 0.14-ext2 Great Circle field finding: Stealth Mode and No Reload use `db 90 E9` over a 6-byte conditional jump, now proven at link time and re-verified at stage time) plus the full Wave 3 feature set on top of the 0.14 content. Previous: `native-20261017T115850Z-1ebb48b7` (0.14, in-build 2932/25); `native-20261016T190005Z-b3139b30` (0.13, in-build 2927/25); `native-20261016T181516Z-b8ae88de` (0.13 pre module-snapshot fallback, in-build 2925/25); `native-20261016T163910Z-d047f2d2` (0.12, in-build 2910/25); `native-20261016T161905Z-e8ef67a0` (0.12, byte-identical re-cut); `native-20261016T154141Z-2de774ab` (0.12 pre release-docs); `native-20261012T092729Z-2d8aaf12` (0.11, in-build 2710/25); `native-20261011T121914Z-bfc5fc11` (0.10, in-build 2671/25); `native-20261010T172336Z-ffe35eb0` (rc2, in-build 2617/25, `api-prototypes.json` present in both EXE payload inventories, user-tested portable) |
 | User-tested portable | run `native-20261010T165731Z-3d1da645`: converter run + generated trainer verified by the user on a machine without CE/Python |
-| Reference-corpus assessment (2026-10-13) | 151 local-only reference tables: baseline 117,019 plan entries, 95,167 supported (incl. 46,987 staged), **21,852 blocked**, 4 whole-table compile errors (run `ref-assessment`); after W1-D (WP-25) + W1-C (WP-22/23): **21,851 of 117,255 blocked**, 3 whole-table compile errors — Octopath compiles (227 supported / 9 blocked, 24 duplicate-ID warnings), 20XX fully supported (10/10), SuperMeatBoy refused with a named legacy-binary error (catalog re-run 2026-10-13); after W1-B + W1-A + W1-E: **10,892 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy legacy binary only; AtomicHeart `$process` closed by WP-19, Cyberpunk `@@` by WP-20) (catalog re-run 2026-10-14); after W2-A (WP-27/32/33/34): **9,962 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy only; catalog re-run 2026-10-14, `blocked-catalog-w2a.json`; −930 blocked, 0 supported regressions, +197 previously masked records now surface the named missing-target reason); after W2-B + W2-C (WP-28/29/31/35 + WP-30/36): **7,577 of 117,624 blocked** (−2,385, 0 supported regressions; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-16, `blocked-catalog-w2final.json`); after W4 B1–B3 (WP-43/44, WP-46 part 1, WP-47/55, WP-45/56, WP-51/48, WP-52): **3,632 of 117,624 blocked** (−3,945, supported 113,992 incl. 58,018 staged; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-19, `blocked-catalog-w4final.json`); after W4 B4 (WP-46 part 2, WP-49/50, WP-53/54, WP-57, WP-58): **2,698 of 117,624 blocked** (−934, supported 114,926 incl. 58,950 staged; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-20, `blocked-catalog-w4b4.json`); consolidated assessment `documentation/reference-gap-assessment.md`, closure plan `plans/archive/reference-closure-continuation.md` (WP-19…WP-42) |
+| Reference-corpus assessment (2026-10-13) | 151 local-only reference tables: baseline 117,019 plan entries, 95,167 supported (incl. 46,987 staged), **21,852 blocked**, 4 whole-table compile errors (run `ref-assessment`); after W1-D (WP-25) + W1-C (WP-22/23): **21,851 of 117,255 blocked**, 3 whole-table compile errors — Octopath compiles (227 supported / 9 blocked, 24 duplicate-ID warnings), 20XX fully supported (10/10), SuperMeatBoy refused with a named legacy-binary error (catalog re-run 2026-10-13); after W1-B + W1-A + W1-E: **10,892 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy legacy binary only; AtomicHeart `$process` closed by WP-19, Cyberpunk `@@` by WP-20) (catalog re-run 2026-10-14); after W2-A (WP-27/32/33/34): **9,962 of 117,624 blocked**, 1 whole-table compile error (SuperMeatBoy only; catalog re-run 2026-10-14, `blocked-catalog-w2a.json`; −930 blocked, 0 supported regressions, +197 previously masked records now surface the named missing-target reason); after W2-B + W2-C (WP-28/29/31/35 + WP-30/36): **7,577 of 117,624 blocked** (−2,385, 0 supported regressions; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-16, `blocked-catalog-w2final.json`); after W4 B1–B3 (WP-43/44, WP-46 part 1, WP-47/55, WP-45/56, WP-51/48, WP-52): **3,632 of 117,624 blocked** (−3,945, supported 113,992 incl. 58,018 staged; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-19, `blocked-catalog-w4final.json`); after W4 B4 (WP-46 part 2, WP-49/50, WP-53/54, WP-57, WP-58): **2,698 of 117,624 blocked** (−934, supported 114,926 incl. 58,950 staged; 1 whole-table compile error, SuperMeatBoy only; catalog re-run 2026-10-20, `blocked-catalog-w4b4.json`); after RT-4.1 (symbol provider fidelity, 2026-10-22): **1,858 of 117,624 blocked** (net −840: 842 unblocked, 2 explained Cyberpunk shared-global regressions; supported 115,766 incl. 59,642 staged; 1 whole-table compile error, SuperMeatBoy only; catalog re-run `blocked-catalog-rt41`); consolidated assessment `documentation/reference-gap-assessment.md`, closure plan `plans/archive/reference-closure-continuation.md` (WP-19…WP-42) |
 
 ### Portable frozen-build fix (2026-10-10)
 
@@ -489,6 +493,111 @@ ships: with the game closed and the previous trainer process verified
 terminated, delete the trainer's state folder
 (`%LOCALAPPDATA%\CT2Trainer\native\<trainer_id>`) to start fresh.
 
+### RT-4.1 symbol provider fidelity (2026-10-22)
+
+Package RT-4.1 of the reference-corpus closure cycle (roadmap
+"RT-2 root-cause map", branch `native-rt4-1`, merged to `main`
+2026-10-22): CE `dupIgnore` provider fidelity — keep-first without
+blocking duplicate provider entries, repeated names inside `label()`
+lists, wildcard-cleanup scoping. Expected class delta 820 (R1 624, R2 3,
+O2 186, O16 4, O17 3); measured net delta **-840** (842 unblocked, 2
+explained regressions).
+
+**Code** (clean-room, four source files):
+
+1. `compiler.py::_dependencies` — keep-first duplicate-provider
+   policy: a second entry registering an already-registered symbol is
+   no longer blocked wholesale. Its duplicate registration is shadowed
+   (removed from the symbol's provider list; first supported provider
+   wins in document order) while every non-duplicate registration in
+   the same entry still takes effect, so dependents resolve against the
+   kept provider. CE reference (read-only): `dupIgnore`
+   (autoassembler.pas:338/345) dedupes only the per-program
+   disable-symbol list, and the AA runtime registration is
+   delete-then-add (autoassembler.pas:4164-4208) — CE is last-wins;
+   keep-first is the documented safe narrowing
+   (`runtime-parity-assessment.md:257`). The
+   `shared_provider_compatible` shared-global path is unchanged:
+   compatible shared-global declarers share, and external consumers are
+   not ambiguously admitted (pinned by
+   `test_native_global_engine::test_compatible_duplicate_declarers_share_
+   without_ambiguous_external_admission`).
+2. `aa_program.py::prepare_program` — repeated names inside one or more
+   `label()` declarations are now tolerated: CE's duplicate-declaration
+   check is disabled (autoassembler.pas:2585-2586); multiple `name:`
+   definitions (2599) and never-defined names (2603) are still refused,
+   and unresolved label references still fail fail-closed in the
+   linker.
+3. `aa_program.py` — the wildcard-cleanup static guard is removed; the
+   wildcard sweep is scoped at runtime to the program's own
+   phase-owned symbols (the wave-B wildcard re-derivation loop and its
+   reason/source constants are gone with it).
+4. `engine.py` — runtime registration is keep-first as well: the first
+   activated registrant owns the symbol, a later duplicate registration
+   is a silent no-op, and the duplicate releases nothing on disable;
+   the plan gates were updated to the same keep-first policy (the
+   `_install_program` collision raise is gone; unselected duplicates
+   stay inert at runtime).
+
+**Tests:** nine focused modules (provider selection/dedupe, compiler,
+global engine, Lua symbol handover/provision, one-shot Lua providers,
+symbol self-provision, user-defined symbols) 167 OK; full local dev
+suite on `main` after the merge: **3,415 OK / 25 expected skips, 0
+failures** (CT2TRAINER_NASM set, 2026-10-22).
+
+**Catalog delta** (local remeasure, run `blocked-catalog-rt41`, frozen
+manifest `gap_inventory/reference-manifest.json` and process bindings
+unchanged; baseline `blocked-catalog-w4b4.json`): **2,698 -> 1,858
+blocked of 117,624** (net −840; supported 114,926 -> 115,766; staged
+58,950 -> 59,642; the one legacy-binary load error unchanged). 842 rows
+unblocked, by baseline reason class: all 624 R1 duplicate-provider
+cascades (600 `Esau_base` + 24 non-template cascade rows across the
+qt-ds trio, Cyberpunk, ForgottonAnne, SHProto), all 3 R2
+wildcard-cleanup rows (Octopath2 `mem0x04`), all 186 O2 direct
+duplicate-provider rows, 2 of 4 O16 dup-label rows (re2 /
+re2_testicles `dCusWetAmount`), and 47 R3 rows whose duplicate root
+cleared (LADG 26 `pbase`, AtomicHeart v1.2 21). Per-table highlights:
+HellPie 140 -> 18, Scorn 140 -> 17, Oregon 141 -> 17, Callisto 140 ->
+17, AtomicHeart v1.2 166 -> 20, LADG 30 -> 0, SOTTR 65 -> 29, qt-ds
+trio 41 -> 4, Borderlands3-V10 30 -> 16, APlagueTaleInnocence 7 -> 0,
+Octopath2 333 -> 327.
+
+**Regressions:** exactly 2 supported rows, both explained —
+Cyberpunk2077 ids 380/381 ("If Iconic Weapon / Item Level 1/2") now
+refuse with "Required symbol has no unique supported provider:
+weaponPtr": keep-first leaves all three compatible
+`globalalloc(weaponPtr,$32)` declarers (741/379/382) supported, so the
+external value records are no longer ambiguously admitted — the pinned
+shared-global contract. In the baseline these two rows resolved only by
+accident: the duplicate providers had been blocked earlier at the
+`weapon`/`weaponBkp` register-symbol duplicates, dropping them from the
+`weaponPtr` candidate set before the shared-global check ran. Net:
+**zero unexplained supported regressions** (package protocol
+satisfied).
+
+**Witcher3 note:** the two O16 dup-label rows (4.02HF1 / 4.03, id 10281
+"Item Pointers (Mousover Inventory and Loot)" in 4.02) now compile past
+the `label(return loot_ptr mouse_ovr code return str_ptr)` duplicate but
+are blocked at the next gate: `str_base` is a Lua-generated `define`
+(`return string.format("define(str_base, %X)", string_static_base)` in
+the `{$LUA}` block) the static compiler cannot resolve — runtime-
+provider class (R3 root spans RT-4.2/4.5). Not a regression: both rows
+were already blocked in the baseline (reason moved from the dup-label
+refusal to the missing-provider refusal), so the `mouse_ovr`
+(41/43), `loot_ptr` (31), `player_ptr` (11) and `st` (1) cascades
+remain for RT-4.2. Three further rows per table surfaced new downstream
+reasons previously masked by the duplicate block (createthread gate,
+`GetAsyncKeyState`, `str_base`) — blocked-to-blocked moves only; two
+duplicate-provider rows per table (return1/return2) unblocked.
+
+**case-28 plan state** (pinned synthetic corpus, re-verified on the
+RT-4.1 tree): total 10 / supported 9 / actionable 9 / blocked 1,
+e[59] "Required symbol has no unique supported provider: SynthOnly28"
+— pre-existing non-dup class, unchanged by RT-4.1.
+
+Static evidence only; runtime activation of the keep-first policy on an
+owned target is RT-6 scope.
+
 ## 3. Deterministic measurement chain
 
 All committed `gap_inventory/` artifacts are reproducible byte-identically
@@ -524,15 +633,20 @@ The active outcome is [100% original reference-table support](../plans/reference
 The old 85% closure estimate and 0.11 release step were superseded by the
 0.16 Wave-4 release and the new target. Priorities are:
 
-1. **RT-3 and RT-4 (RT-1/RT-2 done 2026-10-21):** the 151-path/143-hash
-   manifest is frozen and the 0.16 catalog reproduced; every remaining
-   blocker is attributed to an upstream cause with per-class contracts,
-   risks and expected deltas (RT-2 root-cause map in the roadmap). Next:
-   the legacy-binary table (RT-3) and executing the RT-4 packages
-   RT-4.1…RT-4.6 (sums to 2,698; RT-4.1 symbol provider fidelity
-   started 2026-10-22). The latest snapshot has **2,698/117,624 blocked
-   entries**, 114,926 supported (58,950 staged), and one legacy-binary
-   load error. This is static evidence only.
+1. **RT-3 and RT-4 (RT-1/RT-2 done 2026-10-21, RT-4.1 done 2026-10-22):**
+   the 151-path/143-hash manifest is frozen; every remaining blocker is
+   attributed to an upstream cause with per-class contracts, risks and
+   expected deltas (RT-2 root-cause map in the roadmap). RT-4.1 symbol
+   provider fidelity landed (keep-first duplicate-provider policy,
+   `label()` duplicate-name tolerance, wildcard-cleanup scoping; catalog
+   remeasure 2,698 -> 1,858 blocked, net -840, 2 explained Cyberpunk
+   shared-global regressions, zero unexplained supported regressions —
+   see the RT-4.1 section above). Next: the legacy-binary table (RT-3)
+   and executing the remaining RT-4 packages RT-4.3 452, RT-4.4 65,
+   RT-4.5 57, RT-4.6 219, RT-4.2 1,085 last. The latest snapshot has
+   **1,858/117,624 blocked entries**, 115,766 supported (59,642
+   staged), and one legacy-binary load error. This is static evidence
+   only.
 2. **RT-3 through RT-5:** close the binary-format, provider, address,
    AA, Lua host, and runtime behavior gaps with independent synthetic
    cases and owned-target tests. Pure visual Forms rendering (WP-42)

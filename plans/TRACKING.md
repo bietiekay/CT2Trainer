@@ -36,7 +36,7 @@ GOAL-4/5/6 remain open; GOAL-7 is historical release work.
 | RT-1 full-corpus rebaseline | root | done (2026-10-21) | Frozen manifest `gap_inventory/reference-manifest.json` (151 paths, 143 hashes, exact EXE bindings); catalog re-run on the 0.16 source (`blocked-catalog-rt1`) identical per table to the 2026-10-20 run (2,698 / 117,624, 1 legacy-binary load error); stale 15/27-table prose in `gap-report.json`/`feature-coverage.json` repaired at the tool source and regenerated under the pinned run id. |
 | RT-2 residual attribution | root | done (2026-10-21) | All 2,698 blocked rows traced to an upstream terminal cause (lane final2 run; root re-verified every class sum and per-table sum in both directions and independently re-ran the corrected UNDEFINED-split logic against the local corpus): 1,931 cascade rows = 1,304 undefined-symbol (963 AA-hidden in-table registrations, 110 Lua-runtime, 91 no-registration, 128 legacy built-in, 12 API export) + 624 duplicate-provider cascades + 3 wildcard-cleanup; 767 direct rows in 27 classes. Per-class testable contract, risk, expected delta and the RT-4 package split (RT-4.1 820 / RT-4.2 1,085 / RT-4.3 452 / RT-4.4 65 / RT-4.5 57 / RT-4.6 219; sums to 2,698) recorded in the roadmap's RT-2 root-cause map; CE 7.5 behavior probes (dropdown overflow truncates at SetValue, bare module names without .exe fail in CE too, IL2CPP Type:Member pipe-server-only, BaseAddress has no CE built-in handling, usemono is a newer-CE directive) recorded with source citations; the lane final report (2026-10-21 21:14) is the authoritative record, with verified per-family roots for the 963 AA-hidden rows and seven caveats. |
 | RT-3 legacy binary load | unassigned | design | Determine independently implementable format contract and table-level completeness test. |
-| RT-4 high-volume semantics | root | in progress (RT-4.1 started 2026-10-22) | Execute packages RT-4.1…RT-4.6 (sums to 2,698) per the roadmap root-cause map in suggested order (RT-4.1 820, RT-4.3 452, RT-4.4 65, RT-4.5 57, RT-4.6 219, RT-4.2 1,085 last); each package lands with synthetic case, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. |
+| RT-4 high-volume semantics | root | in progress (RT-4.1 done 2026-10-22) | RT-4.1 symbol provider fidelity landed on 2026-10-22 (branch `native-rt4-1` merged to `main`): keep-first duplicate-provider policy (CE `dupIgnore` alignment), `label()` duplicate-name tolerance, wildcard-cleanup scoping; nine focused modules 167 OK, full suite 3,415 OK / 25 expected skips; catalog remeasure (run `blocked-catalog-rt41`) 2,698 -> 1,858 blocked of 117,624 (net -840: 842 unblocked — all of R1 (624), R2 (3), O2 (186), 2 of 4 O16, plus 47 dup-rooted R3 rows; 2 explained Cyberpunk shared-global regressions per the pinned `test_compatible_duplicate_declarers_share_without_ambiguous_external_admission` contract; zero unexplained supported regressions; case-28 plan state unchanged 10/9/9/1). Remaining packages in suggested order: RT-4.3 452, RT-4.4 65, RT-4.5 57, RT-4.6 219, RT-4.2 1,085 last; each lands with synthetic case, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. |
 | RT-5 runtime trainer parity | unassigned | design | Usage census, bounded game-facing host contracts and owned-target proofs; visual CE UI is outside scope. |
 
 No active worker is implied by `ready` or `design`. WP-19…58 below are
@@ -51,10 +51,13 @@ game-facing action.
   `w4b4-case30-20261020081722Z`). This does not measure original-table
   parity.
 - Local original reference catalog: 151 paths, 143 distinct hashes,
-  114,926 supported (58,950 staged) and 2,698 blocked of 117,624 plan
-  entries; one legacy-binary load error (post-Wave-4 catalog, 2026-10-20;
-  RT-1 re-run on the 0.16 source, 2026-10-21, reproduces all counts per
-  table — frozen manifest `gap_inventory/reference-manifest.json`).
+  115,766 supported (59,642 staged) and 1,858 blocked of 117,624 plan
+  entries; one legacy-binary load error (RT-4.1 remeasure, 2026-10-22,
+  run `blocked-catalog-rt41`, frozen manifest
+  `gap_inventory/reference-manifest.json`; previous: 114,926 supported
+  (58,950 staged) / 2,698 blocked, post-Wave-4 catalog 2026-10-20,
+  reproduced per table by the RT-1 re-run on the 0.16 source,
+  2026-10-21).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
 - Latest verified release: 0.16.1, build

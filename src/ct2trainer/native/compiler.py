@@ -73,20 +73,19 @@ def _is_inert_no_action(message: str) -> bool:
     return (_DATA_NO_ACTION_REASON in message
             and _NATIVE_NO_CONTENT_REASON in message)
 
-# WP-37: canonical handover reason strings.  The named release/wildcard
-# reasons are raised by the AA and program dialects; the two generic
-# cleanup reasons below are the wave-A error texts that wave B1 re-derives
-# with the external-ownership context.
+# WP-37: canonical handover reason strings.  The named release reason is
+# raised by the AA and program dialects; the two generic cleanup reasons
+# below are the wave-A error texts that wave B1 re-derives with the
+# external-ownership context.  (RT-4.1 removed the wildcard-cleanup
+# static guard: the wildcard sweep expands to the program's own
+# phase-owned names only, so the wave-B wildcard re-derivation loop and
+# its reason/source constants are gone as well.)
 _EXTERNAL_RELEASE_REASON = (
     "Program may not unregister or deallocate the externally owned symbol")
-_WILDCARD_CLEANUP_REASON = (
-    "Program cannot combine wildcard cleanup with externally owned symbol")
 _UNREGISTER_EXACT_REASON = (
     "Exactly the registered enable symbols must be unregistered on disable.")
 _CLEANUP_OWNED_REASON = (
     "Cleanup may only release symbols/allocations owned by this program.")
-_WILDCARD_CLEANUP_SOURCE = re.compile(
-    r"\b(?:unregistersymbol|dealloc)\s*\(\s*\*\s*\)", re.IGNORECASE)
 
 
 def _is_addressless_placeholder(entry: dict) -> bool:
@@ -579,12 +578,27 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
                     if candidate not in chosen:
                         _block(candidate,f"Unselected symbol provider conflicts with the selected shared global: {symbol}.")
                 continue
-            # WP-37: deterministic keep-first among supported providers
-            # (document order, tiebreak entry ID) — the same policy as the
-            # WP-25 duplicate-ID keep-first.  The first kept candidate
-            # stays the provider; every later duplicate inside the scope is
-            # blocked with the named reason and dependents resolve against
-            # the kept provider.
+            # WP-37 / RT-4.1: deterministic keep-first among supported
+            # providers (document order, tiebreak entry ID).  The first
+            # kept candidate stays the only visible provider for this
+            # symbol, so dependents resolve against it.  Duplicate provider
+            # entries are no longer blocked wholesale (RT-4.1, CE 7.5
+            # dupIgnore semantics): the engine registers symbols keep-first
+            # at activation — a later duplicate registration is a silent
+            # no-op while the rest of the later script still runs — so the
+            # duplicate entries stay supported and their non-duplicate
+            # registrations still take effect.  They are dropped from this
+            # symbol's provider list so resolution sees exactly one
+            # supported provider.
+            # CE 7.5 source note (read-only, 2026-10-22):
+            # registeredsymbols.Duplicates := dupIgnore
+            # (autoassembler.pas:338/345) dedupes the per-program disable
+            # symbol list; AA runtime registration is delete-then-add on the
+            # user-defined symbol list (autoassembler.pas:4164-4208,
+            # last-wins across records).  CT2Trainer's keep-first is a
+            # documented safe narrowing (runtime-parity-assessment.md):
+            # static resolution and runtime registration agree on the
+            # first registrant, so plans and activations never diverge.
             # WP-45 (GC-E4): keep-first is scoped to the user's selection.
             # When at least one candidate is selected, the selected
             # providers form the scope, so an explicit selection can
@@ -597,8 +611,11 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
             scope = chosen if chosen else candidates
             kept = scope[0]
             for entry in scope[1:]:
-                _block(entry, f"Symbol provider duplicate: {symbol} (kept provider {kept['id']}); "
-                              f"a later registration would shadow the kept one at runtime.")
+                # RT-4.1: keep the duplicate entry supported; only its
+                # registration of this symbol is shadowed by the kept
+                # provider (first registration wins).
+                if entry in providers[symbol]:
+                    providers[symbol].remove(entry)
     # WP-28 two-stage label resolution: prepare_program keeps a program's
     # bare positional labels local (they are the program's own definitions),
     # but a table-wide registered symbol of the same name wins over the
@@ -1427,10 +1444,12 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
             table_lua_claimed = set()
     external_context = frozenset(symbol for symbol, owners in raw_providers.items()
                                  if len(owners) == 1 and symbol not in table_lua_claimed)
-    # Wave B1: re-derive the two generic cleanup refusals for blocked
-    # records with the external-ownership context so the named handover
-    # reasons surface; only a re-derivation that yields a WP-37 named
-    # reason replaces the stored reason.
+    # Wave B1: re-derive the generic cleanup refusals for blocked records
+    # with the external-ownership context so the named handover reasons
+    # surface; only a re-derivation that yields a WP-37 named reason
+    # replaces the stored reason.  (RT-4.1: the wildcard-cleanup refusal
+    # is gone — the sweep now scopes to the program's own names, so no
+    # static re-derivation or block is needed for it.)
     from .aa_program import prepare_program
     from .global_alloc import has_global_alloc
     for entry in entries:
@@ -1468,36 +1487,8 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                                           + str(program_error))
         except (AAError, LuaProgramError) as exc:
             new_reason = str(exc)
-        if new_reason is not None and (_EXTERNAL_RELEASE_REASON in new_reason
-                                       or _WILDCARD_CLEANUP_REASON in new_reason):
+        if new_reason is not None and _EXTERNAL_RELEASE_REASON in new_reason:
             entry["reason"] = new_reason
-    # Wave B2: wildcard boundary.  A wildcard cleanup op expands only to
-    # the program's own phase-owned names, so a program that also requires
-    # an externally owned symbol is refused statically; the authoritative
-    # decision is the guarded re-prepare with the external context.
-    for entry in entries:
-        if not entry["supported"] or entry["kind"] != "script" or "global_program" in entry:
-            continue
-        if "program" in entry:
-            static_source = entry["program"]["source"]
-        elif "lua_program" in entry and isinstance(entry["lua_program"].get("static_program"), dict):
-            static_source = entry["lua_program"]["static_program"]["source"]
-        else:
-            continue
-        if _WILDCARD_CLEANUP_SOURCE.search(static_source) is None:
-            continue
-        try:
-            if "lua_program" in entry:
-                prepare_lua_program(scripts[entry["id"]], process_name, bitness=bitness,
-                                    nth_aob_helper=nth_helper,
-                                    external_owned=external_context)
-            else:
-                prepare_program(scripts[entry["id"]], process_name, bitness=bitness,
-                                labels=labels_by_id.get(entry["id"]),
-                                external_owned=external_context)
-        except (AAError, LuaProgramError) as exc:
-            if _WILDCARD_CLEANUP_REASON in str(exc):
-                _block(entry, str(exc))
     async_ids = {source.id for source in table.entries
                  if source.kind == "script" and source.async_script}
     # WP-46 (part 1): table-level <UserdefinedSymbols> act as static symbol

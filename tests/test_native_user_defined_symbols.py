@@ -310,14 +310,11 @@ class UdsProviderSemanticsTests(unittest.TestCase):
         plan = compile_table(str(path), PROCESS)
         by_id = {entry["id"]: entry for entry in plan["entries"]}
         # Keep-first between the two script providers is unchanged by the
-        # UDS entry: the first provider stays, the duplicate is blocked with
-        # the named reason, and the consumer resolves against the kept one.
+        # UDS entry: the first provider stays the visible provider, the
+        # duplicate stays supported (RT-4.1, CE dupIgnore) and the
+        # consumer resolves against the kept one.
         self.assertTrue(by_id[2]["supported"])
-        self.assertFalse(by_id[3]["supported"])
-        self.assertIn(
-            "Symbol provider duplicate: dupsym (kept provider 2)",
-            by_id[3]["reason"],
-        )
+        self.assertTrue(by_id[3]["supported"], by_id[3]["reason"])
         self.assertTrue(by_id[1]["supported"])
         self.assertEqual(by_id[1]["dependency_ids"], [2])
         self.assertNotIn("user_defined_symbols", plan)

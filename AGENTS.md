@@ -12,13 +12,16 @@ coverage, original-table static coverage and observed effect separate.
 Do not report the reference-table goal as complete from the 42/42
 synthetic matrix or carry stale counts into this overview.
 
-**Active outcome (2026-10-20): 100% of the 151 local-only reference-table
+**Active outcome (2026-10-22): 100% of the 151 local-only reference-table
 paths (143 distinct hashes) must load and support their intended behavior
 through an independent clean-room implementation.** The 0.16 Wave-4
-feature work is complete, but the latest original-table catalog still has
-2,698 blocked of 117,624 plan entries, 58,950 staged entries and one
-legacy-binary load error. The 42/42 feature matrix measures only the 30
-pinned synthetic cases; AP-11 has 0/6,143 confirmed game effects. Read
+feature work is complete; RT-4.1 (symbol provider fidelity) landed on
+`main` 2026-10-22. The latest original-table catalog (run
+`blocked-catalog-rt41`, 2026-10-22) has 1,858 blocked of 117,624 plan
+entries, 59,642 staged entries and one legacy-binary load error
+(previous baseline: 2,698 blocked, 58,950 staged). The 42/42 feature
+matrix measures only the 30 pinned synthetic cases; AP-11 has 0/6,143
+confirmed game effects. Read
 [`plans/reference-table-100-roadmap.md`](plans/reference-table-100-roadmap.md)
 for the active RT-1…RT-7 work and completion gates. Historical AP/WP
 plans remain useful design records, not the current goal queue.

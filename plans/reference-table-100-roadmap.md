@@ -1,6 +1,7 @@
 # Reference-table 100% roadmap
 
-Status: 2026-10-20. Active plan after the 0.16 Wave 4 release. The older
+Status: 2026-10-22. Active plan after the 0.16 Wave 4 release; RT-4.1
+(symbol provider fidelity) landed 2026-10-22. The older
 AP/WP plans record completed implementation history; this document defines
 the next work. [TRACKING.md](TRACKING.md) is the status ledger.
 
@@ -71,7 +72,7 @@ the original reference corpus and raw catalogs local-only.
 | RT-1 | Reproducible full-corpus baseline | Versioned local manifest for 151 paths/143 hashes; exact process bindings; same-source catalog; per-table and per-reason counts; record IDs and provider chains; 0.16 comparison with no unaccounted regression. Separate parse errors, inert records, staged rows, actionable rows, and table-level constructs. |
 | RT-2 | Root-cause map for every residual | Resolve all 2,698 blocked entries to an upstream cause or verified malformed authoring input. Follow provider cascades to their root; distinguish real missing semantics from false positives and duplicate provider policy. Record a testable contract, risk, and expected delta for each class. |
 | RT-3 | Load all table formats | Investigate the remaining legacy binary CT format with a clean-room parser or documented conversion path; preserve record identity and data. Table load reaches 151/151, subject to explicit evidence for genuinely unreadable inputs. |
-| RT-4 | Close high-volume plan gaps | Execute the RT-2 root-cause-map packages in suggested order by expected delta over risk: RT-4.1 symbol provider fidelity (dupIgnore policy, dup labels, wildcard-cleanup scoping) 820, RT-4.3 address expression & identifier dialect 452, RT-4.4 value semantics 65, RT-4.5 AA directive & script coverage 57, RT-4.6 input legacy & authoring gaps 219, RT-4.2 runtime provider model 1,085 (last: its AA_HIDDEN portion clears progressively as root packages land). The split sums to 2,698. Each package: leading-table inspection, an independently authored synthetic case, the class contract as a testable assertion, owned-target runtime tests where effects matter, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. A reason count is not an independent feature count; remeasure after each fix. |
+| RT-4 | Close high-volume plan gaps | Execute the RT-2 root-cause-map packages in suggested order by expected delta over risk: RT-4.1 symbol provider fidelity (dupIgnore policy, dup labels, wildcard-cleanup scoping) 820 — done 2026-10-22 (remeasured 2,698 -> 1,858 blocked), RT-4.3 address expression & identifier dialect 452, RT-4.4 value semantics 65, RT-4.5 AA directive & script coverage 57, RT-4.6 input legacy & authoring gaps 219, RT-4.2 runtime provider model 1,085 (last: its AA_HIDDEN portion clears progressively as root packages land). The split sums to 2,698. Each package: leading-table inspection, an independently authored synthetic case, the class contract as a testable assertion, owned-target runtime tests where effects matter, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. A reason count is not an independent feature count; remeasure after each fix. |
 | RT-5 | Runtime trainer parity | Inventory every used CE Lua/AA API and game-facing table-level construct, including dynamic records, callbacks, target threads, managed resolution, string hex view, and byte-width dropdown semantics. Implement each needed behavior with bounded contracts, teardown rules, and owned-target tests; classify purely visual UI as outside scope. |
 | RT-6 | Full original-table validation | For each path, produce a plan-inspection result and targeted runtime observations against a pinned game build where available. Record skipped or inaccessible targets honestly. Run the Windows clean-machine and Deck/Proton/touch protocols; keep `runtime_unverified` until both pass. |
 | RT-7 | Release gate | Rebuild only through `scripts/Build-Native.ps1`; full suite and source/frozen parity; `ce_inputs: []`; archive hashes and provenance; update tracker, ledger, and verification before declaring 100%. |
@@ -109,6 +110,57 @@ authoritative record: verified per-family roots for the AA_HIDDEN
 family, all three open CE 7.5 probes closed, seven caveats; the map
 below is the final report's per-class table (R1-R7 cascade, O1-O27
 direct).
+
+Update (2026-10-22, RT-4.1): the symbol provider fidelity package
+landed (branch `native-rt4-1`, merged to `main` the same day). Three
+clean-room code changes: (a) keep-first duplicate-provider policy in
+`compiler.py::_dependencies` — a second entry registering an
+already-registered symbol is no longer blocked wholesale; its duplicate
+registration is shadowed (removed from the symbol's provider list) while
+every non-duplicate registration in the same entry still takes effect;
+first supported registration wins, matching CE `dupIgnore`
+(autoassembler.pas:338/345 dedupes only the per-program disable-symbol
+list; the AA runtime registration is delete-then-add,
+autoassembler.pas:4164-4208, so CE is last-wins; keep-first is the
+documented safe narrowing, `runtime-parity-assessment.md:257`);
+(b) `aa_program.py::prepare_program` tolerates repeated names inside one
+or more `label()` declarations (CE's duplicate-declaration check is
+disabled at autoassembler.pas:2585-2586; multiple `name:` definitions,
+2599, and never-defined names, 2603, are still refused; unresolved
+label references still fail in the linker); (c) the wildcard-cleanup
+static guard is removed — the wildcard sweep is scoped at runtime to the
+program's own phase-owned symbols. Tests: nine focused modules 167 OK;
+full suite 3,415 OK / 25 expected skips on `main` after the merge.
+Catalog remeasure (local, run `blocked-catalog-rt41`, frozen manifest
+and process bindings unchanged): **2,698 -> 1,858 blocked** (net -840;
+117,624 total unchanged; staged 58,950 -> 59,642; the one legacy-binary
+load error unchanged). 842 rows unblocked — all 624 R1
+duplicate-provider cascades (600 `Esau_base` plus 24 non-template
+cascade rows), all 3 R2 wildcard-cleanup rows, all 186 O2 direct
+duplicate-provider rows, 2 of 4 O16 dup-label rows (re2 / re2_testicles
+`dCusWetAmount`), and 47 R3 rows whose duplicate root cleared (LADG 26
+`pbase`, AtomicHeart v1.2 21). Exactly 2 supported rows regressed,
+both explained: Cyberpunk2077 ids 380/381 ("If Iconic Weapon / Item
+Level 1/2") now refuse with "Required symbol has no unique supported
+provider: weaponPtr" because keep-first leaves all three compatible
+`globalalloc(weaponPtr,$32)` declarers (741/379/382) supported, so the
+external value records are no longer ambiguously admitted — exactly the
+pinned contract of
+`test_native_global_engine::test_compatible_duplicate_declarers_share_
+without_ambiguous_external_admission` (compatible shared-global
+declarers share; external consumers are not admitted). In the baseline
+they resolved only by accident: the duplicate providers had been
+blocked earlier at the `weapon`/`weaponBkp` register-symbol duplicates,
+which dropped them from the `weaponPtr` candidate set before the
+shared-global check ran. Zero unexplained supported regressions. The
+two Witcher3 O16 rows now compile past the `label()` duplicate but are
+blocked at the next gate: `str_base` is a Lua-generated `define`
+(`string.format("define(str_base, %X)", ...)`) the static compiler
+cannot resolve — runtime-provider class (R3 root spans RT-4.2/4.5), not
+a regression (both rows were already blocked). case-28 plan state
+re-verified unchanged: 10 total / 9 supported / 9 actionable / 1
+blocked, e[59] "Required symbol has no unique supported provider:
+SynthOnly28" (pre-existing non-dup class).
 
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
@@ -198,6 +250,12 @@ Grand total = 2,698.
 | RT-4.5 AA directive & script coverage | Cleanup-ownership diagnostics, aobscanregion, `{$lua}`/`{$c}` directives, usemono newer-CE reporting, alloc sub-errors, global-init profiles, createthread gate, assert args, comment handling, no-executable-patch acceptance | O5 (31), O12 (5), O14 (4), O15 (4), O18 (3), O19 (2), O20 (2), O21 (2), O22 (2), O24 (1), O25 (1) | 57 |
 | RT-4.6 Input legacy & authoring gaps | No-provider symbols (user config / cross-table / dynamic Lua), legacy symbols (BaseAddress, stat names, register-like tokens, module names without .exe) | R5 (91), R6 (128) | 219 |
 | **Total** | | | **2,698** ✓ |
+
+Package status (2026-10-22): **RT-4.1 done** — catalog remeasure
+1,858 blocked of 117,624 (net -840: 842 unblocked, 2 explained
+Cyberpunk shared-global regressions; detail in the RT-4.1 update in the
+investigation queue above). 1,858 = 2,698 - 842 + 2. Next package by
+suggested order: RT-4.3 address expression & identifier dialect (452).
 
 Suggested execution order: RT-4.1 (820, lowest risk and the largest
 guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),

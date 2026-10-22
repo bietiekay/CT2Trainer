@@ -1003,7 +1003,16 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
                 for symbol in node["symbols"]:
                     key = symbol.casefold()
                     if key in locals_:
-                        raise ProgramError(f"Duplicate label or program symbol: {symbol}.")
+                        # RT-4.1 (CE label() semantics, autoassembler.pas:
+                        # 2577-2603, read-only): a name repeated inside one
+                        # or more label() declarations is tolerated - CE's
+                        # duplicate-declaration check is disabled
+                        # (2585-2586).  Multiple `name:` definitions in the
+                        # code (rsLabelIsBeingDefinedMoreThanOnce, 2599) and
+                        # never-defined names (rsLabelIsNotDefinedInTheScript,
+                        # 2603) are still refused; unresolved label
+                        # references fail fail-closed in the linker.
+                        continue
                     locals_[key] = symbol
             if node["op"] == "register":
                 for symbol in node["symbols"]:
@@ -1109,18 +1118,19 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         if key not in locals_:
             # Registering a dependency does not confer ownership over it.
             raise ProgramError(f"Cannot register a symbol not owned by this program: {symbol}.")
-    # WP-37 wildcard boundary: ``unregistersymbol('*')`` / ``dealloc('*')``
-    # expand only to this program's own phase-owned names and never touch
-    # externally owned symbols; the static guard below refuses the wildcard
-    # combination when the program requires an externally owned symbol.
-    wildcard_cleanup = False
+    # RT-4.1 (CE wildcard-cleanup scoping): ``unregistersymbol('*')`` /
+    # ``dealloc('*')`` expand only to this program's own phase-owned names
+    # (the in-place expansion below) and never touch externally owned
+    # symbols, so a wildcard-cleanup program stays supported alongside
+    # externally owned symbols; the expansion is the whole boundary and no
+    # static refusal is needed.  The explicit external-release error for a
+    # named symbol (below) is unchanged.
     for node in sections["disable"]:
         if node["op"] in {"alloc", "globalalloc", "register", "scan", "scan_region", "scan_process"}:
             raise ProgramError("Disable may not allocate, scan or register new symbols.")
         if node["op"] in {"unregister", "dealloc"}:
             owned = provides if node["op"] == "unregister" else {name.casefold(): name for name in allocations}
             if node["symbols"] == ["*"]:
-                wildcard_cleanup = True
                 node["symbols"] = list(owned.values())
             else:
                 foreign = sorted(
@@ -1198,18 +1208,6 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
                 if _placeholder_symbols_in(text):
                     raise ProgramError(
                         "Placeholder tokens are not supported in assertions or data literals.")
-    if wildcard_cleanup and external_owned:
-        # WP-37: the wildcard sweep above expanded to this program's own
-        # phase-owned names only; combining it with a required externally
-        # owned symbol is refused statically because the sweep could shadow
-        # the owning record's release of that symbol.
-        external_required = sorted(
-            (spelling for key, spelling in required.items() if key in external_owned),
-            key=str.casefold)
-        if external_required:
-            raise ProgramError(
-                "Program cannot combine wildcard cleanup with externally owned symbol "
-                + external_required[0] + ".")
     capabilities = sorted({node["op"] for nodes in sections.values() for node in nodes})
     if len(allocations) > 128:
         raise ProgramError("Program contains more than 128 allocations.")
