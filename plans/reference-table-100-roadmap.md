@@ -71,7 +71,7 @@ the original reference corpus and raw catalogs local-only.
 | RT-1 | Reproducible full-corpus baseline | Versioned local manifest for 151 paths/143 hashes; exact process bindings; same-source catalog; per-table and per-reason counts; record IDs and provider chains; 0.16 comparison with no unaccounted regression. Separate parse errors, inert records, staged rows, actionable rows, and table-level constructs. |
 | RT-2 | Root-cause map for every residual | Resolve all 2,698 blocked entries to an upstream cause or verified malformed authoring input. Follow provider cascades to their root; distinguish real missing semantics from false positives and duplicate provider policy. Record a testable contract, risk, and expected delta for each class. |
 | RT-3 | Load all table formats | Investigate the remaining legacy binary CT format with a clean-room parser or documented conversion path; preserve record identity and data. Table load reaches 151/151, subject to explicit evidence for genuinely unreadable inputs. |
-| RT-4 | Close high-volume plan gaps | Execute the RT-2 root-cause-map packages in suggested order by expected delta over risk: P1 duplicate-provider/duplicate-label policy 814, P2 hidden in-table registration cascades 963, P4 relative-address base propagation 341, P3 Lua runtime symbol providers + no-registration triage + Lua-only enables 203, P5 legacy built-ins + API exports 140, P6 AA expression/directive grammar & format tolerance 122, P8 value/display semantics 64, P7 AA ownership/cleanup envelope & table-level constructs 43, documented refusals 8 — the split sums to 2,698. Each package: leading-table inspection, an independently authored synthetic case, the class contract as a testable assertion, owned-target runtime tests where effects matter, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. A reason count is not an independent feature count; remeasure after each fix. |
+| RT-4 | Close high-volume plan gaps | Execute the RT-2 root-cause-map packages in suggested order by expected delta over risk: RT-4.1 symbol provider fidelity (dupIgnore policy, dup labels, wildcard-cleanup scoping) 820, RT-4.3 address expression & identifier dialect 452, RT-4.4 value semantics 65, RT-4.5 AA directive & script coverage 57, RT-4.6 input legacy & authoring gaps 219, RT-4.2 runtime provider model 1,085 (last: its AA_HIDDEN portion clears progressively as root packages land). The split sums to 2,698. Each package: leading-table inspection, an independently authored synthetic case, the class contract as a testable assertion, owned-target runtime tests where effects matter, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. A reason count is not an independent feature count; remeasure after each fix. |
 | RT-5 | Runtime trainer parity | Inventory every used CE Lua/AA API and game-facing table-level construct, including dynamic records, callbacks, target threads, managed resolution, string hex view, and byte-width dropdown semantics. Implement each needed behavior with bounded contracts, teardown rules, and owned-target tests; classify purely visual UI as outside scope. |
 | RT-6 | Full original-table validation | For each path, produce a plan-inspection result and targeted runtime observations against a pinned game build where available. Record skipped or inaccessible targets honestly. Run the Windows clean-machine and Deck/Proton/touch protocols; keep `runtime_unverified` until both pass. |
 | RT-7 | Release gate | Rebuild only through `scripts/Build-Native.ps1`; full suite and source/frozen parity; `ce_inputs: []`; archive hashes and provenance; update tracker, ledger, and verification before declaring 100%. |
@@ -90,7 +90,7 @@ Update (2026-10-21, RT-1): the re-run on the 0.16 source (frozen manifest
 (2,698 / 117,624, 1 legacy-binary load error).
 
 Update (2026-10-21, RT-2): every one of the 2,698 blocked rows is now
-traced to an upstream terminal cause (lane attribution run, final
+traced to an upstream terminal cause (lane attribution, final
 classification `rt2_final2`; the root integrator re-verified every class
 sum and per-table sum in both directions and independently re-ran the
 corrected UNDEFINED-split logic against the local corpus). The
@@ -104,111 +104,192 @@ independently authored synthetic table, and specify the expected runtime
 behavior before any code package still governs RT-4 (integration
 protocol below). The Wave-4 snapshot's one known load error,
 `SuperMeatBoy.CT` (legacy binary format), is RT-3 scope and is not part
-of the 2,698.
+of the 2,698. The lane's final report (2026-10-21 21:14) is the
+authoritative record: verified per-family roots for the AA_HIDDEN
+family, all three open CE 7.5 probes closed, seven caveats; the map
+below is the final report's per-class table (R1-R7 cascade, O1-O27
+direct).
 
-### RT-2 root-cause map (2,698 rows, final2 run 2026-10-21)
+### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
-Decomposition: **2,698 = 1,931 provider-cascade rows + 767 direct
-rows.** Cascade terminals: **1,304 undefined-symbol rows** (963
-AA_HIDDEN + 110 LUA_RUNTIME + 91 NO_REG + 128 LEGACY_SYM + 12
-API_EXPORT) + **624 duplicate-provider cascades** + **3 wildcard-cleanup
-conflicts**. A first-matching catalog reason can hide the terminal
-cause; the map records the terminal class, not the first reason.
+**Scope and method.** Full clean-room attribution of every blocked row in
+`blocked-catalog-rt1.json` (= `blocked-catalog-w4b4.json`, verified
+identical per-table, 0 differing tables) over the 151 local-only
+reference tables. Method: instrumented `_block` (provides captured
+before pop), symbol-chain tracing to terminal state, raw-XML
+registration evidence (multi-name `registersymbol(...)`, `label(...)`,
+bare labels, Lua `registerSymbol("…")`), per-entry plan-state
+cross-reference for the hidden-cascade families, and CE 7.5 source
+probes (read-only). Reconciliation: 2,698 = 1,931 REQSYM + 767 direct;
+per-table sums over 81 blocked tables plus 1 compile-error table; zero
+mismatches. SuperMeatBoy.CT (legacy binary) is excluded from the
+2,698 denominator and reported separately at the end.
 
-**Cascade classes (1,931 rows):**
+**Classification legend.** (a) real missing semantics — CE 7.5 handles
+the construct, CT2Trainer blocks it. (b) conservative false positive —
+CE 7.5 tolerates it, CT2Trainer is stricter. (c) deliberate
+duplicate-provider / safety policy — CT2Trainer's own gate, not a
+parity gap per se. (d) authoring gap / input-legacy — CE 7.5 also
+fails, or the row requires user-side configuration, or the table
+targets a newer CE.
 
-| Class | Rows | Top tables (rows) | Upstream root cause | Classification | Testable contract | Risk | Expected delta | Pkg |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| AA_HIDDEN | 963 | DSDC 121+120, re2_testicles 114, DS2 110, HFWest 63+63, Witcher3 89+87, Subnautica 32, LADG 26, ctts 25 | required symbol is registered in-table (registersymbol incl. multi-name, label(), bare `sym:`) but the static analyzer misses the registration; the first-matching reason hides it | analyzer false positive (registration resolution) | every in-table AA registration resolves: a synthetic table registering S via each registration form and then referencing S compiles with 0 blocked rows | high (multi-block/multi-name/case handling; must not mask true gaps) | up to 963 (residual = genuinely missing registrations) | P2 |
-| LUA_RUNTIME | 110 | HFWest 39+39, DS2 30, RiftApart 2 (g_GameModule, g_GameState, Trampolines, g_DSPlayerSystem, ...) | symbol is provided at runtime by the table's own embedded Lua `registerSymbol`; invisible to the static compiler | runtime-provided symbol (static false positive) | symbols registered via Lua `registerSymbol` in the same table are accepted as providers in the static plan; resolution defers to the staged runtime; a missing registration fails at runtime with a named error | medium (runtime resolution must stay fail-closed; no static address baking) | up to 110 | P3 |
-| NO_REG | 91 | GoW 32 (goPlayer/goGameObject), DS2 28 (InteractionPad/g_DebugSettings/g_Viewport), 小猫咪大城市 14 (CatValues), RiftApart 5, YLIL 3, HFWest 3+3 | no static registration evidence anywhere (no AA, no Lua): runtime host/user-provided or a genuine authoring gap | mixed - per-symbol triage (runtime provider vs authoring gap) | a symbol with no in-table registration blocks with the terminal cause named; it compiles only once registered or an approved runtime provider supplies it; a synthetic case proves both the blocked and the resolved path | medium (~30 distinct symbols; some need runtime-provider contracts) | up to 91 (ceiling; authoring residuals stay documented) | P3 |
-| LEGACY_SYM | 128 | HellPie 18, AtomicHeart v1.2 17, Oregon 17, Scorn 17, Callisto 17, F4 9, LikeaDragonIshin 8+7, SOTTR 3, +13 | CE legacy built-ins/keywords (BaseAddress across the five UE5 template tables, Inf, assembly mnemonics/keywords such as st/int/end/dqword/float, table-local bases pbase/ctts/likeadragonishin/pgengine) that CT2Trainer does not define or misreads as symbols | missing legacy built-ins + keyword false positives | BaseAddress resolves to the attached main-module base; Inf resolves per CE 7.5 semantics; assembly keywords/mnemonics are never treated as symbol references; table-local bases resolve when registered in-table (else NO_REG); tests: a synthetic BaseAddress table compiles, and programs containing `int 3`-style mnemonics create no symbol requirement | low per built-in; medium for the keyword fix (parser change) | up to 128 | P5 |
-| API_EXPORT | 12 | ForgottonAnne 2, SOTTR 2, trine2 2, +6 (FindWindowA/FindWindow, GetAsyncKeyState) | terminal symbol is a Win32 API export, never registered in-table; CE resolves it at attach | real missing semantics (runtime API export resolution) | API export names resolve at attach via OS lookup; unresolvable gives a named block reason; static plan marks them runtime-resolvable; test: FindWindowA resolves on the fixture target | low-medium (runtime-only; fail-closed when the target lacks the export) | up to 12 | P5 |
-| DUPPROV_CASCADE | 624 | five shared UE5 template tables x 120 character_pointer (600), remainder spread | the provider cascade terminates at a duplicate provider registration: CE keeps the first registration (dupIgnore) and shadows later ones; CT2Trainer fail-closes the cascade | duplicate-provider policy (parity divergence) | duplicate provider registration keeps the first registration; dependents resolve against the kept provider; no blocked row arises from duplication alone; test: a synthetic table registering the same symbol twice compiles, kept provider = first | low-medium (kept-first must match author intent in the top tables) | up to 624 | P1 |
-| WILDCARD_ROOT | 3 | Octopath2 3 | the cascade terminates at the wildcard-cleanup + externally-owned-symbol (mem0x04) conflict | ownership model (same family as CLEANUP_OWNED / WILDCARD_CLEANUP) | the ownership decision of P7 | medium | up to 3 | P7 |
+**Per-class root-cause table.** Classes are partitioned by immediate
+terminal reason (each row exactly once; counts sum to 2,698).
+"Delta" = rows whose immediate block this class removes; upstream
+roots of the UNDEFINED family (R3) span packages and are noted, so
+deltas across classes are not additive.
 
-**Direct classes (767 rows):**
+#### REQSYM rows (1,931)
 
-| Class | Rows | Top tables (rows) | Root cause | Classification | Testable contract | Risk | Expected delta | Pkg |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| RELADDR_SKIP | 331 | Octopath2 327, +4 | relative offset applied over an addressless script/value ancestor; no base to propagate | real missing semantics (base propagation through script/value nodes) | pointer chains with a script/value ancestor resolve the base at runtime; the static plan records the dependency; an ancestor that can never carry an address blocks with this named reason; synthetic chain blocks before, resolves after | high (runtime base tracking) | up to 331 | P4 |
-| DUPPROV_POLICY | 186 | SOTTR 38, Borderlands3-V10 14, ForgottonAnne 11, qt-ds-1/2 9+9, APlagueTaleInnocence 7, +88 rows across the remaining tables | direct duplicate provider registration (kept provider, later registration would shadow) | duplicate-provider policy (parity divergence) | same contract as DUPPROV_CASCADE | low-medium | up to 186 | P1 |
-| PTR_OFFSET_HEX | 53 | CP77 30, Callisto V1.1 9, working.ct 9, SOTTR 3, HFWest 1+1 | pointer offset written as a non-hex literal; grammar requires a hex literal | format tolerance gap | pointer offsets accept decimal integer literals (parity; same plan as the hex equivalent) or stay a documented refusal; decision recorded with the CE check | low | up to 53 | P6 |
-| TRAILING_TOKENS | 43 | DS2 10, GingaForce 8, Subnautica 6, PennysBigBreakaway 3, REZ 3, YLIL(1) 3, +10 rows across the remaining tables | address expression carries tokens the parser rejects: define(bytes,/define(address, directives with byte-string args, digit-leading labels (0CurrentWeight:), method atoms with trailing tokens (TechData:get_craftAmount+b), trailing space in quoted atom | parser tolerance (per-case verification) | the AA expression grammar accepts the token forms used by the reference corpus, verified per case; unsupported forms block with a line-specific named reason | medium (grammar expansion surface) | up to 43 | P6 |
-| CLEANUP_OWNED | 31 | DS2 13, re2_testicles 3, ctts 2, Starfield 2, trine2 2, Cronos 1, +8 rows across the remaining tables | cleanup releases symbols/allocations not owned by this program (cross-block ownership) | ownership model (policy decision) | cleanup may only release symbols/allocations allocated by the same program; cross-block cleanup is supported via shared ownership or blocks with a named reason (decision recorded) | medium (memory safety on disable) | up to 31 | P7 |
-| DROPDOWN_WIDTH | 30 | P3R v4/v5/v1 9+9+9, P3Reload v1.5.1 3 | dropdown choice exceeds the value-type width ('314' over Byte) | parity divergence: CE truncates, CT2Trainer refuses | write the low N bits (truncation) to match CE (CE probe a below); test: a Byte dropdown choice 314 writes 58 | low (matches CE) | 30 (full) | P8 |
-| STRING_SHOWASHEX | 15 | DS2 9, HFWest 3+3 | string entry uses the ShowAsHex byte view; CT2Trainer requires literal text display | display/view feature - no game-facing effect (string content unchanged) | string entries with ShowAsHex compile with literal-text display; the hex byte view is classified decorative/no-effect (rows reclassified, not code-fixed) - or the byte view is implemented | low | up to 15 (reclassification) | P8/scope |
-| DROPDOWN_EXPR | 13 | Borderlands3-V10 12, P4G 1 | dropdown choices are unsupported value expressions (IL2CPP Type:Member atoms) | runtime symbol resolution (IL2CPP; CE probe c below) | choices referencing Type:Member resolve at runtime via the IL2CPP pipe; the staged gate fails closed when the backend is absent | medium-high (needs the IL2CPP runtime; RT-5) | up to 13 | P8 |
-| RELADDR_NO_ANC | 10 | SOTTR 10 | relative address with no address-bearing ancestor at all | real missing semantics (same family as RELADDR_SKIP) | same contract as RELADDR_SKIP | high | up to 10 | P4 |
-| SYM_CHARS | 8 | recolored 5, Octopath1 2, RDR2 1 | symbol names start with a digit (8PathBattleResult) or contain non-ASCII characters; CT2Trainer restricts to [A-Za-z0-9_] | parity gap (charset policy) | the symbol charset widens to CE 7.5's accepted set with a deterministic internal encoding; test: a non-ASCII symbol and a digit-leading symbol round-trip through the plan | medium (encoding round-trip) | up to 8 | P6 |
-| CUSTOM_TYPE | 6 | re2 3, re2_testicles 3 | custom value types (RE2_Hrs/Mins/Secs) have no static definition; need a converter/write gate (AP-08.7) | real missing semantics (custom type runtime) | custom types with converter scripts resolve at runtime; the static plan records the type; writes go through the converter gate; test: an RE2_Hrs value write via the converter | medium | up to 6 | P8 |
-| INDIRECT_DATA | 5 | SandFall V1..V5 1 each | indirect address expressions in the data dialect (aobAppendString+7+(DWORD)[aobAppendString+3]) | real missing semantics (data-dialect indirection/cast) | data expressions support casted indirection (TYPE)[expr]; test: a synthetic aob+cast+deref plan is byte-identical | medium | up to 5 | P6 |
-| AOBSCANREGION | 5 | Subnautica_e67616 5 | unsupported AA directive aobscanregion (secondary: dealloc size outside 1..1048576) | missing AA directive support | aobscanregion (range-bound AOB scan) is implemented or a documented refusal with a named reason | medium | up to 5 | P6 |
-| LUA_C_DIRECTIVE | 4 | Borderlands3-V10 4 | embedded Lua/C/compiler-preprocessor directives inside record AA (line 17) with a trailing-token artifact | unsupported directive (scope decision) | the directive family is supported or blocks with a named reason (decision recorded); the reason must not degrade into a generic trailing-token artifact | low | 0-4 | P6/scope |
-| MALFORMED_DIRECTIVE | 4 | ForgottonAnne 2 (usemono), 小猫咪大城市 2 | usemono/.NET AA directive + malformed directive arguments | scope decision (mono AA out of scope) or authoring gap | mono AA stays a documented named refusal unless a user decision changes it; test: the refusal reason is stable | none (documented refusal) | 0 | scope |
-| DUP_LABEL | 4 | re2 1, re2_testicles 1, Witcher3 1+1 | duplicate label/program symbol (dCusWetAmount; duplicate return label); CE tolerates via dupIgnore | duplicate-symbol policy (parity) | duplicate label/symbol registration is tolerated per CE 7.5 dupIgnore semantics (kept per CE source); no hard block; test: a duplicate-label table compiles | low | up to 4 | P1 |
-| ALLOC_CLEANUP | 3 | AtomicHeart 1, P3R-v4 1, Shinkansen 1 | unsupported AA directive alloc outside the supported envelope (secondary: unbalanced args / reassemble arg count / ':get_Level' expression) | missing AA directive support (+ possible authoring malformation) | alloc/dealloc are accepted within the supported size range; out-of-range/unbalanced blocks with a named reason; per-sub-case tests | medium | up to 3 | P6 |
-| WILDCARD_CLEANUP | 3 | Octopath2 3 | wildcard cleanup combined with an externally owned symbol (mem0x04) | ownership model (same family as CLEANUP_OWNED) | same contract/decision as CLEANUP_OWNED | medium | up to 3 | P7 |
-| GLOBAL_INIT | 2 | Resonance 1, SinkingCity_Rem 1 | global initializer requires one direct ENABLE cursor; the table uses another structure | real missing semantics (global init structure) | global initializers with a non-single-cursor structure are supported or a documented refusal (decision recorded) | medium | up to 2 | P7 |
-| NO_EXEC_PATCH | 2 | SOTTR 2 | enable section contains only a Lua call (luaCall(lua_aobscan(...))); CE executes record Lua at activation time | runtime Lua activation semantics (RT-5) | Lua-only enable sections are accepted by the static plan and executed by the record-Lua path at activation; test: a synthetic lua-only enable activates on the fixture target | medium (depends on record-Lua lifecycle) | up to 2 | P3/RT-5 |
-| GLOBAL_INIT_LABEL | 2 | SinkingCity_Rem 2 | labels inside a global initializer are outside the direct literal profile | same family as GLOBAL_INIT | same contract as GLOBAL_INIT | medium | up to 2 | P7 |
-| CREATETHREAD | 2 | Witcher3 1+1 | createThread()/threadWait() are gated: no thread backend is part of the shipped trainer | missing runtime backend (RT-5) | createThread/threadWait resolve against the staged runtime thread backend; absent backend fails closed with a named gate; test: a synthetic thread program on the fixture target | medium-high (thread backend) | up to 2 | P7/RT-5 |
-| QUOTED_ATOM | 1 | CP77 1 | quoted atom is not a module basename; CE module list stores names with the .exe extension (CE probe b below) so CE would not resolve it either | authoring gap (keep the refusal) | the refusal stays; the reason names the expected form; test: a quoted atom must match an attached module basename | none | 0 (documented) | scope |
-| ASSERT_ARGS | 1 | CP77 1 | assert with an invalid argument count (malformed) | authoring gap | stays blocked with the named reason; a test pins the refusal | none | 0 | scope |
-| BLOCK_COMMENT | 1 | SonicFrontiers 1 | unterminated source block comment | authoring gap | stays blocked with the named reason; a test pins the refusal | none | 0 | scope |
-| OTHER | 1 | Sunless Skies 1 | invalid address expression near ':set_EffectiveLevelM' (method-call-style atom) | expression-grammar gap (triage per case) | named reason; decision: support the method syntax or document the refusal | low | 0-1 | P6 |
-| DROPDOWN_EMPTY | 1 | 小猫咪大城市 1 | read-only dropdown has no concrete literal choices | authoring/scope | stays blocked with the named reason or is classified no-effect after review | none | 0-1 | scope |
+| Class | Count | Tables (spread) | Upstream root cause | cls | Testable contract (assertion) | Risk | Delta | RT-4 pkg |
+|---|---|---|---|---|---|---|---|---|
+| R1 DUPPROV_CASCADE | 624 | HellPie 120, Scorn 120, AtomicHeart v1.2 120, Oregon 120, Callisto v1.2 120, qt-ds-1 9, qt-ds-2 6, Cyberpunk 6, ForgottonAnne 2, SHProto 1 | The symbol's provider entry is itself blocked as a duplicate provider (keep-first), so the symbol loses its provider and every dependent record cascades. character_pointer 600 (five UE5 "Esau" template tables sharing the `aobscanmodule(Entity_Player, isaac-ng.exe)` template script; kept production script lacks the full symbol list), inject 16, weaponptr 6, originalcode11 2 | c | A second entry registering an already-registered symbol is not blocked wholesale; its non-duplicate registrations still take effect; first registration wins (CE `registeredsymbols.Duplicates := dupIgnore`) | low-med | 624 (+ ~48 dup-rooted rows inside R3) | RT-4.1 |
+| R2 WILDCARD_CASCADE | 3 | Octopath2 ×3 | Provider entry blocked: "Program cannot combine wildcard cleanup with externally owned symbol mem0x04" | c | A wildcard-cleanup program stays supported alongside externally owned symbols; the wildcard is scoped to program-owned symbols at runtime | low | 3 | RT-4.1 |
+| R3 UNDEF_AA_HIDDEN | 963 | DSDC 121+120, re2_testicles 114, DS2 110, Witcher3 89+87, Horizon 63+63, Subnautica_e67616 32, LikeADragonGaiden 26, ctts 25, SandFall×5 34, Kena 12, AtomicHeart v1.2 21, re2 7, SOTTR 7, recolored 6, Octopath1 6, ForgottonAnne 5, Cyberpunk 4, APlagueTaleRequiem 3, Cronos 3, SonicFrontiers 2, RiftApart 2, Fallout4 1 | Symbol is statically registered in the table XML, but its provider entry is blocked before symbol extraction. Verified per-family roots (entry-level cross-reference): DSDC 241 — digit-leading label `0CurrentWeight:` inside the big provider script (b); re2_testicles 114 — cleanup-ownership chain pAttackInfo→damageHandle1AOB→pPlayer→entry 12997 (c) plus dCusWetAmount dup-label (b); DS2 110 — cleanup-ownership (c) + group-heading activation not executed, entry 87578 "Navigation heading; CE group activation is not executed" (c) + quoted `"ds.exe"+offset` defines (a) + Trampolines/g_Instance Lua-registered (a); Horizon 126 — Trampolines + component symbols Lua-registered (a); Witcher3 176 — dup `return` inside one `label()` list (b, 148) + x87 `st(0)` FPU operand misparsed as symbol `st` (b, 26) + GetAsyncKeyState (a, 2); Subnautica_e67616 32 — `aobscanregion` + Type:Member bounds (a); LikeADragonGaiden 26 — dup provider (c); ctts 25 — cleanup-ownership (c); SandFall 34 — indirect data dialect (a); Kena/Cronos/re2/DS2 parts — cleanup-ownership (c); AtomicHeart v1.2 21 — dup provider (c); SOTTR 7 — API + dup + dqword (a/c/d); recolored 6 — dotted symbols (b); Octopath1 6 — digit-leading labels (b); ForgottonAnne 5 — usemono (d) + API (a); Cyberpunk 4 — quoted-atom rule (a); APlagueTaleRequiem 3 — FindWindowA (a); SonicFrontiers 2 — unterminated comment (d); Fallout4 1 — dqword (d) | mixed a/b/c/d | Every corpus symbol has a supported provider entry in the plan or is runtime-resolvable (Lua); provider entries blocked only by fixed roots still contribute their symbols | med | 963 (roots span RT-4.1/3/5/6) | RT-4.2 |
+| R4 UNDEF_LUA_RUNTIME | 110 | DS2 30, Horizon 39+39, RiftApart 2 | Symbols registered only at attach time via table Lua `registerSymbol("…")` (verified in source): Trampolines, g_GameModule, g_DSPlayerSystem, g_GameState, g_DebugSettings, g_DifficultyManager, g_Viewport, g_AIManagerGame, g_WorldTimer, g_MenuModule, g_PlayerProfile, g_TrophySystem, Player__GetLastActivatedCamera, CharacterProgressionComponent_AddXpBool, CombatRewardsComponent_GetLevel, HeroHealthVFTable | a | An address expression referencing a Lua-registered symbol compiles staged and resolves after table Lua runs at attach | med | 110 | RT-4.2 |
+| R5 UNDEF_NO_REG | 91 | GoW 32, DS2 28, 小猫咪 14, Horizon 3+3, RiftApart 5, YLILWin64 3, AtomicHeart v1.2 2, AtomicHeart 1 | No registration anywhere in the table source (not even quoted). In CE these resolve only via user-side symbols, cross-table loading, or undiscoverable dynamic Lua (GoW: Lua AOB-loop registration, traced) | d | A referenced-but-unregistered symbol surfaces as an actionable "undefined provider" with source location; optional user-symbol import covers user-defined cases | low | 91 (partially via user-symbol import) | RT-4.6 |
+| R6 UNDEF_LEGACY | 128 | BaseAddress 80 (5 UE5 tables ×16), Inf 5, LikeaDragonIshin 15 (module name without .exe), Fallout4 stats 9, SOTTR 3, trine1 2, Witcher3 2 (st — FPU misparse), BioShock 2, Horizon 2, Kena/ctts/RAGE2/TheSinkingCity/RadiantSilvergun/LustForDarkness/Yakuza/HellPie 9 | User-expected / legacy symbols; no built-in CE 7.5 handling (BaseAddress probed: no Delphi handling — user/Lua symbol). The two Witcher3 `st` rows are actually the x87 `st(0)` FPU-operand misparse (b) | d | Legacy symbols produce an actionable per-symbol "no provider; expected from user config" report; `st(0)` FPU operand tokenizes as a register, not a symbol | low | 128 (2 via the FPU fix) | RT-4.6 |
+| R7 UNDEF_API_EXPORT | 12 | GetAsyncKeyState 10 (BatmanAK, DS2, ForgottonAnne 2, SOTTR 2, trine2 2, Witcher3 2), FindWindowA 2 (APlagueTaleRequiem, Resonance) | Windows API exports are not resolvable in the static expression parser; CE resolves them via module export/symbol lists | a | `GetAsyncKeyState` / `FindWindowA` as address expressions resolve to the export address from the target export table; fail closed with an actionable message when absent | low | 12 (+ ~10 API-rooted rows inside R3) | RT-4.2 |
 
-Class total check: 963+110+91+128+12+624+3 + 331+186+53+43+31+30+15+13+10+8+6+5+5+4+4+4+3+3+2+2+2+2+1+1+1+1+1 = 2,698.
+#### Direct (non-REQSYM) rows (767)
+
+| Class | Count | Tables (spread) | Upstream root cause | cls | Testable contract (assertion) | Risk | Delta | RT-4 pkg |
+|---|---|---|---|---|---|---|---|---|
+| O1 RELADDR_SKIP | 331 | Octopath2 327, AtomicHeart v1.2 1, DS2 1, Horizon 2 | WP-50 relative-address adoption cannot skip an addressless script/value ancestor between the record and the address-bearing ancestor (written by a supported script at runtime) | a | A relative-address record with one or more addressless ancestors under an address-bearing ancestor is staged with runtime-relative resolution | med | 331 | RT-4.3 |
+| O2 DUPPROV_DIRECT | 186 | SOTTR 38, Borderlands3-V10 14, ForgottonAnne 11, qt-ds-1 9, qt-ds-2 9, APlagueTaleInnocence 7, +32 tables | Keep-first duplicate-provider policy (WP-37); CE `dupIgnore` keeps first registration and lets the rest of the later script run | c | Same as R1 | low-med | 186 | RT-4.1 |
+| O3 PTR_OFFSET_HEX | 53 | Cyberpunk 30, Callisto V1.1 9, working.ct 9, SOTTR 3, Horizon 2 | Pointer-offset slots holding symbol expressions (e.g. `itemQuantityOffset`, UE property paths); CE evaluates offsets as runtime expressions | a | A pointer offset that is a valid address expression resolves at runtime against the symbol table; hex literals keep working | med | 53 | RT-4.3 |
+| O4 TRAILING_TOKENS | 43 | DS2 10, GingaForce 8, Subnautica.CT 6, YLILWin64 3+3, Borderlands3-V10 4 (Lua/C primary), DSDC 2, Pennys 3, REZ 3, qt-ds 2+2, rayman 1 | Atoms the expression parser cannot tokenize: quoted-module+offset defines (`define(address,"ds.exe"+26D0389)`) 25; IL2CPP Type:Member defines (`TechData:get_craftAmount`, `PaywallUnlockHelper:get_PaywallUnlockCost`) 12; digit-leading label `0CurrentWeight:` 2; qt-ds/rayman 5 (root unverified, caveat) | a/d | `define(address, "module.exe"+0x123)` resolves via the module base; colon-symbol defines resolve when a symbol of that name is registered | med | 43 | RT-4.3 |
+| O5 CLEANUP_OWNED | 31 | DS2 13, re2_testicles 3, ctts 2, Starfield 2, trine2 2, Cronos/Fallout4/Horizon/Kena/re2 8 | Program cleanup section references symbols/allocs not owned by the program; CT2Trainer policy forbids cross-program cleanup; CE permits it unconditionally | c | Cleanup touching only owned symbols passes; foreign references are reported with the owning program (policy kept; diagnostics actionable) | high if relaxed; low for diagnostics only | 31 (+ ~216 cascade rows inside R3) | RT-4.5 |
+| O6 DROPDOWN_WIDTH | 30 | P3R 9, P3R-v4 9, P3R-v5 9, P3Reload 3 | Choice literal ('314'/'300') exceeds the Byte value-type width; CE `SetValue` truncates (see CE conclusions) | b | A dropdown choice parsing as an integer is accepted on a Byte record and written as value mod 2^8 | low | 30 | RT-4.4 |
+| O7 STRING_SHOWASHEX | 15 | DS2 9, Horizon 3+3 | String value record with ShowAsHex byte view; staged runtime requires literal-text display | a | A string record with ShowAsHex stages a byte-array value; writes accept hex byte sequences | low | 15 | RT-4.4 |
+| O8 DROPDOWN_EXPR | 13 | Borderlands3-V10 12, P4G 1 | Dropdown choice values are expressions, not literals; CE `SetValue` evaluates math/Lua expressions in values | a | An expression dropdown choice evaluates at write time against the runtime symbol table | med | 13 | RT-4.4 |
+| O9 RELADDR_NO_ANC | 10 | SOTTR 10 | Relative address with no address-bearing ancestor at all in the tree | a | A relative-address record with no static address-bearing ancestor stages as address-required-at-runtime (user- or script-supplied), not blocked | low-med | 10 | RT-4.3 |
+| O10 SYM_CHARS | 8 | recolored 5 (dotted symbols `_._`…`_....._`), Octopath1 2 (`8PathBattleResult`, `8PathSteal`), RDR2 1 (nested-comment row) | Identifier strictness: digit-leading names and dots rejected; CE `label()` check `val('$'+name)` rejects only pure-hex names, and symbol names with dots pass. The RDR2 row's root is nested `{}` comments, which CE also fails | b (RDR2: d) | Digit-leading and dotted symbol names are accepted unless the name parses fully as hex (`label()` case, CE `rsIsNotAValidIdentifier`); nested `{}` comments are reported as invalid input, matching CE | low | 8 (+ 253 same-root rows inside R3) | RT-4.3 |
+| O11 CUSTOM_TYPE | 6 | re2 3, re2_testicles 3 | RE2_Hrs/RE2_Mins/RE2_Secs custom value types; deliberate AP-08.7 converter/write-gate | c | RE2_* custom types stay staged behind the AP-08.7 gate until a converter/write gate exists | n/a (gated) | 0 until gate | RT-4.4 |
+| O12 AOBSCANREGION | 5 | Subnautica_e67616 5 | `aobscanregion` directive (bounds given as Type:Member symbols) unsupported; CE supports the directive | a | `aobscanregion(name, start, end, pattern)` with registered symbol bounds scans the region and registers the symbol | med | 5 (+ 32 rows inside R3) | RT-4.5 |
+| O13 INDIRECT_DATA | 5 | SandFall×5, 1 each | Pointer expression `'aobAppendString+7+(DWORD)[aobAppendString+3]'` in the record data dialect; CE symhandler resolves pointer chains in record addresses | a | An indirect data expression in the data dialect resolves at runtime (CE pointer-chain semantics) | med | 5 (+ 34 rows inside R3) | RT-4.3 |
+| O14 LUA_C_DIRECTIVE | 4 | Borderlands3-V10 4 | Inline `{$lua}`/`{$c}` (compiler/preprocessor) directives inside AA scripts; CE supports them | a | Inline `{$lua}…{$/lua}` and `{$c}…{$/c}` sections in AA scripts are executed/evaluated (or staged as runtime sections) | med | 4 | RT-4.5 |
+| O15 USEMONO | 4 | ForgottonAnne 2, 小猫咪 2 | `usemono()` directive — zero hits anywhere in the CE 7.5 tree (newer-CE directive) | d | `usemono` is reported as targeting a CE newer than 7.5, out of parity scope (stays blocked with a clear message) | n/a | 0 (out of scope) | RT-4.5 |
+| O16 DUP_LABEL | 4 | Witcher3 ×2 (dup `return` inside one `label()` list), re2 1, re2_testicles 1 (`dCusWetAmount`) | CT2Trainer per-program duplicate-label guard rejects a repeated name inside one `label()` declaration; CE re-verifies each listed name harmlessly (only multiple `name:` definitions raise) | b | `label(a b a)` with exactly one `a:` definition in the code is accepted; multiple `name:` definitions still rejected (CE rsLabelIsBeingDefinedMoreThanOnce); a name with no definition still rejected (rsLabelIsNotDefinedInTheScript) | low | 4 (+ 148+3 same-root rows inside R3) | RT-4.1 |
+| O17 WILDCARD_DIRECT | 3 | Octopath2 3 | Direct wildcard-cleanup conflict rows (see R2) | c | Same as R2 | low | 3 | RT-4.1 |
+| O18 ALLOC_MISC | 3 | AtomicHeart 1 (unbalanced directive arguments), P3R-v4 1 (reassemble invalid argument count), Shinkansen Sunless Sea V1005 1 (Type:Member atom `:get_Level`) | Sub-errors inside alloc/reassemble directive handling | a | alloc/reassemble argument validation matches CE grammar; Type:Member atoms per the O4 rule | low-med | 3 | RT-4.5 |
+| O19 GLOBAL_INIT | 2 | Resonance 1, TheSinkingCity 1 | Global initialization requires one direct ENABLE cursor; the tables' shape is outside that profile | a | Global-initializer profile accepts the tables' cursor shape (one direct cursor to a supported target) | med | 2 | RT-4.5 |
+| O20 NO_EXEC_PATCH | 2 | SOTTR 2 | Enable section contains only `luaCall(lua_aobscan(...))` — Lua-driven symbol registration, no byte patch; CE executes such scripts fine (symbols registered at runtime) | b | An enable section whose content produces symbols via luaCall/registration counts as executable content and is staged | low | 2 | RT-4.5 |
+| O21 GLOBAL_INIT_LABEL | 2 | TheSinkingCity 2 | Labels inside a global initializer are outside the direct-literal profile | a | Labels inside global initializers resolve per the profile | med | 2 | RT-4.5 |
+| O22 CREATETHREAD | 2 | Witcher3 ×2 | `createThread()`/`threadWait()` gated: no thread backend in the native staged runtime (deliberate capability gate) | c | `createThread`/`threadWait` remain gated with the explicit reason until a thread backend ships | n/a (gated) | 0 until backend | RT-4.5 |
+| O23 QUOTED_ATOM | 1 | Cyberpunk 1 | Quoted-atom rule on a script carrying a `$proces` typo (module symbol misspelled) | a/d | Quoted atoms must be resolvable module basenames; otherwise rejected naming the offending token | low | 1 | RT-4.3 |
+| O24 ASSERT_ARGS | 1 | Cyberpunk 1 | Assert argument-count check in a hybrid `{$lua}` entry (partially verified, see caveats) | a | Assert argument validation matches CE `assert()` semantics | low | 1 | RT-4.5 |
+| O25 BLOCK_COMMENT | 1 | SonicFrontiers 1 | Unterminated source block comment; CE's single-pass comment stripping also fails on it | d | Unterminated `{` comments are reported as invalid input, matching CE | low | 1 | RT-4.5 |
+| O26 DROPDOWN_EMPTY | 1 | 小猫咪 1 | Read-only dropdown with no concrete literal choices (description-only) | a | Description-only/read-only dropdowns stage as read-only views without literal choices | low | 1 | RT-4.4 |
+| O27 OTHER | 1 | Sunless Skies 1 | `Invalid address expression near ':set_EffectiveLevelM'` — IL2CPP Type:Member atom in an address expression | a/d | Type:Member atoms resolve only when a symbol of that exact colon-name is registered; otherwise actionable error | low | 1 | RT-4.3 |
+
+**Totals.** REQSYM: 624+3+963+110+91+128+12 = 1,931. Direct:
+331+186+53+43+31+30+15+13+10+8+6+5+5+4+4+4+3+3+2+2+2+2+1+1+1+1+1 = 767.
+Grand total = 2,698.
 
 ### RT-4 package split (sums to 2,698)
 
-| Package | Scope | Rows |
-| --- | --- | --- |
-| P1 | duplicate-provider & duplicate-label policy (DUPPROV_CASCADE 624 + DUPPROV_POLICY 186 + DUP_LABEL 4) | 814 |
-| P2 | hidden in-table registration cascades - analyzer registration resolution (AA_HIDDEN) | 963 |
-| P3 | Lua runtime symbol providers + no-registration triage (LUA_RUNTIME 110 + NO_REG 91 + NO_EXEC_PATCH 2) | 203 |
-| P4 | relative-address base propagation (RELADDR_SKIP 331 + RELADDR_NO_ANC 10) | 341 |
-| P5 | legacy built-in symbols + API exports (LEGACY_SYM 128 + API_EXPORT 12) | 140 |
-| P6 | AA expression/directive grammar & format tolerance (PTR_OFFSET_HEX 53 + TRAILING_TOKENS 43 + SYM_CHARS 8 + INDIRECT_DATA 5 + AOBSCANREGION 5 + ALLOC_CLEANUP 3 + LUA_C_DIRECTIVE 4 + OTHER 1) | 122 |
-| P7 | AA ownership/cleanup envelope & table-level constructs (CLEANUP_OWNED 31 + WILDCARD_CLEANUP 3 + GLOBAL_INIT 2 + GLOBAL_INIT_LABEL 2 + CREATETHREAD 2 + WILDCARD_ROOT 3) | 43 |
-| P8 | value/display semantics (DROPDOWN_WIDTH 30 + STRING_SHOWASHEX 15 + DROPDOWN_EXPR 13 + CUSTOM_TYPE 6) | 64 |
-| documented refusals | authoring/scope gaps, no code fix (MALFORMED_DIRECTIVE 4 + QUOTED_ATOM 1 + ASSERT_ARGS 1 + BLOCK_COMMENT 1 + DROPDOWN_EMPTY 1) | 8 |
-| **total** | | **2,698** |
+| Package | Scope | Classes (rows) | Total |
+|---|---|---|---|
+| RT-4.1 Symbol provider fidelity | CE `dupIgnore` semantics (keep-first without blocking the duplicate provider), repeated names inside one `label()` list, wildcard-cleanup scoping | R1 (624), R2 (3), O2 (186), O16 (4), O17 (3) | 820 |
+| RT-4.2 Runtime provider model | Runtime symbol resolution: Lua-registered symbols, hidden provider entries unblocked by their roots, API-export resolution | R3 (963), R4 (110), R7 (12) | 1,085 |
+| RT-4.3 Address expression & identifier dialect | Relative-address skip/adoption, expression pointer offsets, trailing-token atoms (quoted module+offset, Type:Member), indirect data dialect, identifier strictness, quoted atoms | O1 (331), O3 (53), O4 (43), O9 (10), O10 (8), O13 (5), O23 (1), O27 (1) | 452 |
+| RT-4.4 Value semantics | Dropdown width truncation (CE parity), expression dropdowns, description-only dropdowns, ShowAsHex strings, custom-type gate | O6 (30), O8 (13), O7 (15), O11 (6), O26 (1) | 65 |
+| RT-4.5 AA directive & script coverage | Cleanup-ownership diagnostics, aobscanregion, `{$lua}`/`{$c}` directives, usemono newer-CE reporting, alloc sub-errors, global-init profiles, createthread gate, assert args, comment handling, no-executable-patch acceptance | O5 (31), O12 (5), O14 (4), O15 (4), O18 (3), O19 (2), O20 (2), O21 (2), O22 (2), O24 (1), O25 (1) | 57 |
+| RT-4.6 Input legacy & authoring gaps | No-provider symbols (user config / cross-table / dynamic Lua), legacy symbols (BaseAddress, stat names, register-like tokens, module names without .exe) | R5 (91), R6 (128) | 219 |
+| **Total** | | | **2,698** ✓ |
 
-Suggested execution order by expected delta over risk: P1, P2, P4, P3,
-P5, P6, P8, P7 (43 rows), documented refusals 8. Remeasure the catalog
-after each package (roadmap rule).
+Suggested execution order: RT-4.1 (820, lowest risk and the largest
+guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),
+RT-4.6 (219), and RT-4.2 (1,085) last — its AA_HIDDEN portion clears
+progressively as the root packages land, and the residual is runtime
+provider work. Remeasure the catalog after each package (roadmap rule).
 
-### CE 7.5 behavior probes (read-only reference, 2026-10-21)
+### CE 7.5 behavioral conclusions (read-only reference, probes closed 2026-10-21)
 
-(a) **Dropdown value overflow - CE truncates.** `MemoryRecordUnit.pas:3500`
-(`vtByte: pb^:=StrToQWordEx(currentValue)`, QWord stored into a pbyte ->
-low byte); write flow `addresslist.pas:1167-1174` (picker -> value
-string) -> `SetValue` :3200+ -> per-type store :3500-3503. Out-of-width
-values are not refused.
-(b) **Module references without .exe.** The module list is built from
-`extractfilename` and stores names **with** the extension
-(`symbolhandler.pas:5753`); `getmodulebyname` is an exact case-folded
-match (`:4567-4586`); `aobscanmodule` falls back to the symbol lookup
-and then raises (`autoassembler.pas:1111-1128`). A bare module base name
-therefore does not resolve as a module - only via symbol registration.
-(c) **IL2CPP Type:Member.** The IL2CPP_* commands exist only at the C
-pipe-server level (`PipeServer.h:194-367`); zero Delphi/Lua-level
-references in the 7.5 tree. No native static resolution; tables rely on
-runtime Lua registerSymbol/pipe (RT-5).
+1. **Dropdown value overflow: truncation, not refusal.**
+   `TMemoryRecord.SetValue(v, isFreezer)` (MemoryRecordUnit.pas:3200–3574):
+   for integer types (`vtByte..vtDouble`, `vtCustom`) the value string is
+   parsed with `StrToQWordEx(currentValue)` and stored through the typed
+   pointer (`pb^ := v64` for Byte) — CE **truncates** an out-of-range
+   choice to the record's byte width and never refuses it (choice '314'
+   on a Byte writes low byte 0x3A = 58); only unparseable strings raise.
+   Conclusion: the DROPDOWN_WIDTH refusals (O6, 30 rows, P3R '314' /
+   P3Reload '300' over Byte) are conservative false positives → (b);
+   contract = accept the literal, write value mod 2^bits. The same
+   SetValue path evaluates `[...]` Lua/math expressions in values, which
+   independently grounds O8's (a) classification (expression dropdowns
+   are a real CE capability CT2Trainer lacks).
+2. **Module reference without .exe.** `TSymhandler.getAddressFromName`
+   (symbolhandler.pas:4985–5103): each token is tried as hex, then
+   `getmodulebyname(token)` — an **exact** match against module names
+   stored via `extractfilename` (extension kept, uppercased) — then Lua
+   symbol callbacks, registers, the symbol list. A bare module name
+   without `.exe` (LikeaDragonIshin, 15 rows across the two table
+   versions) matches no module → **fails in CE 7.5 too**, unless the
+   user configured a common-module-list alias or a same-named symbol
+   exists. Conclusion: (d) input-legacy / user-config-dependent;
+   extension-tolerant module matching could be added as a convenience
+   but is not required for 7.5 parity.
+3. **IL2CPP Type:Member resolution.** Zero IL2CPP references in any CE
+   7.5 Delphi (.pas) or Lua source; IL2CPP code exists only in the
+   standalone pipe-server C (PipeServer.cpp/h, ~161 hits — an
+   external-process feature with no table-facing expression resolution
+   in 7.5). `Type:Member` atoms in address expressions resolve **only
+   if a symbol of that exact colon-name is registered** (user symbol
+   configuration or table Lua). Conclusion: the ~19 Type:Member rows
+   (Subnautica.CT 6, YLILWin64 ×2 ×3, Shinkansen Sunless Sea 1, Sunless
+   Skies 1) are not static-semantic gaps against 7.5 → (d) tables
+   targeting newer-CE or user-configured symbol resolution; the
+   `aobscanregion` directive itself (O12, 5 rows) is a real 7.5 feature
+   → (a).
+
+**Supporting CE 7.5 findings used above:**
+
+- `registeredsymbols.Duplicates := dupIgnore` (autoassembler.pas:338/345)
+  — duplicate registrations keep the first silently.
+- `label()` identifier check `val('$'+name)` rejects only names that
+  parse fully as hex (autoassembler.pas:2577–2578); the
+  duplicate-declaration check is commented out (2585–2586); multiple
+  `name:` definitions in the code raise rsLabelIsBeingDefinedMoreThanOnce
+  (2599); a never-defined name raises rsLabelIsNotDefinedInTheScript
+  (2603).
+- `removecomments` (autoassembler.pas:732–798) is a single-pass state
+  machine without nesting support → nested `{}` comments break in CE as
+  well.
+- `usemono`: 0 hits anywhere in the 7.5 tree → newer-CE directive.
+- `BaseAddress`: no built-in handling in the Delphi sources →
+  user/Lua-defined symbol.
 
 ### Caveats
 
-- Counts are static-catalog facts, verified in both directions (class
-  sums and per-table sums each total 2,698); "expected delta" is the
-  ceiling if the class contract is implemented. Per-table residuals
-  (authoring gaps) remain blocked by design.
-- AA_HIDDEN rows may re-bucket into P3/P5 sub-classes as the analyzer
-  gains registration resolution; NO_REG rows are per-symbol triage.
-  Remeasure after each RT-4 package.
-- The one legacy-binary load error (SuperMeatBoy.CT) is RT-3 scope and
-  is excluded from the 2,698.
+1. Five trailing-token rows (qt-ds-1/qt-ds-2 ×2 each,
+   raymanlegends_dvt 1) could not be inspected entry-wise (scripts not
+   retrievable by plan entry ID) → root unverified; counted under O4.
+2. Cyberpunk O24 (assert argument count, entry 159): the assert lives in
+   a hybrid `{$lua}` section whose body was not fully dumped → (a)
+   classification is from the reason shape; details unverified.
+3. Borderlands3-V10 O8 rows (12): the dropdown choice values were not
+   extracted from the XML (different DropDown markup) → classified by
+   reason text; the CE SetValue expression-evaluation evidence is solid
+   regardless.
+4. The DS2 myPtr family (44 rows) has multiple provider entries blocked
+   for different reasons (cleanup-ownership, trailing tokens,
+   group-heading activation, REQSYM) — any single root fix resolves
+   those rows; per-class deltas are therefore not additive.
+5. The two Witcher3 `st` rows sit in R6 (legacy) for strict partitioning,
+   but their true root is the FPU `st(0)` operand misparse (b) — the
+   tokenizer fix resolves them together with the 26-row player_ptr chain
+   (R3).
+6. All counts are over run `w4b4-case30-20261020081722Z` / the RT-1
+   rebaseline (identical per-table catalog); the 42/42 synthetic feature
+   matrix is unaffected.
+7. **SuperMeatBoy.CT (excluded):** legacy-binary table with 1 compile
+   error (`compile_error_count=1` in both catalogs); its rows are not
+   catalogable in the reference format and must be handled via the
+   legacy-binary path, not an RT-4 package. Excluded from the 2,698
+   denominator by definition.
+
 
 ## Integration protocol
 

@@ -54,8 +54,9 @@ regenerated under the pinned run id
    no-registration triage, 128 legacy built-ins, 12 API exports, 624
    duplicate-provider cascades, 3 wildcard-cleanup conflicts) and 767
    direct rows in 27 classes; per-class contracts, risks, expected
-   deltas and the RT-4 package split (P1-P8, sums to 2,698) are in the
-   roadmap's RT-2 root-cause map.
+   deltas and the RT-4 package split (RT-4.1…RT-4.6, sums to
+   2,698) are in the roadmap's RT-2 root-cause map (lane final
+   report, 2026-10-21 21:14, authoritative record).
 3. **Implement the missing behavior (RT-3 to RT-5):** handle the legacy
    binary table and the proven address, AA, Lua and runtime gaps with
    independently authored synthetic cases and owned-target tests.

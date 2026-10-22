@@ -340,15 +340,25 @@ against the frozen manifest and the local-only reference corpus; the root
 integrator re-verified every class sum and per-table sum in both
 directions (each totals exactly 2,698) and independently re-ran the
 lane's corrected UNDEFINED-split logic. Final classification: the
-lane's `rt2_final2` run.
+lane's `rt2_final2` run, superseded in wording by the lane's final
+report (2026-10-21 21:14, `RT2_FINAL_REPORT.md`), which is the
+authoritative record: verified per-family roots for the 963 AA-hidden
+rows (entry-level cross-reference), the a-d classification legend, and
+seven caveats.
 
 **Decomposition:** 2,698 = 1,931 provider-cascade rows + 767 direct
 rows. Cascade terminals: 1,304 undefined-symbol rows - 963 AA_HIDDEN
-(in-table registration the analyzer misses), 110 LUA_RUNTIME (table Lua
-`registerSymbol` providers), 91 NO_REG (no static registration evidence;
-runtime host/user-provided or authoring gap, per-symbol triage), 128
-LEGACY_SYM (CE built-ins/keywords such as BaseAddress, Inf, assembly
-mnemonics, table-local bases), 12 API_EXPORT (Win32 exports) - plus 624
+(in-table registrations whose provider entry is blocked before symbol
+extraction; verified per-family roots span digit-leading labels,
+cleanup-ownership chains, dup-label/dup-provider roots, quoted
+module+offset defines, Lua-registered symbols, and Type:Member
+bounds), 110 LUA_RUNTIME (table Lua `registerSymbol` providers), 91
+NO_REG (no static registration evidence; user-side symbols,
+cross-table loading or dynamic Lua; optional user-symbol import), 128
+LEGACY_SYM (user-expected legacy symbols with no built-in CE 7.5
+handling - BaseAddress, stat names, module names without .exe - plus
+the x87 `st(0)` FPU-operand misparse and keyword false positives),
+12 API_EXPORT (Win32 exports) - plus 624
 duplicate-provider cascades (600 = five shared UE5 template tables x 120
 `character_pointer`) and 3 wildcard-cleanup conflicts. The 2026-10-20
 queue's leading reason occurrences decompose exactly: `Esau_base` (600)
@@ -359,21 +369,22 @@ hex-literal refusals.
 
 **Per-class testable contract, risk and expected delta** are recorded in
 the [RT-2 root-cause map](../plans/reference-table-100-roadmap.md)
-(section "RT-2 root-cause map"), with the RT-4 package split summing
-exactly to 2,698: P1 duplicate-provider/duplicate-label policy 814,
-P2 hidden in-table registration cascades 963, P3 Lua runtime symbol
-providers + no-registration triage + Lua-only enables 203, P4 relative-address base
-propagation 341, P5 legacy built-ins + API exports 140, P6 AA
-expression/directive grammar & format tolerance 122, P7 AA
-ownership/cleanup envelope & table-level constructs 43, P8 value/display
-semantics 64, documented authoring/scope refusals 8. Headline parity
-findings: dropdown overflow - CE 7.5 truncates (verified at
-`MemoryRecordUnit.pas:3500`), CT2Trainer refuses (30 rows, P3R family);
-module references without `.exe` do not resolve in CE either (module
-list stores names with the extension, `symbolhandler.pas:5753`); IL2CPP
-`Type:Member` has no native static resolution in CE (pipe-server
-commands only, `PipeServer.h:194-367`) and belongs to the RT-5 runtime
-path.
+(section "RT-2 root-cause map"), with the RT-4 package split (lane
+final report) summing exactly to 2,698: RT-4.1 symbol provider
+fidelity 820, RT-4.2 runtime provider model 1,085, RT-4.3 address
+expression & identifier dialect 452, RT-4.4 value semantics 65, RT-4.5
+AA directive & script coverage 57, RT-4.6 input legacy & authoring gaps
+219; suggested order RT-4.1, RT-4.3, RT-4.4, RT-4.5, RT-4.6, RT-4.2
+last. Headline parity findings (all three open CE probes closed):
+dropdown overflow - CE 7.5 truncates, never refuses
+(`MemoryRecordUnit.pas:3200-3574` `SetValue`, `pb^:=StrToQWordEx`);
+bare module references without `.exe` fail in CE 7.5 too
+(`TSymhandler.getAddressFromName`, `symbolhandler.pas:4985-5103`,
+exact match with extension kept) - input-legacy/user-config;
+`BaseAddress` has no built-in CE 7.5 handling (user/Lua-defined
+symbol); `usemono` has zero hits in the 7.5 tree (newer-CE directive);
+IL2CPP `Type:Member` atoms resolve only via registered symbols or the
+pipe-server C (no native static resolution, `PipeServer.cpp/h`).
 
 Static evidence only; no code change in this package.
 
@@ -461,8 +472,9 @@ The old 85% closure estimate and 0.11 release step were superseded by the
    manifest is frozen and the 0.16 catalog reproduced; every remaining
    blocker is attributed to an upstream cause with per-class contracts,
    risks and expected deltas (RT-2 root-cause map in the roadmap). Next:
-   the legacy-binary table (RT-3) and executing the RT-4 packages P1-P8
-   (sums to 2,698). The latest snapshot has **2,698/117,624 blocked
+   the legacy-binary table (RT-3) and executing the RT-4 packages
+   RT-4.1…RT-4.6 (sums to 2,698; RT-4.1 symbol provider fidelity
+   started 2026-10-22). The latest snapshot has **2,698/117,624 blocked
    entries**, 114,926 supported (58,950 staged), and one legacy-binary
    load error. This is static evidence only.
 2. **RT-3 through RT-5:** close the binary-format, provider, address,
