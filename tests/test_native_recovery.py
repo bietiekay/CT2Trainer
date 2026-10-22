@@ -110,6 +110,26 @@ class RecoveryAssessmentTests(unittest.TestCase):
         self.assertEqual(len(result.files), 6)
         self.assertTrue(any("state.lock last" in step for step in result.next_steps))
 
+    def test_hook_journal_with_captured_placeholders_stays_eligible(self):
+        # Field case 2026-10-21 (The Sinking City 2, 0.16-series build):
+        # WP-57 journals persist captured_placeholders; the assessment must
+        # accept the field, not refuse recovery with "missing or unknown
+        # schema fields".
+        doc = _hook()
+        doc["captured_placeholders"] = {"s1": "6002", "s2": "31"}
+        self.write(self.hooks / "captured.json", doc)
+        result = self.assess()
+        self.assertTrue(result.eligible, result.reasons)
+
+    def test_hook_journal_with_malformed_captured_placeholders_blocks(self):
+        for bad in ({"s1": "GGGG"}, {"x1": "6002"}, {"s1": "600"}):
+            with self.subTest(bad=bad):
+                doc = _hook()
+                doc["captured_placeholders"] = bad
+                self.write(self.hooks / "bad.json", doc)
+                self.assertBlocked(self.assess(), "placeholder captures")
+        self.write(self.hooks / "bad.json", _hook())
+
     def test_nth_scan_receipts_are_bounded_to_the_same_dead_target(self):
         from copy import deepcopy
         definition={'op':'nth_aobscan','symbol':'ownedScan','module':'fixture.exe','pattern':'11 00',

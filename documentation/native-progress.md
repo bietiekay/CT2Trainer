@@ -6,9 +6,12 @@ the measurement snapshot are tracked in one place:
 confirmed-state detail (builds, suites, acceptance records); when in doubt
 about current status, check the tracker first.
 
-Status: **October 21, 2026** (0.16.1 released, build
-`native-20261021T161241Z-b0566a25` cut from `main` @ `d1c61f2`; previous
-0.16 field-fix re-cut 2 `native-20261021T123801Z-8c5c4e1e` @ `108170b`,
+Status: **October 22, 2026** (0.16.2 field fix on `main` — WP-57 hook
+journal `captured_placeholders` accepted by the recovery assessment,
+field finding from the 0.16.1 Sinking City 2 startup block; 0.16.1
+released, build `native-20261021T161241Z-b0566a25` cut from `main` @
+`d1c61f2`; previous 0.16 field-fix re-cut 2
+`native-20261021T123801Z-8c5c4e1e` @ `108170b`,
 re-cut `native-20261020T150115Z-c426fb92` @ `7616edb` and first
 0.16 run `native-20261020T103508Z-0e3f9d90` @ `809666a` superseded —
 0.16.1: Sinking City 2 table-load warnings made accurate (table-version
@@ -99,7 +102,7 @@ code/build boundaries in
 | --- | --- |
 | Repository baseline | `main` @ `b6c48cc` "initial 0.9 version" (self-contained clean-room tree) |
 | Version | `0.16` (root `VERSION` file; 0.9.0-rc2 was the last user-tested release, 0.16 user-tested 2026-10-20 with the WP-58 startup crash, fix in the re-cut) |
-| Test suite | **3412 OK / 25 expected skips, 0 failures** (full local dev suite on `main` after the 0.16.1 SC2 table-load warning fix — table-version reference 45 → 46 + accurate `{$LUA}`/external-action warnings (`tests/test_native_sc2_table_warnings.py`, version assertion in `tests/test_native_compiler.py`), verified 2026-10-21 at the canonical path with CT2TRAINER_NASM set; previously 3405 on `main` after the 0.16 field-fix round 2 — state-lock self-repair and reliable restart (`tests/test_native_stale_lock_selfheal.py`, updated variant-close assertion in `tests/test_native_engine.py`), verified 2026-10-21 at the canonical path with CT2TRAINER_NASM set; previously 3398 on `main` after the 0.16 field-fix cycle — WP-58 UI startup crash fix + Sinking City 2 runtime chain evidence (`tests/test_native_ui_button.py`, `tests/test_native_sc2_attach_chain.py`), verified 2026-10-20 at the canonical path with CT2TRAINER_NASM set; previously 3393 on `main` after the W4 B4 merges and the case-28/29/30 pins, verified 2026-10-20 at the canonical path; previously 3233 on `main` after the W4 cycle merge and the case-26/27/31 pins, verified 2026-10-19 at the canonical path; previously 3057 on `native-0.15` after the W3 batch 1 + batch 2 + batch 3 + batch 4 merges (WP-39/40/38/41/37) and the case-23 + case-21 + case-22 + case-24 pins, verified 2026-10-18; previously 3046 after the W3 batch 3 merge (WP-41) and the case-22 pin; previously 3001 after the W3 batch 1 + batch 2 merges (WP-39/40/38) and the case-23 + case-21 pins, verified 2026-10-18 at the canonical path; previously 2943 after the 0.15 prefix-cut field fix at `d15268a`, 2026-10-17; previously 2932 on `native-0.14` after the per-wish restore isolation and program-scan debug logging, verified 2026-10-17 at the canonical path; previously 2927 on `native-0.13` after the optional debug-logging feature incl. attach-failure dedupe and the module-snapshot fallback, verified 2026-10-16; previously 2925 after the debug-logging feature; previously 2910 after the W2-C + W2-B merges and the case-15 part 2 + case-18 pins; previously 2840 after the W2-A merge and the case-20 + case-16 + case-17 + case-15 pins, verified 2026-10-14; previously 2805 after the W1-A + W1-E merges and the case-20 + case-16 + case-15 pins; previously 2769 after the W1-D + W1-C + W1-B integration; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2932/25 passed (0.14 build `native-20261017T115850Z-1ebb48b7`); previously 2927/25 (0.13 build `native-20261016T190005Z-b3139b30`); previously 2925/25 (superseded 0.13 build `native-20261016T181516Z-b8ae88de`); previously 2910/25 (0.12 build `native-20261016T163910Z-d047f2d2`); previously 2710/25 (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
+| Test suite | **3414 OK / 25 expected skips, 0 failures** (full local dev suite on `main` after the 0.16.2 field fix — WP-57 hook journal `captured_placeholders` accepted by the recovery assessment (`tests/test_native_recovery.py`, +2 tests), verified 2026-10-22 at the canonical path with CT2TRAINER_NASM set; previously 3412 OK / 25 expected skips, 0 failures (full local dev suite on `main` after the 0.16.1 SC2 table-load warning fix — table-version reference 45 → 46 + accurate `{$LUA}`/external-action warnings (`tests/test_native_sc2_table_warnings.py`, version assertion in `tests/test_native_compiler.py`), verified 2026-10-21 at the canonical path with CT2TRAINER_NASM set; previously 3405 on `main` after the 0.16 field-fix round 2 — state-lock self-repair and reliable restart (`tests/test_native_stale_lock_selfheal.py`, updated variant-close assertion in `tests/test_native_engine.py`), verified 2026-10-21 at the canonical path with CT2TRAINER_NASM set; previously 3398 on `main` after the 0.16 field-fix cycle — WP-58 UI startup crash fix + Sinking City 2 runtime chain evidence (`tests/test_native_ui_button.py`, `tests/test_native_sc2_attach_chain.py`), verified 2026-10-20 at the canonical path with CT2TRAINER_NASM set; previously 3393 on `main` after the W4 B4 merges and the case-28/29/30 pins, verified 2026-10-20 at the canonical path; previously 3233 on `main` after the W4 cycle merge and the case-26/27/31 pins, verified 2026-10-19 at the canonical path; previously 3057 on `native-0.15` after the W3 batch 1 + batch 2 + batch 3 + batch 4 merges (WP-39/40/38/41/37) and the case-23 + case-21 + case-22 + case-24 pins, verified 2026-10-18; previously 3046 after the W3 batch 3 merge (WP-41) and the case-22 pin; previously 3001 after the W3 batch 1 + batch 2 merges (WP-39/40/38) and the case-23 + case-21 pins, verified 2026-10-18 at the canonical path; previously 2943 after the 0.15 prefix-cut field fix at `d15268a`, 2026-10-17; previously 2932 on `native-0.14` after the per-wish restore isolation and program-scan debug logging, verified 2026-10-17 at the canonical path; previously 2927 on `native-0.13` after the optional debug-logging feature incl. attach-failure dedupe and the module-snapshot fallback, verified 2026-10-16; previously 2925 after the debug-logging feature; previously 2910 after the W2-C + W2-B merges and the case-15 part 2 + case-18 pins; previously 2840 after the W2-A merge and the case-20 + case-16 + case-17 + case-15 pins, verified 2026-10-14; previously 2805 after the W1-A + W1-E merges and the case-20 + case-16 + case-15 pins; previously 2769 after the W1-D + W1-C + W1-B integration; previously 2710 after the WP-18 merge `9a76eb8`; previously 2698 after the WP-17 merge `557b2ac`; previously 2688 after the WP-15 merge `d3316aa`; previously 2679 on `native-l5-19` after the WP-16 merge `38a830d`; previously 2671 on `native-0.9-staged` after the WP-14 gate-test merge `54b172e`); in-build suite 2932/25 passed (0.14 build `native-20261017T115850Z-1ebb48b7`); previously 2927/25 (0.13 build `native-20261016T190005Z-b3139b30`); previously 2925/25 (superseded 0.13 build `native-20261016T181516Z-b8ae88de`); previously 2910/25 (0.12 build `native-20261016T163910Z-d047f2d2`); previously 2710/25 (0.11 build `native-20261012T092729Z-2d8aaf12`); previously 2698/25 (0.11 build `native-20261011T182033Z-f3317337`); previously 2671/25 (0.10 build `native-20261011T121914Z-bfc5fc11`) |
 | Feature matrix | **42/42 covered** (100% feature-weighted, 7475/7475 action-weighted; run `w4b4-case30-20261020081722Z`; previously 7446/7446, run `w4-case31-20261019061339`; previously 7426/7426, run `w3e-case24-20261018051230`; previously 7416/7416, run `w3d-case22-20261018040510`; previously 7413/7413, run `w3b-case21-20261018023823Z`; previously 7411/7411, run `w3-case23-20261018012531Z`) — `gap_inventory/feature-coverage.json` |
 | AP-11 manifest | 30 tables, 6143 expected actions, 0 confirmed, all consistency gates `all_ok` (run `w4b4-case30-20261020081722Z`; previously 27 tables / 6119 actions, previously 24 tables / 6100 actions, previously 23 tables / 6092 actions) — `gap_inventory/ap11-campaign.json` |
 | Latest verified build | `native-20261021T161241Z-b0566a25` (0.16.1, first build under the new versioning rule) via `scripts/Build-Native.ps1` from `main` @ `d1c61f2` (2026-10-21): both ZIPs (`CT2Trainer-0.16.1-source.zip` sha256 `13e2e1f6…`, `CT2Trainer-0.16.1-windows-portable.zip` sha256 `5d8f0d47…`), in-build suite 3412 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; both ZIPs carry the changelog with the 0.16.1 entry (Sinking City 2 table-load warnings made accurate + versioning rule) + 0.16 + 0.15 + 0.14. 0.16.1 ships the SC2 table-load warning fixes (table-version reference 45 → 46 field-verified; `{$LUA}` warning states the built-in Lua runtime path; external-action warning split per API — ShellExecute safe no-op, messageDialog review flag) on top of the 0.16 content. 0.16 ships the full Wave 4 feature set (WP-43…WP-57 + WP-58 UI) plus the post-release field fixes (WP-58 UI startup crash fix + Sinking City 2 activation-chain runtime evidence + state-lock self-repair and reliable restart) on top of the released 0.15 content. Superseded 0.16 runs: `native-20261021T141051Z-17d53c1d` (0.16, cut from `main` @ `e9f06fb` after the RT-1 rebaseline, in-build 3405/25, `ce_inputs: []`, superseded by the 0.16.1 cut before its evidence was recorded), `native-20261021T123801Z-8c5c4e1e` (0.16 field-fix re-cut 2, cut from `main` @ `108170b`, in-build 3405/25, user-tested, field finding: Sinking City 2 table-load warnings), `native-20261020T150115Z-c426fb92` (cut from `main` @ `7616edb`, in-build 3398/25, user-tested, field findings: one cheat = table/build mismatch, state-lock orphan after a blocked close) and `native-20261020T103508Z-0e3f9d90` (cut from `main` @ `809666a`, in-build 3393/25, user-tested, shipped with the WP-58 UI startup crash). Previous: `native-20261018T055505Z-39f20180` (0.15) via `scripts/Build-Native.ps1` from `main` @ `ed0b97b` (2026-10-18): both ZIPs (`CT2Trainer-0.15-source.zip` sha256 `5d5a85f6…`, `CT2Trainer-0.15-windows-portable.zip` sha256 `cfcc8e06…`), in-build suite 3057 OK / 25 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; both ZIPs carry the elaborated release READMEs and the changelog with the 0.15 + 0.14 + 0.13 entries. 0.15 ships the prefix-cut byte-patch validation (the 0.14-ext2 Great Circle field finding: Stealth Mode and No Reload use `db 90 E9` over a 6-byte conditional jump, now proven at link time and re-verified at stage time) plus the full Wave 3 feature set on top of the 0.14 content. Previous: `native-20261017T115850Z-1ebb48b7` (0.14, in-build 2932/25); `native-20261016T190005Z-b3139b30` (0.13, in-build 2927/25); `native-20261016T181516Z-b8ae88de` (0.13 pre module-snapshot fallback, in-build 2925/25); `native-20261016T163910Z-d047f2d2` (0.12, in-build 2910/25); `native-20261016T161905Z-e8ef67a0` (0.12, byte-identical re-cut); `native-20261016T154141Z-2de774ab` (0.12 pre release-docs); `native-20261012T092729Z-2d8aaf12` (0.11, in-build 2710/25); `native-20261011T121914Z-bfc5fc11` (0.10, in-build 2671/25); `native-20261010T172336Z-ffe35eb0` (rc2, in-build 2617/25, `api-prototypes.json` present in both EXE payload inventories, user-tested portable) |
@@ -432,6 +435,59 @@ Full local dev suite after the change (CT2TRAINER_NASM set):
 the 0.16 field-fix round 2). Built as
 `native-20261021T161241Z-b0566a25` (in-build 3,412/25, `ce_inputs: []`,
 first build under the rule).
+
+### 0.16.2 field fix: recovery journal schema (WP-57 captured_placeholders) (2026-10-22)
+
+Field report (user testing of the 0.16.1 portable build, 2026-10-21;
+debug log `The Sinking City 2 (0.16-3).ct2debug.log`, trainer
+`4b6b2825f4296e83`, table SHA-256 `f52e0d06041aa0b0…`, target
+`TheSinkingCity2.exe`): the trainer did not start at all — `state.lock`
+from a prior session (trainer PID 9304, verified terminated) was still
+present, and the recovery assessment stayed blocked with three identical
+reasons, one per hook journal in `state/hooks/` (hex-named receipt
+files): "Recovery record contains missing or unknown schema fields".
+The refusal repeated on every startup attempt; the only way out was
+deleting the state folder (user instruction in the error message).
+
+Root cause: WP-57 (`4f89562`, shipped in 0.16) added the
+`captured_placeholders` field to the hook journal document written by
+`hooks.py` (captured bytes of `s<N>.<M>` AOB placeholder tokens), but
+`recovery.py::_hook()` — the journal schema validator used by
+`assess_recovery` — was not updated with that field. Its `_fields`
+check rejects every unknown field, so every journal with non-empty
+captures failed the assessment. Any trainer with
+placeholder-capture hook entries therefore could not start after a
+prior session left `state.lock` behind (crash, kill, or the 0.16
+field-case orphan lock); the refusal was deterministic and repeated on
+every attempt. Pre-0.16 journals (no such field) were unaffected, which
+is why the block surfaced with the 0.16 series. The engine's own
+startup receipt checks (`engine.py`) only parse and finalize existing
+journals, so the stale session was never noticed before the recovery
+assessment; `recovery_operation.py` re-runs `assess_recovery`, so the
+transaction path was affected in the same way.
+
+Fix (clean-room, minimal): `recovery.py::_hook()` now lists
+`captured_placeholders` as an optional journal field and validates its
+shape with the writer-side contract
+(`patterns.validate_placeholder_captures`: at most 16 captures,
+casefolded `s<N>` names, 1-2 hex bytes per value). A malformed
+captures mapping still blocks with the named refusal "Hook journal
+placeholder captures are invalid".
+
+Regression tests: `tests/test_native_recovery.py` (+2): a hook journal
+with valid `captured_placeholders` stays eligible for read-only
+recovery (field case, reproduced locally before the fix), and
+malformed captures (bad hex, non-placeholder name, odd byte length)
+stay blocked with the named reason.
+
+Full local dev suite after the change (CT2TRAINER_NASM set):
+**3,414 OK / 25 expected skips, 0 failures** (previously 3,412/25).
+Merged to `main` on the field-fix branch
+`native-0.16.2-sc2-state-recovery`; build pending (patch bump to 0.16.2
+under the versioning rule). User workaround until the 0.16.2 build
+ships: with the game closed and the previous trainer process verified
+terminated, delete the trainer's state folder
+(`%LOCALAPPDATA%\CT2Trainer\native\<trainer_id>`) to start fresh.
 
 ## 3. Deterministic measurement chain
 
