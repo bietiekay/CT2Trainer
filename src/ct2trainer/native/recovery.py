@@ -479,7 +479,8 @@ def _literal_spans(value, start, size, allocation):
 def _hook(document, trainer_id):
     _fields(document, {"schema", "engine", "owner", "target_pid", "target_created", "state", "uncertain",
                        "allocations", "blocks", "entries", "exports", "retirement_policy"},
-            {"data_commit", "owned_data_ranges", "owned_executable_data_ranges", "external_data_program"})
+            {"data_commit", "owned_data_ranges", "owned_executable_data_ranges", "external_data_program",
+             "captured_placeholders"})
     if (type(document["schema"]) is not int or document["schema"] != 1
             or document["engine"] != "ct2trainer-hooks"
             or not isinstance(document["owner"], str) or not 0 < len(document["owner"]) <= 256
@@ -505,6 +506,16 @@ def _hook(document, trainer_id):
         if (document["allocations"] or document["blocks"] or document.get("data_commit", False)
                 or document.get("owned_data_ranges") or document.get("owned_executable_data_ranges")):
             raise _AssessmentError("External data diagnostics cannot mix allocation/code provenance")
+    captures = document.get("captured_placeholders")
+    if captures is not None:
+        # WP-57 journal field: captured bytes of s<N>.<M> AOB placeholder
+        # tokens, persisted next to the block data. Validated with the
+        # writer-side contract (name shape, bounded count, hex bytes).
+        from .patterns import validate_placeholder_captures
+        try:
+            validate_placeholder_captures(captures)
+        except (ValueError, TypeError) as exc:
+            raise _AssessmentError("Hook journal placeholder captures are invalid") from exc
     allocations = document["allocations"]
     if not isinstance(allocations, dict) or len(allocations) > 128:
         raise _AssessmentError("Hook allocation inventory is invalid")

@@ -87,6 +87,21 @@ game-facing action.
   VERSION 0.16 → 0.16.1 (first build under the rule). Built as
   `native-20261021T161241Z-b0566a25` (in-build 3,412/25, `ce_inputs:
   []`).
+- 0.16.2 field-fix round (2026-10-22, branch
+  `native-0.16.2-sc2-state-recovery`): Sinking City 2 startup block
+  from the 0.16.1 field test (debug log 2026-10-21, trainer
+  `4b6b2825f4296e83`, log `The Sinking City 2 (0.16-3).ct2debug.log`):
+  WP-57 hook journals persist `captured_placeholders`, which the
+  recovery assessment's journal schema (`recovery.py::_hook()`)
+  rejected as unknown fields — every placeholder-capture journal
+  blocked recovery behind a stale `state.lock`, so the trainer refused
+  to start; the field is now an optional journal field validated
+  with the writer-side contract
+  (`patterns.validate_placeholder_captures`); malformed captures keep
+  the named refusal. +2 regression tests
+  (`tests/test_native_recovery.py`); local suite 3,414 OK / 25 expected
+  skips; build pending (patch bump to 0.16.2 under the versioning
+  rule).
 
 ## Historical evidence
 
