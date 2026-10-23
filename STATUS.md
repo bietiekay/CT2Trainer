@@ -50,7 +50,7 @@ defines the work and completion gates.
 | --- | --- | --- |
 | Independently built product | 0.16.3 source and Windows portable ZIPs passed the offline build with **3,421 tests OK, 25 expected skips**, and `ce_inputs: []`. | Keep the clean-room build and release checks green after each change. |
 | Synthetic feature coverage | **42/42** declared feature classes and **7,475/7,475** action weight covered across **30 synthetic tables**. | This metric does not establish support for every original table or a real game effect. Add synthetic cases when a new behavior is found. |
-| Original reference tables | Local static catalog (RT-4.1 remeasure 2026-10-22, run `blocked-catalog-rt41`, frozen manifest `gap_inventory/reference-manifest.json`) classifies **115,766 supported**, including **59,642 staged**, out of **117,624 plan entries**. | **1,858 entries are blocked** (was 2,698 before RT-4.1) and one legacy-binary table does not load. Staged entries still need their runtime conditions proved. |
+| Original reference tables | All **151/151** table paths load after the RT-3 legacy-binary CT loader (2026-10-23). Local static catalog (RT-3 remeasure, run `blocked-catalog-rt3`, frozen manifest `gap_inventory/reference-manifest.json`) classifies **115,776 supported**, including **59,642 staged**, out of **117,634 plan entries**. | **1,858 entries are blocked** (was 2,698 before RT-4.1; RT-3 added the 10 supported `SuperMeatBoy.CT` records and changed no blocked row). Staged entries still need their runtime conditions proved. |
 | Observed game effects | Owned fixtures and selected runtime chains have tests. | The AP-11 campaign has **0 of 6,143** game effects confirmed. Original-table behavior must be checked against pinned game builds or explicitly equivalent owned targets. |
 | Final platforms | The 0.9.0-rc2 portable converter and a generated trainer were user-tested without CE or Python; later fixture tests cover many runtime paths. The 0.16 re-cut was field-tested 2026-10-21 (new WP-58 UI confirmed good; one cheat = table/build mismatch, no fix; the state-lock orphan after a blocked close was fixed in code the same day, see the ledger). The Sinking City 2 table-load warnings were made accurate in 0.16.1 (2026-10-21): table-version reference 45 → 46 field-verified, `{$LUA}`/`ShellExecute` wording now states the supported native behavior — the table itself loaded fine (see the ledger). The 0.16.1 field test (2026-10-21, Sinking City 2) exposed a startup block behind a stale `state.lock`: WP-57 hook journals with `captured_placeholders` failed the recovery schema; fixed on `main` 2026-10-22 (0.16.2, built as `native-20261022T160328Z-0423fb21` — see the ledger). The 0.16.2 field test (2026-10-22, Sinking City 2) exposed the next activation failure: the startup brick from the still-missing journal field `value_data_ranges` plus a module-snapshot retry aimed at the wrong Win32 code (mislabeled 24 instead of 1116) without backoff while the game was still loading DLLs (field log: Win32 error 24 nine ms after attach); both root causes fixed on `main` 2026-10-23, shipped as 0.16.3 (see the ledger). | The 0.16 re-cut has no recorded full clean-machine acceptance. Clean Windows and real Steam Deck/Proton/touch acceptance remain open. `runtime_unverified` stays set. |
 
@@ -84,12 +84,14 @@ regenerated under the pinned run id
    deltas and the RT-4 package split (RT-4.1…RT-4.6, sums to
    2,698) are in the roadmap's RT-2 root-cause map (lane final
    report, 2026-10-21 21:14, authoritative record).
-3. **Implement the missing behavior (RT-3 to RT-5; RT-4.1 done
-   2026-10-22):** handle the legacy binary table and the remaining
-   address, AA, Lua and runtime gaps with independently authored
-   synthetic cases and owned-target tests. RT-4.1 symbol provider
-   fidelity landed first (catalog 2,698 -> 1,858 blocked, net -840);
-   next package: RT-4.3 address expression & identifier dialect (452).
+3. **Implement the missing behavior (RT-3 to RT-5; RT-3 and RT-4.1
+   done):** RT-3 legacy-binary CT loading landed 2026-10-23 (clean-room
+   parser, `SuperMeatBoy.CT` 10/10 supported, table load 151/151,
+   blocked unchanged at 1,858); the RT-5 API/construct inventory is
+   documented in `documentation/rt5-api-inventory.md`. Remaining:
+   RT-4.3 address expression & identifier dialect (452), then RT-4.4
+   65, RT-4.5 57, RT-4.6 219, RT-4.2 1,085 last, then the RT-5
+   implementation items.
 4. **Verify original effects and platforms (RT-6):** record activation,
    values, freeze, re-attach, disable/undo and one-shot behavior where
    applicable. Run the Windows and Deck protocols with exact build

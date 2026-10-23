@@ -71,7 +71,7 @@ the original reference corpus and raw catalogs local-only.
 | --- | --- | --- |
 | RT-1 | Reproducible full-corpus baseline | Versioned local manifest for 151 paths/143 hashes; exact process bindings; same-source catalog; per-table and per-reason counts; record IDs and provider chains; 0.16 comparison with no unaccounted regression. Separate parse errors, inert records, staged rows, actionable rows, and table-level constructs. |
 | RT-2 | Root-cause map for every residual | Resolve all 2,698 blocked entries to an upstream cause or verified malformed authoring input. Follow provider cascades to their root; distinguish real missing semantics from false positives and duplicate provider policy. Record a testable contract, risk, and expected delta for each class. |
-| RT-3 | Load all table formats | Investigate the remaining legacy binary CT format with a clean-room parser or documented conversion path; preserve record identity and data. Table load reaches 151/151, subject to explicit evidence for genuinely unreadable inputs. |
+| RT-3 | Load all table formats | Investigate the remaining legacy binary CT format with a clean-room parser or documented conversion path; preserve record identity and data. Table load reaches 151/151, subject to explicit evidence for genuinely unreadable inputs. — done 2026-10-23 (clean-room parser `src/ct2trainer/legacy_ct.py`; `SuperMeatBoy.CT` loads with all 10 records supported; run `blocked-catalog-rt3`). |
 | RT-4 | Close high-volume plan gaps | Execute the RT-2 root-cause-map packages in suggested order by expected delta over risk: RT-4.1 symbol provider fidelity (dupIgnore policy, dup labels, wildcard-cleanup scoping) 820 — done 2026-10-22 (remeasured 2,698 -> 1,858 blocked), RT-4.3 address expression & identifier dialect 452, RT-4.4 value semantics 65, RT-4.5 AA directive & script coverage 57, RT-4.6 input legacy & authoring gaps 219, RT-4.2 runtime provider model 1,085 (last: its AA_HIDDEN portion clears progressively as root packages land). The split sums to 2,698. Each package: leading-table inspection, an independently authored synthetic case, the class contract as a testable assertion, owned-target runtime tests where effects matter, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. A reason count is not an independent feature count; remeasure after each fix. |
 | RT-5 | Runtime trainer parity | Inventory every used CE Lua/AA API and game-facing table-level construct, including dynamic records, callbacks, target threads, managed resolution, string hex view, and byte-width dropdown semantics. Implement each needed behavior with bounded contracts, teardown rules, and owned-target tests; classify purely visual UI as outside scope. |
 | RT-6 | Full original-table validation | For each path, produce a plan-inspection result and targeted runtime observations against a pinned game build where available. Record skipped or inaccessible targets honestly. Run the Windows clean-machine and Deck/Proton/touch protocols; keep `runtime_unverified` until both pass. |
@@ -161,6 +161,58 @@ a regression (both rows were already blocked). case-28 plan state
 re-verified unchanged: 10 total / 9 supported / 9 actionable / 1
 blocked, e[59] "Required symbol has no unique supported provider:
 SynthOnly28" (pre-existing non-dup class).
+
+Update (2026-10-23, RT-3): the legacy-binary CT format loads now
+(branch `native-rt3` merged to `main` the same day). Clean-room parser
+`src/ct2trainer/legacy_ct.py` (457 lines) reads the CE 5.x-era pre-XML
+binary format: the true magic is 11 bytes (`CHEATENGINE\t` — the 12th
+byte is the version-DWORD LSB, so the former 12-byte constant in
+`table.py` matched only version-9 files by accident), format versions
+6-9 are verified against the reference layout, version >9 loads with an
+"assumed unchanged" warning, version <6 is refused as too old; truncation
+(offset + remaining bytes), corrupt magic and implausible counts/lengths
+carry bounded named `LegacyCTError` refusals (a `TableError` subclass,
+so inspection diagnostics stay G4a). `read_table` dispatches
+magic-matching files to the parser and everything else to the unchanged
+XML path; the converted standard-XML document flows through the
+unchanged, fully tested XML pipeline (`compile_table` consumes
+`Table.converted_xml`), so record semantics, activation safety and
+warnings are not re-derived. Source identity stays the original binary
+bytes: `Table.source_sha256` and the plan `table_sha256` are the binary's
+SHA-256 (matching the reference manifest), the converted XML is carried
+on the unserialized `Table.converted_xml`. Record IDs are synthesized in
+document order (top-level records in file order, then "Group N" headers
+in numeric order with their members); pointer records keep the last
+pointer's address plus the full offset chain (intermediate addresses are
+not XML-expressible, documented); legacy code records become CheatCodes.
+Tests: 28 new in `tests/test_native_legacy_ct.py` (byte-level parse,
+conversion order/IDs/groups, pointer survival, CheatCodes blocks,
+refusals, plan byte-stability, engine-level value write + AA roundtrip
+on fixture memory) plus updated legacy pins in
+`tests/test_native_table_robustness.py`; full suite on `main` after the
+merge: 3,450 OK / 25 expected skips. Catalog remeasure (local, run
+`blocked-catalog-rt3`, frozen manifest and process bindings unchanged):
+**151/151 tables load** (the one legacy-binary load error is cleared),
+total 117,624 -> 117,634, supported 115,766 -> 115,776 (all 10
+`SuperMeatBoy.CT` records, 0 staged, 0 blocked), blocked unchanged at
+1,858; the other 150 tables are byte-identical per-table — zero
+regressions. `runtime_unverified` remains: the 10 AA records' real-game
+effect is untested (standing gate).
+
+Update (2026-10-23, RT-5): the inventory half of RT-5 is done —
+`documentation/rt5-api-inventory.md` catalogs every used CE Lua/AA API
+and game-facing table-level construct over the 151 reference tables
+(394 distinct Lua call names: 61 CE globals, 36 CE object methods,
+28 stdlib, 269 table-local; 20 CE globals hosted, 41 named-refusal gaps
+split 14 game-facing vs 27 pure-UI no-effect; table-level construct
+census with per-construct scope decisions). The implementation queue
+(section 9 of the doc) is ordered after the RT-4 lanes: (A) embedded-
+file extraction + `findTableFile`/`readStringLocal` (4 tables), (C)
+bounded process-info APIs, (D) `onOpenProcess`/`onTableLoad` callback
+dispatch (2 FearlessRev tables), (B) `CheatCodes` code-patch path
+(22 tables, 175 entries), (E) `messageDialog` decision (31 tables),
+(F) no-effect register ratification, (G) `createThread`/`threadWait`
+backend decision (O22). Purely visual UI stays out of scope.
 
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
