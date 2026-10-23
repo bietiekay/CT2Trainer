@@ -496,6 +496,80 @@ still on an older build: with the game closed and the previous trainer
 process verified terminated, delete the trainer's state folder
 (`%LOCALAPPDATA%\CT2Trainer\native\<trainer_id>`) to start fresh.
 
+### 0.16.3 field fix: Sinking City 2 activation failure (2026-10-22)
+
+Field report (user testing of the 0.16.2 portable build, 2026-10-22;
+debug log `The Sinking City 2 (0.16-4).ct2debug.log`, trainer
+`4b6b2825f4296e83`, table SHA-256 `f52e0d06041aa0b0…`, x64 controller
+against the x64 target `TheSinkingCity2.exe`): "total failure — the
+trainer did not activate at all". Two independent defects compounded:
+
+1. **Startup block (0.16.2 brick class, second field):** the state
+   directory held three hook journals from a prior 0.16-series session
+   (hex-named receipt files `2dd1f087…`, `701e2488…`, `cde6a43b…`).
+   Since WP-47/55 (`ee07b60`, shipped in 0.16) the journal writer
+   persists a `value_data_ranges` span list on **every** allocation
+   entry (the initial allocation dict in `hooks.py::allocate()`,
+   appended by `declare_value_data`), but `recovery.py::_hook()` — the
+   journal schema validator used by `assess_recovery` — did not accept
+   the field. The 0.16.2 fix had added only the sibling
+   `captured_placeholders` field. Every allocation-bearing journal
+   therefore failed with "Recovery record contains missing or unknown
+   schema fields" and blocked recovery behind the stale `state.lock`;
+   the refusal repeated on every startup attempt until the state
+   folder was deleted manually.
+2. **Activation failure:** after a fresh state, the attach to a
+   freshly started game succeeded, but the first entry scan failed
+   nine milliseconds after attach: `CreateToolhelp32Snapshot
+   architecture modules failed (Win32 error 24)` with both the
+   combined 0x18 and the native-only 0x08 flags. Error 24 is
+   `ERROR_INVALID_ID` — the documented transient form of
+   module-snapshot creation while the target's module list is still
+   changing (DLLs loading right after start; CreateToolhelp32Snapshot
+   Remarks: the call "may fail with ERROR_BAD_LENGTH or another error
+   code … try calling the function again"). The `memory.py` retry
+   loop was doubly broken: (a) `ERROR_BAD_LENGTH` was mislabeled as
+   24 (the documented transient code is 1116), so the documented code
+   was never retried; (b) the mislabeled retry was a tight
+   3-attempt loop without backoff, useless while the module list is in
+   flux. The engine blocked (entry scan) and the later close re-raised
+   the stored block error (fail-closed, per design), leaving a lock
+   the restart assessment correctly refused while the target was
+   alive.
+
+Fix (clean-room, minimal):
+- `memory.py`: corrected the constants (`ERROR_BAD_LENGTH = 1116`,
+  `ERROR_INVALID_ID = 24`, `ERROR_MORE_DATA = 119`);
+  `_take_module_snapshot` now retries a bounded 8 attempts with
+  exponential backoff (0.05 s doubling, 1.0 s cap, ~3.5 s worst case)
+  on the transient set {1116, 24, 119}; non-transient errors still
+  fail fast. The architecture-only retry flag is now
+  architecture-aware (0x08 for a 64-bit target, 0x10 for a
+  32-bit/WOW64 target, which lists its modules only under
+  `TH32CS_SNAPMODULE32`), and the final dual-failure message carries
+  both failure codes.
+- `recovery.py::_hook()`: accepts `value_data_ranges` as an optional
+  allocation-entry field and validates it against the writer contract
+  (list of at most 4096 exact `{address, size}` spans; each span
+  inside the allocation's `[address, address + actual_size or size]`
+  bounds; no duplicate span; an unlocated allocation cannot carry
+  spans). Malformed inventories keep named refusals.
+
+Regression tests: `tests/test_native_architecture.py` (+4):
+transient 24 is retried with backoff until success; 1116 (the
+documented code) is retried; a persistent transient error exhausts
+2×8 attempts and fails with the named dual-flag message; an x86
+target falls back to the 0x10 flag. `tests/test_native_recovery.py`
+(+2): a writer-shape allocation journal with in-bounds
+`value_data_ranges` stays eligible for recovery; six malformed
+shapes (non-list, non-dict span, missing size, below/above the
+allocation, duplicate span) stay blocked.
+
+Full local dev suite after the change (CT2TRAINER_NASM set):
+**3,421 OK / 25 expected skips, 0 failures** (previously 3,415/25).
+Merged to `main` on the field-fix branch
+`native-0.16.3-sc2-field`; built as 0.16.3.
+
 ### RT-4.1 symbol provider fidelity (2026-10-22)
 
 Package RT-4.1 of the reference-corpus closure cycle (roadmap

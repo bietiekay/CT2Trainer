@@ -130,6 +130,51 @@ class RecoveryAssessmentTests(unittest.TestCase):
                 self.assertBlocked(self.assess(), "placeholder captures")
         self.write(self.hooks / "bad.json", _hook())
 
+    def test_hook_journal_with_value_data_ranges_stays_eligible(self):
+        # Field case 2026-10-22 (The Sinking City 2, 0.16.2): every
+        # 0.16-series hook journal carries the WP-47/55 value_data_ranges
+        # field on each allocation entry; the assessment must accept the
+        # writer-contract field instead of refusing recovery with "missing
+        # or unknown schema fields" (the 0.16.2 field brick).
+        doc = _hook()
+        doc["data_commit"] = False
+        doc["owned_data_ranges"] = []
+        doc["owned_executable_data_ranges"] = []
+        doc["allocations"] = {
+            "pool": {"address": 0x400000, "size": 4096, "budget_size": 65536,
+                     "near": None, "executable": True, "writable": True,
+                     "actual_size": 4096, "literal_data_ranges": [],
+                     "value_data_ranges": [{"address": 0x400100, "size": 8}],
+                     "state": "published"}}
+        self.write(self.hooks / "value-data.json", doc)
+        result = self.assess()
+        self.assertTrue(result.eligible, result.reasons)
+
+    def test_hook_journal_with_invalid_value_data_ranges_blocks(self):
+        def doc_with(spans):
+            doc = _hook()
+            doc["allocations"] = {
+                "pool": {"address": 0x400000, "size": 4096, "budget_size": 65536,
+                         "near": None, "executable": True, "writable": True,
+                         "actual_size": 4096, "literal_data_ranges": [],
+                         "value_data_ranges": spans,
+                         "state": "published"}}
+            return doc
+        cases = {
+            "not-a-list": 7,
+            "span-not-a-dict": [{"address": 0x400100, "size": 8}, "x"],
+            "span-missing-size": [{"address": 0x400100}],
+            "span-below-allocation": [{"address": 0x3FFFF8, "size": 8}],
+            "span-above-allocation": [{"address": 0x401000, "size": 8}],
+            "duplicate-span": [{"address": 0x400100, "size": 8},
+                               {"address": 0x400100, "size": 8}],
+        }
+        for name, spans in cases.items():
+            with self.subTest(kind=name):
+                self.write(self.hooks / "bad.json", doc_with(spans))
+                self.assertBlocked(self.assess())
+        self.write(self.hooks / "bad.json", _hook())
+
     def test_nth_scan_receipts_are_bounded_to_the_same_dead_target(self):
         from copy import deepcopy
         definition={'op':'nth_aobscan','symbol':'ownedScan','module':'fixture.exe','pattern':'11 00',

@@ -2,6 +2,54 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.16.3 (2026-10-23)
+
+- Sinking City 2 activation failure field fix (0.16.2 field test
+  2026-10-22, "the trainer did not activate at all"): two independent
+  defects compounded.
+  - Recovery brick: every 0.16-series hook journal carries the
+    WP-47/55 `value_data_ranges` field on each allocation entry
+    (persisted since `ee07b60`, shipped in 0.16), but the recovery
+    assessment's journal schema (`recovery.py::_hook()`) rejected it
+    as an unknown field — the 0.16.2 fix had added only the sibling
+    `captured_placeholders` field. Every allocation-bearing journal
+    failed with "Recovery record contains missing or unknown schema
+    fields" and blocked recovery behind the stale `state.lock`, so the
+    trainer refused to start on every attempt. `value_data_ranges` is
+    now an optional allocation-entry field validated with the
+    writer-side contract (at most 4096 exact `{address, size}` spans,
+    inside the allocation's `[address, address + actual_size]` bounds,
+    no duplicate span); malformed inventories keep named refusals.
+  - Module-snapshot retry: the first entry scan failed nine
+    milliseconds after attach with `CreateToolhelp32Snapshot
+    architecture modules failed (Win32 error 24)` while the game was
+    still loading DLLs — the documented transient form of
+    module-snapshot creation (Microsoft: "may fail with
+    ERROR_BAD_LENGTH or another error code … try calling the function
+    again"). `memory.py` mislabeled `ERROR_BAD_LENGTH` as 24 (the real
+    code is 1116; 24 is `ERROR_INVALID_ID`) and retried only that
+    mislabeled code in a tight 3-attempt loop without backoff, so the
+    transient failure was never retried usefully. The constants are
+    now correct, `_take_module_snapshot` retries a bounded 8 attempts
+    with exponential backoff (0.05 s doubling, 1.0 s cap, ~3.5 s
+    worst case) on the transient set {1116, 24, 119}, and
+    non-transient errors still fail fast. The architecture-only retry
+    flag is now architecture-aware (0x08 for a 64-bit target, 0x10 for
+    a 32-bit/WOW64 target, which lists its modules only under
+    `TH32CS_SNAPMODULE32`), and the final dual-failure message carries
+    both failure codes.
+  - Regression tests: `tests/test_native_architecture.py` (+4:
+    transient 24 retries with backoff until success; 1116 retries;
+    persistent transient exhausts 2×8 attempts with the named
+    dual-flag message; x86 target falls back to the 0x10 flag) and
+    `tests/test_native_recovery.py` (+2: writer-shape allocation
+    journal with in-bounds `value_data_ranges` stays eligible; six
+    malformed shapes stay blocked).
+  - Field workaround while on 0.16.2: with the game closed and the
+    previous trainer process verified terminated, delete the state
+    folder (`%LOCALAPPDATA%\CT2Trainer\native\<trainer_id>`) to start
+    fresh; activate only after the game has finished loading.
+
 ## 0.16.2 (2026-10-22)
 
 - Sinking City 2 startup block field fix: a trainer left behind by a

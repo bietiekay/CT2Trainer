@@ -523,7 +523,7 @@ def _hook(document, trainer_id):
         if not _SYMBOL.fullmatch(name) or not isinstance(item, dict):
             raise _AssessmentError("Hook allocation is malformed")
         _fields(item, {"address", "size", "budget_size", "near", "executable", "state"},
-                {"writable", "actual_size", "literal_data_ranges"})
+                {"writable", "actual_size", "literal_data_ranges", "value_data_ranges"})
         if (type(item["size"]) is not int or not 0 < item["size"] <= 4 * 1024 * 1024
                 or type(item["budget_size"]) is not int or not item["size"] <= item["budget_size"] <= 16 * 1024 * 1024
                 or type(item["executable"]) is not bool or type(item.get("writable", False)) is not bool
@@ -540,6 +540,28 @@ def _hook(document, trainer_id):
             _literal_spans(item.get("literal_data_ranges", []), item["address"], item["size"], name)
         elif item.get("literal_data_ranges"):
             raise _AssessmentError("Unlocated allocation cannot have literal spans")
+        value_ranges = item.get("value_data_ranges")
+        if value_ranges is not None:
+            # WP-47/55 journal field: controller-declared value spans
+            # inside the owned allocation, persisted by
+            # HookManager.declare_value_data. Validated with the
+            # writer-side contract (exact {address, size} spans, bounded
+            # count, inside the allocation, no duplicate span).
+            if not isinstance(value_ranges, list) or len(value_ranges) > 4096:
+                raise _AssessmentError("Hook value-data range inventory is invalid")
+            base, bound = item["address"], actual or item["size"]
+            seen = set()
+            for span in value_ranges:
+                if not isinstance(span, dict):
+                    raise _AssessmentError("Hook value-data range is malformed")
+                _fields(span, {"address", "size"})
+                _range(span["address"], span["size"])
+                if (base is None or span["address"] < base
+                        or span["address"] + span["size"] > base + bound):
+                    raise _AssessmentError("Hook value-data range exceeds its owning allocation")
+                if (span["address"], span["size"]) in seen:
+                    raise _AssessmentError("Hook value-data range inventory has a duplicate span")
+                seen.add((span["address"], span["size"]))
     total = 0
     for kind in ("blocks", "entries"):
         values = document[kind]

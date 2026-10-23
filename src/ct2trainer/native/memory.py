@@ -48,7 +48,17 @@ WRITABLE = {0x04, 0x08, 0x40, 0x80}
 EXECUTABLE = {0x10, 0x20, 0x40, 0x80}
 WAIT_OBJECT_0, WAIT_TIMEOUT = 0, 0x102
 ERROR_NO_MORE_FILES = 18
-ERROR_BAD_LENGTH = 24
+ERROR_BAD_LENGTH = 1116
+ERROR_INVALID_ID = 24
+ERROR_MORE_DATA = 119
+# Transient module-snapshot failures: Microsoft documents ERROR_BAD_LENGTH as
+# the retry-until-success code, and the 0.16.2 field log (The Sinking City 2,
+# 2026-10-22) observed the same transient form - in-flight DLL loading while
+# the target is still initializing - as Win32 error 24 (ERROR_INVALID_ID).
+_SNAPSHOT_TRANSIENT_ERRORS = {ERROR_BAD_LENGTH, ERROR_INVALID_ID, ERROR_MORE_DATA}
+_SNAPSHOT_MAX_ATTEMPTS = 8
+_SNAPSHOT_RETRY_BASE_SECONDS = 0.05
+_SNAPSHOT_RETRY_MAX_SECONDS = 1.0
 _DWORD = ctypes.c_uint32
 _WORD = ctypes.c_uint16
 
@@ -735,17 +745,30 @@ class ProcessMemory:
             return result
 
     def _take_module_snapshot(self, flags: int, operation: str) -> int:
-        """Create a toolhelp module snapshot, retrying only on BAD_LENGTH."""
-        snapshot = None
-        for _ in range(3):
+        """Create a toolhelp module snapshot, retrying transient failures.
+
+        Microsoft documents module-snapshot creation as transient while the
+        target's module list is still changing: the call fails with
+        ERROR_BAD_LENGTH or another error code and must be retried
+        (CreateToolhelp32Snapshot Remarks). The 0.16.2 field log (The
+        Sinking City 2, 2026-10-22) observed the same in-flight DLL loading
+        seconds after target start as Win32 error 24 (ERROR_INVALID_ID).
+        Retries are bounded and back off so a persistent failure (blocked or
+        protected process, invalid target) still fails with a named error.
+        """
+        attempt = 0
+        while True:
+            attempt += 1
             snapshot = self._kernel.CreateToolhelp32Snapshot(flags, self._pid)
-            if snapshot != ctypes.c_void_p(-1).value:
-                break
-            if ctypes.get_last_error() != ERROR_BAD_LENGTH:
+            if snapshot not in (None, ctypes.c_void_p(-1).value):
+                return int(snapshot)
+            error = ctypes.get_last_error()
+            if error not in _SNAPSHOT_TRANSIENT_ERRORS or attempt >= _SNAPSHOT_MAX_ATTEMPTS:
                 raise _windows_error(operation)
-        if not snapshot or snapshot == ctypes.c_void_p(-1).value:
-            raise _windows_error(operation)
-        return snapshot
+            time.sleep(
+                min(_SNAPSHOT_RETRY_BASE_SECONDS * (2 ** (attempt - 1)),
+                    _SNAPSHOT_RETRY_MAX_SECONDS)
+            )
 
     def module_for_architecture(self, name: str, pointer_size: int) -> tuple[int, int]:
         """Select a uniquely named mapped PE image with explicit x86/x64 ABI."""
@@ -759,19 +782,21 @@ class ProcessMemory:
                     0x08 | 0x10, "CreateToolhelp32Snapshot architecture modules")
             except ProcessMemoryError as exc:
                 # Some Windows builds reject the combined native/WOW64 module
-                # snapshot (observed in the field: Win32 error 299). This
-                # controller is 64-bit, where TH32CS_SNAPMODULE alone already
-                # lists both the 32- and 64-bit modules of the target, so
-                # retry with the native flag before failing.
+                # snapshot (observed in the field: Win32 error 299). Retry
+                # with the single flag matching the target architecture:
+                # 64-bit targets list under TH32CS_SNAPMODULE, 32-bit
+                # (WOW64) targets only under TH32CS_SNAPMODULE32.
+                fallback = 0x08 if pointer_size == 8 else 0x10
                 try:
                     snapshot = self._take_module_snapshot(
-                        0x08,
+                        fallback,
                         "CreateToolhelp32Snapshot architecture modules (native-only fallback)")
-                except ProcessMemoryError:
+                except ProcessMemoryError as exc2:
                     raise ProcessMemoryError(
                         "CreateToolhelp32Snapshot architecture modules failed with "
-                        "the combined native/WOW64 flags and again with the "
-                        "native-only fallback; first failure: " + str(exc)) from exc
+                        "the combined native/WOW64 flags (first failure: "
+                        + str(exc) + ") and again with the native-only "
+                        "fallback (second failure: " + str(exc2) + ")") from exc2
             matches = {}
             started, examined = time.monotonic(), 0
             try:

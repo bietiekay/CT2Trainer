@@ -1,6 +1,6 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-22. **Latest verified release:** 0.16.2, build
+**Updated:** 2026-10-23. **Latest verified release:** 0.16.2, build
 `native-20261022T160328Z-0423fb21` (built from `main` at `68eeb00`,
 2026-10-22): the Sinking City 2 startup-block field fix (recovery
 assessment accepts the WP-57 hook-journal `captured_placeholders`
@@ -8,7 +8,15 @@ field, which had blocked recovery behind a stale `state.lock`) plus
 RT-4.1 symbol provider fidelity (keep-first duplicate-provider
 policy, `label()` duplicate-name tolerance, wildcard-cleanup
 scoping — catalog remeasure 2,698 -> 1,858 blocked of 117,624, zero
-unexplained supported regressions). Superseded: 0.16.1, build
+unexplained supported regressions). The 0.16.2 field test
+(2026-10-22, Sinking City 2) then exposed the next brick: the same
+journal-schema fix was still missing the sibling writer field
+`value_data_ranges` (startup refusal on every attempt) and the module
+snapshot retried the wrong Win32 code without backoff, so after a
+state-folder reset the trainer attached but never activated (Win32
+error 24 while the game was still loading DLLs); both root causes are
+fixed on `main` 2026-10-23 and ship as 0.16.3 (ledger). Superseded:
+0.16.1, build
 `native-20261021T161241Z-b0566a25` (built from `main` at `d1c61f2`,
 2026-10-21) — Sinking City 2 table-load warnings made accurate + new
 versioning rule (every build gets a new version number, bug fixes bump
@@ -36,7 +44,7 @@ defines the work and completion gates.
 | Synthetic feature coverage | **42/42** declared feature classes and **7,475/7,475** action weight covered across **30 synthetic tables**. | This metric does not establish support for every original table or a real game effect. Add synthetic cases when a new behavior is found. |
 | Original reference tables | Local static catalog (RT-4.1 remeasure 2026-10-22, run `blocked-catalog-rt41`, frozen manifest `gap_inventory/reference-manifest.json`) classifies **115,766 supported**, including **59,642 staged**, out of **117,624 plan entries**. | **1,858 entries are blocked** (was 2,698 before RT-4.1) and one legacy-binary table does not load. Staged entries still need their runtime conditions proved. |
 | Observed game effects | Owned fixtures and selected runtime chains have tests. | The AP-11 campaign has **0 of 6,143** game effects confirmed. Original-table behavior must be checked against pinned game builds or explicitly equivalent owned targets. |
-| Final platforms | The 0.9.0-rc2 portable converter and a generated trainer were user-tested without CE or Python; later fixture tests cover many runtime paths. The 0.16 re-cut was field-tested 2026-10-21 (new WP-58 UI confirmed good; one cheat = table/build mismatch, no fix; the state-lock orphan after a blocked close was fixed in code the same day, see the ledger). The Sinking City 2 table-load warnings were made accurate in 0.16.1 (2026-10-21): table-version reference 45 → 46 field-verified, `{$LUA}`/`ShellExecute` wording now states the supported native behavior — the table itself loaded fine (see the ledger). The 0.16.1 field test (2026-10-21, Sinking City 2) exposed a startup block behind a stale `state.lock`: WP-57 hook journals with `captured_placeholders` failed the recovery schema; fixed on `main` 2026-10-22 (0.16.2, built as `native-20261022T160328Z-0423fb21` — see the ledger). | The 0.16 re-cut has no recorded full clean-machine acceptance. Clean Windows and real Steam Deck/Proton/touch acceptance remain open. `runtime_unverified` stays set. |
+| Final platforms | The 0.9.0-rc2 portable converter and a generated trainer were user-tested without CE or Python; later fixture tests cover many runtime paths. The 0.16 re-cut was field-tested 2026-10-21 (new WP-58 UI confirmed good; one cheat = table/build mismatch, no fix; the state-lock orphan after a blocked close was fixed in code the same day, see the ledger). The Sinking City 2 table-load warnings were made accurate in 0.16.1 (2026-10-21): table-version reference 45 → 46 field-verified, `{$LUA}`/`ShellExecute` wording now states the supported native behavior — the table itself loaded fine (see the ledger). The 0.16.1 field test (2026-10-21, Sinking City 2) exposed a startup block behind a stale `state.lock`: WP-57 hook journals with `captured_placeholders` failed the recovery schema; fixed on `main` 2026-10-22 (0.16.2, built as `native-20261022T160328Z-0423fb21` — see the ledger). The 0.16.2 field test (2026-10-22, Sinking City 2) exposed the next activation failure: the startup brick from the still-missing journal field `value_data_ranges` plus a module-snapshot retry aimed at the wrong Win32 code (mislabeled 24 instead of 1116) without backoff while the game was still loading DLLs (field log: Win32 error 24 nine ms after attach); both root causes fixed on `main` 2026-10-23, shipping as 0.16.3 (see the ledger). | The 0.16 re-cut has no recorded full clean-machine acceptance. Clean Windows and real Steam Deck/Proton/touch acceptance remain open. `runtime_unverified` stays set. |
 
 **The 42/42 result is real, but it measures the synthetic feature matrix.**
 The 1,858 blocked entries (after the RT-4.1 remeasure, was 2,698), staged
