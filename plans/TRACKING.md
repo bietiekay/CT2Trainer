@@ -60,14 +60,17 @@ game-facing action.
   2026-10-21).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
-- Latest verified release: 0.16.2, build
-  `native-20261022T160328Z-0423fb21` (cut from `main` @ `68eeb00`),
-  in-build suite 3,415 OK / 25 expected skips, `ce_inputs: []`;
-  ships the Sinking City 2 startup-block field fix (recovery
-  assessment accepts the WP-57 hook-journal `captured_placeholders`
-  field) and RT-4.1 symbol provider fidelity (catalog remeasure
-  2,698 -> 1,858 blocked of 117,624, zero unexplained supported
-  regressions); superseded 0.16.1
+- Latest verified release: 0.16.3, build
+  `native-20261023T065015Z-afbc3eba` (cut from `main` @ `6a5ba63`),
+  in-build suite 3,421 OK / 25 expected skips, `ce_inputs: []`;
+  ships the Sinking City 2 activation field fix (recovery
+  assessment accepts the hook-journal `value_data_ranges`
+  allocation field; module-snapshot transient retry with correct
+  Win32 codes, bounded exponential backoff, architecture-aware
+  fallback flag) on top of the 0.16.2 content; superseded 0.16.2
+  `native-20261022T160328Z-0423fb21` (in-build 3,415/25, user-tested,
+  field finding: Sinking City 2 activation failure) and superseded
+  0.16.1
   `native-20261021T161241Z-b0566a25` (in-build 3,412/25, user-tested,
   field finding: Sinking City 2 startup block) and superseded 0.16
   field-fix re-cut 2
@@ -131,8 +134,13 @@ game-facing action.
   native-only fallback flag (0x10 for 32-bit targets), both failure
   codes in the dual-failure message. +4 (`tests/test_native_architecture.py`)
   +2 (`tests/test_native_recovery.py`) regression tests; local suite
-  3,421 OK / 25 expected skips; built as 0.16.3 (VERSION + __version__
-  in the same change per the versioning rule).
+  3,421 OK / 25 expected skips; cut as 0.16.3 build `native-20261023T065015Z-afbc3eba` (in-build
+  suite 3,421/25, `ce_inputs: []`, `runtime_unverified` kept per
+  gate; VERSION + __version__ in the same change per the
+  versioning rule; source ZIP sha256
+  `0b34c4f3797095aefcba66a45d46216596e816817ea1b98208a42a5217df2e5a`,
+  portable ZIP sha256
+  `bb495a6f61538051b8caeac14394bdc80b7b165b946f34f3ae710524e37fd0a3`).
 
 ## Historical evidence
 

@@ -36,8 +36,9 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-22, 0.16.2 released (build
-`native-20261022T160328Z-0423fb21` cut from `main` @ `68eeb00`; previous
+**CT2Trainer (status 2026-10-23, 0.16.3 released (build
+`native-20261023T065015Z-afbc3eba` cut from `main` @ `6a5ba63`; previous
+0.16.2 `native-20261022T160328Z-0423fb21` @ `68eeb00`, previous
 0.16.1 `native-20261021T161241Z-b0566a25` @ `d1c61f2`, previous
 0.16 field-fix re-cut 2 `native-20261021T123801Z-8c5c4e1e` @ `108170b`,
 re-cut 1 `native-20261020T150115Z-c426fb92` @ `7616edb` and first
@@ -47,7 +48,7 @@ remeasure 2,698 -> 1,858 blocked of 117,624, zero unexplained supported
 regressions) and the post-release field fixes (WP-58 UI
 startup crash fix, Sinking City 2 activation-chain runtime evidence,
 state-lock self-repair and reliable restart, SC2 startup-block
-journal-field fix)
+journal-field fix, SC2 activation field fix)
 on top of the released 0.15 (prefix-cut field fix `d15268a`, part-3
 fast-path fix `d068c44`); Wave 4 of the
 reference-corpus closure cycle complete — all twelve W4 lanes
@@ -166,19 +167,38 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261022T160328Z-0423fb21` (0.16.2,
-cut from `main` @ `68eeb00`; in-build suite 3415 OK / 25 regular
+**Latest verified build:** `native-20261023T065015Z-afbc3eba` (0.16.3,
+cut from `main` @ `6a5ba63`; in-build suite 3421 OK / 25 regular
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
-gate; source ZIP `CT2Trainer-0.16.2-source.zip` sha256
-`1e284d2a8d632ceb38a6861e097192b9a3d64076bfdcf60b4c08d6323ef45ef6`,
-portable ZIP `CT2Trainer-0.16.2-windows-portable.zip` sha256
-`9c8ccc9e1e9cb19780306bb410b5d09d0b43a47359982a993c3be618679de6da`).
-0.16.2 ships the Sinking City 2 startup-block field fix (recovery
-assessment accepts the WP-57 hook-journal `captured_placeholders`
-field; regression tests `tests/test_native_recovery.py`) and RT-4.1
-symbol provider fidelity (keep-first duplicate-provider policy,
-`label()` duplicate-name tolerance, wildcard-cleanup scoping; catalog
-remeasure 2,698 -> 1,858 blocked of 117,624, zero unexplained supported
+gate; source ZIP `CT2Trainer-0.16.3-source.zip` sha256
+`0b34c4f3797095aefcba66a45d46216596e816817ea1b98208a42a5217df2e5a`
+(13,050,549 bytes), portable ZIP
+`CT2Trainer-0.16.3-windows-portable.zip` sha256
+`bb495a6f61538051b8caeac14394bdc80b7b165b946f34f3ae710524e37fd0a3`
+(28,609,768 bytes)).
+0.16.3 ships the Sinking City 2 activation field fix (0.16.2 field
+test 2026-10-22: the recovery assessment still rejected the WP-47/55
+hook-journal `value_data_ranges` field on every allocation entry,
+blocking startup behind a stale `state.lock` on every attempt; and
+the module-snapshot retry targeted the wrong Win32 code -
+`ERROR_BAD_LENGTH` mislabeled as 24, real 1116; 24 is
+ERROR_INVALID_ID, the transient code observed 9 ms after attach while
+the game was still loading DLLs; now a bounded 8-attempt
+exponential-backoff retry on {1116, 24, 119}, architecture-aware
+native-only fallback flag (0x10 for 32-bit targets), dual-failure
+message carrying both codes; regression tests
+`tests/test_native_architecture.py` +4 and
+`tests/test_native_recovery.py` +2) on top of the 0.16.2 content.
+Superseded 0.16.2 build:
+`native-20261022T160328Z-0423fb21` (0.16.2, cut from `main` @
+`68eeb00`; in-build suite 3415 OK / 25 regular skips, `ce_inputs:
+[]`, user-tested, field finding: Sinking City 2 activation failure) -
+the Sinking City 2 startup-block field fix (recovery assessment
+accepts the WP-57 hook-journal `captured_placeholders` field;
+regression tests `tests/test_native_recovery.py`) and RT-4.1 symbol
+provider fidelity (keep-first duplicate-provider policy, `label()`
+duplicate-name tolerance, wildcard-cleanup scoping; catalog remeasure
+2,698 -> 1,858 blocked of 117,624, zero unexplained supported
 regressions) on top of the 0.16.1 content. Superseded 0.16.1 build:
 `native-20261021T161241Z-b0566a25` (0.16.1, first build under the new
 versioning rule, cut from `main` @ `d1c61f2`; in-build suite 3412 OK /
