@@ -1,9 +1,12 @@
 # Reference-table 100% roadmap
 
-Status: 2026-10-22. Active plan after the 0.16 Wave 4 release; RT-4.1
-(symbol provider fidelity) landed 2026-10-22. The older
-AP/WP plans record completed implementation history; this document defines
-the next work. [TRACKING.md](TRACKING.md) is the status ledger.
+Status: 2026-10-23. Active plan after the 0.16 Wave 4 release; RT-3
+(legacy-binary CT loading) and RT-4.4 (value semantics) landed 2026-10-23,
+RT-4.1 (symbol provider fidelity) landed 2026-10-22. Catalog remeasure
+`blocked-catalog-rt44`: 1,807 blocked of 117,634 plan entries, 151/151
+tables load. The older AP/WP plans record completed implementation
+history; this document defines the next work.
+[TRACKING.md](TRACKING.md) is the status ledger.
 
 ## Outcome and measurement
 
@@ -214,6 +217,62 @@ dispatch (2 FearlessRev tables), (B) `CheatCodes` code-patch path
 (F) no-effect register ratification, (G) `createThread`/`threadWait`
 backend decision (O22). Purely visual UI stays out of scope.
 
+Update (2026-10-23, RT-4.4): the value-semantics package landed
+(branch `native-rt4-4`, merged to `main` the same day). Clean-room
+semantics per the CE 7.5 conclusions: (a) O6 DROPDOWN_WIDTH — CE
+`SetValue` (MemoryRecordUnit.pas:3500-3503) parses choice strings with
+`StrToQWordEx` and stores them through the typed pointer, truncating to
+the record's byte width (choice '314' on a Byte writes low byte 0x3A =
+58); `parse_value` now truncates every integer write to the record
+width in both decimal and hex base modes (decimal mode: decimal regex
+then hex fallback; hex mode stays hex-only, fail-closed) instead of
+refusing at plan time; (b) O8 DROPDOWN_EXPR — bracketed choices on
+simple-numeric records compile as `expression: True`, are validated by
+`parse_expression` at plan time and resolved against the runtime symbol
+table at write time (the bracket condition is strict: starts `[` and
+ends `]`, length > 2 — CE SetValue 3449-3450 parity, so `[sym]+4` is
+not an expression in either); alternate-base hex choice IDs on decimal
+records are accepted as writable literals (deliberate documented
+clean-room extension: CE's `StrToQWordEx` (parsers.pas:248) would route
+bare hex-looking decimals through the float path and error there);
+unparseable choices keep the refusal on writable records and become
+display rows on read-only dropdowns; (c) O7 STRING_SHOWASHEX — string
+records with ShowAsHex stage a `byte_array` value profile (hex byte
+display; CE copies raw text on vtString — MemoryRecordUnit.pas
+3534-3587 — so the byte-array staging is the documented clean-room
+interpretation of the O7 row); (d) O26 DROPDOWN_EMPTY — read-only
+dropdowns with empty or placeholder-only choice lists stage as
+display-only views (the `*` placeholder drops out, possibly-empty
+choices allowed) instead of refusing. The O11 custom-type gate is
+unchanged by design (6 rows stay gated; refusal messages pinned in
+`tests/test_native_compiler.py`). Plan metadata: `writable: False`
+(display-only row) and `expression: True` (expression choice) markers,
+enforced byte-identically by both plan validators (compiler
+`validate_plan` and the engine wrapper). Tests: 18 new in
+`tests/test_native_value_semantics.py` (byte-exact engine-level pins on
+memory.data/memory.writes: signed wraparound '-1' on 4 Bytes ->
+`ff ff ff ff` displayed 4294967295, '70000' on 2 Bytes -> `70 11`,
+decimal '01E7' on 2 Bytes -> `e7 01`, hex-mode fail-closed, expression
+pre-resolution before any write, read-only empty-set write refusal,
+O7 byte-array roundtrip, O26 empty placeholder staging) plus pin
+updates in `test_native_dropdown_separators`, `test_native_value_types`,
+`test_native_compiler` and `test_native_engine` per lane-rules 6a. Full
+suite on `main` after the merge: 3,471 OK / 25 expected skips. Catalog
+remeasure (local, run `blocked-catalog-rt44`, frozen manifest and
+process bindings unchanged): **1,858 -> 1,807 blocked** of 117,634
+(net -51; supported 115,776 -> 115,827; staged 59,642 -> 59,683;
+151/151 tables load, zero compile errors). Exactly 51 rows unblocked,
+all in the expected classes: O6 30 (P3R/v4/v5 9 each, P3Reload 3),
+O7 8 (DS2 2, HorizonForbiddenWest 3 + HorizonForbiddenWest (1) 3),
+O8 13 (Borderlands3-V10 12, P4G 1). Zero newly blocked rows. Eight rows
+change only their immediate block reason and stay blocked on the
+pre-existing symbol-provider gate: DS2 25521/25524/25526 (ShowAsHex
+string pointer records on the blocked `p` provider), DS2 87558/87561/
+87563 (blocked `myPtr3`), DS2 87598 (blocked `myPtr2`) and 小猫咪，
+大城市 id=3 (the empty-dropdown row now reaching the blocked `CatValues`
+provider behind 小猫咪 id=2 `usemono`). No plan-level providers
+involved; zero supported regressions.
+
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
 **Scope and method.** Full clean-room attribution of every blocked row in
@@ -303,11 +362,19 @@ Grand total = 2,698.
 | RT-4.6 Input legacy & authoring gaps | No-provider symbols (user config / cross-table / dynamic Lua), legacy symbols (BaseAddress, stat names, register-like tokens, module names without .exe) | R5 (91), R6 (128) | 219 |
 | **Total** | | | **2,698** ✓ |
 
-Package status (2026-10-22): **RT-4.1 done** — catalog remeasure
-1,858 blocked of 117,624 (net -840: 842 unblocked, 2 explained
-Cyberpunk shared-global regressions; detail in the RT-4.1 update in the
-investigation queue above). 1,858 = 2,698 - 842 + 2. Next package by
-suggested order: RT-4.3 address expression & identifier dialect (452).
+Package status (2026-10-23): **RT-4.4 done** — catalog remeasure
+`blocked-catalog-rt44`: **1,807 blocked** of 117,634 (net -51 over the
+RT-3 baseline of 1,858: 51 unblocked, 0 newly blocked, 8 rows
+reason-changed onto their pre-existing symbol-provider block; detail in
+the RT-4.4 update in the investigation queue above). History: RT-3
+(2026-10-23) cleared the one legacy-binary load error (151/151 load,
+1,858 blocked of 117,634); RT-4.1 (2026-10-22, remeasure
+`blocked-catalog-rt41`) 2,698 -> 1,858 of 117,624 (net -840: 842
+unblocked, 2 explained Cyberpunk shared-global regressions). Next
+packages by suggested order: RT-4.3 address expression & identifier
+dialect (452), RT-4.5 AA directive & script coverage (57), RT-4.6 input
+legacy & authoring gaps (219), RT-4.2 runtime provider model (1,085,
+last).
 
 Suggested execution order: RT-4.1 (820, lowest risk and the largest
 guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),
