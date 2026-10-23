@@ -319,15 +319,46 @@ def _dropdown(entry: Entry, entries: tuple[Entry, ...], value_profile: dict | No
         if (value_profile is None and entry.variable_type in {"Float", "Double"}
                 and not entry.show_as_hex and _COMMA_DECIMAL.fullmatch(value)):
             value = value.replace(",", ".", 1)
-        refusal = _dropdown_choice_refusal(value, entry.variable_type,
-                                           entry.show_as_hex, entry.show_as_signed,
-                                           value_profile)
-        if refusal is not None:
+        status, refusal = _dropdown_choice_status(value, entry.variable_type,
+                                                  entry.show_as_hex,
+                                                  entry.show_as_signed,
+                                                  value_profile)
+        if status != "refusal":
+            # RT-4.4 (O6/O8): the literal is parseable in one of the
+            # accepted integer bases ("own" or "alternate"); integer-width
+            # overflow is a write-time truncation (O6), not a compile
+            # refusal, matching the CE typed-pointer store.
+            choices.append({"value": value, "description": label})
+        elif (status == "refusal" and value_profile is None
+                and entry.variable_type in SIMPLE_VALUE_TYPES
+                and value.strip()[:1] == "["
+                and value.strip()[-1:] == "]"
+                and len(value.strip()) > 2):
+            # RT-4.4 (O8): a bracketed dropdown choice is an address
+            # expression evaluated against the runtime symbol table at
+            # write time; syntax is validated here, semantics at write.
+            try:
+                parse_expression(value.strip())
+            except AddressExpressionError as exc:
+                raise AAError(
+                    "Dropdown expression choice '%s' is not a valid address "
+                    "expression: %s" % (value, exc)) from exc
+            choices.append({"value": value, "description": label,
+                            "expression": True})
+        elif status == "refusal" and source.dropdown_read_only:
+            # RT-4.4 (O8/O26): a read-only (description-only) list may
+            # carry display sentinels (e.g. the CE '??' unreadable-value
+            # marker) that the record's value type cannot parse.  They are
+            # staged as non-writable display rows; the write path never
+            # treats them as selectable choices.
+            choices.append({"value": value, "description": label,
+                            "writable": False})
+        else:
             raise AAError(refusal)
-        choices.append({"value": value, "description": label})
-    if source.dropdown_read_only and not any(
-            choice.get("separator") is not True for choice in choices):
-        raise AAError("Read-only dropdown has no concrete literal choices.")
+    # RT-4.4 (O26): a read-only list without concrete writable choices
+    # stages as an empty read-only view instead of a refusal; the record's
+    # own value semantics are unchanged.  (Previously: "Read-only
+    # dropdown has no concrete literal choices.")
     result = {"choices": choices, "read_only": source.dropdown_read_only}
     if entry.dropdown_link:
         result["link_target_id"] = source.id
@@ -378,17 +409,45 @@ def _value_literal_safe(value: str, value_type: str, hexadecimal: bool,
 
 _COMMA_DECIMAL = re.compile(r"[+-]?[0-9]+,[0-9]+\Z")
 _INTEGER_WIDTHS = {"Byte": 8, "2 Bytes": 16, "4 Bytes": 32, "8 Bytes": 64}
+_HEX_INTEGER_LITERAL = re.compile(r"(?:0[xX])?[0-9A-Fa-f]+\Z")
 
 
-def _dropdown_choice_refusal(value: str, value_type: str, hexadecimal: bool,
-                             signed: bool | None,
-                             value_profile: dict | None = None) -> str | None:
-    """Exact per-choice dropdown refusal, or None when the literal is writable.
+def _integer_choice_base(value: str, hexadecimal: bool) -> str | None:
+    """RT-4.4 (O6/O8): which integer base an choice literal parses in.
+
+    Returns "own" when the literal is an integer in the record's display
+    base, "alternate" when it is an integer only in the other base (the
+    corpus P4G skill list: hex IDs listed on a decimal-mode record), or
+    None when it is an integer literal in neither base.  No width check:
+    CE stores the parsed integer through the record's typed pointer, so
+    out-of-width literals are written truncated (O6).
+    """
+    literal = value.strip()
+    if hexadecimal:
+        return "own" if _HEX_INTEGER_LITERAL.fullmatch(literal) is not None else None
+    if re.fullmatch(r"-?[0-9]+", literal) is not None:
+        return "own"
+    if _HEX_INTEGER_LITERAL.fullmatch(literal) is not None:
+        return "alternate"
+    return None
+
+
+def _dropdown_choice_status(value: str, value_type: str, hexadecimal: bool,
+                            signed: bool | None,
+                            value_profile: dict | None = None) -> tuple[str, str]:
+    """Classify one dropdown choice literal for the record's value type.
+
+    Returns (status, refusal): status is "literal" (writable in the
+    record's own base; integer widths truncate at write time),
+    "alternate" (integer literal of the other base; written as that
+    number), or "refusal" with the exact message for a literal the
+    record cannot write.
 
     WP-27/WP-34 (FLAG-2): byte-array and bit-field profiles name the
-    offending choice with its length or range problem; simple integer types
-    name a literal that exceeds the record's value-type width.  Every other
+    offending choice with its length or range problem; every other
     unusable literal keeps the generic unsupported-expression refusal.
+    RT-4.4 (O6): the old "exceeds the value-type width" refusal is gone;
+    integer choices are always writable and the write truncates.
     """
     if value_profile is None and value_type in {"Float", "Double"} and hexadecimal:
         # WP-33: a ShowAsHex float choice must be the fixed-width IEEE-754
@@ -396,8 +455,8 @@ def _dropdown_choice_refusal(value: str, value_type: str, hexadecimal: bool,
         digits = 8 if value_type == "Float" else 16
         if re.fullmatch(r"(?:0[xX])?[0-9a-fA-F]{" + str(digits) + r"}",
                         value.strip()) is None:
-            return "Dropdown contains an unsupported value expression."
-        return None
+            return ("refusal", "Dropdown contains an unsupported value expression.")
+        return "literal", ""
     if value_profile is not None:
         try:
             # A synthetic snapshot is only for literal validation during
@@ -408,37 +467,24 @@ def _dropdown_choice_refusal(value: str, value_type: str, hexadecimal: bool,
             detail = str(exc)
             if value_profile["kind"] == "byte_array" and detail == (
                     "Byte array must contain exactly ByteLength hex bytes"):
-                return ("Dropdown choice '%s' must contain exactly %d hex bytes "
-                        "for this byte array record."
+                return ("refusal", "Dropdown choice '%s' must contain exactly %d hex bytes "
+                                    "for this byte array record."
                         % (value, value_profile["size"]))
             if value_profile["kind"] == "bitfield" and detail.startswith(
                     "Bit-field value must be between "):
-                return ("Dropdown choice '%s' is outside the bit-field value "
-                        "range (must be between %s)."
+                return ("refusal", "Dropdown choice '%s' is outside the bit-field value "
+                                    "range (must be between %s)."
                         % (value, detail.split("must be between ", 1)[1]))
-            return "Dropdown contains an unsupported value expression."
-        return None
+            return ("refusal", "Dropdown contains an unsupported value expression.")
+        return "literal", ""
     if value_type in _INTEGER_WIDTHS:
-        bits = _INTEGER_WIDTHS[value_type]
-        literal = value.strip()
-        if hexadecimal:
-            if re.fullmatch(r"(?:0[xX])?[0-9A-Fa-f]+", literal) is None:
-                return "Dropdown contains an unsupported value expression."
-            number = int(literal, 16)
-        else:
-            if re.fullmatch(r"-?[0-9]+", literal) is None:
-                return "Dropdown contains an unsupported value expression."
-            number = int(literal, 10)
-        native_signed = signed is True and not hexadecimal
-        minimum = -(1 << (bits - 1)) if native_signed else 0
-        maximum = (1 << (bits - int(native_signed))) - 1
-        if not minimum <= number <= maximum:
-            return ("Dropdown choice '%s' exceeds the %s value-type width "
-                    "(%d to %d)." % (value, value_type, minimum, maximum))
-        return None
+        base = _integer_choice_base(value, hexadecimal)
+        if base is not None:
+            return base, ""
+        return ("refusal", "Dropdown contains an unsupported value expression.")
     if not _native_literal_safe(value, value_type, hexadecimal, signed):
-        return "Dropdown contains an unsupported value expression."
-    return None
+        return ("refusal", "Dropdown contains an unsupported value expression.")
+    return "literal", ""
 
 
 def _compile_value_address(entry: dict, source: Entry, sources: dict[int, Entry],
@@ -1995,7 +2041,6 @@ def validate_plan(plan: dict) -> None:
                 if (not isinstance(dropdown, dict) or not isinstance(dropdown.get("choices"), list)
                         or type(dropdown.get("read_only")) is not bool):
                     raise NativeCompileError("Invalid dropdown plan.")
-                writable = 0
                 for choice in dropdown["choices"]:
                     if (not isinstance(choice, dict) or not isinstance(choice.get("description"), str)):
                         raise NativeCompileError("Invalid dropdown choice.")
@@ -2008,12 +2053,35 @@ def validate_plan(plan: dict) -> None:
                         continue
                     if "separator" in choice:
                         raise NativeCompileError("Dropdown separator marker must be true.")
-                    if not _value_literal_safe(choice.get("value"), entry["variable_type"],
-                                               entry["show_as_hex"], entry["show_as_signed"], value_profile):
+                    if choice.get("writable") is False:
+                        # RT-4.4 (O8/O26): display-only choice staged by a
+                        # read-only (description-only) list; never selectable.
+                        if not dropdown["read_only"]:
+                            raise NativeCompileError("Display-only dropdown choices require a read-only dropdown.")
+                        continue
+                    if "writable" in choice:
+                        raise NativeCompileError("Dropdown writable marker must be false.")
+                    if choice.get("expression") is True:
+                        # RT-4.4 (O8): bracketed expression choice; syntax is
+                        # plan-checked, semantics resolve at write time.
+                        if value_profile is not None:
+                            raise NativeCompileError("Dropdown expression choices require a simple numeric record.")
+                        try:
+                            parse_expression(choice.get("value", ""))
+                        except AddressExpressionError as exc:
+                            raise NativeCompileError("Dropdown expression choice is not a valid address expression.") from exc
+                        continue
+                    if "expression" in choice:
+                        raise NativeCompileError("Dropdown expression marker must be true.")
+                    status, _refusal = _dropdown_choice_status(choice.get("value"), entry["variable_type"],
+                                                               entry["show_as_hex"], entry["show_as_signed"],
+                                                               value_profile)
+                    if status == "refusal":
                         raise NativeCompileError("Dropdown values must be exact supported literals.")
-                    writable += 1
-                if dropdown["read_only"] and writable == 0:
-                    raise NativeCompileError("Read-only dropdown has no numeric choices.")
+                # RT-4.4 (O26): a read-only dropdown may stage zero
+                # writable choices (display-only rows, or an empty
+                # read-only view); the write path refuses anything
+                # outside the (possibly empty) writable set.
             elif entry["kind"] == "heading" and "value_profile" in entry:
                 # The only profile-backed navigation record is a canonical
                 # zero-byte placeholder. Its address still anchors children.

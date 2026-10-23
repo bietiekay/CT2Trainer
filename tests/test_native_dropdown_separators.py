@@ -168,17 +168,21 @@ class DropdownSeparatorRuntimeTests(unittest.TestCase):
             ("empty value without the separator marker",
              lambda plan: by_id(plan)[5000]["dropdown"]["choices"][2].pop("separator"),
              "Dropdown values must be exact supported literals."),
-            ("read-only list reduced to separators only",
-             lambda plan: by_id(plan)[5001]["dropdown"]["choices"].__setitem__(
-                 slice(None), [
-                     {"value": "", "description": "Section:", "separator": True},
-                     {"value": "", "description": "First", "separator": True},
-                     {"value": "", "description": "Second", "separator": True},
-                 ]),
-             "Read-only dropdown has no numeric choices."),
-            ("out-of-range byte choice smuggled into a RO list",
-             lambda plan: by_id(plan)[5001]["dropdown"]["choices"][1].update(value="300"),
+            ("display-only marker on a writable list",
+             lambda plan: by_id(plan)[5000]["dropdown"]["choices"][0].update(writable=False),
+             "Display-only dropdown choices require a read-only dropdown."),
+            ("writable marker as true",
+             lambda plan: by_id(plan)[5000]["dropdown"]["choices"][0].update(writable=True),
+             "Dropdown writable marker must be false."),
+            ("unparseable choice smuggled into a RO list",
+             lambda plan: by_id(plan)[5001]["dropdown"]["choices"][1].update(value="3,5"),
              "Dropdown values must be exact supported literals."),
+            ("expression marker as false",
+             lambda plan: by_id(plan)[5000]["dropdown"]["choices"][0].update(expression=False),
+             "Dropdown expression marker must be true."),
+            ("malformed expression choice",
+             lambda plan: by_id(plan)[5000]["dropdown"]["choices"][0].update(value="[", expression=True),
+             "Dropdown expression choice is not a valid address expression."),
         ]
         for name, mutate, expected in cases:
             with self.subTest(case=name):
@@ -208,8 +212,6 @@ class DropdownSeparatorRuntimeTests(unittest.TestCase):
              "Dropdown contains an unsupported value expression."),
             ('<DropDownList>2+2:Math</DropDownList>',
              "Dropdown contains an unsupported value expression."),
-            ('<DropDownList ReadOnly="1">:Only: :Nothing</DropDownList>',
-             "Read-only dropdown has no concrete literal choices."),
         )
         for index, (extra, expected_reason) in enumerate(bodies):
             with self.subTest(index=index):
@@ -225,8 +227,9 @@ class DropdownSeparatorRuntimeTests(unittest.TestCase):
                 entry = compile_table(standalone, "FixtureTarget.exe")["entries"][0]
                 self.assertFalse(entry["supported"])
                 self.assertEqual(entry["reason"], expected_reason)
-        # A separator row mixed with a malformed literal refuses the whole
-        # record with the literal reason (the separator itself is fine).
+        # RT-4.4 (O6): a separator row mixed with an over-width literal no
+        # longer refuses the record; the choice is staged and the write
+        # truncates to the record's width (CE typed-pointer parity).
         mixed = self.root / "mixed.ct"
         mixed.write_text(
             '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
@@ -234,30 +237,46 @@ class DropdownSeparatorRuntimeTests(unittest.TestCase):
             '<VariableType>Byte</VariableType><Address>1090</Address>'
             '<DropDownList>\n:Section:\n300:Big\n</DropDownList></CheatEntry>'
             '</CheatEntries></CheatTable>', encoding="utf-8")
-        entry = compile_table(mixed, "FixtureTarget.exe")["entries"][0]
-        self.assertFalse(entry["supported"])
-        # WP-34 (FLAG-2 follow-up 2): the width refusal names the choice and
-        # the record's value-type width.
-        self.assertEqual(entry["reason"],
-                         "Dropdown choice '300' exceeds the Byte value-type width (0 to 255).")
+        plan = compile_table(mixed, "FixtureTarget.exe")
+        entry = plan["entries"][0]
+        self.assertTrue(entry["supported"], entry["reason"])
+        self.assertEqual(entry["dropdown"]["choices"],
+                         [{"value": "", "description": "Section:", "separator": True},
+                          {"value": "300", "description": "Big"}])
+        validate_plan(plan)
+        validate_runtime_plan(plan)
+        engine = TrainerEngine(plan, state_dir=self.root / "state_mixed",
+                               process_lock_dir=self.root / "shared_mixed",
+                               memory_factory=lambda name: self.memory,
+                               hook_coordinator=self.coordinator)
+        self.addCleanup(engine.close)
+        engine.poll()
+        self.assertEqual(engine.set_value(6001, "300"), "44")
+        self.assertEqual(self.memory.read(0x1090, 1), b"\x2c")
 
-    def test_width_refusals_name_the_choice_and_the_type_width(self):
-        # WP-34 (FLAG-2 follow-up 2): exact per-choice width messages for the
-        # remaining simple integer types, unsigned and signed.
+    def test_integer_choices_truncate_to_the_type_width_on_write(self):
+        # RT-4.4 (O6): integer dropdown choices outside the record's width
+        # are no longer compile refusals; the engine stores the low
+        # width bits, matching CE's typed-pointer store (SetValue).
         cases = (
-            ('<DropDownList>70000:Big</DropDownList>', "2 Bytes",
-             "Dropdown choice '70000' exceeds the 2 Bytes value-type width (0 to 65535)."),
-            ('<DropDownList>-1:Neg</DropDownList>', "4 Bytes",
-             "Dropdown choice '-1' exceeds the 4 Bytes value-type width (0 to 4294967295)."),
-            ('<ShowAsSigned>1</ShowAsSigned><DropDownList>-2147483649:Neg</DropDownList>', "4 Bytes",
-             "Dropdown choice '-2147483649' exceeds the 4 Bytes value-type width (-2147483648 to 2147483647)."),
-            ('<ShowAsSigned>1</ShowAsSigned><DropDownList>2147483648:Pos</DropDownList>', "4 Bytes",
-             "Dropdown choice '2147483648' exceeds the 4 Bytes value-type width (-2147483648 to 2147483647)."),
-            ('<ShowAsHex>1</ShowAsHex><DropDownList>100000000:Big</DropDownList>', "4 Bytes",
-             "Dropdown choice '100000000' exceeds the 4 Bytes value-type width (0 to 4294967295)."),
+            # (extra XML, value type, choice literal, expected written bytes)
+            ('<DropDownList>314:Big</DropDownList>', "Byte", "314", b"\x3a"),
+            ('<DropDownList>70000:Big</DropDownList>', "2 Bytes", "70000", b"\x70\x11"),
+            ('<DropDownList>-1:Neg</DropDownList>', "4 Bytes", "-1", b"\xff\xff\xff\xff"),
+            ('<ShowAsSigned>1</ShowAsSigned>'
+             '<DropDownList>-2147483649:Neg</DropDownList>', "4 Bytes",
+             "-2147483649", b"\xff\xff\xff\x7f"),
+            ('<ShowAsSigned>1</ShowAsSigned>'
+             '<DropDownList>2147483648:Pos</DropDownList>', "4 Bytes",
+             "2147483648", b"\x00\x00\x00\x80"),
+            ('<ShowAsHex>1</ShowAsHex><DropDownList>100000000:Big</DropDownList>',
+             "4 Bytes", "100000000", b"\x00\x00\x00\x00"),
+            # RT-4.4 (O8): hex-style choice on a decimal-mode record
+            # (corpus P4G shape) parses in the alternate base.
+            ('<DropDownList>01E7:Hex</DropDownList>', "2 Bytes", "01E7", b"\xe7\x01"),
         )
-        for extra, value_type, expected_reason in cases:
-            with self.subTest(value_type=value_type, extra=extra):
+        for index, (extra, value_type, literal, expected_bytes) in enumerate(cases):
+            with self.subTest(index=index, value_type=value_type, literal=literal):
                 standalone = self.root / "width.ct"
                 standalone.write_text(
                     '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
@@ -265,9 +284,23 @@ class DropdownSeparatorRuntimeTests(unittest.TestCase):
                     f'<VariableType>{value_type}</VariableType><Address>1090</Address>'
                     f'{extra}</CheatEntry>'
                     '</CheatEntries></CheatTable>', encoding="utf-8")
-                entry = compile_table(standalone, "FixtureTarget.exe")["entries"][0]
-                self.assertFalse(entry["supported"], entry["reason"])
-                self.assertEqual(entry["reason"], expected_reason)
+                plan = compile_table(standalone, "FixtureTarget.exe")
+                entry = plan["entries"][0]
+                self.assertTrue(entry["supported"], entry["reason"])
+                validate_plan(plan)
+                validate_runtime_plan(plan)
+                engine = TrainerEngine(plan, state_dir=self.root / f"state_w{index}",
+                                       process_lock_dir=self.root / f"shared_w{index}",
+                                       memory_factory=lambda name: self.memory,
+                                       hook_coordinator=self.coordinator)
+                self.addCleanup(engine.close)
+                engine.poll()
+                before = list(self.memory.writes)
+                engine.set_value(6100, literal)
+                self.assertEqual(self.memory.read(0x1090, len(expected_bytes)),
+                                 expected_bytes)
+                self.assertEqual(self.memory.writes[len(before):],
+                                 [(0x1090, expected_bytes)])
 
     def test_comma_decimal_float_choices_normalize_to_dot_form(self):
         # WP-34 (FLAG-2 follow-up 3): comma-decimal Float/Double choice
@@ -317,6 +350,131 @@ class DropdownSeparatorRuntimeTests(unittest.TestCase):
         plan = compile_table(self.table, "FixtureTarget.exe")
         validate_plan(plan)
         validate_runtime_plan(plan)
+
+    def test_read_only_display_only_lists_are_supported(self):
+        # RT-4.4 (O26): a read-only dropdown without concrete writable
+        # choices stages as an empty display view instead of a refusal;
+        # the record keeps its normal value semantics and every write is
+        # refused against the (possibly empty) writable choice set.
+        bodies = (
+            # separators only (previously: "Read-only dropdown has no
+            # concrete literal choices.")
+            ('<DropDownList ReadOnly="1">\n:Only:\n:Nothing:\n</DropDownList>',
+             [{"value": "", "description": "Only:", "separator": True},
+              {"value": "", "description": "Nothing:", "separator": True}]),
+            # unparseable display sentinels (corpus '??' marker) staged as
+            # non-writable rows on a read-only list
+            ('<DropDownList ReadOnly="1">\n??:Unreadable\n1:One\n</DropDownList>',
+             [{"value": "??", "description": "Unreadable", "writable": False},
+              {"value": "1", "description": "One"}]),
+            # a fully empty read-only list
+            ('<DropDownList ReadOnly="1"></DropDownList>', []),
+        )
+        for index, (extra, expected_choices) in enumerate(bodies):
+            with self.subTest(index=index):
+                standalone = self.root / f"ro_{index}.ct"
+                standalone.write_text(
+                    '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+                    f'<CheatEntry><ID>6400</ID><Description>RO View</Description>'
+                    f'<VariableType>Byte</VariableType><Address>1090</Address>'
+                    f'{extra}</CheatEntry>'
+                    '</CheatEntries></CheatTable>', encoding="utf-8")
+                plan = compile_table(standalone, "FixtureTarget.exe")
+                entry = plan["entries"][0]
+                self.assertTrue(entry["supported"], entry["reason"])
+                self.assertTrue(entry["dropdown"]["read_only"])
+                self.assertEqual(entry["dropdown"]["choices"], expected_choices)
+                validate_plan(plan)
+                validate_runtime_plan(plan)
+                engine = TrainerEngine(plan, state_dir=self.root / f"state_ro{index}",
+                                       process_lock_dir=self.root / f"shared_ro{index}",
+                                       memory_factory=lambda name: self.memory,
+                                       hook_coordinator=self.coordinator)
+                self.addCleanup(engine.close)
+                engine.poll()
+                before = list(self.memory.writes)
+                writable_literals = [c["value"] for c in expected_choices
+                                     if "writable" not in c
+                                     and c.get("separator") is not True]
+                if not writable_literals:
+                    # The writable set is empty (display rows only), so
+                    # every write is refused against it.
+                    with self.assertRaisesRegex(NativeRuntimeError,
+                                                "supplied list"):
+                        engine.set_value(6400, "1")
+                else:
+                    # A value outside the writable set is still refused.
+                    with self.assertRaisesRegex(NativeRuntimeError,
+                                                "supplied list"):
+                        engine.set_value(6400, "0")
+                    # The writable literal still writes byte-exactly.
+                    engine.set_value(6400, writable_literals[0])
+                    self.assertEqual(self.memory.read(0x1090, 1),
+                                     bytes([int(writable_literals[0]) & 0xFF]))
+                # The sentinel literal itself is not a byte at all and is
+                # refused at parse time.
+                with self.assertRaisesRegex(NativeRuntimeError,
+                                            "Enter a whole decimal number"):
+                    engine.set_value(6400, "??")
+
+    def test_display_sentinel_rows_are_never_writable_on_read_only_lists(self):
+        # RT-4.4 (O8): the '??' sentinel stays out of the writable set even
+        # when sibling choices are writable literals.
+        standalone = self.root / "sentinel.ct"
+        standalone.write_text(
+            '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+            '<CheatEntry><ID>6500</ID><Description>Sentinel</Description>'
+            '<VariableType>Float</VariableType><Address>1090</Address>'
+            '<DropDownList ReadOnly="1">\n0:None\n??:Unknown\n</DropDownList>'
+            '</CheatEntry>'
+            '</CheatEntries></CheatTable>', encoding="utf-8")
+        plan = compile_table(standalone, "FixtureTarget.exe")
+        entry = plan["entries"][0]
+        self.assertTrue(entry["supported"], entry["reason"])
+        self.assertEqual(entry["dropdown"]["choices"],
+                         [{"value": "0", "description": "None"},
+                          {"value": "??", "description": "Unknown",
+                           "writable": False}])
+        validate_plan(plan)
+        validate_runtime_plan(plan)
+        engine = TrainerEngine(plan, state_dir=self.root / "state_sentinel",
+                               process_lock_dir=self.root / "shared_sentinel",
+                               memory_factory=lambda name: self.memory,
+                               hook_coordinator=self.coordinator)
+        self.addCleanup(engine.close)
+        engine.poll()
+        before = list(self.memory.writes)
+        # The sentinel literal itself is not a finite number; it is
+        # refused at parse time and never treated as a selectable row.
+        with self.assertRaisesRegex(NativeRuntimeError,
+                                    "Enter a finite decimal number"):
+            engine.set_value(6500, "??")
+        # A value outside the writable choice set is refused by the
+        # read-only allowed-set check; the display row is not in it.
+        with self.assertRaisesRegex(NativeRuntimeError,
+                                    "supplied list"):
+            engine.set_value(6500, "0.5")
+        self.assertEqual(self.memory.writes, before)
+        # The one writable literal still writes byte-exactly.
+        engine.set_value(6500, "0")
+        self.assertEqual(self.memory.read(0x1090, 4), b"\x00\x00\x00\x00")
+        self.assertEqual(self.memory.writes[len(before):],
+                         [(0x1090, b"\x00\x00\x00\x00")])
+        # A plain writable Float record's sentinel stays a compile refusal.
+        writable = self.root / "sentinel_writable.ct"
+        writable.write_text(
+            '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+            '<CheatEntry><ID>6600</ID><Description>Sentinel W</Description>'
+            '<VariableType>Float</VariableType><Address>1090</Address>'
+            '<DropDownList>\n0:None\n??:Unknown\n</DropDownList>'
+            '</CheatEntry>'
+            '</CheatEntries></CheatTable>', encoding="utf-8")
+        blocked = compile_table(writable, "FixtureTarget.exe")["entries"][0]
+        self.assertFalse(blocked["supported"])
+        self.assertEqual(blocked["reason"],
+                         "Dropdown contains an unsupported value expression.")
+        self.assertEqual(self.memory.writes[len(before):],
+                         [(0x1090, b"\x00\x00\x00\x00")])
 
 
 if __name__ == "__main__":

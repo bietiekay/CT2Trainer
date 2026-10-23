@@ -483,18 +483,36 @@ class NativeCompilerTests(unittest.TestCase):
             "Custom value type 'GhostType' has no static definition; blocked "
             "until a converter/write gate exists (AP-08.7).")
 
-    def test_empty_and_expression_readonly_dropdown_blocked(self):
+    def test_empty_and_unparseable_readonly_dropdowns_stage_as_display_views(self):
+        # RT-4.4 (O26/O8): a read-only list without writable choices no
+        # longer blocks the record.  '*' placeholders are dropped and an
+        # unparseable literal is staged as a non-writable display row.
         body = value_record(0, extra='<DropDownList ReadOnly="1">*:None</DropDownList>') + value_record(1, extra='<DropDownList ReadOnly="1">1+2:Expression</DropDownList>')
-        self.assertEqual(self.compile(body)["counts"]["blocked"], 2)
+        plan = self.compile(body)
+        self.assertEqual(plan["counts"]["blocked"], 0)
+        self.assertEqual(plan["entries"][0]["dropdown"],
+                         {"choices": [], "read_only": True})
+        self.assertEqual(plan["entries"][1]["dropdown"],
+                         {"choices": [{"value": "1+2", "description": "Expression",
+                                       "writable": False}],
+                          "read_only": True})
+        validate_plan(plan)
+        validate_runtime_plan(plan)
 
     def test_safe_dropdown_choices_preserve_value_and_description(self):
         plan = self.compile(value_record(0, extra='<DropDownList ReadOnly="1">*:Placeholder\n1:One\n2:Two</DropDownList>'))
         self.assertEqual(plan["entries"][0]["dropdown"], {"read_only": True, "choices": [{"value": "1", "description": "One"}, {"value": "2", "description": "Two"}]})
 
     def test_native_dropdown_range_and_signed_defaults(self):
+        # RT-4.4 (O6): integer width overflow no longer blocks the record;
+        # the write truncates to the low width bits (CE SetValue
+        # typed-pointer store parity).  A hex-mode record still requires
+        # hex literals, so the negative decimal choice stays blocked.
         body = value_record(0, value_type="Byte", extra='<DropDownList>256:Overflow</DropDownList>') + value_record(1, extra='<DropDownList>-1:Negative without signed</DropDownList>') + value_record(2, extra='<ShowAsSigned>1</ShowAsSigned><DropDownList>-1:Signed</DropDownList>') + value_record(3, extra='<ShowAsSigned>1</ShowAsSigned><ShowAsHex>1</ShowAsHex><DropDownList>-1:Negative hex</DropDownList>')
         plan = self.compile(body)
-        self.assertEqual([entry["supported"] for entry in plan["entries"]], [False, False, True, False])
+        self.assertEqual([entry["supported"] for entry in plan["entries"]], [True, True, True, False])
+        self.assertEqual(plan["entries"][3]["reason"],
+                         "Dropdown contains an unsupported value expression.")
         self.assertEqual(plan["numeric_policy"]["hexadecimal"], "unsigned-bit-pattern")
 
     def test_byte_arrays_and_binary_fields_compile_explicit_value_profiles(self):
@@ -586,13 +604,14 @@ class NativeCompilerTests(unittest.TestCase):
 
     def test_profiles_refuse_linked_expression_wildcard_and_numeric_array_dropdowns(self):
         # WP-27: linked dropdowns work for profile value records; the last
-        # case now refuses only because the borrowed choice (5) is outside
+        # case now refuses because the borrowed choice (5) is outside
         # the linked bit field's range (WP-34 per-choice refusal).
+        # RT-4.4 (O26): the placeholder-only RO case moved to
+        # test_read_only_placeholder_only_list_stages_an_empty_view.
         cases = (
             ("Array of byte", '<ByteLength>2</ByteLength><DropDownList>12:Number</DropDownList>'),
             ("Array of byte", '<ByteLength>2</ByteLength><DropDownList>01 ??:Wildcard</DropDownList>'),
             ("Array of byte", '<ByteLength>2</ByteLength><DropDownList>01 02+1:Expression</DropDownList>'),
-            ("Array of byte", '<ByteLength>2</ByteLength><DropDownList ReadOnly="1">*:Placeholder</DropDownList>'),
             ("Binary", '<BitStart>0</BitStart><BitLength>2</BitLength><DropDownList>1+1:Expression</DropDownList>'),
             ("Binary", '<BitStart>0</BitStart><BitLength>2</BitLength><DropDownListLink>Value 1</DropDownListLink>'),
         )
@@ -601,6 +620,16 @@ class NativeCompilerTests(unittest.TestCase):
                 entry = self.compile(value_record(0, value_type=variable_type, extra=properties) + value_record(1, extra='<DropDownList>5:Big</DropDownList>'))["entries"][0]
                 self.assertFalse(entry["supported"])
                 self.assertNotIn("value_profile", entry)
+
+    def test_read_only_placeholder_only_list_stages_an_empty_view(self):
+        # RT-4.4 (O26): a read-only list whose only row is the '*'
+        # placeholder stages as an empty display view; the record keeps
+        # its own value semantics and stays supported.
+        entry = self.compile(value_record(0, value_type="Array of byte",
+                                          extra='<ByteLength>2</ByteLength><DropDownList ReadOnly="1">*:Placeholder</DropDownList>'))["entries"][0]
+        self.assertTrue(entry["supported"], entry["reason"])
+        self.assertIn("value_profile", entry)
+        self.assertEqual(entry["dropdown"], {"choices": [], "read_only": True})
 
     def test_cross_record_dropdown_link_borrows_choices_and_records_target(self):
         body = (value_record(1, extra='<DropDownList>0:Off\n1:On\n2:Both</DropDownList>')

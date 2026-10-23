@@ -587,11 +587,16 @@ class NativeNumericTests(unittest.TestCase):
             entry = self.entry(kind)
             maximum = (1 << size * 8) - 1
             self.assertEqual(format_value(entry, parse_value(entry, str(maximum))), str(maximum))
-            with self.assertRaises(NativeRuntimeError):
-                parse_value(entry, str(maximum + 1))
+            # RT-4.4 (O6): out-of-width literals store the low width bits
+            # (CE SetValue typed-pointer store parity); no range refusal.
+            self.assertEqual(parse_value(entry, str(maximum + 1)), b"\x00" * size)
             entry["show_as_signed"] = True
             minimum = -(1 << (size * 8 - 1))
             self.assertEqual(format_value(entry, parse_value(entry, str(minimum))), str(minimum))
+            self.assertEqual(
+                format_value(entry, parse_value(entry, str(minimum - 1))),
+                str((minimum - 1) & ((1 << size * 8) - 1)),
+            )
             entry["show_as_hex"] = True
             self.assertEqual(format_value(entry, parse_value(entry, format(maximum, "X"))), format(maximum, "X"))
             with self.assertRaises(NativeRuntimeError):
