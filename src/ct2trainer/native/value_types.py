@@ -78,12 +78,28 @@ def prepare_value_profile(variable_type: str, xml_properties: Mapping[str, Any])
         try:
             properties = dict(xml_properties)
             display = {key: _flag(properties, key) for key in ('ShowAsHex','ShowAsSigned','ShowAsBinary')}
-            if display['ShowAsHex'] or display['ShowAsBinary']:
+            if display['ShowAsHex']:
+                # RT-4.4 (O7): a ShowAsHex string record exposes the bounded
+                # byte buffer of the string as a byte-array value.  The
+                # canonical length bounds of the string codec still apply
+                # (Length, Unicode, CodePage, ZeroTerminate); the write path
+                # accepts exact hex byte sequences over the full buffer and
+                # the display is the raw byte view.  The literal-text codec
+                # and its encoding rules do not apply to this presentation.
+                base = prepare(properties)
+                result = {'kind': 'byte_array', 'size': base['size'],
+                          'byte_order': 'address', 'display': 'hex_bytes',
+                          'signed': False, 'actionable': base['actionable'],
+                          'read_only': not base['actionable'],
+                          'reason': ('Zero-length string is a non-actionable table placeholder.'
+                                     if not base['actionable'] else '')}
+                return {'schema': SCHEMA, 'variable_type': 'String',
+                        'properties': {**base['properties'], **display}, **result}
+            if display['ShowAsBinary']:
                 # WP-34: name the display flag so the catalog reason reads as
                 # a hex-string byte-view boundary, not a generic display rule.
-                flag = 'ShowAsHex' if display['ShowAsHex'] else 'ShowAsBinary'
                 raise ValueTypeError('Strings require literal text display; the '
-                                     + flag + ' byte view is unsupported.')
+                                     + 'ShowAsBinary byte view is unsupported.')
             result = prepare(properties)
             return {**result, 'schema':SCHEMA, 'variable_type':'String',
                     'properties':{**result['properties'], **display},

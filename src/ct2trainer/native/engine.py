@@ -508,7 +508,10 @@ def validate_plan(plan: dict) -> None:
             dropdown = entry.get("dropdown")
             if not isinstance(dropdown, dict) or not isinstance(dropdown.get("choices"), list) or type(dropdown.get("read_only")) is not bool:
                 raise NativeRuntimeError("Invalid numeric dropdown")
-            writable = 0
+            # RT-4.4 (O6/O8/O26): mirror the compiler validator with the
+            # dual-base literal classification; display-only rows and
+            # expression choices carry their own markers, and a read-only
+            # list may stage zero writable choices.
             for choice in dropdown["choices"]:
                 if not isinstance(choice, dict) or not isinstance(choice.get("description"), str):
                     raise NativeRuntimeError("Invalid dropdown choice")
@@ -520,11 +523,34 @@ def validate_plan(plan: dict) -> None:
                     continue
                 if "separator" in choice:
                     raise NativeRuntimeError("Dropdown separator marker must be true")
-                snapshot = bytes(entry['value_profile']['size']) if 'value_profile' in entry else None
-                parse_value(dict(entry, dropdown=None), choice.get("value"), snapshot)
-                writable += 1
-            if dropdown["read_only"] and writable == 0:
-                raise NativeRuntimeError("Read-only dropdown needs concrete choices")
+                if choice.get("writable") is False:
+                    # RT-4.4 (O8/O26): display-only choice staged by a
+                    # read-only (description-only) list; never selectable.
+                    if not dropdown["read_only"]:
+                        raise NativeRuntimeError("Display-only dropdown choices require a read-only dropdown.")
+                    continue
+                if "writable" in choice:
+                    raise NativeRuntimeError("Dropdown writable marker must be false.")
+                if choice.get("expression") is True:
+                    # RT-4.4 (O8): bracketed expression choice; syntax is
+                    # plan-checked, semantics resolve at write time.
+                    if 'value_profile' in entry:
+                        raise NativeRuntimeError("Dropdown expression choices require a simple numeric record.")
+                    try:
+                        from .address_expression import parse_expression, AddressExpressionError
+                        parse_expression(choice.get("value", ""))
+                    except AddressExpressionError as exc:
+                        raise NativeRuntimeError("Dropdown expression choice is not a valid address expression.") from exc
+                    continue
+                if "expression" in choice:
+                    raise NativeRuntimeError("Dropdown expression marker must be true.")
+                from .compiler import _dropdown_choice_status
+                status, _refusal = _dropdown_choice_status(
+                    choice.get("value"), entry["variable_type"],
+                    entry["show_as_hex"], entry.get("show_as_signed"),
+                    entry.get("value_profile"))
+                if status == "refusal":
+                    raise NativeRuntimeError("Dropdown values must be exact supported literals.")
     # WP-37: mirror the compiler gate — the external-ownership map is
     # optional on schema 2 and must name supported script providers that
     # actually carry the symbol before any runtime use.  (Reuses the WP-38
@@ -690,7 +716,10 @@ def parse_value(entry: dict, text: str, current_bytes: bytes | None = None) -> b
         if dropdown.get('read_only') and result not in {
                 parse_profile_value(entry['value_profile'], item['value'], current_bytes)
                 for item in dropdown.get('choices', [])
-                if item.get('separator') is not True}:  # WP-24: separator rows are display-only
+                if item.get('separator') is not True  # WP-24: separator rows are display-only
+                and item.get('writable') is not False  # RT-4.4 (O8/O26): display-only rows
+                and item.get('expression') is not True  # RT-4.4 (O8): expression rows
+                }:
             raise NativeRuntimeError('Choose a value from the supplied list')
         return result
     """Parse complete numeric literals, never expressions or executable input."""
@@ -700,20 +729,26 @@ def parse_value(entry: dict, text: str, current_bytes: bytes | None = None) -> b
     kind = entry["variable_type"]
     if kind in _INTEGER_TYPES:
         size = _INTEGER_TYPES[kind]
-        signed = bool(entry.get("show_as_signed")) and not entry.get("show_as_hex", False)
         if entry.get("show_as_hex", False):
             if not re.fullmatch(r"(?:0[xX])?[0-9a-fA-F]+", literal):
                 raise NativeRuntimeError("Enter hexadecimal digits only")
             number = int(literal.removeprefix("0x").removeprefix("0X"), 16)
         else:
-            if not re.fullmatch(r"[+-]?[0-9]+", literal):
+            # RT-4.4 (O6/O8): decimal mode accepts a hex literal of the
+            # other base as well (corpus P4G: hex skill IDs listed on a
+            # decimal-mode record), mirroring the compiler's dual-base
+            # choice classification; hex mode stays hex-only.
+            if re.fullmatch(r"[+-]?[0-9]+", literal) is not None:
+                number = int(literal, 10)
+            elif re.fullmatch(r"(?:0[xX])?[0-9A-Fa-f]+", literal) is not None:
+                number = int(literal.removeprefix("0x").removeprefix("0X"), 16)
+            else:
                 raise NativeRuntimeError("Enter a whole decimal number")
-            number = int(literal, 10)
-        minimum = -(1 << (size * 8 - 1)) if signed else 0
-        maximum = (1 << (size * 8 - int(signed))) - 1
-        if not minimum <= number <= maximum:
-            raise NativeRuntimeError(f"Value must be between {minimum} and {maximum}")
-        result = number.to_bytes(size, "little", signed=signed)
+        # RT-4.4 (O6): out-of-width integer literals are truncated at
+        # write time, matching the CE typed-pointer store (SetValue
+        # StrToQWordEx low-width bits); the old "Value must be between"
+        # refusal is gone for integer writes.
+        result = (number & ((1 << (size * 8)) - 1)).to_bytes(size, "little")
     elif kind in _FLOAT_TYPES:
         if entry.get("show_as_hex", False):
             # WP-33: fixed-size raw IEEE-754 bit-pattern edit.  The literal
@@ -750,10 +785,17 @@ def parse_value(entry: dict, text: str, current_bytes: bytes | None = None) -> b
         raise NativeRuntimeError("Unsupported numeric type")
     dropdown = entry.get("dropdown") or {}
     if dropdown.get("read_only"):
+        # RT-4.4 (O8/O26): display-only rows (writable: False) and
+        # bracketed expression choices never enter the allowed set; an
+        # empty writable set refuses every write (the O26 contract).
         allowed = set()
         for choice in dropdown.get("choices", []):
             if choice.get("separator") is True:
                 continue  # WP-24 separator rows are display-only; never selectable.
+            if choice.get("writable") is False:
+                continue  # RT-4.4 (O8/O26): display-only row; never selectable.
+            if choice.get("expression") is True:
+                continue  # RT-4.4 (O8): expression choice; resolved in set_value.
             plain = dict(entry, dropdown=None)
             allowed.add(parse_value(plain, choice["value"]))
         if result not in allowed:
@@ -4798,6 +4840,31 @@ class TrainerEngine:
             return self._set_recursive_value(identifier, entry, text)
         bitfield = entry.get('value_profile', {}).get('kind') == 'bitfield'
         string = entry.get('value_profile', {}).get('kind') == 'string'
+        # RT-4.4 (O8): a bracketed dropdown choice is an address
+        # expression; it is resolved against the live symbol table at
+        # write time, mirroring CE, which evaluates such values in the
+        # table's scripting context before the store.  Resolution happens
+        # before any parse or memory access so a failed expression never
+        # touches the target (named refusal, no partial write).
+        if not bitfield and not string:
+            expression_choice = next(
+                (choice for choice in (entry.get("dropdown") or {}).get("choices", [])
+                 if choice.get("expression") is True
+                 and choice.get("value") == str(text).strip()), None)
+            if expression_choice is not None:
+                from .address_expression import (AddressExpressionError,
+                                                 resolve_expression)
+                if self.memory is None:
+                    raise NativeRuntimeError(
+                        "Expression dropdown choices require an attached target.")
+                try:
+                    resolved = resolve_expression(
+                        str(text).strip(), self.memory, self.symbols,
+                        process_name=self.plan["process_name"],
+                        pointer_size=self.memory.pointer_size)
+                except AddressExpressionError as exc:
+                    raise NativeRuntimeError(str(exc)) from exc
+                text = str(resolved)
         raw = None if bitfield else parse_value(entry, text)
         if bitfield:
             parse_value(entry, text, bytes(self._value_size(entry)))

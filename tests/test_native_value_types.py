@@ -187,16 +187,49 @@ class NativeValueTypeTests(unittest.TestCase):
         self.assertTrue(any(a&b for a,b in zip(wide,second)))
 
 
-    def test_string_show_as_hex_and_binary_are_refused_with_named_flag(self):
-        # WP-34: the display flag that triggers the refusal is named so the
-        # catalog reason reads as a hex/binary byte-view boundary.
-        for flag in ('ShowAsHex', 'ShowAsBinary'):
-            with self.subTest(flag=flag), self.assertRaises(ValueError) as caught:
-                prepare_value_profile('String', {'Length': 8, 'ZeroTerminate': 1, flag: 1})
-            self.assertEqual(str(caught.exception),
-                             f'Strings require literal text display; the {flag} byte view is unsupported.')
+    def test_string_show_as_hex_stages_byte_array_and_binary_stays_refused(self):
+        # RT-4.4 (O7): a ShowAsHex string record exposes its bounded byte
+        # buffer as a byte-array value (roadmap O7 row); the literal-text
+        # codec and its encoding rules no longer apply to this view.
+        profile = prepare_value_profile('String', {'Length': 8, 'ZeroTerminate': 1,
+                                                   'ShowAsHex': 1})
+        self.assertEqual(profile['kind'], 'byte_array')
+        self.assertEqual(profile['size'], 8)
+        self.assertEqual(profile['display'], 'hex_bytes')
+        self.assertEqual(profile['byte_order'], 'address')
+        self.assertFalse(profile['signed'])
+        self.assertTrue(profile['actionable'])
+        self.assertFalse(profile['read_only'])
+        self.assertEqual(profile['variable_type'], 'String')
+        self.assertTrue(profile['properties']['ShowAsHex'])
+        self.assertTrue(profile['properties']['ZeroTerminate'])
+        validate_value_profile(profile)
+        # The canonical write literal is exact hex byte pairs over the
+        # full buffer; anything else is refused by the byte-array codec.
+        self.assertEqual(parse_profile_value(profile, '01 02 03 04 05 06 07 08'),
+                         b'\x01\x02\x03\x04\x05\x06\x07\x08')
+        self.assertEqual(format_profile_value(profile, b'\x01\x02\x03\x04\x05\x06\x07\x08'),
+                         '01 02 03 04 05 06 07 08')
+        for text in ('01 02', '01 02 03 04 05 06 07 08 09',
+                     'GG GG GG GG GG GG GG GG', '01 02 03 04 05 06 07', 'hello'):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                parse_profile_value(profile, text)
+        # Unicode sizing still bounds the byte-array span (Length * unit).
+        wide = prepare_value_profile('String', {'Length': 4, 'Unicode': 1, 'ShowAsHex': 1})
+        self.assertEqual(wide['kind'], 'byte_array')
+        self.assertEqual(wide['size'], 8)
+        self.assertEqual(parse_profile_value(wide, '01 02 03 04 05 06 07 08'),
+                         b'\x01\x02\x03\x04\x05\x06\x07\x08')
+        # WP-34 pin: the ShowAsBinary byte view is still refused with the
+        # named flag, byte-identical to the pre-RT-4.4 message.
+        with self.assertRaises(ValueError) as caught:
+            prepare_value_profile('String', {'Length': 8, 'ZeroTerminate': 1,
+                                             'ShowAsBinary': 1})
+        self.assertEqual(str(caught.exception),
+                         'Strings require literal text display; the ShowAsBinary byte view is unsupported.')
         ok = prepare_value_profile('String', {'Length': 8, 'ZeroTerminate': 1,
                                               'ShowAsHex': 0, 'ShowAsBinary': 0})
+        self.assertEqual(ok['kind'], 'string')
         self.assertTrue(ok['actionable'])
 
 
