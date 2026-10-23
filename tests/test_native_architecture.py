@@ -527,6 +527,100 @@ class ArchitectureMemoryTests(unittest.TestCase):
                     ProcessMemoryError, 'native-only fallback'):
                 memory.module('owned.exe')
 
+    def test_transient_invalid_id_snapshot_error_retries_with_backoff_until_success(self):
+        # Field case 2026-10-22 (The Sinking City 2, 0.16.2): the module
+        # snapshot failed with Win32 error 24 (ERROR_INVALID_ID) while the
+        # target was still loading DLLs; the documented remedy is a
+        # bounded retry with backoff.
+        record = (0x100000000, 0x100, r'C:\owned.exe', 0x8664, 0x20b)
+        memory = self.modules([record], pointer_size=8)
+        original = memory._kernel
+        snapshot_calls = []
+        def snapshot(flags, pid):
+            snapshot_calls.append(flags)
+            if len(snapshot_calls) < 3:
+                return ctypes.c_void_p(-1).value
+            return 7
+        memory._kernel = SimpleNamespace(
+            CreateToolhelp32Snapshot=Mock(side_effect=snapshot),
+            Module32FirstW=original.Module32FirstW,
+            Module32NextW=original.Module32NextW,
+            CloseHandle=original.CloseHandle)
+        with patch('ctypes.get_last_error', side_effect=[24, 24, 18], create=True), \
+             patch('time.sleep') as sleep:
+            self.assertEqual(memory.module('owned.exe'), (0x100000000, 0x100))
+        self.assertEqual(snapshot_calls, [0x08 | 0x10, 0x08 | 0x10, 0x08 | 0x10])
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [0.05, 0.1])
+        memory._kernel.CloseHandle.assert_called_once_with(7)
+
+    def test_bad_length_snapshot_error_retries_until_success(self):
+        # ERROR_BAD_LENGTH (1116) is the documented transient
+        # module-snapshot code; the pre-fix constant was mislabeled as 24,
+        # so the real code failed immediately without retrying.
+        record = (0x100000000, 0x100, r'C:\owned.exe', 0x8664, 0x20b)
+        memory = self.modules([record], pointer_size=8)
+        original = memory._kernel
+        snapshot_calls = []
+        def snapshot(flags, pid):
+            snapshot_calls.append(flags)
+            if len(snapshot_calls) == 1:
+                return ctypes.c_void_p(-1).value
+            return 7
+        memory._kernel = SimpleNamespace(
+            CreateToolhelp32Snapshot=Mock(side_effect=snapshot),
+            Module32FirstW=original.Module32FirstW,
+            Module32NextW=original.Module32NextW,
+            CloseHandle=original.CloseHandle)
+        with patch('ctypes.get_last_error', side_effect=[1116, 18], create=True), \
+             patch('time.sleep') as sleep:
+            self.assertEqual(memory.module('owned.exe'), (0x100000000, 0x100))
+        self.assertEqual(snapshot_calls, [0x08 | 0x10, 0x08 | 0x10])
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [0.05])
+        memory._kernel.CloseHandle.assert_called_once_with(7)
+
+    def test_persistent_transient_snapshot_exhausts_retries_with_named_error(self):
+        from ct2trainer.native.memory import _SNAPSHOT_MAX_ATTEMPTS, ProcessMemoryError
+        record = (0x100000000, 0x100, r'C:\owned.exe', 0x8664, 0x20b)
+        memory = self.modules([record], pointer_size=8)
+        snapshot_calls = []
+        def snapshot(flags, pid):
+            snapshot_calls.append(flags)
+            return ctypes.c_void_p(-1).value
+        memory._kernel = SimpleNamespace(
+            CreateToolhelp32Snapshot=Mock(side_effect=snapshot),
+            Module32FirstW=Mock(), Module32NextW=Mock(),
+            CloseHandle=Mock(return_value=True))
+        with patch('ctypes.get_last_error', return_value=24, create=True), \
+             patch('time.sleep'):
+            with self.assertRaisesRegex(ProcessMemoryError, 'native-only fallback'):
+                memory.module('owned.exe')
+        self.assertEqual(len(snapshot_calls), 2 * _SNAPSHOT_MAX_ATTEMPTS)
+        self.assertEqual(snapshot_calls[0], 0x08 | 0x10)
+        self.assertEqual(snapshot_calls[_SNAPSHOT_MAX_ATTEMPTS], 0x08)
+
+    def test_x86_target_falls_back_to_wow64_only_flags(self):
+        # A 32-bit (WOW64) target lists its modules under
+        # TH32CS_SNAPMODULE32 only, so the architecture-only retry must
+        # use 0x10, not the 64-bit 0x08.
+        record = (0x1000, 0x100, r'C:\owned.exe', 0x14c, 0x10b)
+        memory = self.modules([record], pointer_size=4)
+        original = memory._kernel
+        snapshot_calls = []
+        def snapshot(flags, pid):
+            snapshot_calls.append(flags)
+            if flags == (0x08 | 0x10):
+                return ctypes.c_void_p(-1).value
+            return 7
+        memory._kernel = SimpleNamespace(
+            CreateToolhelp32Snapshot=Mock(side_effect=snapshot),
+            Module32FirstW=original.Module32FirstW,
+            Module32NextW=original.Module32NextW,
+            CloseHandle=original.CloseHandle)
+        with patch('ctypes.get_last_error', side_effect=[299, 18, 18], create=True):
+            self.assertEqual(memory.module('owned.exe'), (0x1000, 0x100))
+        self.assertEqual(snapshot_calls, [0x08 | 0x10, 0x10])
+        memory._kernel.CloseHandle.assert_called_once_with(7)
+
     def test_module_scan_time_bound_closes_snapshot_without_truncated_success(self):
         from ct2trainer.native.memory import ProcessMemoryError
         memory = self.modules([(0x1000, 0x100, r'C:\owned.exe', 0x14c, 0x10b)])

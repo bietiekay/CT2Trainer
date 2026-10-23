@@ -112,6 +112,27 @@ game-facing action.
   (`tests/test_native_recovery.py`); local suite 3,414 OK / 25 expected
   skips; build pending (patch bump to 0.16.2 under the versioning
   rule).
+- 0.16.3 field-fix round (2026-10-22, branch
+  `native-0.16.3-sc2-field`): Sinking City 2 activation failure from
+  the 0.16.2 field test (debug log 2026-10-22, trainer
+  `4b6b2825f4296e83`, log `The Sinking City 2 (0.16-4).ct2debug.log`,
+  x64 controller / x64 target): (a) recovery brick - the 0.16.2 fix
+  added only `captured_placeholders`; the sibling writer field
+  `value_data_ranges` on every allocation entry (persisted since
+  WP-47/55 `ee07b60`) still failed `_hook()` schema validation, so
+  every allocation-bearing journal blocked recovery behind the stale
+  `state.lock`; it is now an optional field validated with the
+  writer-side contract (<=4096 exact {address,size} spans,
+  in-allocation bounds, no duplicate span). (b) module-snapshot retry -
+  `ERROR_BAD_LENGTH` was mislabeled as 24 (real 1116; 24 =
+  ERROR_INVALID_ID, the transient code observed 9 ms after attach while
+  the game was still loading DLLs); now a bounded 8-attempt
+  exponential-backoff retry on {1116, 24, 119}, architecture-aware
+  native-only fallback flag (0x10 for 32-bit targets), both failure
+  codes in the dual-failure message. +4 (`tests/test_native_architecture.py`)
+  +2 (`tests/test_native_recovery.py`) regression tests; local suite
+  3,421 OK / 25 expected skips; built as 0.16.3 (VERSION + __version__
+  in the same change per the versioning rule).
 
 ## Historical evidence
 
