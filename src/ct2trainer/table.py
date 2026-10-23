@@ -21,9 +21,13 @@ MAX_ENTRY_DEPTH = 64
 # bounded per record (the plan validators enforce the same bound).
 MAX_HOTKEYS_PER_RECORD = 16
 HOTKEY_ACTION_DEFAULT = "Toggle Activation"
-# Legacy pre-XML binary tables (CE 5.x era) start with this magic header;
-# they are refused with a named, distinct error (WP-25).
-LEGACY_BINARY_CT_HEADER = b"CHEATENGINE\t"
+# Legacy pre-XML binary tables (CE 5.x era) start with this 11-byte magic
+# header.  WP-25 detected the 12-byte accidental "CHEATENGINE" + tab prefix
+# (byte 12 is the low byte of the little-endian format-version DWORD, which
+# is a tab for version 9) and refused it with a named error.  RT-3 detects
+# the true 11-byte magic and parses the legacy layout through the
+# clean-room converter in ct2trainer.legacy_ct.
+LEGACY_BINARY_CT_HEADER = b"CHEATENGINE"
 # Newest table version verified in the field.  CE 7.5 (the behavior
 # reference) writes 45 (OpenSave.pas _CurrentTableVersion); 46 is issued
 # by newer CE builds and is field-verified to load and compile unchanged
@@ -204,6 +208,12 @@ class Table:
     sections: tuple[SectionSummary, ...]
     warnings: tuple[str, ...]
     user_defined_symbols: tuple[UserDefinedSymbol, ...] = ()
+    # RT-3: for legacy binary sources this carries the clean-room converted
+    # XML document that the XML pipeline actually parsed; the original
+    # binary bytes remain the source identity (source/source_sha256).
+    # XML sources keep None.  Not serialized by to_dict(): it is derivable
+    # from the source bytes through ct2trainer.legacy_ct.
+    converted_xml: bytes | None = None
 
     @property
     def counts(self) -> dict[str, int]:
@@ -457,12 +467,15 @@ def read_table(path: str | Path) -> Table:
     """Parse a .CT without evaluating any embedded Lua or Auto Assembler.
 
     DTDs and entity declarations are refused.  Legacy pre-XML binary tables
-    (``CHEATENGINE\\t`` magic header) are refused with a named error that is
-    distinct from the malformed-XML reason.  Duplicate CheatEntry IDs are
-    tolerated (CE loads them without any check): the first occurrence owns
-    the ID and later duplicates are dropped from the table with a per-ID
-    warning, because the plan, the by_id map and selection persistence are
-    ID-keyed and require exactly one addressable record per ID.
+    (``CHEATENGINE`` magic header, CE 5.x era) are parsed by the clean-room
+    reader in :mod:`ct2trainer.legacy_ct` and loaded through the standard
+    XML pipeline; unparseable legacy input is still refused with a named
+    error that is distinct from the malformed-XML reason.  Duplicate
+    CheatEntry IDs are tolerated (CE loads them without any check): the
+    first occurrence owns the ID and later duplicates are dropped from the
+    table with a per-ID warning, because the plan, the by_id map and
+    selection persistence are ID-keyed and require exactly one addressable
+    record per ID.
     """
     source = Path(path).expanduser().resolve()
     if source.suffix.lower() != ".ct":
@@ -475,9 +488,16 @@ def read_table(path: str | Path) -> Table:
         raise TableError(f"Table exceeds {MAX_TABLE_BYTES} Bytes.")
     data = source.read_bytes()
     if data.startswith(LEGACY_BINARY_CT_HEADER):
-        raise TableError(
-            "Legacy binary CT table (CHEATENGINE header): not supported — "
-            "XML .CT expected.")
+        # RT-3: the legacy binary layout is parsed and converted
+        # clean-room; the resulting standard XML document flows through
+        # the unchanged XML pipeline below.
+        from .legacy_ct import legacy_ct_to_table
+        return legacy_ct_to_table(source, data)
+    return _parse_xml_table(source, data)
+
+
+def _parse_xml_table(source: Path, data: bytes) -> Table:
+    """The XML .CT pipeline (bounded, DTD-free), dispatched by read_table."""
     if re.search(rb"<!\s*(DOCTYPE|ENTITY)\b", data, re.IGNORECASE):
         raise TableError("DTD/ENTITY is not allowed in .CT input.")
     try:

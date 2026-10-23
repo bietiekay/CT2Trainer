@@ -1086,7 +1086,10 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     data = table.source.read_bytes()
     if len(data) > MAX_TABLE_BYTES or sha256(data).hexdigest() != table.source_sha256:
         raise NativeCompileError("CT source changed during compilation.")
-    root = ET.fromstring(data)  # Identical to the bounded, DTD-free reader input.
+    # RT-3: legacy binary sources are not XML; the clean-room conversion
+    # (carried on the table) is the bounded, DTD-free parser input, while
+    # XML sources keep the raw file bytes.
+    root = ET.fromstring(table.converted_xml if table.converted_xml is not None else data)
     nodes, scripts = _entry_node_maps(root)
     # Table-level nested-assembly label registry: `name:` definitions inside
     # AssemblerScript records are shared candidates for autoAssemble()/

@@ -1,10 +1,10 @@
-"""WP-25 table robustness: keep-first duplicate CheatEntry IDs + legacy binary CT detection.
+"""WP-25 table robustness: keep-first duplicate CheatEntry IDs + legacy binary CT handling.
 
 Fixture shapes mirror the planned case-19 corpus table (duplicate-ID pair where
-one side is a group with children; a byte file with the binary ``CHEATENGINE\\t``
-magic header) on the owned module token ``ct2synth19.exe``.  The pinned corpus
-case itself is added by the root integrator; the fixtures below stay inside
-this test module.
+one side is a group with children; a byte file with the 11-byte ``CHEATENGINE``
+legacy binary magic header) on the owned module token ``ct2synth19.exe``.  The
+pinned corpus case itself is added by the root integrator; the fixtures below
+stay inside this test module.
 
 Keep-first model (plan design note, decided 2026-10-13): the first occurrence
 of an ID becomes the plan entry; later duplicates are dropped from the plan
@@ -12,8 +12,16 @@ of an ID becomes the plan entry; later duplicates are dropped from the plan
 duplicated ID.  Children of a dropped duplicate stay addressable at the
 duplicate's own tree position (re-parented to the duplicate's parent), so the
 plan total always equals the number of unique source IDs (gate:1 invariant
-preserved).  Malformed XML without the binary header keeps its existing
+preserved).  Malformed XML without the legacy binary magic keeps its existing
 ``Invalid CT XML: ...`` reason byte-identically.
+
+Since RT-3, files with the legacy binary magic load through the clean-room
+reader (``ct2trainer.legacy_ct``) when parseable; unparseable legacy input is
+refused with the named ``LegacyCTError`` (a ``TableError`` subclass), which
+stays distinct from the ``Invalid CT XML`` reason.  The 96-byte fixture below
+decodes as a version-9 table with 10 records whose bytes run out inside
+record 2, so it pins the named truncation refusal; full happy-path coverage
+lives in ``test_native_legacy_ct.py``.
 """
 
 from __future__ import annotations
@@ -23,6 +31,7 @@ import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from ct2trainer.legacy_ct import LegacyCTError
 from ct2trainer.native.compiler import NativeCompileError, compile_table
 from ct2trainer.native.engine import validate_plan as validate_runtime_plan
 from ct2trainer.table import TableError, read_table
@@ -30,6 +39,12 @@ from ct2trainer.table import TableError, read_table
 
 PROCESS = "ct2synth19.exe"
 
+# 96 bytes: 11-byte CHEATENGINE magic, version 9 (byte 11 is 0x09), record
+# count 10 (byte 15 is 0x0A), then record 0 (description "Unlimited" padded
+# to 15 bytes, zero address/flags) and record 1 (all-zero fields).  The
+# parser reaches record 2's 4-byte description length at offset 94 with only
+# 2 bytes left, so this fixture pins the named truncation refusal.  Full
+# happy-path coverage of the legacy format lives in test_native_legacy_ct.py.
 BINARY_HEADER_BODY = (
     b"CHEATENGINE\t\x00\x00\x00\n\x00\x00\x00\x0f"
     b"\x00\x00\x00Unlimited" + b"\x00" * 64
@@ -41,7 +56,8 @@ MISFORMED_XML = (
 )
 
 LEGACY_BINARY_MSG = (
-    "Legacy binary CT table (CHEATENGINE header): not supported — XML .CT expected."
+    "Legacy binary CT table is truncated: record 2 description length "
+    "needs 4 byte(s) at offset 94 but only 2 remain."
 )
 
 
@@ -311,27 +327,46 @@ class DuplicateIdKeepFirstTests(unittest.TestCase):
 
 
 class LegacyBinaryTableTests(unittest.TestCase):
-    """Files starting with the CHEATENGINE\\t magic are refused with a named error."""
+    """The CHEATENGINE magic dispatches to the legacy binary reader.
+
+    The 96-byte fixture below decodes as a version-9 table with 10 records
+    whose bytes run out inside record 2, so it pins the named truncation
+    refusal (``LegacyCTError``), which stays distinct from the
+    ``Invalid CT XML`` reason of the XML path.  Fully valid legacy tables
+    are covered by ``test_native_legacy_ct.py``.
+    """
 
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory(prefix="ct2-wp25-bin-")
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
 
-    def test_binary_header_gets_named_distinct_error(self):
+    def test_truncated_legacy_binary_gets_named_distinct_error(self):
         path = self.root / "legacy.ct"
         path.write_bytes(BINARY_HEADER_BODY)
-        with self.assertRaises(TableError) as ctx:
+        with self.assertRaises(LegacyCTError) as ctx:
             read_table(path)
         self.assertEqual(str(ctx.exception), LEGACY_BINARY_MSG)
         self.assertFalse(str(ctx.exception).startswith("Invalid CT XML"))
 
-    def test_binary_header_refusal_survives_compile_table(self):
+    def test_truncated_legacy_binary_refusal_survives_compile_table(self):
         path = self.root / "legacy.ct"
         path.write_bytes(BINARY_HEADER_BODY)
-        with self.assertRaises(TableError) as ctx:
+        with self.assertRaises(LegacyCTError) as ctx:
             compile_table(str(path), PROCESS)
         self.assertEqual(str(ctx.exception), LEGACY_BINARY_MSG)
+
+    def test_version_below_six_is_refused_as_too_old(self):
+        path = self.root / "legacy-old.ct"
+        path.write_bytes(
+            b"CHEATENGINE" + (5).to_bytes(4, "little") + (1).to_bytes(4, "little"))
+        with self.assertRaises(LegacyCTError) as ctx:
+            read_table(path)
+        self.assertEqual(
+            str(ctx.exception),
+            "Legacy binary CT table version 5 is older than 6; "
+            "the pre-converter layout is not supported.",
+        )
 
 
 class MalformedXmlUnchangedTests(unittest.TestCase):
