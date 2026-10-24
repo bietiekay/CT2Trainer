@@ -40,8 +40,9 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-23, 0.16.3 released (build
-`native-20261023T065015Z-afbc3eba` cut from `main` @ `6a5ba63`; previous
+**CT2Trainer (status 2026-10-24, 0.16.4 released (build
+`native-20261024T003853Z-a8cf04fc` cut from `main` @ `988ff8e`; previous
+0.16.3 `native-20261023T065015Z-afbc3eba` @ `6a5ba63`, previous
 0.16.2 `native-20261022T160328Z-0423fb21` @ `68eeb00`, previous
 0.16.1 `native-20261021T161241Z-b0566a25` @ `d1c61f2`, previous
 0.16 field-fix re-cut 2 `native-20261021T123801Z-8c5c4e1e` @ `108170b`,
@@ -49,10 +50,13 @@ re-cut 1 `native-20261020T150115Z-c426fb92` @ `7616edb` and first
 0.16 run `native-20261020T103508Z-0e3f9d90` @ `809666a` superseded) with
 the full Wave 4 feature set, RT-4.1 symbol provider fidelity (catalog
 remeasure 2,698 -> 1,858 blocked of 117,624, zero unexplained supported
-regressions) and the post-release field fixes (WP-58 UI
+regressions), RT-4.4 value semantics (catalog remeasure
+`blocked-catalog-rt44`: 1,858 -> 1,807 blocked of 117,634, zero newly
+blocked rows) and the post-release field fixes (WP-58 UI
 startup crash fix, Sinking City 2 activation-chain runtime evidence,
 state-lock self-repair and reliable restart, SC2 startup-block
-journal-field fix, SC2 activation field fix)
+journal-field fix, SC2 activation field fix, SC2 crash-observability
+field fix)
 on top of the released 0.15 (prefix-cut field fix `d15268a`, part-3
 fast-path fix `d068c44`); Wave 4 of the
 reference-corpus closure cycle complete — all twelve W4 lanes
@@ -171,10 +175,40 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261023T065015Z-afbc3eba` (0.16.3,
-cut from `main` @ `6a5ba63`; in-build suite 3421 OK / 25 regular
+**Latest verified build:** `native-20261024T003853Z-a8cf04fc` (0.16.4,
+cut from `main` @ `988ff8e`; in-build suite 3479 OK / 25 regular
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
-gate; source ZIP `CT2Trainer-0.16.3-source.zip` sha256
+gate; source ZIP `CT2Trainer-0.16.4-source.zip` sha256
+`87e1f448ce3a9b72386b62ffb8c981e451242c3bf88ecb030e9979c29733e47f`
+(13,075,064 bytes), portable ZIP
+`CT2Trainer-0.16.4-windows-portable.zip` sha256
+`ffa08832fe0f6673ef00054c15395990846a67a709a6d19c9e78becad35d6807`
+(28,645,790 bytes)).
+0.16.4 ships the Sinking City 2 trainer-crash-observability field fix
+(0.16.3 field test 2026-10-23: the windowed trainer process died
+silently mid wish-restore - last event the TALENTPTR aobscan at
+18:49:31, zero follow-up events - and the restart was blocked by the
+correct state-lock refusal while the game was still running; every
+Python-level failure path logs an event, so the silent death is a hard
+exit, and the windowed build had no crash observability at all:
+unattached stderr, no excepthook/faulthandler, unguarded Tk poll
+callback) - `TrainerDebugLog.arm_crash_reporting()` installs one-time
+process-wide `sys.excepthook` (`trainer-crashed` JSON event with full
+traceback) and `threading.excepthook` (`trainer-thread-crashed`)
+wrappers plus `faulthandler` on a dedicated append handle independent
+of `close()`, `run_trainer` arms both entry points,
+`TrainerWindow.poll` wraps `engine.poll()` fail-closed
+(`poll-crashed` + engine block + tick continues), and the restore loop
+logs `restore-entry-start` per wish before enable; state-lock
+fail-closed behavior unchanged; regression test
+`tests/test_native_sc2_crash_observability.py` +8) on top of the
+0.16.3 content and the RT-4.4 value-semantics merge (catalog remeasure
+`blocked-catalog-rt44`: 1,858 -> 1,807 blocked of 117,634, zero newly
+blocked rows). Superseded 0.16.3 build:
+`native-20261023T065015Z-afbc3eba` (0.16.3, cut from `main` @ `6a5ba63`;
+in-build suite 3421 OK / 25 regular skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.16.3-source.zip` sha256
 `0b34c4f3797095aefcba66a45d46216596e816817ea1b98208a42a5217df2e5a`
 (13,050,549 bytes), portable ZIP
 `CT2Trainer-0.16.3-windows-portable.zip` sha256

@@ -169,8 +169,13 @@ game-facing action.
   and the restore loop logs `restore-entry-start` per wish before
   enable. State-lock behavior unchanged. +8 regression tests
   (`tests/test_native_sc2_crash_observability.py`); local suite 3,479
-  OK / 25 expected skips; cut as 0.16.4 (build pending; VERSION +
-  __version__ in the same change per the versioning rule).
+  OK / 25 expected skips; cut as 0.16.4 build
+  `native-20261024T003853Z-a8cf04fc` (in-build suite 3,479/25,
+  `ce_inputs: []`, `runtime_unverified` kept per gate; VERSION +
+  __version__ in the same change per the versioning rule; source ZIP
+  sha256 `87e1f448ce3a9b72386b62ffb8c981e451242c3bf88ecb030e9979c29733e47f`,
+  portable ZIP sha256
+  `ffa08832fe0f6673ef00054c15395990846a67a709a6d19c9e78becad35d6807`).
 
 ## Historical evidence
 

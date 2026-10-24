@@ -1,8 +1,22 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-23. **Latest verified release:** 0.16.3, build
+**Updated:** 2026-10-24. **Latest verified release:** 0.16.4, build
+`native-20261024T003853Z-a8cf04fc` (built from `main` at `988ff8e`,
+2026-10-24): the Sinking City 2 trainer-crash-observability field fix
+(from the 0.16.3 field test: the windowed trainer process died
+silently mid wish-restore with zero follow-up log events and the
+restart was blocked by the correct state-lock refusal while the game
+was alive; `arm_crash_reporting()` now sinks
+excepthook/threading-hook/faulthandler evidence into the opt-in debug
+log, `TrainerWindow.poll` fails closed instead of letting an exception
+kill the windowed process, and the restore loop logs
+`restore-entry-start` per wish; state-lock fail-closed behavior
+unchanged) on top of the 0.16.3 content and the RT-4.4
+value-semantics merge (catalog remeasure `blocked-catalog-rt44`:
+1,858 -> 1,807 blocked of 117,634, zero newly blocked rows).
+Superseded: 0.16.3, build
 `native-20261023T065015Z-afbc3eba` (built from `main` at `6a5ba63`,
-2026-10-23): the Sinking City 2 activation field fix (two root
+2026-10-23) - the Sinking City 2 activation field fix (two root
 causes from the 0.16.2 field test: the recovery assessment still
 rejected the WP-47/55 hook-journal `value_data_ranges` field on
 every allocation entry, blocking startup behind a stale
@@ -11,8 +25,9 @@ targeted the wrong Win32 code without backoff, so the transient
 failure while the game was still loading DLLs was never retried -
 now a bounded 8-attempt exponential-backoff retry on {1116, 24, 119}
 with the architecture-aware fallback flag and the journal field
-validated with the writer contract) on top of the 0.16.2 content.
-Superseded:
+validated with the writer contract) on top of the 0.16.2 content;
+user-tested, field finding: the 0.16.3 Sinking City 2 field test
+found the silent mid-restore death above (ledger). Superseded:
 0.16.2, build
 `native-20261022T160328Z-0423fb21` (built from `main` at `68eeb00`,
 2026-10-22) - the Sinking City 2 startup-block field fix (recovery
