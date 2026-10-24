@@ -68,6 +68,30 @@ def has_global_alloc(source):
     return re.search(r'^\s*globalalloc\s*\(', aa._clean_source(source), re.I|re.M) is not None
 
 
+def empty_consumer_program(source, process_name, bitness):
+    """Canonical consumer program for a record whose whole body is global
+    declaration/initializer/reset lines.
+
+    No AA content survives the transformation, so there is nothing to
+    preflight, link, stage or restore: the pool acquisition itself (global
+    allocation plus initializer write) is the entire activation.  The shape
+    mirrors the keys ``aa.prepare_program`` emits so the shared engine
+    installation path works unchanged; it is deterministic from the
+    (alias-prefixed) consumer source and therefore byte-verifiable by the
+    pool binding/confirmation canonical checks without re-running the AA
+    grammar (whose no-content refusal is exactly why this shape exists).
+    """
+    return {'schema': aa.SCHEMA, 'bitness': bitness,
+            'process_name': process_name, 'source': source,
+            'source_sha256': _hash(source.encode('utf-8')),
+            'defines': {}, 'conditional_decisions': [],
+            'preamble': [], 'enable': [], 'disable': [],
+            'one_shot': True, 'requires': [], 'provides': [],
+            'managed_method_labels': [], 'allocations': {},
+            'allocation_executable': {}, 'allocation_writable': {},
+            'capabilities': [], 'requires_coordinator': False}
+
+
 def prepare_global_program(source, process_name=None, *, bitness=64):
     """Parse the original source, with no target read, allocation or execution."""
     if type(bitness) is not int or bitness not in (32, 64):
@@ -140,6 +164,27 @@ def prepare_global_program(source, process_name=None, *, bitness=64):
         return False
     transformed, phase, cursor, cursor_expr = [], None, None, None
     initializer_seen = set()
+    # RT-4.5 (O21): literal data consumed under the current global cursor
+    # region.  Once data is consumed, the first non-literal line closes the
+    # region and belongs to the consumer program; labels before any data keep
+    # the established refusal.
+    cursor_data = False
+    # RT-4.5 (O19): a direct global cursor on an initialized global in
+    # DISABLE starts a pending no-op reset; the repeated initializer bytes
+    # are validated at the region end (equal or empty = CE no-op, changed
+    # = named changed-reinitialization refusal).
+    reset_cursor, reset_expected, reset_hex = None, '', ''
+    reset_done = set()
+    def end_region():
+        """Close the pending global region (reset validation at the end)."""
+        nonlocal reset_cursor, reset_expected, reset_hex
+        if reset_cursor is None:
+            return
+        item = globals_[reset_cursor]
+        if reset_hex and bytes.fromhex(reset_hex) != bytes.fromhex(reset_expected):
+            raise GlobalError('Global DISABLE re-initialization must repeat the exact ENABLE initializer bytes; the changed value stays blocked: ' + item['name'])
+        reset_done.add(reset_cursor)
+        reset_cursor, reset_expected, reset_hex = None, '', ''
     # Staged readmem candidates are collected per direction and validated as a
     # pair after the loop: the shared profile admits only the paired
     # ENABLE/DISABLE shape, so an unpaired readmem touching a global keeps the
@@ -151,7 +196,9 @@ def prepare_global_program(source, process_name=None, *, bitness=64):
             transformed.append(raw)
             continue
         if line.upper() in ('[ENABLE]', '[DISABLE]'):
+            end_region()
             phase, cursor, cursor_expr = line[1:-1].casefold(), None, None
+            cursor_data = False
             transformed.append(line)
             continue
         if re.fullmatch(r'globalalloc\s*\(.*\)', line, re.I):
@@ -173,16 +220,33 @@ def prepare_global_program(source, process_name=None, *, bitness=64):
                 if cursor is None:
                     transformed.append(raw)
                 continue
+            end_region()
             cursor_expr = expression
             cursor = expression.casefold() if expression.casefold() in globals_ else None
             # Indirect global cursors cannot disguise executable/global writes.
             if global_references(expression) and cursor is None:
                 raise GlobalError('Only a direct global cursor can initialize shared storage.')
             if cursor is not None:
-                if phase != 'enable' or cursor in initializer_seen:
-                    raise GlobalError('Global initialization requires one direct ENABLE cursor.')
-                initializer_seen.add(cursor)
-                globals_[cursor]['initializer_present'] = True
+                if phase == 'enable':
+                    if cursor in initializer_seen:
+                        raise GlobalError('Global initialization requires one direct ENABLE cursor.')
+                    initializer_seen.add(cursor)
+                    globals_[cursor]['initializer_present'] = True
+                else:
+                    # O19: a direct global cursor on an initialized global in
+                    # DISABLE starts a pending no-op reset; the repeated
+                    # initializer bytes are validated at the region end.  A
+                    # global that was never initialized keeps the
+                    # established ENABLE-only refusal.
+                    item = globals_[cursor]
+                    if not item['initializer']:
+                        raise GlobalError('Global initialization requires one direct ENABLE cursor.')
+                    if cursor in reset_done:
+                        raise GlobalError('A global reset must be a single contiguous DISABLE region: ' + item['name'])
+                    reset_cursor = cursor
+                    reset_expected = item['initializer']
+                    reset_hex = ''
+                cursor_data = False
                 continue
         node = aa._parse_line(line)
         if node['op'] == 'readmem':
@@ -247,20 +311,49 @@ def prepare_global_program(source, process_name=None, *, bitness=64):
             owned = [node['symbol']] if 'symbol' in node else node['symbols']
             if any(x.casefold() in globals_ for x in owned):
                 raise GlobalError('A global cannot be redefined as local storage or a label.')
-            if cursor is not None and node['op'] == 'label':
-                raise GlobalError('Labels inside a global initializer are outside the direct literal profile.')
+            if cursor is not None:
+                if cursor_data:
+                    # O21: after the region consumed literal data, a label or
+                    # other non-data line closes the region and belongs to
+                    # the consumer program.
+                    end_region()
+                    cursor, cursor_expr, cursor_data = None, None, False
+                elif node['op'] == 'label':
+                    raise GlobalError('Labels inside a global initializer are outside the direct literal profile.')
         if cursor is not None and node['op'] in ('data', 'instruction', 'nops', 'align', 'readmem', 'reassemble'):
-            if cursor in candidates_target:
-                raise GlobalError('A global cannot mix literal initializers with staged readmem.')
-            if phase != 'enable' or not aa._literal_data(node):
-                raise GlobalError('Only scalar/string db/dw/dd/dq initializers are supported; readmem/code globals remain blocked.')
-            raw_bytes = aa._literal_bytes(node, None, None)
-            item = globals_[cursor]
-            if len(bytes.fromhex(item['initializer'])) + len(raw_bytes) > item['size']:
-                raise GlobalError('Global initializer crosses its declared storage size.')
-            item['initializer'] += raw_bytes.hex()
-            continue
+            if cursor_data and node['op'] != 'data':
+                # O21: the first non-literal line after data closes the
+                # global region; the line keeps its consumer semantics.
+                end_region()
+                cursor, cursor_expr, cursor_data = None, None, False
+            else:
+                if cursor in candidates_target:
+                    raise GlobalError('A global cannot mix literal initializers with staged readmem.')
+                if phase == 'enable':
+                    if not aa._literal_data(node):
+                        raise GlobalError('Only scalar/string db/dw/dd/dq initializers are supported; readmem/code globals remain blocked.')
+                    raw_bytes = aa._literal_bytes(node, None, None)
+                    item = globals_[cursor]
+                    if len(bytes.fromhex(item['initializer'])) + len(raw_bytes) > item['size']:
+                        raise GlobalError('Global initializer crosses its declared storage size.')
+                    item['initializer'] += raw_bytes.hex()
+                    cursor_data = True
+                    continue
+                # O19: a direct global cursor in DISABLE is a reset region;
+                # the repeated initializer bytes are validated at the region
+                # end.  Non-literal reset data is refused with its named
+                # reason before any byte bookkeeping.
+                if not aa._literal_data(node):
+                    raise GlobalError('Global DISABLE reset data must repeat the literal ENABLE initializer (db/dw/dd/dq only).')
+                raw_bytes = aa._literal_bytes(node, None, None)
+                item = globals_[cursor]
+                if len(bytes.fromhex(reset_hex)) + len(raw_bytes) > item['size']:
+                    raise GlobalError('Global DISABLE reset crosses the declared global storage size: ' + item['name'])
+                reset_hex += raw_bytes.hex()
+                cursor_data = True
+                continue
         transformed.append(raw)
+    end_region()  # EOF closes a pending reset region (validated or refused)
     # Pairing and mixing validation for staged candidates: the shared profile
     # admits only the paired ENABLE-staging plus DISABLE-restoration shape per
     # global, and no literal initializer may coexist with staged readmem for
@@ -287,7 +380,16 @@ def prepare_global_program(source, process_name=None, *, bitness=64):
     consumer_source = '\n'.join(transformed)
     diagnostic_source = _alias_source(consumer_source,
         {item['name']: 0x10000 + index * 0x10000 for index, item in enumerate(globals_.values())})
-    program = aa.prepare_program(diagnostic_source, process_name, bitness=bitness)
+    consumer_empty = not any(
+        line.strip() and line.strip().upper() not in ('[ENABLE]', '[DISABLE]')
+        for line in transformed)
+    if consumer_empty:
+        # RT-4.5 (O19): a record whose whole body is global declarations and
+        # initializer/reset lines owns no consumer program; the pool
+        # acquisition itself is the entire activation.
+        program = empty_consumer_program(diagnostic_source, process_name, bitness)
+    else:
+        program = aa.prepare_program(diagnostic_source, process_name, bitness=bitness)
     scans=[node for node in program['enable'] if node['op'] in {'scan','scan_process','scan_region'}]
     if len(scans)>64:
         raise GlobalError('The shared profile allows at most 64 original scan captures.')
@@ -322,6 +424,10 @@ def prepare_global_program(source, process_name=None, *, bitness=64):
     # profiles keep their exact pre-stage byte shape.
     if staged_ops:
         profile['staged_ops'] = staged_ops
+    # RT-4.5 (O19): present only when no consumer program exists; existing
+    # profiles keep their exact pre-lane byte shape.
+    if consumer_empty:
+        profile['consumer_empty'] = True
     return profile
 
 
@@ -359,6 +465,15 @@ class GlobalScanCapture:
         from .lua_work_budget import broker_checkpoint
         capture=cls(_AUTHORITY,profile,memory,guard)
         capture.recheck()
+        if profile.get('consumer_empty'):
+            # RT-4.5 (O19): no consumer content survives the transformation,
+            # so there is no AA grammar to replay and no original scan to
+            # capture; the canonical empty program is the diagnostic shape
+            # and the acquisition owns no further symbols or allocations.
+            broker_checkpoint()
+            capture.capturing=False
+            capture.recheck()
+            return capture,{'symbols':{},'allocation_requests':[]}
         diagnostic=aa.prepare_program(_alias_source(profile['consumer_source'],{x['name']:0x10000+i*0x10000
                                       for i,x in enumerate(profile['globals'])}),profile['process_name'],bitness=profile['bitness'])
         broker_checkpoint()
@@ -398,7 +513,18 @@ class GlobalScanCapture:
     def bind(self,profile,program):
         if self.capturing or _canonical(validate_global_program(profile))!=self.profile:
             raise GlobalError('Original shared source capture has not completed or changed.')
-        aa.validate_program(program)
+        if profile.get('consumer_empty'):
+            # RT-4.5 (O19): the empty consumer has no AA grammar to replay;
+            # the canonical synthetic program is the binding contract.  The
+            # shared alias checks below parse the live addresses from the
+            # program's own define prefix, so no pool state is needed here.
+            if _canonical(program) != _canonical(
+                    empty_consumer_program(program['source'],
+                                           profile['process_name'],
+                                           profile['bitness'])):
+                raise GlobalError('Consumer differs from the exact original body and literal alias binding.')
+        else:
+            aa.validate_program(program)
         if (program['process_name'],program['bitness'])!=(profile['process_name'],profile['bitness']):
             raise GlobalError('Consumer context differs from the original scan source.')
         prefix=program['source'].splitlines()[:len(profile['globals'])]
@@ -664,8 +790,16 @@ class GlobalPool:
     def binding(self, lease):
         lease = self._lease(lease, states=('prepared',))
         aliases = {r['name']: self.members[r['name'].casefold()]['address'] for r in lease._profile['globals']}
-        program = aa.prepare_program(_alias_source(lease._profile['consumer_source'], aliases),
-                                     lease._profile['process_name'], bitness=lease._profile['bitness'])
+        source = _alias_source(lease._profile['consumer_source'], aliases)
+        if lease._profile.get('consumer_empty'):
+            # RT-4.5 (O19): the canonical synthetic program stands in for
+            # the missing consumer program.
+            program = empty_consumer_program(source, lease._profile['process_name'],
+                                             lease._profile['bitness'])
+        else:
+            program = aa.prepare_program(source,
+                                         lease._profile['process_name'],
+                                         bitness=lease._profile['bitness'])
         lease._binding = _canonical(program)
         return program
 
@@ -723,11 +857,26 @@ class GlobalPool:
 
     def confirm_enabled(self, lease, program):
         self._lease(lease, states=('prepared',))
-        aa.validate_program(program)
+        if not lease._profile.get('consumer_empty'):
+            # The empty consumer (RT-4.5 O19) is byte-verified against its
+            # canonical synthetic shape instead of re-running the AA grammar,
+            # which refuses no-content sources by design.
+            aa.validate_program(program)
         if _canonical(program) != lease._binding:
             raise GlobalError('A consumer cannot confirm a different source/address binding.')
         manager = lease._manager
-        if manager is None or manager.state != 'enabled':
+        if lease._profile.get('consumer_empty'):
+            # RT-4.5 (O19): the pool acquisition already published the
+            # allocation plus initializer block through the member manager;
+            # the empty consumer owns no consumer transaction of its own.
+            if manager is not None:
+                raise GlobalError('The empty consumer owns no consumer transaction.')
+            lease.state = 'enabled'
+            self._save()
+            return
+        if manager is not None and manager.state != 'enabled':
+            raise GlobalError('The exact consumer transaction has not published.')
+        if manager is None:
             raise GlobalError('The exact consumer transaction has not published.')
         manager.check_entries()
         lease.state = 'enabled'
@@ -744,7 +893,7 @@ class GlobalPool:
                 manager.receipt()
             if manager.state not in ('retired', 'abandoned'):
                 raise GlobalError('Consumer entries must be restored before releasing a global lease.')
-        elif lease.state != 'prepared':
+        elif lease.state != 'prepared' and not lease._profile.get('consumer_empty'):
             raise GlobalError('An enabled consumer lacks its exact transaction receipt.')
         lease.state = 'released'
         self._save()  # no free: retired code may still retain the global pointer

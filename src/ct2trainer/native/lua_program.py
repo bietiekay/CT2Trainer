@@ -818,9 +818,51 @@ def lua_dynamic_address_targets(source: str) -> list[str]:
     return sorted(targets)
 
 
+_SYMBOL_ONLY_UNREGISTER = re.compile(r'unregistersymbol\(([A-Za-z_][A-Za-z0-9_]*)\)\Z', re.I)
+
+
+def _symbol_only_disable_names(parts: list[_Part], source: str) -> list[str] | None:
+    """RT-4.5 (O20): the exact static envelope a binding-gated luaCall
+    record may carry besides its Lua, or None.
+
+    Admitted shape: every static AA part is an ``unregistersymbol(<name>)``
+    line in the DISABLE phase, and every released name is one of the
+    record's own luaCall AOB symbols (registered at activation by the
+    binding-gated luaCall, released from this same record's static disable
+    line).  Any static content in the ENABLE phase, any other directive,
+    any name outside the record's own AOB symbol set, or a refused plan
+    model (real ``{$lua}`` chunks, malformed call grammar) returns None
+    and the record keeps its existing fail-closed envelope refusal.
+    The decision is pure source text, so plan validation regeneration
+    reproduces it byte-for-byte without external context.
+    """
+    from .aa_luacall import LuaCallError, analyze_luacall_program
+    try:
+        aob_symbols = {symbol.casefold()
+                       for symbol in analyze_luacall_program(source).aob_symbols}
+    except LuaCallError:
+        return None
+    if not aob_symbols:
+        return None
+    names: list[str] = []
+    for part in parts:
+        if part.kind != 'asm':
+            continue
+        if part.phase != 'disable':
+            return None
+        match = _SYMBOL_ONLY_UNREGISTER.fullmatch(part.text.strip())
+        if match is None or len(match.group(1)) > 128:
+            return None
+        if match.group(1).casefold() not in aob_symbols:
+            return None
+        names.append(match.group(1))
+    return names or None
+
+
 def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
                         nth_aob_helper=None,
-                        external_owned: frozenset[str] = frozenset()) -> dict:
+                        external_owned: frozenset[str] = frozenset(),
+                        external_owners: dict[str, int] | None = None) -> dict:
     """Prepare canonical metadata without compiling or executing original Lua.
 
     ``static_source`` uses LF, canonical phase markers and visible AA code only.
@@ -859,16 +901,25 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
     except NthAOBError as exc:
         raise LuaProgramError(str(exc)) from exc
     auto_assemble = None
+    symbol_only_disable = None
     try:
         static_program = prepare_program(static_source, process_name, bitness=bitness,
-                                         external_owned=external_owned) if static_body else None
+                                         external_owned=external_owned,
+                                         external_owners=external_owners) if static_body else None
     except ProgramError as exc:
         # WP-51: a non-executable static envelope is still plan-admissible
         # when the record Lua provably assembles the program itself.
         if static_body and str(exc) == _NO_CONTENT_REASON:
             auto_assemble = _auto_assemble_proof(parts, process_name, bitness)
             if auto_assemble is None:
-                raise LuaProgramError('Static AA envelope: ' + str(exc)) from exc
+                # RT-4.5 (O20): the static envelope is owned-symbol release
+                # only (unregistersymbol lines in DISABLE whose names are the
+                # record's own luaCall AOB symbols); the binding-gated
+                # luaCall registers them at activation, so the record is
+                # admitted with the deterministic symbol_only_disable marker.
+                symbol_only_disable = _symbol_only_disable_names(parts, source)
+                if symbol_only_disable is None:
+                    raise LuaProgramError('Static AA envelope: ' + str(exc)) from exc
             static_program = None
         else:
             raise LuaProgramError('Static AA envelope: ' + str(exc)) from exc
@@ -892,6 +943,11 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
             'one_shot': bool(one_shot),
             'requires': list(static_program['requires']) if static_program is not None else [],
             'provides': list(static_program['provides']) if static_program is not None else []}
+    # RT-4.5 (O20): deterministic marker for the symbol-only static envelope;
+    # the runtime skips the assembler for it and releases exactly the owned
+    # symbols named by its DISABLE lines.
+    if symbol_only_disable is not None:
+        result['symbol_only_disable'] = True
     # WP-14 (C1): PRAGMATA-class tables register their base symbols inside
     # the embedded Lua (registerSymbol / symbol='...' table field) and
     # release them on disable; static proof of that pair makes the record

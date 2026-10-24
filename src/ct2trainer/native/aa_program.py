@@ -399,6 +399,13 @@ def _parse_line(line: str) -> dict:
         name = command.group(1).casefold()
         if name == "threadwait" and command.group(2).strip() == "":
             return {"op": "threadwait"}
+        if name == "usemono":
+            # RT-4.5 (O15): usemono() targets Cheat Engine newer than 7.5
+            # (the mono-injection mode switch); the parity scope is CE 7.5.
+            # The named refusal fires before argument parsing so the empty
+            # usemono() spelling and any argument form refuse identically.
+            raise ProgramError(
+                "usemono targets a Cheat Engine newer than 7.5; out of parity scope.")
         raw_args = command.group(2)
         if raw_args.strip() == "" and name in {"createthread", "protect", "unprotect", "getmodulehandle", "getprocaddress"}:
             args = []
@@ -451,19 +458,36 @@ def _parse_line(line: str) -> dict:
                     validate_symbol(symbol)
             return {"op": {"registersymbol": "register", "registerlabel": "register", "unregistersymbol": "unregister"}.get(name, name), "symbols": args}
         if name == "dealloc":
-            if len(args) not in {1, 2}:
-                raise ProgramError("dealloc requires one symbol and an optional byte size.")
-            if args[0] == "*":
-                if len(args) != 1:
-                    raise ProgramError("Wildcard dealloc takes no size.")
-                return {"op": "dealloc", "symbols": ["*"]}
-            validate_symbol(args[0])
-            if len(args) == 1:
-                return {"op": "dealloc", "symbols": [args[0]]}
-            size = _numeric_token(args[1])
-            if size is None or not 1 <= size <= MAX_BLOCK_BYTES:
-                raise ProgramError("dealloc size must contain 1–1048576 bytes.")
-            return {"op": "dealloc", "symbols": [args[0]], "size": size}
+            # RT-4.5 (O12): CE 7.5 name-list semantics (autoassembler.pas
+            # 2625-2669, read-only reference): the parenthesized content is
+            # split on commas and whitespace into allocation names, unknown
+            # names are silently ignored, and dealloc(*) releases everything
+            # this script allocated.  A trailing numeric token (the newer-CE
+            # dealloc(name, size) shape) is simply not an allocation name, so
+            # the same split admits both spellings without a size argument.
+            tokens = [token for argument in args for token in argument.split()]
+            if not tokens:
+                raise ProgramError("dealloc requires one or more allocation names.")
+            if len(tokens) > 128 or any(len(token) > 128 for token in tokens):
+                raise ProgramError("dealloc names exceed the bounded name list.")
+            symbols = []
+            for token in tokens:
+                if token == "*":
+                    symbols.append(token)
+                    continue
+                try:
+                    validate_symbol(token)
+                except AAError:
+                    continue  # unknown name: CE ignores it
+                if token.casefold() not in {s.casefold() for s in symbols}:
+                    symbols.append(token)
+            if not symbols:
+                raise ProgramError("dealloc requires one or more allocation names.")
+            if "*" in symbols:
+                if len(symbols) != 1:
+                    raise ProgramError("Wildcard dealloc takes no other names.")
+                return {"op": "dealloc", "symbols": symbols}
+            return {"op": "dealloc", "symbols": symbols}
         if name == "fullaccess":
             if len(args) != 2:
                 raise ProgramError("fullaccess requires an address expression and a byte size.")
@@ -860,7 +884,8 @@ def _inline_nested_invocations(pruned, nested, labels, define_lines: set) -> dic
 
 
 def prepare_program(source: str, process_name: str | None = None, *, bitness: int = 64,
-                    labels: dict | None = None, external_owned: frozenset[str] = frozenset()) -> dict:
+                    labels: dict | None = None, external_owned: frozenset[str] = frozenset(),
+                    external_owners: Mapping[str, int] | None = None) -> dict:
     if type(bitness) is not int or bitness not in {32, 64}:
         raise ProgramError("Only 32/64-bit programs are supported.")
     if process_name is not None:
@@ -1157,8 +1182,14 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
                 if external:
                     # WP-37: the symbol is owned by another record's Lua or
                     # allocation-only program; only the owning record releases it.
+                    # RT-4.5 (O5): when the compiler supplies the provider map,
+                    # name the owning record so the refusal is actionable.
+                    owner = None
+                    if external_owners:
+                        owner = external_owners.get(external[0].casefold())
+                    suffix = f" (owned by record {owner})" if type(owner) is int else ""
                     raise ProgramError(
-                        f"Program may not unregister or deallocate the externally owned symbol {external[0]}.")
+                        f"Program may not unregister or deallocate the externally owned symbol {external[0]}{suffix}.")
                 if foreign:
                     raise ProgramError("Cleanup may only release symbols/allocations owned by this program.")
     if sum(node["op"] == "scan_process" for node in sections["enable"]) > MAX_PROCESS_SCANS:

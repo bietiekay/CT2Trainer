@@ -3392,18 +3392,30 @@ class TrainerEngine:
             # before the consumer install publishes the patch over them; the
             # AOB symbol addresses are already known from the scan capture.
             self._run_staged_readmem(entry,lease,capture=capture,phase='enable',scan_symbols=resolved['symbols'])
-            program=pool.binding(lease)
-            scan_memory=capture.bind(profile,program)
-            def factory(path,**kwargs):
-                return pool.make_consumer(lease,path,coordinator=kwargs.pop('coordinator'),**kwargs)
-            manager,linked,live=self._install_program(program,entry['id'],manager_factory=factory,
-                                                    scan_memory=scan_memory,publication_guard=capture.recheck,
-                                                    staged_restore=tuple(self._staged_copy_ranges(entry,'disable',scan_symbols=resolved['symbols'])))
-            pool.confirm_enabled(lease,program)
-            self.hooks[entry['id']]=manager
-            self.applied[entry['id']]=[_Patch(b['address'],bytes.fromhex(b['original']),bytes.fromhex(b['bytes'])) for b in live]
-            self.local_symbols[entry['id']]=linked['symbols']
-            exports={k.casefold():v for k,v in linked['exports'].items()}
+            if profile.get('consumer_empty'):
+                # RT-4.5 (O19): the pool acquisition itself is the entire
+                # activation; the canonical empty consumer is confirmed
+                # against its binding without the AA install path, whose
+                # no-content refusal is exactly why the empty shape exists.
+                program=pool.binding(lease)
+                capture.bind(profile,program)
+                pool.confirm_enabled(lease,program)
+                self.applied[entry['id']]=[]
+                self.local_symbols[entry['id']]={}
+                exports={}
+            else:
+                program=pool.binding(lease)
+                scan_memory=capture.bind(profile,program)
+                def factory(path,**kwargs):
+                    return pool.make_consumer(lease,path,coordinator=kwargs.pop('coordinator'),**kwargs)
+                manager,linked,live=self._install_program(program,entry['id'],manager_factory=factory,
+                                                        scan_memory=scan_memory,publication_guard=capture.recheck,
+                                                        staged_restore=tuple(self._staged_copy_ranges(entry,'disable',scan_symbols=resolved['symbols'])))
+                pool.confirm_enabled(lease,program)
+                self.hooks[entry['id']]=manager
+                self.applied[entry['id']]=[_Patch(b['address'],bytes.fromhex(b['original']),bytes.fromhex(b['bytes'])) for b in live]
+                self.local_symbols[entry['id']]=linked['symbols']
+                exports={k.casefold():v for k,v in linked['exports'].items()}
             # RT-4.1: globalalloc names are pool-managed (their
             # self.symbols entries are the aliases refreshed from the pool
             # on every change), but they are claimed in keep-first order
@@ -3994,6 +4006,25 @@ class TrainerEngine:
                 except Exception as exc:
                     self._block(StateError('Shared-global disable ownership is uncertain: '+str(exc)))
                     raise
+            reversal=None
+        elif identifier in self.global_leases:
+            # RT-4.5 (O19): an empty-consumer global record owns no hook
+            # manager; the staged restore plus the pool lease release is the
+            # entire disable.
+            staged_disable=[op for op in (entry.get('global_program') or {}).get('staged_ops', ())
+                            if op.get('phase')=='disable']
+            if staged_disable:
+                try:
+                    self._run_staged_readmem(entry,self.global_leases[identifier],phase='disable')
+                except Exception as exc:
+                    self._block(StateError('Staged global readmem restoration failed; the record stays enabled: '+str(exc)))
+                    raise NativeRuntimeError(str(exc)) from exc
+            try:
+                self.global_pool.release(self.global_leases[identifier])
+                del self.global_leases[identifier]
+            except Exception as exc:
+                self._block(StateError('Shared-global disable ownership is uncertain: '+str(exc)))
+                raise
             reversal=None
         elif one_shot_bytes:
             # No disable phase exists; restore exactly the ranges that still
