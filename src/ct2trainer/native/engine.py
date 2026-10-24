@@ -2307,6 +2307,13 @@ class TrainerEngine:
                 for identifier in sorted(self.desired):
                     entry = self.entries[identifier]
                     try:
+                        # Field case 2026-10-23 (Sinking City 2, 0.16.3):
+                        # mark every wish restore start so a hard process
+                        # exit mid-restore leaves the last in-progress
+                        # entry identifiable in the debug log.
+                        self.debug_log.log("restore-entry-start",
+                                           identifier=identifier,
+                                           label=entry["label"])
                         if entry.get("one_shot") and entry.get("async") is not True:
                             self._dependencies(entry, persist=False)
                             if (self.one_shot is not None

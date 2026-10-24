@@ -148,6 +148,29 @@ game-facing action.
   `0b34c4f3797095aefcba66a45d46216596e816817ea1b98208a42a5217df2e5a`,
   portable ZIP sha256
   `bb495a6f61538051b8caeac14394bdc80b7b165b946f34f3ae710524e37fd0a3`).
+- 0.16.4 field-fix round (2026-10-24, branch
+  `native-0.16.4-sc2-field`): Sinking City 2 silent trainer death from
+  the 0.16.3 field test (debug log 2026-10-23, PC2: trainer pid 10528
+  died mid wish-restore after the TALENTPTR aobscan 18:49:31 with zero
+  follow-up events; the 18:50:06 restart was refused by the state lock
+  while the game was still alive; session 12692 at 19:16 after a game
+  restart restored TALENTPTR, proving the restore is not
+  deterministically broken): the root cause is missing crash
+  observability in the windowed build (unattached stderr, no
+  excepthook/faulthandler, unguarded Tk poll callback) - the silent
+  death is a hard exit, not a Python failure. Fix:
+  `TrainerDebugLog.arm_crash_reporting()` (process-wide
+  `sys.excepthook` wrapper `trainer-crashed`, `threading.excepthook`
+  wrapper `trainer-thread-crashed` with thread name, `faulthandler` on
+  a dedicated append handle independent of `close()`; re-arm closes
+  the previous handle; no armed-event noise), `run_trainer` arms it
+  for both entry points, `TrainerWindow.poll` wraps `engine.poll()`
+  fail-closed (`poll-crashed` + engine block + tick keeps scheduling),
+  and the restore loop logs `restore-entry-start` per wish before
+  enable. State-lock behavior unchanged. +8 regression tests
+  (`tests/test_native_sc2_crash_observability.py`); local suite 3,479
+  OK / 25 expected skips; cut as 0.16.4 (build pending; VERSION +
+  __version__ in the same change per the versioning rule).
 
 ## Historical evidence
 

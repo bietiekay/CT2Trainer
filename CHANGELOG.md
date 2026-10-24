@@ -2,6 +2,56 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.16.4 (2026-10-24)
+
+- Sinking City 2 trainer-crash observability field fix (0.16.3 field
+  test 2026-10-23: the trainer process died silently mid wish-restore
+  - last logged event the TALENTPTR aobscan at 18:49:31, zero
+  follow-up events - and the restart on PC2 was blocked by the correct
+  fail-closed state-lock refusal while the game was still running):
+  the TALENTPTR restore itself is not deterministically broken (it
+  worked on PC1 and on PC2's second attempt after a game restart), and
+  every Python-level failure path logs an event - so the silent death
+  is a hard exit (native crash or external kill). The defect is the
+  missing crash observability: a windowed build has unattached stderr,
+  no excepthook, no faulthandler, and an unguarded Tk poll callback.
+  - `debug_log.py` gains `TrainerDebugLog.arm_crash_reporting()`:
+    process-wide one-time `sys.excepthook` wrapper writing a
+    `trainer-crashed` JSON event (error + full traceback + pid) and
+    delegating to the previous hook, `threading.excepthook` wrapper
+    writing `trainer-thread-crashed` (with the thread name), and
+    `faulthandler` on a dedicated append handle so native fatal
+    signals (access violation, stack overflow, abort) dump every
+    thread's Python stacks into the same log file. The crash handle is
+    independent of `close()`, so evidence is written even after the
+    engine tore the session log down. Arming emits no log event of its
+    own; a re-arm (the startup retry loop may create several engines
+    before the session engine is final) closes the previous handle.
+  - `run_trainer` arms crash reporting once the final engine exists -
+    both entry points covered (frozen launcher, source CLI run
+    command).
+  - `TrainerWindow.poll` wraps `engine.poll()` fail-closed: an
+    escaping exception is logged as `poll-crashed`, the engine is
+    blocked (writes refuse, the status line names the cause), and the
+    250 ms tick keeps scheduling instead of the exception propagating
+    out of the Tk after-callback and killing the windowed process.
+  - The restore loop logs `restore-entry-start` (identifier + label)
+    before each record's dependencies/enable, so a hard process exit
+    mid-restore leaves the last in-progress entry identifiable in the
+    debug log.
+  - State-lock behavior is unchanged: the blocked restart while the
+    target was alive remained the correct fail-closed refusal; this
+    build only adds the evidence that was missing.
+  - Regression tests: `tests/test_native_sc2_crash_observability.py`
+    (new, 8 tests: excepthook/threading-hook/faulthandler arming,
+    evidence surviving session close, one-time hook installation,
+    disabled no-op, the poll guard blocking and keeping the window
+    alive, restore-entry-start ordering).
+  - Full local dev suite on the 0.16.4 branch: 3,479 OK / 25 expected
+    skips. This build also ships the RT-4.4 value-semantics content
+    merged into main (catalog remeasure `blocked-catalog-rt44`:
+    1,858 -> 1,807 blocked of 117,634, zero newly blocked rows).
+
 ## 0.16.3 (2026-10-23)
 
 - Sinking City 2 activation failure field fix (0.16.2 field test

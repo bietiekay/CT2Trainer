@@ -43,6 +43,78 @@ def _now() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="milliseconds")
 
 
+# Process-wide crash-reporting state, installed at most once.  The hooks
+# always point at the most recently armed log instance (the trainer's
+# startup loop may create several before the session engine is final).
+_crash: dict[str, Any] = {}
+
+
+def _crash_line(event: str, exc_type: type, exc_value: BaseException,
+                exc_tb: Any, **details: Any) -> str | None:
+    try:
+        tb = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+    except Exception:
+        tb = ""
+    record = {
+        "ts": _now(),
+        "event": event,
+        "error": "%s: %s" % (exc_type.__name__, exc_value),
+        "traceback": tb,
+        "pid": os.getpid(),
+    }
+    record.update(details)
+    try:
+        return json.dumps(record, ensure_ascii=False, sort_keys=True,
+                          default=str) + "\n"
+    except (TypeError, ValueError):
+        return None
+
+
+def _crash_write(line: str | None) -> None:
+    if line is None:
+        return
+    fh = _crash.get("fh")
+    if fh is None:
+        return
+    try:
+        fh.write(line)
+        fh.flush()
+    except (OSError, ValueError):
+        # A crashed process cannot lose more evidence by a failed write.
+        pass
+
+
+def _crash_excepthook(exc_type: type, exc_value: BaseException, exc_tb: Any) -> None:
+    # Field case 2026-10-23 (Sinking City 2, 0.16.3): an uncaught exception
+    # escaping the Tk event loop left no trace in the debug log of a
+    # windowed trainer (stderr is unattached).  The evidence goes to the
+    # log file first, then to the original hook (stderr / debugger).
+    _crash_write(_crash_line("trainer-crashed", exc_type, exc_value, exc_tb))
+    original = _crash.get("hooks", (None, None))[0]
+    if original is not None and original is not _crash_excepthook:
+        try:
+            original(exc_type, exc_value, exc_tb)
+        except Exception:
+            pass
+
+
+def _crash_thread_excepthook(args: Any) -> None:
+    # The hook argument is CPython's _thread._ExceptHookArgs
+    # (exc_type, exc_value, exc_traceback, thread) - the thread name lives
+    # on the Thread member, not on the args tuple.
+    _crash_write(_crash_line("trainer-thread-crashed",
+                             args.exc_type, args.exc_value,
+                             args.exc_traceback,
+                             thread=getattr(getattr(args, "thread", None),
+                                           "name", "")))
+    original = _crash.get("hooks", (None, None))[1]
+    if original is not None and original is not _crash_thread_excepthook:
+        try:
+            original(args)
+        except Exception:
+            pass
+
+
 class TrainerDebugLog:
     """Append-only JSON-lines debug log; disabled instances are pure no-ops."""
 
@@ -84,6 +156,59 @@ class TrainerDebugLog:
             pass
         self.log(event, error="%s: %s" % (type(exc).__name__, exc),
                  traceback=tb, **details)
+
+    def arm_crash_reporting(self) -> None:
+        """Persist uncaught-exception and native-crash evidence in this log.
+
+        Field case 2026-10-23 (Sinking City 2, 0.16.3): the trainer process
+        died mid-restore with zero follow-up log events; a windowed build
+        has no stderr, so without an explicit sink an uncaught exception
+        (or a native crash) leaves no evidence at all.  This arms three
+        independent, best-effort sinks into the same log file:
+
+        - ``sys.excepthook`` wrapper: a ``trainer-crashed`` JSON event with
+          the full traceback, installed once per process and always
+          delegating to the previously installed hook;
+        - ``threading.excepthook`` wrapper: a ``trainer-thread-crashed``
+          JSON event for failures on background threads (the debug-event
+          coordinator worker, async policy threads);
+        - ``faulthandler`` on a dedicated append handle: native fatal
+          signals (access violation, stack overflow, abort) dump the
+          Python stacks of every thread into the log file.
+
+        The crash handle is independent of :meth:`close`, so the evidence
+        is still written after the engine has torn the session log down.
+        Arming emits no log event of its own; only real failures do.
+        """
+        if not self.enabled:
+            return
+        try:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            fh = self.path.open("a", encoding="utf-8")
+        except OSError:
+            return
+        previous = _crash.get("fh")
+        _crash["log"] = self
+        _crash["fh"] = fh
+        if "hooks" not in _crash:
+            _crash["hooks"] = (sys.excepthook, threading.excepthook)
+            sys.excepthook = _crash_excepthook
+            threading.excepthook = _crash_thread_excepthook
+        try:
+            import faulthandler
+            if hasattr(faulthandler, "enable"):
+                faulthandler.enable(file=fh)
+        except Exception:
+            pass
+        # A re-arm (the startup loop may create several engines before the
+        # session engine is final) replaces the active sink; the previous
+        # append handle is no longer referenced by any mechanism - close
+        # it so it does not leak for the process lifetime.
+        if previous is not None:
+            try:
+                previous.close()
+            except Exception:
+                pass
 
     def close(self) -> None:
         if not self.enabled:
