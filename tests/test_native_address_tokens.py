@@ -167,12 +167,35 @@ class DoubleColonLabelGrammarTests(unittest.TestCase):
 
     def test_malformed_colon_forms_stay_refused(self):
         for text, message in (("A:::B", "Invalid address expression near ':::B'."),
-                              ("A:B:C", "Invalid address expression near ':C'."),
+                              ("Mod.Cls:Base:M:Extra", "Invalid address expression near ':Extra'."),
                               (":B", "Invalid address expression near ':B'."),
                               ("A:", "Invalid address expression near ':'.")):
             with self.subTest(text=text):
                 with self.assertRaisesRegex(AddressExpressionError, re.escape(message)):
                     parse_expression(text)
+
+    def test_three_segment_managed_label_parses(self):
+        # RT-4.5 (O18): the corpus three-segment namespace form
+        # Namespace.Class:BaseClass:Method is one managed atom.
+        self.assertEqual(
+            parse_expression("FailBetter.Core.QAssoc.BaseClasses:BaseQAssocWithLevel:get_Level"),
+            {"kind": "managed",
+             "name": "FailBetter.Core.QAssoc.BaseClasses:BaseQAssocWithLevel:get_Level"})
+        self.assertEqual(
+            parse_expression("A:B:C+10"),
+            {"kind": "binary", "operator": "+",
+             "left": {"kind": "managed", "name": "A:B:C"},
+             "right": {"kind": "integer", "value": 0x10}})
+        self.assertEqual(expression_symbols("A:B:C+10"), [])
+
+    def test_three_segment_managed_label_resolves_through_symbol_map(self):
+        class Memory:
+            pointer_size = 8
+        symbols = {"a:b:c": 0x4000}
+        self.assertEqual(resolve_expression("A:B:C", Memory(), symbols), 0x4000)
+        with self.assertRaisesRegex(AddressExpressionError,
+                                    "Unresolved managed method label: A:B:C."):
+            resolve_expression("A:B:C", Memory(), {})
 
     def test_existing_managed_and_export_forms_unchanged(self):
         self.assertEqual(parse_expression("Namespace.Class.Method"),

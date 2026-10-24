@@ -106,10 +106,20 @@ class ManagedMethodProgramTests(unittest.TestCase):
         # positional_labels are casefolded by design.
         self.assertEqual(program["positional_labels"], ["mylabel"])
 
-    def test_triple_colon_form_is_refused(self):
-        with self.assertRaises(ProgramError):
+    def test_three_segment_form_is_admitted_as_managed_label(self):
+        # RT-4.5 (O18): the corpus three-segment namespace form
+        # Namespace.Class:BaseClass:Method is one managed atom.
+        program = prepare_program(
+            "[ENABLE]\nA:B:C:\ndb c3\n[DISABLE]\nA:B:C:\ndb c3\n",
+            "FixtureTarget.exe")
+        self.assertEqual(program["managed_method_labels"], ["A:B:C"])
+        self.assertEqual(program["requires"], [])
+        validate_program(program)
+
+    def test_four_segment_form_is_refused(self):
+        with self.assertRaisesRegex(ProgramError, "Invalid address expression near ':D'"):
             prepare_program(
-                "[ENABLE]\nA:B:C:\ndb c3\n[DISABLE]\nA:B:C:\ndb c3\n",
+                "[ENABLE]\nA:B:C:D:\ndb c3\n[DISABLE]\nA:B:C:D:\ndb c3\n",
                 "FixtureTarget.exe")
 
     def test_empty_colon_segment_is_refused(self):

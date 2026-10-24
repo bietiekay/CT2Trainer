@@ -487,7 +487,15 @@ class LuaActivation:
         for result in self.nth_aob_results:
             recheck_result(result, self.engine.memory)
         preamble, enable, disable = self._aa_sections(expanded)
-        if preamble.strip() or enable.strip() or disable.strip():
+        if program.get('symbol_only_disable'):
+            # RT-4.5 (O20): the static envelope is owned-symbol release
+            # only; the binding-gated luaCall registered the symbols at
+            # activation, so there is no assembler receipt to create.  A
+            # runtime-expanded enable section with executable content is a
+            # profile violation (the plan is source-deterministic).
+            if preamble.strip() or enable.strip():
+                raise LuaHostError('Symbol-only Lua record gained executable enable content at runtime.')
+        elif preamble.strip() or enable.strip() or disable.strip():
             outcome = self.assemble(expanded)
             self.record_assembly_token = outcome['disableInfo']['token']
         if any(name.casefold() not in self.symbols for name in program['provides']):
@@ -514,6 +522,14 @@ class LuaActivation:
             recheck_result(result, self.engine.memory, before_publication=False)
         expanded = phase_expansion(self.host, self.record_program, 'disable')
         preamble, enable, disable = self._aa_sections(expanded)
+        if self.record_program.get('symbol_only_disable'):
+            # RT-4.5 (O20): the static DISABLE envelope releases exactly
+            # the owned symbols it names; no assembler receipt exists.
+            if preamble.strip() or enable.strip():
+                raise LuaHostError('Symbol-only Lua record gained executable enable content at runtime.')
+            self._release_owned_unregister(disable)
+            self.check()
+            return
         if self.record_assembly_token is None:
             if preamble.strip() or enable.strip() or disable.strip():
                 raise LuaHostError('Disable cannot introduce AA for a Lua-only activation')
@@ -541,6 +557,46 @@ class LuaActivation:
         if restored != expected:
             raise LuaHostError('Disable Lua AA must restore exactly the captured original entry bytes')
         self.check()
+
+    def _release_owned_unregister(self, disable_text):
+        """RT-4.5 (O20): execute the static DISABLE envelope of a
+        symbol-only record.
+
+        Two-pass, fail-closed: first every non-blank line is validated as
+        an ``unregistersymbol(<name>)`` releasing a symbol this activation
+        itself registered (no live assembler export, no live symbol
+        consumer, no duplicate name); only then are the symbols removed
+        from the activation and the engine symbol map with a single
+        journal save.
+        """
+        from .lua_program import _SYMBOL_ONLY_UNREGISTER
+        names = []
+        for line in (disable_text or '').splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            match = _SYMBOL_ONLY_UNREGISTER.fullmatch(line)
+            if match is None or len(match.group(1)) > 128:
+                raise LuaHostError('Symbol-only Lua record disable must be unregistersymbol lines only.')
+            names.append(match.group(1))
+        if not names:
+            return
+        ordered = []
+        for name in names:
+            key = name.casefold()
+            if key in ordered:
+                raise LuaHostError('Symbol-only Lua record releases the same symbol twice: ' + name)
+            if key not in self.symbols:
+                raise LuaHostError('Symbol-only Lua record may only release its own symbols: ' + name)
+            if any(key in {n.casefold() for n in item['exports']} for item in self.assemblies.values()):
+                raise LuaHostError('Active assembler exports require their owned disable receipt')
+            if self.engine._symbol_consumers({key}):
+                raise LuaHostError('Disable symbol consumers before unregistering their provider')
+            ordered.append(key)
+        for key in ordered:
+            del self.symbols[key]
+            del self.engine.symbols[key]
+        self._save()
 
     def _retire(self, token):
         item = self.assemblies[token]

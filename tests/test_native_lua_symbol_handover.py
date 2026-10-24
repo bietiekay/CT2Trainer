@@ -160,9 +160,9 @@ class ExternalOwnedPlanTests(unittest.TestCase):
         # named handover refusal, so it surfaces in both halves.
         self.assertEqual(plan["entries"][1]["reason"],
                          "Program may not unregister or deallocate the "
-                         "externally owned symbol HandoverSym. "
+                         "externally owned symbol HandoverSym (owned by record 0). "
                          "Native assembly: Program may not unregister or "
-                         "deallocate the externally owned symbol HandoverSym.")
+                         "deallocate the externally owned symbol HandoverSym (owned by record 0).")
         self.assertTrue(plan["entries"][2]["supported"], plan["entries"][2]["reason"])
         self.assertEqual(plan["entries"][2]["dependency_ids"], [0])
         self.assertEqual(plan["external_owned_providers"], {"handoversym": 0})
@@ -182,7 +182,7 @@ class ExternalOwnedPlanTests(unittest.TestCase):
         self.assertEqual(plan["entries"][1]["reason"],
                          "Unsupported AA directive: alloc. Native assembly: "
                          "Program may not unregister or deallocate the "
-                         "externally owned symbol HandoverSym.")
+                         "externally owned symbol HandoverSym (owned by record 0).")
         self.assertEqual(plan["external_owned_providers"], {"handoversym": 0})
 
     def test_wildcard_cleanup_scopes_to_owned_names_with_external_require(self):

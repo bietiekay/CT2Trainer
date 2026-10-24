@@ -403,6 +403,14 @@ def _section(lines: list[str], inherited: set[str]) -> tuple[list[dict], set[str
                 # A name that is never defined by a known data cursor is
                 # still refused by the declared - defined check below.
                 declared.add(symbol.casefold())
+            elif name == "usemono":
+                # RT-4.5 (O15): usemono() targets Cheat Engine newer than
+                # 7.5 (the mono-injection mode switch); the parity scope is
+                # CE 7.5.  The static envelope names the same refusal the
+                # native assembly path gives so the composite reason reads
+                # consistently on both sides.
+                raise AAError(
+                    "usemono targets a Cheat Engine newer than 7.5; out of parity scope.")
             else:
                 raise AAError(f"Unsupported AA directive: {name}.")
             continue
@@ -491,7 +499,8 @@ def validate_one_shot_guards(enable: list[dict]) -> None:
     _guarded_writes(enable, {})
 
 
-def compile_script(script: str, external_owned: frozenset[str] = frozenset()) -> dict:
+def compile_script(script: str, external_owned: frozenset[str] = frozenset(),
+                   external_owners: dict[str, int] | None = None) -> dict:
     """Compile a data-dialect AA script into enable/disable operation lists.
 
     ``external_owned`` carries the casefolded names of externally owned
@@ -499,6 +508,8 @@ def compile_script(script: str, external_owned: frozenset[str] = frozenset()) ->
     program).  A disable phase releasing one of those names is refused with
     the named handover reason instead of the generic cleanup-ownership
     refusal, because the owning record releases it on deactivation.
+    ``external_owners`` (RT-4.5 O5) maps those casefolded names to their
+    single owning record id so the refusal can name the owner.
     """
     if not isinstance(script, str) or len(script.encode("utf-8")) > MAX_SCRIPT_BYTES:
         raise AAError("AA script exceeds 1 MiB.")
@@ -549,8 +560,14 @@ def compile_script(script: str, external_owned: frozenset[str] = frozenset()) ->
         if foreign:
             # WP-37: releasing a symbol owned by another record races its
             # deactivation path, so the named handover refusal is reported.
+            # RT-4.5 (O5): name the owning record when the provider map is
+            # supplied, so the refusal is actionable.
+            owner = None
+            if external_owners:
+                owner = external_owners.get(foreign[0].casefold())
+            suffix = f" (owned by record {owner})" if type(owner) is int else ""
             raise AAError(
-                f"Program may not unregister or deallocate the externally owned symbol {foreign[0]}.")
+                f"Program may not unregister or deallocate the externally owned symbol {foreign[0]}{suffix}.")
         raise AAError("Exactly the registered enable symbols must be unregistered on disable.")
     if any(operation["op"] == "scan" for operation in disable):
         raise AAError("Disable must reuse the original resolved symbols; rescanning is unsupported.")

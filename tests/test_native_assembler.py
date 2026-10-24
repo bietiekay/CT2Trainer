@@ -898,7 +898,16 @@ class AllocationOnlyLinkTests(unittest.TestCase):
 
 
 class DirectiveGrammarTests(unittest.TestCase):
-    """WP-31: 2-arg dealloc, registerlabel, fullaccess no-op."""
+    """WP-31: dealloc name lists, registerlabel, fullaccess no-op.
+
+    RT-4.5 (O12): dealloc follows the CE 7.5 name-list semantics - the
+    parenthesized content splits on commas and whitespace into allocation
+    names, unknown/non-symbol tokens are silently ignored, ``*`` releases
+    every allocation of this script, and a trailing numeric size token
+    (the newer-CE dealloc(name, size) spelling) is not an allocation name,
+    so both spellings admit.  Ownership is still enforced by the
+    cleanup-ownership check.
+    """
 
     def test_dealloc_one_and_two_arg_forms(self):
         one = prepare_program("[ENABLE]\nalloc(memory,0x100)\n[DISABLE]\ndealloc(memory)", "Target.exe")
@@ -906,16 +915,41 @@ class DirectiveGrammarTests(unittest.TestCase):
                          {"op": "dealloc", "symbols": ["memory"]})
         two = prepare_program("[ENABLE]\nalloc(memory,0x100)\n[DISABLE]\ndealloc(memory,0x100)", "Target.exe")
         self.assertEqual(next(node for node in two["disable"] if node["op"] == "dealloc"),
-                         {"op": "dealloc", "symbols": ["memory"], "size": 256})
+                         {"op": "dealloc", "symbols": ["memory"]})
 
-    def test_dealloc_size_rejections(self):
-        for line, needle in (("dealloc(memory,0)", "dealloc size must contain"),
-                             ("dealloc(memory,zz)", "dealloc size must contain"),
-                             ("dealloc(memory,0x100001)", "dealloc size must contain"),
-                             ("dealloc(memory,100,10)", "dealloc requires one symbol"),
-                             ("dealloc(*,100)", "Wildcard dealloc takes no size.")):
-            with self.subTest(line=line), self.assertRaisesRegex(ProgramError, needle):
-                prepare_program(f"[ENABLE]\nalloc(memory,0x100)\n[DISABLE]\n{line}", "Target.exe")
+    def test_dealloc_name_list_semantics(self):
+        base = "[ENABLE]\nalloc(memory,0x100)\nalloc(zz,0x10)\n[DISABLE]\n"
+        for line, symbols in (
+                ("dealloc(memory,0)", ["memory"]),
+                ("dealloc(memory,100,10)", ["memory"]),
+                ("dealloc(memory,zz)", ["memory", "zz"]),
+                ("dealloc(memory, MEMORY)", ["memory"])):
+            with self.subTest(line=line):
+                program = prepare_program(base + line, "Target.exe")
+                node = next(node for node in program["disable"] if node["op"] == "dealloc")
+                self.assertEqual(node, {"op": "dealloc", "symbols": symbols})
+        program = prepare_program("[ENABLE]\nalloc(memory,0x100)\nalloc(other,0x10)\n"
+                                  "[DISABLE]\ndealloc(*,100)", "Target.exe")
+        node = next(node for node in program["disable"] if node["op"] == "dealloc")
+        self.assertEqual(node["symbols"], ["memory", "other"])
+        # A valid-but-unowned name parses as a name (CE ignores unknown
+        # names only when they are not valid symbols), then the
+        # cleanup-ownership check keeps it refused with the named reason.
+        with self.assertRaisesRegex(ProgramError,
+                "Cleanup may only release symbols/allocations owned by this program."):
+            prepare_program("[ENABLE]\nalloc(memory,0x100)\n[DISABLE]\ndealloc(memory,zz)",
+                            "Target.exe")
+
+    def test_dealloc_name_list_rejections(self):
+        for line, needle in (
+                ("dealloc()", "Malformed or empty directive arguments."),
+                ("dealloc(*, memory)", "Wildcard dealloc takes no other names."),
+                ("dealloc(" + ", ".join(f"name{i:03d}" for i in range(129)) + ")",
+                 "dealloc names exceed the bounded name list."),
+                ("dealloc(memory," + "n" + "m" * 128 + ")",
+                 "dealloc names exceed the bounded name list.")):
+            with self.subTest(line=line[:40]), self.assertRaisesRegex(ProgramError, needle):
+                prepare_program("[ENABLE]\nalloc(memory,0x100)\n[DISABLE]\n" + line, "Target.exe")
 
     def test_registerlabel_owned_positional_label(self):
         program = prepare_program("[ENABLE]\nalloc(cave,0x100)\ncave:\nflag:\ndb 0\n"

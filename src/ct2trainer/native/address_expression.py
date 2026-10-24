@@ -15,11 +15,15 @@ class AddressExpressionError(ValueError):
 # module-prefixed forms Module.Class::Method / Module.Class:Method, where
 # the module prefix is one or more dotted basename segments (digits and
 # hyphens allowed, e.g. Kena-Win64-Shipping.UMochiState::execHasItem).
-# Offsets attach like any other base atom.  The full three-segment name is
-# kept verbatim, classified as kind "managed" and resolved through the
-# injected symbol map, never as a module export and never as symbol
-# requires.
-_MANAGED_LABEL = re.compile(r"(?:[A-Za-z0-9_$][A-Za-z0-9_$\-]*\.)*[A-Za-z_$][A-Za-z0-9_]*:?:[A-Za-z_$][A-Za-z0-9_]*\Z")
+# RT-4.5 (O18): the colon-separated tail is bounded to one or two
+# separators, admitting the three-segment namespace form
+# Namespace.Class:BaseClass:Method (e.g.
+# FailBetter.Core.QAssoc.BaseClasses:BaseQAssocWithLevel:get_Level) while
+# keeping the two-segment forms and the double-colon alias unchanged.
+# Offsets attach like any other base atom.  The full name is kept verbatim,
+# classified as kind "managed" and resolved through the injected symbol
+# map, never as a module export and never as symbol requires.
+_MANAGED_LABEL = re.compile(r"(?:[A-Za-z0-9_$][A-Za-z0-9_$\-]*\.)*[A-Za-z_$][A-Za-z0-9_]*(?:::?[A-Za-z_$][A-Za-z0-9_]*){1,2}\Z")
 # Module basenames that start with a digit (WP-22): 20XX.exe, 1234.dll, ...
 # The .exe/.dll suffix is what disambiguates them from a bare integer, and
 # the alternative is ordered BEFORE the bare-integer alternative in _TOKEN
@@ -35,8 +39,11 @@ _DIGIT_MODULE = re.compile(r"[0-9][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*\.(?:[Ee][Xx]
 # so "Mod.Class::Method" tokenizes as one managed atom instead of a symbol
 # followed by an untokenizable "::*".  The plain two-segment forms and all
 # other tokens (module basenames, digit-leading modules, bare integers) are
-# unaffected: the prefix requires a terminating colon.
-_TOKEN = re.compile(r'\s*("[^"\r\n]+"|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|(?:[A-Za-z0-9_$][A-Za-z0-9_$\-]*\.)*[A-Za-z_$][A-Za-z0-9_]*:?:[A-Za-z_$][A-Za-z0-9_]*|@?[A-Za-z_$][A-Za-z0-9_.$]*|' + _DIGIT_MODULE.pattern + r'|[0-9][0-9a-fA-F]*|[+\-*/()\[\]])')
+# unaffected: the prefix requires a terminating colon.  RT-4.5 (O18): the
+# tail admits one or two colon (or double-colon) separators, so the
+# three-segment namespace form tokenizes as one managed atom instead of a
+# two-segment atom plus an untokenizable ":Method" tail.
+_TOKEN = re.compile(r'\s*("[^"\r\n]+"|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|(?:[A-Za-z0-9_$][A-Za-z0-9_$\-]*\.)*[A-Za-z_$][A-Za-z0-9_]*(?:::?[A-Za-z_$][A-Za-z0-9_]*){1,2}|@?[A-Za-z_$][A-Za-z0-9_.$]*|' + _DIGIT_MODULE.pattern + r'|[0-9][0-9a-fA-F]*|[+\-*/()\[\]])')
 MAX_ADDRESS = 0xFFFFFFFFFFFFFFFF
 # Closed set of bounded type-cast names (WP-30).  Matched case-insensitive
 # at the token level; a cast never changes the symbol set or plan metadata.

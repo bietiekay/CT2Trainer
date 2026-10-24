@@ -1447,6 +1447,11 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
             table_lua_claimed = set()
     external_context = frozenset(symbol for symbol, owners in raw_providers.items()
                                  if len(owners) == 1 and symbol not in table_lua_claimed)
+    # RT-4.5 (O5): the named handover refusals name the single owning
+    # record; ambiguous (multi-owner) symbols and table-Lua claims keep
+    # the generic refusal.
+    external_owner_ids = {symbol: owners[0] for symbol, owners in raw_providers.items()
+                          if len(owners) == 1 and symbol not in table_lua_claimed}
     # Wave B1: re-derive the generic cleanup refusals for blocked records
     # with the external-ownership context so the named handover reasons
     # surface; only a re-derivation that yields a WP-37 named reason
@@ -1470,10 +1475,12 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
             if has_lua_sections(text):
                 prepare_lua_program(text, process_name, bitness=bitness,
                                     nth_aob_helper=nth_helper,
-                                    external_owned=external_context)
+                                    external_owned=external_context,
+                                    external_owners=external_owner_ids)
             elif not has_global_alloc(text):
                 try:
-                    compile_script(text, external_owned=external_context)
+                    compile_script(text, external_owned=external_context,
+                                   external_owners=external_owner_ids)
                 except AAError as bounded_error:
                     one_shot = None
                     try:
@@ -1484,7 +1491,8 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                         try:
                             prepare_program(text, process_name, bitness=bitness,
                                             labels=labels_by_id.get(entry["id"]),
-                                            external_owned=external_context)
+                                            external_owned=external_context,
+                                            external_owners=external_owner_ids)
                         except AAError as program_error:
                             new_reason = (str(bounded_error) + " Native assembly: "
                                           + str(program_error))
