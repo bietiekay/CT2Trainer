@@ -894,6 +894,97 @@ Full local dev suite on the field-fix branch (CT2TRAINER_NASM set):
 after the RT-4.4 merge). Merged to `main` on the field-fix branch
 `native-0.16.4-sc2-field`; cut as 0.16.4 (build pending).
 
+### RT-4.6 input legacy & authoring gaps (lane `native-rt4-6`, 2026-10-24)
+
+Lane commit `839c1c6` on branch `native-rt4-6` (pinned base `c95c10b`),
+merged to `main` on 2026-10-24 (merge commit `7c3149c`, clean three-way
+merge over the RT-4.4 + 0.16.4 state, no conflict resolution needed).
+
+- **R5 UNDEF_NO_REG / R6 UNDEF_LEGACY closure:** the `_dependencies`
+  zero-candidate branch distinguishes "symbol registered nowhere" from
+  "symbol has ambiguous providers". A pure-text registration survey
+  (`_symbol_source_survey`: `registersymbol` / `registerlabel` /
+  `registerSymbol` call forms including quoted names, line-anchored
+  `label(...)`, `define(...)` + `{$define ...}`, positional `name:`
+  labels, `aobscan*(...)` first argument) over the raw table source
+  decides. No registration found -> actionable per-symbol report
+  `Required symbol '<S>' is not registered anywhere in this table
+  (referenced by '<record path>'): no record defines it and it is not a
+  user-defined symbol. Import it as a user symbol with its target
+  address, or add a record that registers it
+  (registersymbol/registerSymbol/label/aobscan).`; registration found
+  (or more than one supported provider) -> the generic `Required symbol
+  has no unique supported provider: S.` stays byte-identical. The survey
+  is fail-safe: malformed syntax can only add registration evidence,
+  never remove it. The plan cannot make this distinction itself because
+  `_block()` clears `provides`.
+- **`st`/`st(N)` FPU-operand fold (2 reference rows):** the AA tokenizer
+  folds the x87 operand per CE 7.5 Assemblerunit.pas:3283-3291 parity:
+  bare `st` -> `st0`, exactly one digit `st(N)` -> `st0`-`st7`; `st(8)`
+  and wider keep the bare token so the symbol machinery still blocks
+  fail-closed.
+- **User-symbol import:** `compile_table(user_symbols=...)`,
+  `load_user_symbols(path)` (JSON: casefolded name -> 64-bit unsigned
+  address; named, bounded, fail-closed refusals for non-mapping/oversized
+  imports, non-text names, casefold duplicates, non-integer or
+  out-of-range addresses, invalid symbol names, non-JSON or non-object
+  files, and invalid address strings), CLI `--user-symbols FILE` on
+  inspect/prepare/build. Plan field `user_symbols` (schema 2, emitted
+  only when non-empty, keys sorted) carries the residual symbols no
+  supported record provides (same residual rule as
+  `user_defined_symbols`). Engine `_seed_user_defined_symbols` seeds UDS
+  first, then user symbols, on init and every confirmed attach; an import
+  overrides a table-level definition of the same name. Both plan
+  validators (compiler `validate_plan` and the engine wrapper) refuse
+  forged maps: shadowing record-provided symbols, out-of-range values,
+  duplicates.
+- **Documented deviations beyond the R5/R6 split** (lane audit): +2
+  RiftApart `HeroHealthVFTable` and +2 Witcher3 `str_base` are
+  legitimately unregistered -> new-style report; DS2
+  `InventoryItemProperties_call_dest` and Horizon Forbidden West
+  `Sleep` x2 stay generic (bare `call` targets). Lane classification
+  audit over all 1,284 zero-candidate rows: 1,038 generic / 217
+  new-style / 0 misclassified.
+- **Known root-owned defect (out of lane scope):** the pinned NASM 3.02
+  dependency mis-encodes the FSTP fpureg table entry —
+  `x86/insns.dat` line 751 `FSTP fpureg [r: dd d8+r]` instead of
+  `df c0+r`. Measured: `fstp st0` -> `DD D8`, `fstp st1` -> `DD D9`
+  (both wrong; expected `DF C0` / `DF C1`), while `fcomip st0, st1` ->
+  `DF F1` is correct. NASM 3.02 also rejects the parenthesized
+  `st(N)` syntax outright (bare `st0`-`st7` only), which the tokenizer
+  fold works around at link time. Consequence: the two Witcher3
+  `fstp st(0)` rows (one per 4.0x table) pass our linker but assemble
+  with wrong bytes until root re-pins or locally patches the NASM
+  dependency (authorized local-fork/adaptation path per `AGENTS.md`,
+  with source pin, notice and build evidence).
+
+Tests: 53 new — `tests/test_native_fpu_st_operand.py` (9, including the
+runtime roundtrip `fcomip st(0), st(1)` -> `DF F1` enable write on
+fixture memory with disable restore of the original bytes),
+`tests/test_native_undefined_provider_report.py` (12) and
+`tests/test_native_user_symbol_import.py` (32) — plus pin updates in
+`test_native_creator_inspection`, `test_native_luacall_symbol_provision`
+(x3) and `test_native_placeholder_aob` (the fixtures' symbols are
+registered nowhere, so the new classification applies by design). Full
+suite on `main` after the merge: **3,532 OK / 25 expected skips**
+(baseline 3,479 + 53; clean re-run exit 0).
+
+**Catalog delta** (local remeasure, run `blocked-catalog-rt46`, frozen
+manifest and process bindings unchanged): **1,807 -> 1,778 blocked** of
+117,634 (net -29; supported 115,827 -> 115,856; staged 59,683 ->
+59,709; 151/151 tables load, zero compile errors). Exactly 29 rows
+unblocked: `Lust from Beyond -F.CT` id=8 (`st`) and
+Witcher3_Complete_Edition_or GOTY_4.02HF1_G25v2.CT x14 /
+Witcher3_Complete_Edition_or GOTY_4.03_G25v2.CT x14 (per table: `st` 1
+at id=10070 plus the cascade behind the now-supported 'Activate Player
+Scripts' provider — player_ptr 11, companion_ptr 1, horse_ptr 1). Zero
+newly blocked rows. 218 rows change only their block reason and stay
+blocked on the same gate: all 218 move from the generic provider message
+to the actionable per-symbol report (the lane's 217 over the RT-3
+baseline plus the RT-4.4 reason-changed 小猫咪 id=3 `CatValues` row,
+which now also qualifies); 0 rows move back to the generic form. No
+supported regressions.
+
 ## 3. Deterministic measurement chain
 
 All committed `gap_inventory/` artifacts are reproducible byte-identically
@@ -930,8 +1021,8 @@ The old 85% closure estimate and 0.11 release step were superseded by the
 0.16 Wave-4 release and the new target. Priorities are:
 
 1. **RT-4 and RT-5 (RT-1/RT-2 done 2026-10-21, RT-3 done 2026-10-23,
-   RT-4.1 done 2026-10-22, RT-4.4 done 2026-10-23, RT-5 inventory done
-   2026-10-23):**
+   RT-4.1 done 2026-10-22, RT-4.4 done 2026-10-23, RT-4.6 done
+   2026-10-24, RT-5 inventory done 2026-10-23):**
    the 151-path/143-hash manifest is frozen; every remaining blocker is
    attributed to an upstream cause with per-class contracts, risks and
    expected deltas (RT-2 root-cause map in the roadmap). RT-4.1 symbol
@@ -945,11 +1036,14 @@ The old 85% closure estimate and 0.11 release step were superseded by the
    RT-4.4 value semantics landed (dropdown width truncation + expression
    choices per the CE SetValue conclusions, ShowAsHex byte-array
    profiles, empty read-only dropdown display views, O11 custom-type
-   gate kept by design — see the RT-4.4 section below). Next: executing
-   the remaining RT-4 packages RT-4.3 452, RT-4.5 57, RT-4.6 219,
-   RT-4.2 1,085 last. The latest snapshot has **1,807/117,634 blocked
-   entries**, 115,827 supported (59,683 staged), and zero load errors
-   (run `blocked-catalog-rt44`). This is static evidence only.
+   gate kept by design — see the RT-4.4 section below). RT-4.6 input
+   legacy & authoring gaps landed (actionable per-symbol 'not registered
+   anywhere' report with raw-source registration survey, x87 st/st(N)
+   FPU-operand fold, user-symbol import — see the RT-4.6 section above).
+   Next: executing the remaining RT-4 packages RT-4.3 452, RT-4.5 57,
+   RT-4.2 1,085 last. The latest snapshot has **1,778/117,634 blocked
+   entries**, 115,856 supported (59,709 staged), and zero load errors
+   (run `blocked-catalog-rt46`). This is static evidence only.
 2. **RT-4.x through RT-5:** close the remaining address, value, AA
    directive, input-legacy and runtime-provider gaps (RT-4.x) and the
    RT-5 implementation items A-G inventoried in

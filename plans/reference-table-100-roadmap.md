@@ -1,9 +1,10 @@
 # Reference-table 100% roadmap
 
-Status: 2026-10-23. Active plan after the 0.16 Wave 4 release; RT-3
+Status: 2026-10-24. Active plan after the 0.16 Wave 4 release; RT-3
 (legacy-binary CT loading) and RT-4.4 (value semantics) landed 2026-10-23,
-RT-4.1 (symbol provider fidelity) landed 2026-10-22. Catalog remeasure
-`blocked-catalog-rt44`: 1,807 blocked of 117,634 plan entries, 151/151
+RT-4.1 (symbol provider fidelity) landed 2026-10-22, and RT-4.6 (input
+legacy & authoring gaps) landed 2026-10-24. Catalog remeasure
+`blocked-catalog-rt46`: 1,778 blocked of 117,634 plan entries, 151/151
 tables load. The older AP/WP plans record completed implementation
 history; this document defines the next work.
 [TRACKING.md](TRACKING.md) is the status ledger.
@@ -273,6 +274,71 @@ string pointer records on the blocked `p` provider), DS2 87558/87561/
 provider behind 小猫咪 id=2 `usemono`). No plan-level providers
 involved; zero supported regressions.
 
+Update (2026-10-24, RT-4.6): the input-legacy & authoring-gaps package
+landed (branch `native-rt4-6`, merged to `main` the same day; clean
+three-way merge over the RT-4.4 + 0.16.4 state, no conflict resolution).
+Three clean-room changes: (a) R5/R6 UNDEF_NO_REG / UNDEF_LEGACY closure —
+in `_dependencies`' zero-candidate branch, a required symbol with no
+supported record provider and no UDS/table-Lua/user-symbol fallback now
+receives the actionable per-symbol report `Required symbol '<S>' is not
+registered anywhere in this table (referenced by '<record path>'): no
+record defines it and it is not a user-defined symbol. Import it as a
+user symbol with its target address, or add a record that registers it
+(registersymbol/registerSymbol/label/aobscan).` when the raw-source
+registration survey (`_symbol_source_survey`: registersymbol /
+registerlabel / registerSymbol call forms including quoted names,
+line-anchored `label(...)`, `define(...)` + `{$define ...}`, positional
+`name:` labels, `aobscan*(...)` first argument — pure text, fail-safe
+direction: malformed syntax can only add registration evidence, never
+remove it) finds no registration anywhere; the generic `Required symbol
+has no unique supported provider: S.` stays byte-identical when a
+registration exists or several providers compete (the plan cannot make
+this distinction itself because `_block()` clears `provides`). (b) R6
+legacy-tokenizer fix — the x87 FPU operand `st`/`st(N)` (CE
+Assemblerunit.pas:3283-3291 parity) now folds to register tokens
+st0-st7 in the AA tokenizer (bare `st` -> st0; exactly one digit
+`st(N)` -> stN); `st(8)`+ keeps the bare token so the symbol machinery
+blocks fail-closed. (c) user-symbol import — `compile_table(
+user_symbols=...)`, `load_user_symbols(path)` (JSON name -> 64-bit
+unsigned address; bounded, named, fail-closed refusals) and CLI
+`--user-symbols FILE` on inspect/prepare/build; plan field
+`user_symbols` (residual rule identical to the UDS field: only symbols
+no supported record provides, casefolded keys, sorted); the engine seeds
+UDS first, then user symbols, on init and every confirmed attach; both
+plan validators refuse forged maps (shadowing record-provided symbols,
+out-of-range values, duplicates). Tests: 53 new (9 + 12 + 32) in
+`tests/test_native_fpu_st_operand.py`,
+`tests/test_native_undefined_provider_report.py`,
+`tests/test_native_user_symbol_import.py`, plus pin updates in
+`test_native_creator_inspection`, `test_native_luacall_symbol_provision`
+(x3) and `test_native_placeholder_aob`. Full suite on `main` after the
+merge: **3,532 OK / 25 expected skips** (baseline 3,479 + 53; clean
+re-run exit 0). Catalog remeasure (local, run `blocked-catalog-rt46`,
+frozen manifest and process bindings unchanged): **1,807 -> 1,778
+blocked** of 117,634 (net -29; supported 115,827 -> 115,856; staged
+59,683 -> 59,709; 151/151 tables load, zero compile errors). Exactly 29
+rows unblocked: Lust from Beyond -F id=8 (`st`) and Witcher3 4.02HF1 x14 /
+4.03 x14 (per table: `st` 1 at id=10070, plus the cascade behind the
+now-supported 'Activate Player Scripts' provider — player_ptr 11,
+companion_ptr 1, horse_ptr 1). Zero newly blocked rows. 218 rows change
+only their block reason and stay blocked on the same gate: all 218 move
+from the generic provider message to the actionable per-symbol report
+(the lane's 217 over the RT-3 baseline plus the RT-4.4 reason-changed
+小猫咪 id=3 `CatValues` row, which now also qualifies); 0 rows change
+back to generic. Lane classification audit over all 1,284 zero-candidate
+rows: 1,038 generic / 217 new-style / 0 misclassified. Documented
+deviations beyond the R5/R6 split: +2 RiftApart `HeroHealthVFTable` and
++2 Witcher3 `str_base` (legitimately unregistered -> new-style); DS2
+`InventoryItemProperties_call_dest` and Horizon Forbidden West `Sleep`
+x2 stay generic (bare call targets). Known root-owned defect (out of
+lane scope): the pinned NASM 3.02 mis-encodes the FSTP fpureg table
+entry (`x86/insns.dat:751` `FSTP fpureg [r: dd d8+r]`, correct is
+`df c0+r`) — measured `fstp st0` -> `DD D8` instead of `DF C0`
+(`fcomip st0, st1` -> `DF F1` is correct); the two Witcher3 `fstp
+st(0)` rows (one per 4.0x table) therefore link but assemble with wrong
+bytes until root re-pins or locally patches the NASM dependency
+(authorized local-fork path per `AGENTS.md`).
+
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
 **Scope and method.** Full clean-room attribution of every blocked row in
@@ -362,19 +428,19 @@ Grand total = 2,698.
 | RT-4.6 Input legacy & authoring gaps | No-provider symbols (user config / cross-table / dynamic Lua), legacy symbols (BaseAddress, stat names, register-like tokens, module names without .exe) | R5 (91), R6 (128) | 219 |
 | **Total** | | | **2,698** ✓ |
 
-Package status (2026-10-23): **RT-4.4 done** — catalog remeasure
-`blocked-catalog-rt44`: **1,807 blocked** of 117,634 (net -51 over the
-RT-3 baseline of 1,858: 51 unblocked, 0 newly blocked, 8 rows
-reason-changed onto their pre-existing symbol-provider block; detail in
-the RT-4.4 update in the investigation queue above). History: RT-3
-(2026-10-23) cleared the one legacy-binary load error (151/151 load,
-1,858 blocked of 117,634); RT-4.1 (2026-10-22, remeasure
-`blocked-catalog-rt41`) 2,698 -> 1,858 of 117,624 (net -840: 842
-unblocked, 2 explained Cyberpunk shared-global regressions). Next
-packages by suggested order: RT-4.3 address expression & identifier
-dialect (452), RT-4.5 AA directive & script coverage (57), RT-4.6 input
-legacy & authoring gaps (219), RT-4.2 runtime provider model (1,085,
-last).
+Package status (2026-10-24): **RT-4.6 done** - catalog remeasure
+`blocked-catalog-rt46`: **1,778 blocked** of 117,634 (net -29 over the
+RT-4.4 state of 1,807: 29 unblocked, 0 newly blocked, 218 rows
+reason-changed generic -> actionable per-symbol report, all still
+blocked; detail in the RT-4.6 update in the investigation queue above).
+History: RT-4.4 (2026-10-23, remeasure `blocked-catalog-rt44`) 1,858 ->
+1,807 of 117,634 (net -51: O6 30, O7 8, O8 13); RT-3 (2026-10-23)
+cleared the one legacy-binary load error (151/151 load, 1,858 blocked of
+117,634); RT-4.1 (2026-10-22, remeasure `blocked-catalog-rt41`) 2,698 ->
+1,858 of 117,624 (net -840: 842 unblocked, 2 explained Cyberpunk
+shared-global regressions). Next packages by suggested order: RT-4.3
+address expression & identifier dialect (452), RT-4.5 AA directive &
+script coverage (57), RT-4.2 runtime provider model (1,085, last).
 
 Suggested execution order: RT-4.1 (820, lowest risk and the largest
 guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),
