@@ -119,11 +119,21 @@ regenerated under the pinned run id
    `documentation/rt5-api-inventory.md`. Remaining: RT-4.3 address
    expression & identifier dialect (452), then RT-4.2 1,085 last, then
    the RT-5 implementation items.
-4. **Verify original effects and platforms (RT-6):** record activation,
+4. **Trainer UI feature (user request, done 2026-10-24):** the
+   `Scripts` filter view (every script record, blocked/unselected
+   included with their reason; headings and values hidden) and the row
+   context menu (right-click / long-press) with script preview (the
+   executed Auto Assembler / Lua source), copy-script, plain-language
+   entry assessment and the unchanged Info dialog — merged on branch
+   `native-0.17-ui-script-inspector` (suite 3,587 OK / 25 expected
+   skips; catalog remeasure `blocked-catalog-ui-scripts` zero delta).
+   Ships in the 0.17 build cut after the remaining RT-4.x merges
+   (user decision 2026-10-24).
+5. **Verify original effects and platforms (RT-6):** record activation,
    values, freeze, re-attach, disable/undo and one-shot behavior where
    applicable. Run the Windows and Deck protocols with exact build
    hashes and setups.
-5. **Release only with evidence (RT-7):** full suite, offline build,
+6. **Release only with evidence (RT-7):** full suite, offline build,
    source/frozen parity, `ce_inputs: []`, and updated tracking and
    verification records.
 

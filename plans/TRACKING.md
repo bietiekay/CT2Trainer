@@ -71,22 +71,28 @@ game-facing action.
   (58,950 staged) / 2,698 blocked, post-Wave-4 catalog 2026-10-20,
   reproduced per table by the RT-1 re-run on the 0.16 source,
   2026-10-21).
+- Local original reference catalog re-verified after the trainer UI
+  feature change (2026-10-24, run `blocked-catalog-ui-scripts`):
+  per-table identical to `blocked-catalog-rt45main` - 151/151 load,
+  117,634 total, 115,891 supported (59,735 staged), 1,743 blocked,
+  zero compile errors, zero newly blocked/unblocked, zero
+  reason-changed rows (UI-only change, zero catalog effect).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
-- Latest verified release: 0.16.3, build
-  `native-20261023T065015Z-afbc3eba` (cut from `main` @ `6a5ba63`),
-  in-build suite 3,421 OK / 25 expected skips, `ce_inputs: []`;
-  ships the Sinking City 2 activation field fix (recovery
-  assessment accepts the hook-journal `value_data_ranges`
-  allocation field; module-snapshot transient retry with correct
-  Win32 codes, bounded exponential backoff, architecture-aware
-  fallback flag) on top of the 0.16.2 content; superseded 0.16.2
-  `native-20261022T160328Z-0423fb21` (in-build 3,415/25, user-tested,
-  field finding: Sinking City 2 activation failure) and superseded
-  0.16.1
-  `native-20261021T161241Z-b0566a25` (in-build 3,412/25, user-tested,
-  field finding: Sinking City 2 startup block) and superseded 0.16
-  field-fix re-cut 2
+- Latest verified release: 0.16.4, build
+  `native-20261024T003853Z-a8cf04fc` (cut from `main` @ `988ff8e`),
+  in-build suite 3,479 OK / 25 expected skips, `ce_inputs: []`;
+  ships the Sinking City 2 crash-observability field fix (process-wide
+  excepthook/faulthandler sinks into the opt-in debug log, unguarded
+  Tk poll callback wrapped fail-closed, per-wish restore-entry
+  logging) on top of the 0.16.3 content; superseded 0.16.3
+  `native-20261023T065015Z-afbc3eba` (in-build 3,421/25, user-tested,
+  field finding: Sinking City 2 silent trainer death) and superseded
+  0.16.2 `native-20261022T160328Z-0423fb21` (in-build 3,415/25,
+  user-tested, field finding: Sinking City 2 activation failure) and
+  superseded 0.16.1 `native-20261021T161241Z-b0566a25` (in-build
+  3,412/25, user-tested, field finding: Sinking City 2 startup block)
+  and superseded 0.16 field-fix re-cut 2
   `native-20261021T123801Z-8c5c4e1e` (in-build 3,405/25, user-tested,
   field finding: Sinking City 2 table-load warnings) and re-cut
   `native-20261020T150115Z-c426fb92` (in-build 3,398/25, user-tested,
@@ -182,6 +188,32 @@ game-facing action.
   sha256 `87e1f448ce3a9b72386b62ffb8c981e451242c3bf88ecb030e9979c29733e47f`,
   portable ZIP sha256
   `ffa08832fe0f6673ef00054c15395990846a67a709a6d19c9e78becad35d6807`).
+- Trainer UI feature (2026-10-24, branch
+  `native-0.17-ui-script-inspector`, user request): (a) new `Scripts`
+  filter view (sixth chip; lists every `kind == "script"` record -
+  blocked and unselected included with their reason, headings and
+  value rows hidden; `FILTER_CHIP_COLUMNS_WIDE` 5 -> 6, the narrow 2x3
+  grid is now exactly full); (b) row context menu on right-click or
+  the existing 400 ms long-press (the long-press now opens the menu
+  instead of the Info dialog directly) with "Script preview" (raw
+  Auto Assembler / embedded Lua / global program source, or the
+  normalized enable/disable operation list, read-only), "Copy script
+  text" (clipboard), "What is happening here" (deterministic
+  plain-language assessment from plan metadata: status, staged gate
+  with provider labels, program form with phase operation counts and
+  capabilities, one-shot, provides/requires, depends-on/required-by,
+  activation set, source hotkeys, runtime verification) and
+  "Details" (the existing Info dialog, content unchanged); pure text
+  builders in the new `src/ct2trainer/native/ui_script_view.py` (no
+  Tk), design in `documentation/trainer-ui-design.md` section 8. 25
+  new tests (`tests/test_native_ui_script_view.py` +23,
+  `tests/test_native_ui_rows.py` +2 Scripts-view filter tests,
+  `tests/test_native_ui_layout.py` `window_columns` 5 -> 6); local
+  suite 3,587 OK / 25 expected skips; catalog remeasure
+  `blocked-catalog-ui-scripts` zero delta vs
+  `blocked-catalog-rt45main` (UI-only change). Ships in the 0.17
+  build, cut after the remaining RT-4.x merges (RT-4.3 452, RT-4.2
+  1,085) per the user decision 2026-10-24.
 
 ## Historical evidence
 

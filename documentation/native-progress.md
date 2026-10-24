@@ -1056,6 +1056,69 @@ divergence); Sunless Skies id=29 onto the trailing-tokens refusal;
 TheSinkingCity id=258084 onto the changed-reinitialization refusal
 (`bFastTravel`). No supported regressions.
 
+### Trainer UI: Scripts view and row context menu (root, 2026-10-24)
+
+User-requested feature (2026-10-24), implemented on branch
+`native-0.17-ui-script-inspector` cut from `main` @ `42f7fb6`; UI-only
+change — plan format, engine contract and catalog untouched.
+
+- **`Scripts` view** (sixth filter chip; `VIEWS` in `ui_layout.py`
+  5 -> 6, `FILTER_CHIP_COLUMNS_WIDE` 5 -> 6, the narrow 2x3 chip grid
+  under 650 px width is now exactly full,
+  `_VIEW_ROW_HEIGHT["Scripts"] = ROW_HEIGHT_SWITCH`): lists every plan
+  entry with `kind == "script"` regardless of selected/supported —
+  supported scripts as normal switch rows, blocked and unselected
+  scripts as dim 48 px info rows with their exact reason; heading and
+  value records hidden, group sections kept as structural rows.
+- **Row context menu** (right-click `Button-3` on any row, or the
+  existing 400 ms long-press, which now opens the menu instead of the
+  Info dialog directly): "Script preview" and "Copy script text"
+  (both only when the entry carries executable source), "What is
+  happening here" (assessment dialog), "Details" (the existing Info
+  dialog, content unchanged). Works on switch, value, section and dim
+  info rows alike.
+- **Pure builders** in the new `src/ct2trainer/native/ui_script_view.py`
+  (no Tk, no engine): `script_backing()` classifies the executable
+  form (`program` / `lua_program` / `global_program` / `operations` /
+  None — blocked records carry no executable source by plan
+  contract); `script_preview()` returns (window title, body) — the
+  raw `source` text for program/Lua/global entries (exactly what will
+  run) and, for operation lists, the normalized phases rendered one
+  operation per line; `entry_assessment()` renders the deterministic
+  plain-language read from plan metadata: status (supported / not
+  selected / staged pending-or-satisfied via the live applied set /
+  blocked), last action error (window-supplied), converter reason,
+  staged gate with provider labels, program form with bitness,
+  enable/disable operation counts and capabilities, one-shot flag,
+  provides/requires, depends-on (via `dependency_ids`) and
+  required-by (via `provides` intersection with other entries'
+  `requires`), activation-set summary, source hotkey count and the
+  runtime-verification flag. Both dialogs are read-only `ScrolledText`
+  `Toplevel`s on the existing dark palette; "Copy script text"
+  reports in the status line.
+- Docs updated in the same change:
+  `documentation/trainer-ui-design.md` (D3/D7/D8/D9 updates + new
+  section 8), `documentation/usage.md` (chips + context-menu usage
+  guide), `tests/deck/compatibility-matrix.md` (touch checklist and
+  layout description).
+
+Tests: 25 new — `tests/test_native_ui_script_view.py` (23: backing
+detection per form, exact preview titles/bodies for all four forms,
+pinned assessment texts for supported/staged-pending/staged-satisfied/
+blocked/unselected/value/heading/one-shot/activation-set entries),
+`tests/test_native_ui_rows.py` (+2: Scripts view lists every script
+record only; headings and values hidden) and
+`tests/test_native_ui_layout.py` (`window_columns` wide mode 5 -> 6,
+docstrings). Full suite on the branch: **3,587 OK / 25 expected
+skips** (baseline 3,562 + 25; clean run exit 0). Catalog remeasure
+(run `blocked-catalog-ui-scripts`, frozen manifest and process
+bindings unchanged): **zero delta** vs `blocked-catalog-rt45main` —
+151/151 load, 117,634 total, 115,891 supported (59,735 staged),
+1,743 blocked, zero compile errors, zero newly blocked/unblocked,
+zero reason changes (UI-only change, plans byte-identical). The
+feature ships in the 0.17 build, cut after the remaining RT-4.x
+merges (RT-4.3 452, RT-4.2 1,085) per the user decision 2026-10-24.
+
 ## 3. Deterministic measurement chain
 
 All committed `gap_inventory/` artifacts are reproducible byte-identically
@@ -1116,10 +1179,17 @@ The old 85% closure estimate and 0.11 release step were superseded by the
    three-segment managed labels, global DISABLE reset regions,
    symbol-only luaCall envelopes, label/data global-region closure —
    see the RT-4.5 section above). Next: executing the remaining RT-4
-   packages RT-4.3 452, RT-4.2 1,085 last. The latest snapshot has
-   **1,743/117,634 blocked entries**, 115,891 supported (59,735
-   staged), and zero load errors (run `blocked-catalog-rt45main`). This
-   is static evidence only.
+   packages RT-4.3 452, RT-4.2 1,085 last. The user-requested trainer
+   UI feature (Scripts view + row context menu with script preview and
+   entry assessment) landed 2026-10-24 on branch
+   `native-0.17-ui-script-inspector` (suite 3,587 OK / 25 expected
+   skips; catalog remeasure `blocked-catalog-ui-scripts` zero delta —
+   see the Trainer UI section above); it ships in the 0.17 build cut
+   after the remaining RT-4.x merges (user decision 2026-10-24). The
+   latest snapshot has **1,743/117,634 blocked entries**, 115,891
+   supported (59,735 staged), and zero load errors (run
+   `blocked-catalog-ui-scripts`, zero-delta re-verification of the
+   RT-4.5 state after the UI change). This is static evidence only.
 2. **RT-4.x through RT-5:** close the remaining address, value, AA
    directive, input-legacy and runtime-provider gaps (RT-4.x) and the
    RT-5 implementation items A-G inventoried in

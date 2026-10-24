@@ -24,7 +24,7 @@ MAX_WINDOW_WIDTH = 1600
 MAX_WINDOW_HEIGHT = 900
 INITIAL_HEIGHT_FLOOR = 620
 NARROW_THRESHOLD = 650  # window width < 650 -> 2x3 chip grid + own search row
-FILTER_CHIP_COLUMNS_WIDE = 5
+FILTER_CHIP_COLUMNS_WIDE = 6
 FILTER_CHIP_COLUMNS_NARROW = 2
 MAX_PAGE_ROWS = 12
 TOUCH_MINIMUM = 48  # interactive targets are at least 48 logical pixels
@@ -40,7 +40,7 @@ ROW_INDENT_STEP = 12  # per nesting level, with a 1 px left rule
 # Compact chrome rows (D7).
 CHROME_HEADER = 48
 CHROME_FILTER = 48  # wide mode: chips + inline search in one row
-CHROME_FILTER_GRID = 96  # narrow mode: 2x3 chip grid (2 rows x 48)
+CHROME_FILTER_GRID = 96  # narrow mode: 2x3 chip grid (3 rows x 32 px)
 CHROME_SEARCH = 48  # narrow mode: dedicated search row
 CHROME_STATUS = 32
 CHROME_PAGINATION = 48
@@ -53,7 +53,7 @@ PAGINATION_BUTTON_SIZE = (56, 48)
 INFO_CHIP_SIZE = 16
 PILL_SIZE = (40, 24)
 
-VIEWS = ("Switches", "On", "Saved", "Values", "All")
+VIEWS = ("Switches", "On", "Saved", "Values", "Scripts", "All")
 # Smallest row each view can produce; used for the fast page-size estimate
 # and the "fits at least one row" layout check.  Mixed content is paginated
 # exactly by the row model's ``slice_pages`` in ``ui_rows``.
@@ -62,6 +62,7 @@ _VIEW_ROW_HEIGHT = {
     "On": ROW_HEIGHT_SWITCH,
     "Saved": ROW_HEIGHT_SWITCH,
     "Values": ROW_HEIGHT_VALUE,
+    "Scripts": ROW_HEIGHT_SWITCH,
     "All": ROW_HEIGHT_SECTION,
 }
 # Chrome rows that carry inputs or buttons and therefore meet the 48-px
@@ -92,10 +93,10 @@ def _check_view(view: str) -> None:
 def _chrome_rows(width: int, banner_count: int) -> list:
     """Top-down fixed chrome rows for one width and banner count.
 
-    Wide windows keep the five filter chips plus the inline search in one
-    48 px row; narrow windows fall back to a 2x3 chip grid and give the
-    search field its own 48 px row.  Banner strips stack directly under
-    the status row, above the row area.
+    Wide windows keep the six filter chips plus the inline search in one
+    48 px row; narrow windows fall back to a 2x3 chip grid (exactly full
+    with the six views) and give the search field its own 48 px row.
+    Banner strips stack directly under the status row, above the row area.
     """
     rows = [("header", CHROME_HEADER)]
     if width < NARROW_THRESHOLD:
@@ -119,7 +120,7 @@ def initial_window_size(screen_width: int, screen_height: int) -> tuple[int, int
 
 
 def window_columns(width: int) -> int:
-    """Filter-chip columns: five in one row when wide, a 2x3 grid when narrow."""
+    """Filter-chip columns: six in one row when wide, a 2x3 grid when narrow."""
     if width < 0:
         raise LayoutError("Width must be nonnegative")
     return (FILTER_CHIP_COLUMNS_NARROW if width < NARROW_THRESHOLD

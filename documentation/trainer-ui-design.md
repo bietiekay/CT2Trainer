@@ -101,8 +101,9 @@ or dependency hint, for values the type.
 **The entire row is the tap target for toggling** (not just the pill) —
 largest practical hit area. The pill is state display, not a separate
 control. **Info** = 16×16 "i" chip at the right edge (tap) **or long-press
-(400 ms) anywhere on the row** → existing Info dialog (full label, reason,
-hotkey, current value — content unchanged).
+(400 ms) anywhere on the row** (the long-press now opens the row context
+menu — §8 — whose "Details" item is the existing Info dialog, content
+unchanged).
 
 ### D4 — Value row
 
@@ -162,7 +163,7 @@ stay as today. No per-row label text changes beyond the transient chip.
 | Row | Height | Content |
 | --- | ---: | --- |
 | Header | 48 px | trainer title (left, 13 px) · connection dot + target process name (right) |
-| Filter/search | 48 px | chips **Switches / On / Saved / Values / All** (≥ 80×48 px each; same row as an inline search field when wide; below 650 px window width the chips fall to a 2×3 grid and search gets its own 48 px row) |
+| Filter/search | 48 px | chips **Switches / On / Saved / Values / Scripts / All** (≥ 80×48 px each; same row as an inline search field when wide; below 650 px window width the six chips fill a 2×3 grid exactly and search gets its own 48 px row) |
 | Status | 32 px | `engine.status` (as today) |
 | Banners | 28 px each | hotkey-conflict banner (WP-40) + table-Lua banner (WP-41) — compact amber strips, same strings, stacked |
 | Pagination | 48 px | "Page x/y" · ◀ ▶ (56×48 px touch buttons) · ⤒ (top) |
@@ -179,16 +180,18 @@ same window size; window clamping rules (screen-derived, min 400×610 /
 - Finger drag: `B1-Motion` on the list area with an 80 px drag threshold
   changes the page (same paging as MouseWheel); no free scroll in v1.
 - MouseWheel / PageUp / PageDown / Escape bindings stay.
-- No hover or right-click path anywhere in the new layout (Deck protocol
-  requirement). All interactive targets ≥ 48 px.
+- No hover requirement anywhere in the layout (Deck protocol
+  requirement). All interactive targets ≥ 48 px. Right-click on a row
+  opens the row context menu (§8) — a mouse-only affordance; the same
+  menu is reachable on touch via the existing 400 ms long-press.
 
 ### D9 — Short names
 
 Labels render one line, ellipsized to the available width (canvas text
 `-ellipsis`). The full label, exact reason and hotkey are always in the Info
-dialog (long-press or "i" chip). No abbreviation engine — truncation only,
-deterministic and byte-verifiable in the pure row model (same width input →
-same truncated output in tests).
+dialog (context menu "Details" or "i" chip). No abbreviation engine —
+truncation only, deterministic and byte-verifiable in the pure row model
+(same width input → same truncated output in tests).
 
 ### D10 — Visuals
 
@@ -248,7 +251,89 @@ constants.
 
 - Scroll: page-based drag chosen for v1; free-scroll (row-precise) is a
   possible follow-up, not required.
-- Long-press = Info **and** "i" chip (both) — if field tests show the chip
-  is sufficient, the long-press can be dropped later.
+- Long-press = row context menu **and** "i" chip (both; see §8) — if
+  field tests show the chip is sufficient, the long-press can be dropped
+  later.
 - DPI awareness remains a separate, explicitly open item (see
   `tests/deck/compatibility-matrix.md`).
+
+## 8. Increment 2026-10-24 (0.17): Scripts view and row context menu
+
+User request (2026-10-24): the trainer shall (a) show the executable
+source a record actually runs (Auto Assembler / embedded Lua), (b)
+explain in plain language what a record does and how it is gated, and
+(c) provide a filter view listing only script items (headings and value
+rows hidden). Implemented on top of the WP-58 row grid; plan format and
+engine contract unchanged (UI-only change, plan byte-identity preserved).
+
+### D11 — `Scripts` view (sixth chip)
+
+Every plan entry with `kind == "script"`, regardless of `selected` /
+`supported`: supported scripts render as normal switch rows; blocked and
+unselected scripts render as dim 48 px info rows with their exact reason
+as sublabel (same rendering as in `All`). Heading and value records are
+hidden; group sections remain as structural rows around the visible
+scripts (same as the other views). `FILTER_CHIP_COLUMNS_WIDE` moves
+5 → 6; the narrow 2×3 grid under 650 px width is now exactly full
+(6 chips, 3 rows × 32 px). The page-size estimate uses
+`_VIEW_ROW_HEIGHT["Scripts"] = ROW_HEIGHT_SWITCH`.
+
+### D12 — Row context menu
+
+Right-click (`Button-3`) on any row, or the existing 400 ms long-press —
+which now opens this menu instead of the Info dialog directly — pops a
+native menu at the pointer with, in order:
+
+1. **Script preview** — only when the entry carries executable source;
+   opens a read-only `ScrolledText` `Toplevel` (Consolas 10, dark
+   palette, transient, single Close button) with the raw source: the
+   static Auto Assembler program's `source` (exact `[ENABLE]` /
+   `[DISABLE]` text that runs), the embedded Lua program's `source`
+   (full AssemblerScript), the global allocation program's `source`, or,
+   for operation-list records, the normalized phases rendered one
+   operation per line (`aobscan … module=… pattern=…`,
+   `define sym = expr`, `registersymbol sym`,
+   `unregistersymbol sym`, `assert addr = bytes`, `write addr =
+   bytes`). Blocked records carry no executable source by plan contract
+   and get no preview item.
+2. **Copy script text** — same condition; puts the preview body into the
+   clipboard and reports it in the status line.
+3. **What is happening here** — read-only `Toplevel` with the
+   plain-language assessment (D13).
+4. **Details** — the existing Info dialog, content unchanged (D3/§4).
+
+The menu works on switch, value, section and dim info rows alike
+(every row carries its entry id). Touch operability is unchanged: the
+long-press is the touch path, the right-click is an additional mouse
+affordance (D8's no-hover contract is untouched).
+
+### D13 — Entry assessment (pure builders)
+
+`src/ct2trainer/native/ui_script_view.py` (no Tk, no engine; unit
+testable):
+
+- `script_backing(entry)` → `'program' | 'lua_program' |
+  'global_program' | 'operations' | None`.
+- `script_preview(entry)` → `(window title, body) | None` as in D12.
+- `entry_assessment(entry, entries, applied, error)` → deterministic
+  plain-language lines: status (`supported` / `not selected` /
+  `staged (pending|gate satisfied)` via the live `applied` set /
+  `blocked`), last action error (window-supplied), converter reason,
+  staged gate with provider labels, program form with bitness +
+  enable/disable operation counts + capabilities (programs), embedded
+  Lua line count, global allocation count, one-shot flag, provides /
+  requires, depends-on (via `dependency_ids`) and required-by (via
+  `provides` ∩ other entries' `requires`), activation-set summary
+  (reusing `activation_set_summary`), source hotkey count, and the
+  runtime-verification flag for script records. Value records report
+  type / address expression / hex display; headings report their group
+  nature and (when flagged) the parent-activation cascade.
+
+Tests: `tests/test_native_ui_script_view.py` (new, pure — backing
+detection per form, exact preview titles/bodies for all four forms,
+pinned assessment texts for supported / staged-pending /
+staged-satisfied / blocked / unselected / value / heading / one-shot /
+activation-set entries); `tests/test_native_ui_rows.py` (Scripts view
+filter contract: blocked + unselected scripts included, headings and
+values excluded); `tests/test_native_ui_layout.py` (`window_columns`
+wide mode 5 → 6, chip-grid docstrings).

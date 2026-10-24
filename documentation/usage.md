@@ -96,8 +96,10 @@ designed for touch operation on a Steam Deck:
 
 - One row per record: 64 px switch rows, 72 px value rows (the row expands
   to 120 px with its inline editor), 48 px group section headers.
-- Filter chips: **Switches / On / Saved / Values / All**, plus a literal
-  search field (name, ID or full parent path, case-insensitive).
+- Filter chips: **Switches / On / Saved / Values / Scripts / All**, plus a
+  literal search field (name, ID or full parent path, case-insensitive).
+  The **Scripts** view lists every script record — blocked and unselected
+  ones included (with their reason) — and hides headings and value rows.
 - **Tap anywhere on a switch row to toggle it**; the row flashes and shows
   a short confirmation chip, and the toggle tone plays. Before the target
   is attached, a tap manages the saved "auto-on for next game launch" wish.
@@ -108,10 +110,19 @@ designed for touch operation on a Steam Deck:
   "n/N on" counter; the chevron collapses a section, and flagged groups
   (source activation semantics) carry a group toggle that runs the parent
   cascade.
-- **Info** on a record: the small "i" chip at the row's right edge, or a
-  400 ms long-press anywhere on the row. `Status / help` shows the full
-  trainer state; the status line shows the engine status and the reason of
-  the last failed action (failed actions never open a modal dialog).
+- **Info** on a record: the small "i" chip at the row's right edge.
+  `Status / help` shows the full trainer state; the status line shows the
+  engine status and the reason of the last failed action (failed actions
+  never open a modal dialog).
+- **Context menu** on a row: right-click (mouse) or a 400 ms long-press
+  (touch) anywhere on the row opens a menu with **Script preview** (the
+  exact Auto Assembler / embedded Lua / global-program source that will
+  run, or the normalized enable/disable operation list, in a read-only
+  window), **Copy script text** (clipboard), **What is happening here**
+  (plain-language assessment from the table data: staged gate and its
+  providers, dependencies and dependents, one-shot flag, activation set,
+  source hotkeys, runtime-verification state) and **Details** (the
+  standard Info dialog).
 - **Paging**: 80 px finger drag, mouse wheel, PageUp/PageDown or the
   pagination buttons; Escape closes the expanded value editor. No hover
   and no right-click anywhere; every interactive target is at least 48 px.

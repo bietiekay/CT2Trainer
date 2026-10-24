@@ -281,10 +281,13 @@ def filter_entries(entries: dict, view: str, needle: str,
 
     Views: ``Switches`` (selected supported scripts), ``On`` (those among
     them the engine has applied), ``Saved`` (those carrying a saved wish),
-    ``Values`` (selected supported value records) and ``All`` (every
-    record, blocked ones included with their reason).  A non-empty search
-    is a table-wide escape hatch over label/id/ancestor path (casefolded);
-    the view filter still applies to the candidates.
+    ``Values`` (selected supported value records), ``Scripts`` (every
+    script record — blocked or unselected ones included, headings and
+    values hidden; the row model still renders the group sections around
+    them) and ``All`` (every record, blocked ones included with their
+    reason).  A non-empty search is a table-wide escape hatch over
+    label/id/ancestor path (casefolded); the view filter still applies to
+    the candidates.
     """
     if view not in VIEWS:
         raise RowModelError(f"Unknown view {view!r}; expected one of {VIEWS}")
@@ -297,9 +300,11 @@ def filter_entries(entries: dict, view: str, needle: str,
     for entry in entries.values():
         if not isinstance(entry, dict) or "id" not in entry:
             raise RowModelError("plan entries need an id field")
-        if not entry["selected"] and view != "All":
+        if not entry["selected"] and view not in ("All", "Scripts"):
             continue
         if view == "Switches" and not (entry["supported"] and entry["kind"] == "script"):
+            continue
+        if view == "Scripts" and entry["kind"] != "script":
             continue
         if view == "On" and not (entry["supported"] and entry["kind"] == "script"
                                  and entry["id"] in applied):
