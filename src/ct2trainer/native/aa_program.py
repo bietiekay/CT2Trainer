@@ -76,6 +76,9 @@ _REGISTERS |= {f"{kind}{index}" for kind in ("xmm", "ymm", "zmm", "mm", "k", "st
 _KEYWORDS = {"byte", "word", "dword", "qword", "tword", "oword", "xmmword", "yword", "ymmword", "zword", "zmmword", "short", "near", "far", "strict", "rel", "abs", "to"}
 _FORBIDDEN = {"bits", "org", "section", "segment", "global", "extern", "common", "equ", "times", "incbin", "include", "resw", "resd", "resq", "istruc", "struc", "endstruc", "iend", "absolute", "default", "cpu", "warning", "map", "alignb"}
 _TOKEN_OPERAND = re.compile(r"'[^'\r\n\\]'|"+r'"[^"\r\n]+"|@@?[A-Za-z_][A-Za-z0-9_]*|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|[A-Za-z_$][A-Za-z0-9_.$]*|[0-9][0-9a-fA-F]*|\s+|[][+\-*/(),:]')
+# RT-4.6 (CE 7.5 Assemblerunit.pas:3283-3291 parity): ST(0) through ST(7) are
+# single FPU register tokens, exactly one digit inside the parentheses.
+_ST_REGISTER = re.compile(r"\(([0-7])\)")
 # WP-43: single-quoted string operand at the current token position (any
 # content; the content rules are enforced explicitly in _operand_tokens).
 _QUOTED_STRING_OPERAND = re.compile(r"'([^'\r\n]*)'")
@@ -245,8 +248,21 @@ def _operand_tokens(text: str):
         match = _TOKEN_OPERAND.match(text, position)
         if match is None:
             raise ProgramError(f"Unsupported instruction operand near {text[position:position + 25]!r}.")
-        values.append(match.group())
-        position = match.end()
+        token, end = match.group(), match.end()
+        # RT-4.6 (CE 7.5 Assemblerunit.pas:3283-3291 parity): ST and
+        # ST(0)-ST(7) are single FPU register tokens; a bare ST is the stack
+        # top ST(0).  ST(N) with N outside 0-7 is not a register token, so
+        # the bare ST name is kept for the ordinary symbol machinery
+        # (fail-closed report).
+        if token.casefold() == "st":
+            suffix = _ST_REGISTER.match(text[end:])
+            if suffix is not None:
+                token = "st" + suffix.group(1)
+                end += suffix.end()
+            elif text[end:end + 1] != "(":
+                token = "st0"
+        values.append(token)
+        position = end
     return values
 
 

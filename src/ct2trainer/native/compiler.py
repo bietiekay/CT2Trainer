@@ -152,6 +152,128 @@ def _block(entry: dict, reason: str) -> None:
     entry["provides"] = []
 
 
+# RT-4.6: registration evidence for the actionable per-symbol report.  A
+# symbol counts as "registered anywhere in the table source" when any of
+# these markers names it (case rules per marker, CE semantics): the AA
+# registersymbol()/registerlabel() forms (one or more space/comma-separated
+# names, optionally quoted), the Lua registerSymbol(...) variant, the
+# line-anchored label() directive, define() and the {$define ...}
+# directive, positional `name:` label definitions, and the first argument
+# of aobscan*(...).  The final plan cannot make this distinction itself
+# because _block() clears the provider's `provides`, so the raw source
+# survey reproduces the human R5/R6 split (provider exists but blocked vs
+# never registered at all).
+_REGISTRATION_CALL = re.compile(
+    r"(?i)\b(?:registersymbol|registerlabel|registerSymbol)\s*\(([^)]*)\)")
+_LABEL_DIRECTIVE = re.compile(r"(?m)^\s*label\s*\(([^)]*)\)")
+_DEFINE_CALL = re.compile(r"(?im)^\s*define\s*\(([^,]+),")
+_DEFINE_DIRECTIVE = re.compile(r"(?im)\{\$define\s+([A-Za-z_][A-Za-z0-9_]*)")
+_POSITIONAL_LABEL = re.compile(r"(?m)^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:")
+_AOBSKAN_LABEL = re.compile(
+    r"(?im)\baobscan(?:module|float|double|byte|qword|dword|region)?\s*\(\s*['\"]?([A-Za-z_][A-Za-z0-9_]*)")
+# A bare call target (Windows API export territory, RT-4.2/R7): the name
+# must not continue with identifier, dot or hyphen characters, so
+# `call user32.GetAsyncKeyState` and `call ctts-...` do not contribute a
+# bare-target entry.
+_CALL_TARGET = re.compile(
+    r"\bcall\s+(?:(?:near|short|abs|far)\s+)*([A-Za-z_$][A-Za-z0-9_]*)(?![A-Za-z0-9_.$\-])",
+    re.IGNORECASE)
+
+
+def _symbol_source_survey(scripts: dict[int, str]) -> tuple[set[str], set[str]]:
+    """Scan raw record scripts for symbol-registration evidence.
+
+    Returns ``(registered, call_targets)`` as casefolded name sets.  The
+    scan is pure text: it never parses the scripts, so malformed or
+    unsupported syntax can only add evidence, never remove it (the
+    fail-safe direction for the report classification).
+    """
+    text = "\n".join(scripts.values())
+    registered: set[str] = set()
+    for pattern in (_REGISTRATION_CALL, _LABEL_DIRECTIVE, _DEFINE_CALL):
+        for match in pattern.finditer(text):
+            names = re.split(r"[, \t]+", match.group(1).strip())
+            registered.update(name.strip("'\"").casefold()
+                              for name in names if name.strip().strip("'\""))
+    for match in _DEFINE_DIRECTIVE.finditer(text):
+        registered.add(match.group(1).casefold())
+    for match in _AOBSKAN_LABEL.finditer(text):
+        registered.add(match.group(1).casefold())
+    for match in _POSITIONAL_LABEL.finditer(text):
+        registered.add(match.group(1).casefold())
+    call_targets: set[str] = set()
+    for match in _CALL_TARGET.finditer(text):
+        call_targets.add(match.group(1).casefold())
+    return registered, call_targets
+
+
+def _normalize_user_symbols(user_symbols: dict[str, int] | None) -> dict[str, int]:
+    """RT-4.6: validate and casefold the optional user-symbol import.
+
+    The map mirrors the UDS shape contract: bounded, nonempty ASCII symbol
+    names unique case-insensitively, 64-bit unsigned addresses.  The result
+    is the residual plan field (record providers always win) and the engine
+    seed input.
+    """
+    if user_symbols is None:
+        return {}
+    if not isinstance(user_symbols, dict) or len(user_symbols) > MAX_UDS_ENTRIES:
+        raise NativeCompileError(
+            "User-symbol import must be a mapping of at most "
+            f"{MAX_UDS_ENTRIES} symbol names to addresses.")
+    symbols: dict[str, int] = {}
+    for name, address in user_symbols.items():
+        if not isinstance(name, str) or not name:
+            raise NativeCompileError(
+                "User-symbol names must be nonempty text.")
+        try:
+            validate_symbol(name)
+        except AAError as exc:
+            raise NativeCompileError(str(exc)) from exc
+        if type(address) is not int or not (0 <= address <= 0xFFFFFFFFFFFFFFFF):
+            raise NativeCompileError(
+                "User-symbol addresses must be 64-bit unsigned integers.")
+        key = name.casefold()
+        if key in symbols:
+            raise NativeCompileError(
+                f"Duplicate user-symbol name (case-insensitive): {name}.")
+        symbols[key] = address
+    return symbols
+
+
+def load_user_symbols(path: str | Path) -> dict[str, int]:
+    """RT-4.6: read an optional user-symbol import file.
+
+    The file is a JSON object mapping symbol names to target addresses;
+    addresses are decimal integers or 0x/$-prefixed hex strings.  The
+    result is passed to ``compile_table(user_symbols=...)`` where the
+    casefold/uniqueness/name rules are enforced.
+    """
+    try:
+        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError) as exc:
+        raise NativeCompileError(
+            f"User-symbol import file is not readable JSON: {exc}") from exc
+    if not isinstance(raw, dict):
+        raise NativeCompileError(
+            "User-symbol import file must be a JSON object mapping symbol "
+            "names to addresses.")
+    symbols: dict[str, int] = {}
+    for name, address in raw.items():
+        if isinstance(address, str):
+            text = address.strip()
+            if re.fullmatch(r"0[xX][0-9A-Fa-f]+|\$[0-9A-Fa-f]+", text):
+                address = int(text[2:] if text[:2].lower() == "0x" else text[1:], 16)
+            elif re.fullmatch(r"[0-9]+", text):
+                address = int(text)
+            else:
+                raise NativeCompileError(
+                    f"User-symbol address {address!r} must be a decimal "
+                    "integer or a 0x/$ hex string.")
+        symbols[name] = address
+    return symbols
+
+
 _OFFSET_SLOT_GRAMMAR = re.compile(
     r"^[+-]?(?:(?:0x)?[0-9A-Fa-f]+|#[+-]?[0-9]+)"
     r"(?:\s*[-+*]\s*(?:(?:0x)?[0-9A-Fa-f]+|#[+-]?[0-9]+))*$")
@@ -538,7 +660,10 @@ def _native_literal_safe(value: str, value_type: str, hexadecimal: bool,
 
 def _dependencies(entries: list[dict], selected: set[int] | None = None,
                   uds_symbols: dict[str, int] | None = None,
-                  table_lua_symbols: set[str] | None = None) -> None:
+                  table_lua_symbols: set[str] | None = None,
+                  user_symbols: dict[str, int] | None = None,
+                  source_registered: set[str] | None = None,
+                  api_call_targets: set[str] | None = None) -> None:
     """Reject missing/ambiguous symbol providers and their dependent records.
 
     ``uds_symbols`` (WP-46, part 1) maps casefolded table-level
@@ -557,6 +682,15 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
     the table scope is live for the whole attach and its bootstrap
     precedes wish restore, so no record dependency arises.  Record
     providers still win in every non-zero-candidate branch.
+
+    ``user_symbols`` (RT-4.6) is the optional user-symbol import map
+    (casefolded names to static addresses); it joins the same
+    zero-candidate fallback.  ``source_registered`` and
+    ``api_call_targets`` are the raw-source survey sets (see
+    ``_symbol_source_survey``) that decide the report wording in the
+    zero-candidate branch: a symbol registered somewhere in the table
+    source or a bare call target keeps the generic reason, any other
+    missing definition gets the actionable per-symbol report.
     """
     providers: dict[str, list[dict]] = {}
     for entry in entries:
@@ -673,18 +807,46 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
                     if (len(supported) == 0
                             and ((uds_symbols
                                    and symbol.casefold() in uds_symbols)
-                                 or (table_lua_symbols
-                                     and symbol.casefold() in table_lua_symbols))):
-                        # WP-46 (part 1) / WP-54 (c): no supported record
-                        # provides this symbol, so a table-level provider
-                        # covers the requirement; no record dependency
-                        # arises and the record stays supported.  The UDS
-                        # address is seeded into the runtime symbol table
-                        # by the engine from the plan field; the table-Lua
-                        # address is registered live by the table-scope
-                        # bootstrap, which precedes wish restore.
+                                  or (table_lua_symbols
+                                      and symbol.casefold() in table_lua_symbols)
+                                  or (user_symbols
+                                      and symbol.casefold() in user_symbols))):
+                        # WP-46 (part 1) / WP-54 (c) / RT-4.6: no supported
+                        # record provides this symbol, so a table-level
+                        # provider covers the requirement; no record
+                        # dependency arises and the record stays supported.
+                        # The UDS address is seeded into the runtime symbol
+                        # table by the engine from the plan field; the
+                        # table-Lua address is registered live by the
+                        # table-scope bootstrap, which precedes wish restore;
+                        # the user-symbol address is seeded by the engine
+                        # after the UDS seed (an explicit operator import
+                        # overrides a table-level definition of the same
+                        # name).
                         continue
-                    _block(entry, f"Required symbol has no unique supported provider: {symbol}.")
+                    # RT-4.6: with no supported provider and no table-level
+                    # fallback, the raw-source survey decides which report
+                    # the operator sees.  A symbol registered somewhere in
+                    # the table source (its provider record exists but is
+                    # blocked for another reason) or a bare call target
+                    # (Windows API export territory) keeps the generic
+                    # reason; anything else is a missing definition, and
+                    # the actionable per-symbol report names the referring
+                    # record and both remediations.
+                    if (len(supported) == 0
+                            and symbol.casefold() not in source_registered
+                            and symbol.casefold() not in api_call_targets):
+                        symbol_path = entry["path"]
+                        _block(entry, (
+                            f"Required symbol '{symbol}' is not registered "
+                            f"anywhere in this table (referenced by '{symbol_path}'): "
+                            f"no record defines it and it is not a "
+                            f"user-defined symbol. Import it as a user "
+                            f"symbol with its target address, or add a "
+                            f"record that registers it "
+                            f"(registersymbol/registerSymbol/label/aobscan)."))
+                    else:
+                        _block(entry, f"Required symbol has no unique supported provider: {symbol}.")
                     changed = True
                     break
                 entry["dependency_ids"].append(supported[0]["id"])
@@ -1074,8 +1236,17 @@ def _entry_node_maps(root) -> tuple[dict[int, ET.Element], dict[int, str]]:
 
 def compile_table(path: str | Path, process_name: str, title: str | None = None,
                   selected_ids: list[int] | set[int] | tuple[int, ...] | None = None,
+                  user_symbols: dict[str, int] | None = None,
                   *, architecture: str = "x64", debug_log: bool = False) -> dict:
-    """Return all records with explicit supported/blocked states and reasons."""
+    """Return all records with explicit supported/blocked states and reasons.
+
+    ``user_symbols`` (RT-4.6) is an optional user-symbol import map: valid
+    symbol names (case-insensitive) to static 64-bit addresses.  A symbol
+    the operator imports covers a zero-candidate requirement exactly like
+    a table-level user-defined symbol (no record dependency), and the
+    engine seeds it after the UDS seed, so an import overrides a
+    table-level definition of the same name.  Record providers always win.
+    """
     validate_process_name(process_name)
     try:
         target_architecture = prepare_architecture(architecture)
@@ -1500,7 +1671,13 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     # _dependencies), so record providers always win.
     uds_symbols = {symbol.name.casefold(): symbol.address
                    for symbol in table.user_defined_symbols}
-    _dependencies(entries, selected, uds_symbols, table_lua_symbols)
+    # RT-4.6: the optional user-symbol import (validated, casefolded) joins
+    # the same zero-candidate fallback, and the raw-source registration
+    # survey feeds the per-symbol report classification.
+    user_symbols = _normalize_user_symbols(user_symbols)
+    source_registered, api_call_targets = _symbol_source_survey(scripts)
+    _dependencies(entries, selected, uds_symbols, table_lua_symbols,
+                  user_symbols, source_registered, api_call_targets)
     # WP-38: adopt proven runtime bases for blocked relative values before
     # the selection closure and the staged/recursive post-passes see the
     # final supported state (the recompiled values carry no symbol
@@ -1739,6 +1916,16 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                 if key not in supported_provides}
     if uds_plan:
         plan["user_defined_symbols"] = uds_plan
+    # RT-4.6: the optional user-symbol import, same residual rule as the
+    # table-level UDS field — emitted only when non-empty (byte-stable
+    # plans otherwise, WP-40 convention) and only for symbols no supported
+    # script record provides (record providers always win).  The engine
+    # seeds it after the UDS seed, so an import overrides a table-level
+    # definition of the same name at runtime.
+    user_plan = {key: user_symbols[key] for key in sorted(user_symbols)
+                 if key not in supported_provides}
+    if user_plan:
+        plan["user_symbols"] = user_plan
     # WP-54 (b): table-scope symbol names the combined table source proves
     # to register, minus the symbols a supported script record provides —
     # record providers always win, so the bootstrap skips symbols a
@@ -2335,6 +2522,37 @@ def validate_plan(plan: dict) -> None:
             if uds_keys & record_provides:
                 raise NativeCompileError(
                     "user_defined_symbols may not shadow a record-provided symbol.")
+        # RT-4.6: the optional user-symbol import map is strict-validated
+        # exactly like the table-level UDS map (bounded, casefold-unique,
+        # valid symbol names, 64-bit unsigned addresses, no shadowing of a
+        # supported record provider — record providers always win).
+        user_map = plan.get("user_symbols")
+        if user_map is not None:
+            if plan["schema"] != 2:
+                raise NativeCompileError("user_symbols requires schema 2")
+            if not isinstance(user_map, dict) or len(user_map) > MAX_UDS_ENTRIES:
+                raise NativeCompileError("user_symbols must be a bounded symbol map.")
+            user_keys: set[str] = set()
+            for key, value in user_map.items():
+                if not isinstance(key, str) or not key:
+                    raise NativeCompileError("user_symbols keys must be symbol names.")
+                try:
+                    validate_symbol(key)
+                except AAError as exc:
+                    raise NativeCompileError(str(exc)) from exc
+                folded = key.casefold()
+                if folded in user_keys:
+                    raise NativeCompileError("Duplicate user symbol name.")
+                user_keys.add(folded)
+                if type(value) is not int or not (0 <= value <= 0xFFFFFFFFFFFFFFFF):
+                    raise NativeCompileError("user_symbols values must be 64-bit unsigned integers.")
+            record_provides = {symbol.casefold()
+                               for entry in entries
+                               if entry.get("supported") and entry.get("kind") == "script"
+                               for symbol in entry.get("provides", [])}
+            if user_keys & record_provides:
+                raise NativeCompileError(
+                    "user_symbols may not shadow a record-provided symbol.")
         # WP-54 (b): the table-Lua symbol list is re-derived byte-exactly
         # from the table bootstrap source — the same literal-pair
         # extraction (one-shot adoption) plus the record-provider residual

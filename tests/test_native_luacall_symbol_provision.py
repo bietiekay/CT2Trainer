@@ -176,7 +176,11 @@ class LuacallSymbolProvisionTests(unittest.TestCase):
         plan = self._compile(record(1, '"Mode section"', script))
         entry = plan['entries'][0]
         self.assertFalse(entry['supported'])
-        self.assertIn('Required symbol has no unique supported provider: anchor.',
+        # RT-4.6: 'anchor' is registered nowhere in the table source (the
+        # luaCall AOB form is not a static registration marker), so the
+        # named refusal is the actionable per-symbol report.
+        self.assertIn("Required symbol 'anchor' is not registered anywhere "
+                      "in this table (referenced by 'Mode section')",
                       entry['reason'])
         # The plan model itself refuses mode sections (domain exclusion).
         with self.assertRaises(Exception) as caught:
@@ -198,7 +202,11 @@ class LuacallSymbolProvisionTests(unittest.TestCase):
         plan = self._compile(record(1, '"Conflict"', script))
         entry = plan['entries'][0]
         self.assertFalse(entry['supported'])
-        self.assertIn('Required symbol has no unique supported provider: anchor.',
+        # RT-4.6: the conflicting record provides no supported provider and
+        # 'anchor' is registered nowhere in the table source, so the named
+        # refusal is the actionable per-symbol report.
+        self.assertIn("Required symbol 'anchor' is not registered anywhere "
+                      "in this table (referenced by 'Conflict')",
                       entry['reason'])
 
     def test_malformed_luacall_falls_back_to_named_refusal(self):
@@ -215,7 +223,11 @@ class LuacallSymbolProvisionTests(unittest.TestCase):
         plan = self._compile(record(1, '"Malformed"', script))
         entry = plan['entries'][0]
         self.assertFalse(entry['supported'])
-        self.assertIn('Required symbol has no unique supported provider: anchor.',
+        # RT-4.6: the unrecognized two-argument luaCall merges no provider
+        # and 'anchor' is registered nowhere in the table source, so the
+        # named refusal is the actionable per-symbol report.
+        self.assertIn("Required symbol 'anchor' is not registered anywhere "
+                      "in this table (referenced by 'Malformed')",
                       entry['reason'])
 
 
