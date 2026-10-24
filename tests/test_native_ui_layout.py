@@ -1,7 +1,7 @@
 """Pure Touch-UI layout contract for the compact row grid (WP-58).
 
 Window clamping, the compact chrome row stack (48 px header / filter row
-with the five view chips, 32 px status, 28 px amber banners, 48 px
+with the six view chips, 32 px status, 28 px amber banners, 48 px
 pagination; a 2x3 chip grid plus dedicated search row under 650 px width),
 touch minimums, the row-area floor, the per-view page-size estimate and the
 no-overlap stack invariants. The row model itself (heights, truncation,
@@ -67,11 +67,11 @@ class WindowSizeTests(unittest.TestCase):
                     initial_window_size(*pair)
 
     def test_column_mode_switches_at_650(self):
-        # Wide mode: five chips in one row. Narrow mode: 2x3 chip grid.
+        # Wide mode: six chips in one row. Narrow mode: 2x3 chip grid.
         self.assertEqual(window_columns(399), 2)
         self.assertEqual(window_columns(649), 2)
-        self.assertEqual(window_columns(650), 5)
-        self.assertEqual(window_columns(1920), 5)
+        self.assertEqual(window_columns(650), 6)
+        self.assertEqual(window_columns(1920), 6)
 
     def test_min_window_size_depends_on_column_mode(self):
         self.assertEqual(min_window_size(400), (MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT_NARROW))

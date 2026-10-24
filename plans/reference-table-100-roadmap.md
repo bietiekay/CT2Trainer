@@ -488,9 +488,14 @@ RT-4.4 (2026-10-23, remeasure `blocked-catalog-rt44`) 1,858 -> 1,807 of
 legacy-binary load error (151/151 load, 1,858 blocked of 117,634);
 RT-4.1 (2026-10-22, remeasure `blocked-catalog-rt41`) 2,698 -> 1,858 of
 117,624 (net -840: 842 unblocked, 2 explained Cyberpunk shared-global
-regressions). Next packages by suggested order: RT-4.3 address
-expression & identifier dialect (452), RT-4.2 runtime provider model
-(1,085, last).
+regressions). The user-requested trainer UI feature (Scripts view +
+row context menu with script preview and entry assessment) landed on
+branch `native-0.17-ui-script-inspector` 2026-10-24 (suite 3,587 OK /
+25 expected skips; catalog remeasure `blocked-catalog-ui-scripts`
+zero delta — UI-only change); per the user decision 2026-10-24 the
+0.17 build is cut after all RT-4.x merges. Next packages by
+suggested order: RT-4.3 address expression & identifier dialect (452),
+RT-4.2 runtime provider model (1,085, last).
 
 Suggested execution order: RT-4.1 (820, lowest risk and the largest
 guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),

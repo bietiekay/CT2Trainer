@@ -1,11 +1,11 @@
 """Pure row-model contract for the native Touch UI row grid (WP-58).
 
 Tk-free coverage of ``ui_rows``: deterministic label truncation, snapshot
-validation, the five view filters (Switches/On/Saved/Values/All) with the
-table-wide search, per-D6 state-to-accent mapping, row heights and hit
-geometry, the transient pulse/confirm tints, the value-row "on" rule
-(session value writes only), the inline editor rectangles of the expanded
-value row and the mixed-content page slicing.
+validation, the six view filters (Switches/On/Saved/Values/Scripts/All)
+with the table-wide search, per-D6 state-to-accent mapping, row heights
+and hit geometry, the transient pulse/confirm tints, the value-row "on"
+rule (session value writes only), the inline editor rectangles of the
+expanded value row and the mixed-content page slicing.
 """
 from __future__ import annotations
 
@@ -143,7 +143,7 @@ class SnapshotTests(unittest.TestCase):
 
 
 class FilterTests(unittest.TestCase):
-    """The five D1/D7 views plus the table-wide, casefolded search."""
+    """The six D1/D7 views plus the table-wide, casefolded search."""
 
     def setUp(self):
         self.entries = _entries()
@@ -166,13 +166,38 @@ class FilterTests(unittest.TestCase):
         self.assertEqual([e["id"] for e in self._filter("Saved", desired=frozenset({1}))], [1])
         self.assertEqual(self._filter("Saved"), [])
 
-    def test_unselected_and_unsupported_only_appear_in_all(self):
+    def test_scripts_view_lists_every_script_record_only(self):
+        # Every kind == "script" entry, blocked (5) and unselected (4)
+        # included; value records (3, 6) excluded.
+        self.assertEqual([e["id"] for e in self._filter("Scripts")], [1, 2, 4, 5, 7])
+
+    def test_scripts_view_hides_values_and_headings(self):
+        from ct2trainer.native.ui_rows import filter_entries
+        entries = dict(self.entries)
+        entries[8] = {"id": 8, "label": "A Heading", "path": "A Heading",
+                      "parent_id": None, "kind": "heading", "selected": True,
+                      "supported": True, "reason": "", "requires": [],
+                      "provides": [], "dependency_ids": []}
+        entries[9] = {"id": 9, "label": "Hidden Value", "path": "Hidden Value",
+                      "parent_id": None, "kind": "value", "selected": True,
+                      "supported": True, "reason": "", "requires": [],
+                      "provides": [], "dependency_ids": [],
+                      "variable_type": "4 Bytes", "show_as_hex": False,
+                      "show_as_signed": None, "dropdown": {"choices": [], "read_only": False}}
+        ids = [e["id"] for e in
+               filter_entries(entries, "Scripts", "", frozenset(), frozenset())]
+        self.assertNotIn(8, ids)
+        self.assertNotIn(9, ids)
+        self.assertEqual([e["id"] for e in self._filter("Scripts")], [1, 2, 4, 5, 7])
+
+    def test_unselected_and_unsupported_appear_in_all_and_scripts(self):
         for view in ("Switches", "On", "Saved", "Values"):
             self.assertNotIn(4, [e["id"] for e in self._filter(view)], view)
             self.assertNotIn(5, [e["id"] for e in self._filter(view)], view)
-        all_ids = [e["id"] for e in self._filter("All")]
-        self.assertIn(4, all_ids)
-        self.assertIn(5, all_ids)
+        for view in ("All", "Scripts"):
+            ids = [e["id"] for e in self._filter(view)]
+            self.assertIn(4, ids, view)
+            self.assertIn(5, ids, view)
 
     def test_search_is_a_table_wide_casefolded_haystack(self):
         self.assertEqual([e["id"] for e in self._filter("Switches", "SWITCH TWO")], [2])
