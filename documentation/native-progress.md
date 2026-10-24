@@ -985,6 +985,77 @@ baseline plus the RT-4.4 reason-changed 小猫咪 id=3 `CatValues` row,
 which now also qualifies); 0 rows move back to the generic form. No
 supported regressions.
 
+### RT-4.5 AA directive & script coverage (lane `native-rt4-5`, 2026-10-24)
+
+Lane commit `92dd60e` on branch `native-rt4-5` (pinned base `c95c10b`),
+merged to `main` on 2026-10-24 after the RT-4.6 merge (merge commit
+`885a3b7`, clean three-way merge, no conflict resolution needed).
+
+- **O12 AOBSCANREGION:** `aobscanregion(name, start, end, pattern)` is
+  now supported with Type:Member symbol bounds resolved at runtime; the
+  `dealloc` name-list follows CE 7.5 semantics — comma/whitespace
+  split, silent unknown-name drop, 128-name / 128-character bounds, a
+  wildcard takes no other names, numeric size tails tolerated. One
+  deliberate divergence kept: cleanup touching foreign symbols or
+  allocations stays refused by the ownership gate (documented, stricter
+  than CE).
+- **O15 USEMONO:** both envelope halves (static AA and Lua) now refuse
+  `usemono()` with the named parity-scope refusal 'usemono targets a
+  Cheat Engine newer than 7.5; out of parity scope.' (zero hits in the
+  CE 7.5 tree).
+- **O18 managed labels:** the managed-label regex admits the
+  three-segment `Namespace.Class:BaseClass:Method` form via a `{1,2}`
+  colon tail; two-segment, `::` and four-segment forms keep the
+  established refusal.
+- **O19 GLOBAL_INIT:** global DISABLE reset regions — a direct global
+  cursor on an initialized global in DISABLE opens a no-op reset whose
+  repeated literal bytes must equal the ENABLE initializer; empty
+  regions accepted; changed bytes get the named
+  changed-reinitialization refusal; non-literal/oversize/double/
+  never-initialized/staged-readmem-under-cursor all named.
+- **O20 NO_EXEC_PATCH:** symbol-only static envelopes — DISABLE-only
+  `unregistersymbol` lines whose names are the record's own luaCall AOB
+  symbols are admitted with the deterministic `symbol_only_disable`
+  marker; the runtime skips the assembler receipt and releases exactly
+  those owned symbols via two-pass `_release_owned_unregister` with
+  named refusals; plan-level `one_shot` True vs record-level False.
+- **O21 GLOBAL_INIT_LABEL:** label after consumed literal data closes
+  the global region into the consumer program; label before data keeps
+  the established refusal.
+- **O5 CLEANUP_OWNED (diagnostics):** named symbol-handover refusals
+  carry the single owning record id via `external_owners` at all three
+  re-derivation sites (`compile_script` / `prepare_program` /
+  `prepare_lua_program`). Pure-global records (whole body
+  globalalloc/initializer/reset) get the canonical empty consumer
+  program with a manager-less pool round trip
+  (`global_alloc.empty_consumer_program`).
+
+Tests: 30 new — `tests/test_native_global_reset.py` (17),
+`tests/test_native_luacall_symbol_only.py` (5),
+`tests/test_native_aa_named_refusals.py` (4) — plus pin updates in
+`test_native_assembler`, `test_native_address_tokens`,
+`test_native_managed_method`, `test_native_aa_literals` and
+`test_native_lua_symbol_handover`. Full suite on `main` after the
+merge: **3,562 OK / 25 expected skips** (baseline 3,532 + 30; clean
+re-run exit 0).
+
+**Catalog delta** (local remeasure, run `blocked-catalog-rt45main`,
+frozen manifest and process bindings unchanged): **1,778 -> 1,743
+blocked** of 117,634 (net -35; supported 115,856 -> 115,891; staged
+59,709 -> 59,735; 151/151 tables load, zero compile errors). Exactly 35
+rows unblocked: Subnautica_e67616 x28 (4 `aobscanregion` rows plus 24
+provider-cascade rows now registered by the supported directive),
+TheSinkingCity x2 (O19 id=14780, O21 id=258093), SOTTR x2 (O20
+symbol-only envelopes), Resonance x1 (O19 id=14780), Shinkansen
+Sunless Sea V1005 x1 (O18 Type:Member atom, id=112473), RDR2 x1
+(id=48136). Zero newly blocked rows. Seven rows change only their block
+reason and stay blocked on the same gate: ForgottonAnne id=0/103886
+and 小猫咪 id=1/2 onto the named usemono parity-scope refusal;
+Subnautica_e67616 id=89 onto the ownership gate (deliberate
+divergence); Sunless Skies id=29 onto the trailing-tokens refusal;
+TheSinkingCity id=258084 onto the changed-reinitialization refusal
+(`bFastTravel`). No supported regressions.
+
 ## 3. Deterministic measurement chain
 
 All committed `gap_inventory/` artifacts are reproducible byte-identically
@@ -1021,8 +1092,8 @@ The old 85% closure estimate and 0.11 release step were superseded by the
 0.16 Wave-4 release and the new target. Priorities are:
 
 1. **RT-4 and RT-5 (RT-1/RT-2 done 2026-10-21, RT-3 done 2026-10-23,
-   RT-4.1 done 2026-10-22, RT-4.4 done 2026-10-23, RT-4.6 done
-   2026-10-24, RT-5 inventory done 2026-10-23):**
+   RT-4.1 done 2026-10-22, RT-4.4 done 2026-10-23, RT-4.5 done
+   2026-10-24, RT-4.6 done 2026-10-24, RT-5 inventory done 2026-10-23):**
    the 151-path/143-hash manifest is frozen; every remaining blocker is
    attributed to an upstream cause with per-class contracts, risks and
    expected deltas (RT-2 root-cause map in the roadmap). RT-4.1 symbol
@@ -1040,10 +1111,15 @@ The old 85% closure estimate and 0.11 release step were superseded by the
    legacy & authoring gaps landed (actionable per-symbol 'not registered
    anywhere' report with raw-source registration survey, x87 st/st(N)
    FPU-operand fold, user-symbol import — see the RT-4.6 section above).
-   Next: executing the remaining RT-4 packages RT-4.3 452, RT-4.5 57,
-   RT-4.2 1,085 last. The latest snapshot has **1,778/117,634 blocked
-   entries**, 115,856 supported (59,709 staged), and zero load errors
-   (run `blocked-catalog-rt46`). This is static evidence only.
+   RT-4.5 AA directive & script coverage landed (aobscanregion + CE
+   dealloc name-list semantics, usemono parity-scope refusal,
+   three-segment managed labels, global DISABLE reset regions,
+   symbol-only luaCall envelopes, label/data global-region closure —
+   see the RT-4.5 section above). Next: executing the remaining RT-4
+   packages RT-4.3 452, RT-4.2 1,085 last. The latest snapshot has
+   **1,743/117,634 blocked entries**, 115,891 supported (59,735
+   staged), and zero load errors (run `blocked-catalog-rt45main`). This
+   is static evidence only.
 2. **RT-4.x through RT-5:** close the remaining address, value, AA
    directive, input-legacy and runtime-provider gaps (RT-4.x) and the
    RT-5 implementation items A-G inventoried in

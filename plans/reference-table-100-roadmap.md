@@ -3,9 +3,9 @@
 Status: 2026-10-24. Active plan after the 0.16 Wave 4 release; RT-3
 (legacy-binary CT loading) and RT-4.4 (value semantics) landed 2026-10-23,
 RT-4.1 (symbol provider fidelity) landed 2026-10-22, and RT-4.6 (input
-legacy & authoring gaps) landed 2026-10-24. Catalog remeasure
-`blocked-catalog-rt46`: 1,778 blocked of 117,634 plan entries, 151/151
-tables load. The older AP/WP plans record completed implementation
+legacy & authoring gaps) and RT-4.5 (AA directive & script coverage)
+landed 2026-10-24. Catalog remeasure `blocked-catalog-rt45main`:
+1,743 blocked of 117,634 plan entries, 151/151 tables load. The older AP/WP plans record completed implementation
 history; this document defines the next work.
 [TRACKING.md](TRACKING.md) is the status ledger.
 
@@ -339,6 +339,55 @@ st(0)` rows (one per 4.0x table) therefore link but assemble with wrong
 bytes until root re-pins or locally patches the NASM dependency
 (authorized local-fork path per `AGENTS.md`).
 
+Update (2026-10-24, RT-4.5): the AA directive & script-coverage package
+landed (branch `native-rt4-5`, merged to `main` the same day after the
+RT-4.6 merge; clean three-way merge, no conflict resolution). Changes:
+(a) O12 AOBSCANREGION — `aobscanregion(name, start, end, pattern)` with
+Type:Member symbol bounds supported; the `dealloc` name-list follows CE
+7.5 (comma/whitespace split, silent unknown-name drop, 128-name/128-char
+bounds, a wildcard takes no other names, numeric size tail tolerated),
+while cross-program cleanup keeps the ownership-gate refusal as a
+documented deliberate divergence; (b) O15 USEMONO — both envelope halves
+refuse `usemono()` with the named parity-scope message (zero CE 7.5
+hits); (c) O18 managed-label regex admits the three-segment
+`Namespace.Class:BaseClass:Method` form (`{1,2}` colon tail); two-,
+`::` and four-segment forms stay refused; (d) O19 GLOBAL_INIT — global
+DISABLE reset regions (no-op reset on an initialized global whose
+repeated literal bytes equal the ENABLE initializer; empty regions
+accepted; changed bytes refused as changed re-initialization);
+(e) O20 NO_EXEC_PATCH — symbol-only static envelopes (DISABLE-only
+`unregistersymbol` of the record's own luaCall AOB symbols admitted via
+the `symbol_only_disable` marker, two-pass `_release_owned_unregister`,
+plan-level one_shot True / record-level False); (f) O21 — label after
+consumed literal data closes the global region into the consumer
+program, label before data keeps the refusal; (g) O5 diagnostics — named
+symbol-handover refusals carry the single owning record id via
+`external_owners` at all three re-derivation sites; pure-global records
+get the canonical empty consumer program (manager-less pool round trip,
+`global_alloc.empty_consumer_program`). Tests: 30 new (17 + 5 + 4) in
+`tests/test_native_global_reset.py`,
+`tests/test_native_luacall_symbol_only.py`,
+`tests/test_native_aa_named_refusals.py`, plus pin updates in
+`test_native_assembler`, `test_native_address_tokens`,
+`test_native_managed_method`, `test_native_aa_literals` and
+`test_native_lua_symbol_handover`. Full suite on `main` after the
+merge: **3,562 OK / 25 expected skips** (clean re-run exit 0). Catalog
+remeasure (local, run `blocked-catalog-rt45main`, frozen manifest and
+process bindings unchanged): **1,778 -> 1,743 blocked** of 117,634
+(net -35; supported 115,856 -> 115,891; staged 59,709 -> 59,735;
+151/151 tables load, zero compile errors). Exactly 35 rows unblocked:
+Subnautica_e67616 x28 (4 `aobscanregion` rows plus 24 cascade rows whose
+providers the supported directive now registers), TheSinkingCity x2
+(O19 id=14780, O21 id=258093), SOTTR x2 (O20), Resonance x1 (O19),
+Shinkansen Sunless Sea V1005 x1 (O18, id=112473) and RDR2 x1
+(id=48136). Zero newly blocked rows. Seven rows change only their block
+reason and stay blocked: ForgottonAnne id=0/103886 and 小猫咪 id=1/2
+onto the named usemono parity-scope refusal; Subnautica_e67616 id=89
+onto the ownership gate (deliberate divergence); Sunless Skies id=29
+onto the trailing-tokens refusal; TheSinkingCity id=258084 onto the
+changed-reinitialization refusal (`bFastTravel`). No supported
+regressions.
+
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
 **Scope and method.** Full clean-room attribution of every blocked row in
@@ -428,19 +477,20 @@ Grand total = 2,698.
 | RT-4.6 Input legacy & authoring gaps | No-provider symbols (user config / cross-table / dynamic Lua), legacy symbols (BaseAddress, stat names, register-like tokens, module names without .exe) | R5 (91), R6 (128) | 219 |
 | **Total** | | | **2,698** ✓ |
 
-Package status (2026-10-24): **RT-4.6 done** - catalog remeasure
-`blocked-catalog-rt46`: **1,778 blocked** of 117,634 (net -29 over the
-RT-4.4 state of 1,807: 29 unblocked, 0 newly blocked, 218 rows
-reason-changed generic -> actionable per-symbol report, all still
-blocked; detail in the RT-4.6 update in the investigation queue above).
-History: RT-4.4 (2026-10-23, remeasure `blocked-catalog-rt44`) 1,858 ->
-1,807 of 117,634 (net -51: O6 30, O7 8, O8 13); RT-3 (2026-10-23)
-cleared the one legacy-binary load error (151/151 load, 1,858 blocked of
-117,634); RT-4.1 (2026-10-22, remeasure `blocked-catalog-rt41`) 2,698 ->
-1,858 of 117,624 (net -840: 842 unblocked, 2 explained Cyberpunk
-shared-global regressions). Next packages by suggested order: RT-4.3
-address expression & identifier dialect (452), RT-4.5 AA directive &
-script coverage (57), RT-4.2 runtime provider model (1,085, last).
+Package status (2026-10-24): **RT-4.5 done** - catalog remeasure
+`blocked-catalog-rt45main`: **1,743 blocked** of 117,634 (net -35 over
+the RT-4.6 state of 1,778: 35 unblocked, 0 newly blocked, 7 rows
+reason-changed, all still blocked and explained; detail in the RT-4.5
+update in the investigation queue above). History: RT-4.6 (2026-10-24,
+remeasure `blocked-catalog-rt46`) 1,807 -> 1,778 of 117,634 (net -29);
+RT-4.4 (2026-10-23, remeasure `blocked-catalog-rt44`) 1,858 -> 1,807 of
+117,634 (net -51: O6 30, O7 8, O8 13); RT-3 (2026-10-23) cleared the one
+legacy-binary load error (151/151 load, 1,858 blocked of 117,634);
+RT-4.1 (2026-10-22, remeasure `blocked-catalog-rt41`) 2,698 -> 1,858 of
+117,624 (net -840: 842 unblocked, 2 explained Cyberpunk shared-global
+regressions). Next packages by suggested order: RT-4.3 address
+expression & identifier dialect (452), RT-4.2 runtime provider model
+(1,085, last).
 
 Suggested execution order: RT-4.1 (820, lowest risk and the largest
 guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),
