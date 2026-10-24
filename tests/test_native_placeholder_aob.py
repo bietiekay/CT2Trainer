@@ -586,10 +586,18 @@ class PlaceholderEngineTests(unittest.TestCase):
         plan = compile_table(str(table), PROCESS)
         entry = plan["entries"][0]
         self.assertFalse(entry["supported"])
-        self.assertEqual(entry["reason"],
-                         "Required symbol has no unique supported provider: RapidFireSearchBegin.")
-        self.assertIn("Required symbol has no unique supported provider: RapidFireSearchBegin.",
-                      plan["blocked_reasons"])
+        # RT-4.6: RapidFireSearchBegin is not registered anywhere in the
+        # table source (it is the aobscanregion range argument, not a
+        # registration), so the refusal is the actionable per-symbol report.
+        reason = (
+            "Required symbol 'RapidFireSearchBegin' is not registered "
+            "anywhere in this table (referenced by 'region'): no record "
+            "defines it and it is not a user-defined symbol. Import it as a "
+            "user symbol with its target address, or add a record that "
+            "registers it (registersymbol/registerSymbol/label/aobscan)."
+        )
+        self.assertEqual(entry["reason"], reason)
+        self.assertIn(reason, plan["blocked_reasons"])
         # The placeholder machinery added no new refusal path for this case.
         self.assertNotIn("placeholder", entry["reason"].casefold())
 

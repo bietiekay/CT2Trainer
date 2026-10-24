@@ -265,19 +265,27 @@ class TableInspectionTests(unittest.TestCase):
     def test_mixed_table_groups_top_reasons_deterministically(self):
         # case-19 shape: keep-first duplicate ID (warning only), a provider
         # script record with a staged relative-address child, plus three
-        # blocked records in two distinct named reasons.
+        # blocked records.  RT-4.6: none of MissingSymA/B is registered
+        # anywhere in the table source, so each blocked record carries its
+        # own actionable per-symbol report (the referring record path keeps
+        # the reasons distinct), grouped casefold-deterministically.
         plan = _compile(self.directory, "mixed.ct", MIXED_CT)
         result = table_inspection(plan)
         self.assertEqual(result["supported"], 3)
         self.assertEqual(result["blocked"], 3)
         self.assertEqual(result["top_reasons"], [
-            {"key": "Required symbol has no unique supported provider: MissingSymA.",
-             "reason": "Required symbol has no unique supported provider: MissingSymA.",
+            {"key": "Required symbol 'MissingSymA' is not registered anywhere in this table (referenced by 'child of missing symbol A (same reason)'): no record defines it and it is not a user-defined symbol. Import it as a user symbol with its target address, or add a record that registers it (registersymbol/registerSymbol/label/aobscan).",
+             "reason": "Required symbol 'MissingSymA' is not registered anywhere in this table (referenced by 'child of missing symbol A (same reason)'): no record defines it and it is not a user-defined symbol. Import it as a user symbol with its target address, or add a record that registers it (registersymbol/registerSymbol/label/aobscan).",
              "api": None,
-             "count": 2,
-             "records": [1, 2]},
-            {"key": "Required symbol has no unique supported provider: MissingSymB.",
-             "reason": "Required symbol has no unique supported provider: MissingSymB.",
+             "count": 1,
+             "records": [2]},
+            {"key": "Required symbol 'MissingSymA' is not registered anywhere in this table (referenced by 'child of missing symbol A'): no record defines it and it is not a user-defined symbol. Import it as a user symbol with its target address, or add a record that registers it (registersymbol/registerSymbol/label/aobscan).",
+             "reason": "Required symbol 'MissingSymA' is not registered anywhere in this table (referenced by 'child of missing symbol A'): no record defines it and it is not a user-defined symbol. Import it as a user symbol with its target address, or add a record that registers it (registersymbol/registerSymbol/label/aobscan).",
+             "api": None,
+             "count": 1,
+             "records": [1]},
+            {"key": "Required symbol 'MissingSymB' is not registered anywhere in this table (referenced by 'child of missing symbol B'): no record defines it and it is not a user-defined symbol. Import it as a user symbol with its target address, or add a record that registers it (registersymbol/registerSymbol/label/aobscan).",
+             "reason": "Required symbol 'MissingSymB' is not registered anywhere in this table (referenced by 'child of missing symbol B'): no record defines it and it is not a user-defined symbol. Import it as a user symbol with its target address, or add a record that registers it (registersymbol/registerSymbol/label/aobscan).",
              "api": None,
              "count": 1,
              "records": [3]},

@@ -667,6 +667,12 @@ def validate_plan(plan: dict) -> None:
     # here (the strict map checks already ran in the compiler validator
     # this function delegates to first).
     uds_available = {name.casefold() for name in (plan.get("user_defined_symbols") or {})}
+    # RT-4.6: imported user symbols are seeded into the runtime symbol
+    # table at engine init and on every confirmed attach (after the UDS
+    # seed, so an import overrides a table-level definition of the same
+    # name), so they cover required symbols exactly like the UDS fallback
+    # — no record dependency is needed.
+    user_available = {name.casefold() for name in (plan.get("user_symbols") or {})}
     # WP-54 (c): table-Lua registered symbols are live for the whole attach
     # (the table-scope bootstrap precedes wish restore), so they cover
     # required symbols exactly like the UDS fallback — no record dependency
@@ -691,7 +697,9 @@ def validate_plan(plan: dict) -> None:
                 continue
             provider = providers.get(name.casefold())
             if provider is None:
-                if name.casefold() in uds_available or name.casefold() in table_lua_available:
+                if (name.casefold() in uds_available
+                        or name.casefold() in table_lua_available
+                        or name.casefold() in user_available):
                     continue
                 raise NativeRuntimeError(f"Selected entry requires an unavailable symbol: {name}")
             visit(provider)
@@ -1700,17 +1708,25 @@ class TrainerEngine:
         self.table_lua_scope = None
 
     def _seed_user_defined_symbols(self) -> None:
-        """WP-46 (part 1) + WP-54 (e): seed the runtime symbol table from the
-        plan's table-level <UserdefinedSymbols> map (casefolded keys).
+        """WP-46 (part 1) + WP-54 (e) + RT-4.6: seed the runtime symbol table
+        from the plan's table-level <UserdefinedSymbols> map (casefolded
+        keys), then from the optional user-symbol import map
+        (plan field ``user_symbols``).
 
         Called at engine init and again on every confirmed attach: the
         confirmed target-exit path clears ``self.symbols`` wholesale, so
-        without the reseed UDS-backed records would stop resolving after a
-        re-attach within one trainer session.  The call happens before any
-        wish restore and before the table-Lua bootstrap (a table-scope
-        registerSymbol then keeps CE order and overwrites the UDS seed).
+        without the reseed table-level-backed records would stop resolving
+        after a re-attach within one trainer session.  The call happens
+        before any wish restore and before the table-Lua bootstrap (a
+        table-scope registerSymbol then keeps CE order and overwrites both
+        seeds).  User symbols are seeded after the UDS seed, so an explicit
+        operator import overrides a table-level definition of the same
+        name; record registrations overwrite both at runtime registration
+        (program registrations beat the user-defined symbol table).
         """
         for symbol, address in (self.plan.get("user_defined_symbols") or {}).items():
+            self.symbols[symbol.casefold()] = address
+        for symbol, address in (self.plan.get("user_symbols") or {}).items():
             self.symbols[symbol.casefold()] = address
 
     def _run_table_lua_bootstrap(self) -> None:

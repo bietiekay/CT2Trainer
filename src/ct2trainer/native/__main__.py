@@ -18,6 +18,13 @@ def main(argv=None) -> int:
         sub.add_argument("--architecture", choices=("x86", "x64"), default="x64",
                          help="Fixed target architecture (default: x64); attach refuses a different target. Controller remains x64.")
         sub.add_argument("--include-id", type=int, action="append")
+        sub.add_argument("--user-symbols", type=Path,
+                         help="Optional user-symbol import file: JSON mapping of symbol "
+                              "names to target addresses (decimal integers or 0x/$ hex "
+                              "strings). Imported symbols cover requirements that no "
+                              "record registers; they are seeded after the table-level "
+                              "user-defined symbols, so an import overrides a table "
+                              "definition of the same name. Record providers always win.")
         sub.add_argument("--debug-log", action="store_true",
                          help="Enable detailed runtime debug logging in the generated trainer "
                               "(plan flag debug_log; the trainer writes a *.ct2debug.log file next to the EXE)")
@@ -80,8 +87,11 @@ def main(argv=None) -> int:
                                          expected_table_sha256=plan['table_sha256'])
             print(json.dumps(asdict(result), indent=2, default=str))
             return 0 if result.completed else 2 if result.status == 'refused' else 3
-        from .compiler import compile_table
+        from .compiler import compile_table, load_user_symbols
+        user_symbols = (load_user_symbols(args.user_symbols)
+                        if args.user_symbols is not None else None)
         plan = compile_table(args.table, args.process, title=args.title, selected_ids=args.include_id,
+                             user_symbols=user_symbols,
                              architecture=args.architecture, debug_log=args.debug_log)
         if args.command == "inspect":
             print(json.dumps(plan, ensure_ascii=True, indent=2))
