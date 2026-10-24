@@ -807,7 +807,25 @@ class TrainerWindow:
         if self.engine.closed:
             return
         before = self._signature()
-        self.engine.poll()
+        try:
+            self.engine.poll()
+        except Exception as exc:
+            # Field case 2026-10-23 (Sinking City 2, 0.16.3): an exception
+            # escaping this Tk after-callback propagates out of
+            # mainloop() and kills the windowed trainer process without a
+            # single debug-log event (stderr is unattached).  The tick is
+            # fail-closed instead: the failure is logged, the engine is
+            # blocked (writes refuse, the status line names the cause),
+            # and the window keeps ticking so the state stays observable
+            # and recoverable.
+            try:
+                self.engine.debug_log.error("poll-crashed", exc)
+            except Exception:
+                pass
+            try:
+                self.engine._block(exc)
+            except Exception:
+                pass
         self._status_text.set(self.engine.status)
         self._update_banners()
         if before != self._signature():
@@ -984,6 +1002,15 @@ def run_trainer(plan: dict | str | Path) -> int:
                     parent=root)
                 root.destroy()
                 return 1
+    # Crash observability (field case 2026-10-23, Sinking City 2 0.16.3):
+    # uncaught exceptions from the Tk event loop and native fatal signals
+    # land in the trainer debug log instead of an unattached stderr.
+    # Covers both entry points (frozen launcher and the source CLI run
+    # command) because both arrive here with the final engine.
+    try:
+        engine.debug_log.arm_crash_reporting()
+    except Exception:
+        pass
     # WP-53 (GC-D7): OS hotkey capture bridge (Windows only): the hidden
     # message-only window starts with the trainer; the engine mirrors every
     # published binding into it and drains its queue on the 250 ms poll
