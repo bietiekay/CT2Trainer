@@ -20,16 +20,31 @@ Covered classes:
   skip-fold or the runtime-base marker and resolve byte-exactly once the
   group base is written at runtime; forged markers stay fail-closed.
 - O13 INDIRECT_DATA: directive-aware string literals (dd/dq/dw) write
-  the documented bytes.
+  the documented bytes; the combined data-dialect refusals stay
+  byte-stable at plan level.
+- O4 TRAILING_TOKENS: define(bytes, "...") pattern defines and
+  assert(address, pattern-ref) references resolve in walk order;
+  unknown refs, inverted walk order and mismatched images refuse
+  before any write.
+- UDS/O10 table level: <UserdefinedSymbols> entries keep the label
+  contract (all-hex names warned and ignored), the plan map is
+  casefolded, and seeded symbols resolve value addresses end-to-end.
+- Provider-group-shape gate: a proven or intent-bearing addressless
+  provider script as the anchor's direct parent keeps the WP-38 named
+  block; a provider two levels up stages on the inner heading instead.
 """
 from __future__ import annotations
 
 import copy
+import re
 from pathlib import Path
 import struct
 import tempfile
 import unittest
 
+from test_native_dynamic_address_provider import (
+    PROVIDER_NO_RELEASE_SOURCE, PROVIDER_TWO_SYMBOLS_SOURCE, SKIP_REASON,
+    write_table)
 from test_native_engine import FakeMemory
 from test_native_engine_code import Coordinator
 from test_native_il2cpp_host import default_base
@@ -45,6 +60,7 @@ from ct2trainer.native.compiler import (NativeCompileError, compile_table,
                                         validate_plan)
 from ct2trainer.native.engine import (NativeRuntimeError, TrainerEngine,
                                       validate_plan as validate_engine_plan)
+from ct2trainer.table import read_table
 
 PROCESS = "FixtureTarget.exe"
 
@@ -580,6 +596,481 @@ class DirectiveStringEngineTests(unittest.TestCase):
         self.assertEqual(memory.read(0x1050, 4), b"\x00" * 4)
         self.assertEqual(memory.read(0x1054, 4), b"\x00" * 4)
         self.assertEqual(memory.read(0x1058, 8), b"\x00" * 8)
+        engine.close()
+
+
+class UserDefinedSymbolDialectTests(unittest.TestCase):
+    """O10/O23 table level: UDS entries keep the label contract end-to-end."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.table = self.root / "uds.ct"
+        self.table.write_text(
+            '<CheatTable CheatEngineTableVersion="45"><UserdefinedSymbols>'
+            '<SymbolEntry><Name>9bad</Name><Address>1040</Address></SymbolEntry>'
+            '<SymbolEntry><Name>0x1A</Name><Address>1044</Address></SymbolEntry>'
+            '<SymbolEntry><Name>8Path</Name><Address>1050</Address></SymbolEntry>'
+            '<SymbolEntry><Name>0x</Name><Address>1070</Address></SymbolEntry>'
+            '</UserdefinedSymbols><CheatEntries>'
+            '<CheatEntry><ID>1</ID><Description>"UDS value"</Description>'
+            '<VariableType>4 Bytes</VariableType>'
+            '<Address>8Path+4</Address></CheatEntry>'
+            '<CheatEntry><ID>2</ID><Description>"Orphan value"</Description>'
+            '<VariableType>4 Bytes</VariableType>'
+            '<Address>Orphan+10</Address></CheatEntry>'
+            '<CheatEntry><ID>3</ID><Description>"Quoted value"</Description>'
+            '<VariableType>4 Bytes</VariableType>'
+            '<Address>"badfile.txt"</Address></CheatEntry>'
+            '</CheatEntries></CheatTable>',
+            encoding="utf-8")
+
+    def test_invalid_uds_entries_are_warned_and_the_map_is_casefolded(self):
+        table = read_table(self.table)
+        self.assertEqual(
+            table.warnings,
+            ("UserdefinedSymbols entry '9bad': invalid symbol name "
+             "(All-hexadecimal symbol names are ambiguous and "
+             "unsupported.); entry ignored.",
+             "UserdefinedSymbols entry '0x1A': invalid symbol name "
+             "(All-hexadecimal symbol names are ambiguous and "
+             "unsupported.); entry ignored."))
+        plan = compile_table(self.table, PROCESS)
+        self.assertEqual(plan["user_defined_symbols"],
+                         {"8path": 0x1050, "0x": 0x1070})
+        by_id = {entry["id"]: entry for entry in plan["entries"]}
+        self.assertTrue(by_id[1]["supported"], by_id[1]["reason"])
+        self.assertEqual(by_id[1]["address_profile"], "expression/v1")
+        self.assertEqual(by_id[1]["requires"], ["8Path"])
+        validate_plan(plan)
+        validate_engine_plan(plan)
+
+    def test_uds_seeded_value_resolves_and_writes_byte_exact(self):
+        memory = Memory()
+        plan = compile_table(self.table, PROCESS)
+        engine = TrainerEngine(
+            plan, state_dir=self.root / "state",
+            process_lock_dir=self.root / "shared",
+            memory_factory=lambda name: memory,
+            hook_coordinator=Coordinator())
+        engine.poll()
+        # The engine re-seeds the casefolded residual map at attach.
+        self.assertEqual(engine.symbols.get("8path"), 0x1050)
+        self.assertEqual(engine.symbols.get("0x"), 0x1070)
+        self.assertEqual(engine.read_value(1), "0")
+        self.assertEqual(engine.set_value(1, "7"), "7")
+        self.assertEqual(memory.read(0x1054, 4), struct.pack("<I", 7))
+        engine.close()
+
+    def test_symbol_without_any_provider_stays_blocked_with_the_named_reason(self):
+        plan = compile_table(self.table, PROCESS)
+        entry = {e["id"]: e for e in plan["entries"]}[2]
+        self.assertFalse(entry["supported"])
+        self.assertEqual(
+            entry["reason"],
+            "Required symbol 'Orphan' is not registered anywhere in this "
+            "table (referenced by 'Orphan value'): no record defines it "
+            "and it is not a user-defined symbol. Import it as a user "
+            "symbol with its target address, or add a record that "
+            "registers it (registersymbol/registerSymbol/label/aobscan).")
+
+    def test_quoted_atom_that_is_not_a_module_basename_is_blocked(self):
+        plan = compile_table(self.table, PROCESS)
+        entry = {e["id"]: e for e in plan["entries"]}[3]
+        self.assertFalse(entry["supported"])
+        self.assertEqual(
+            entry["reason"],
+            "Quoted atom 'badfile.txt' must be a module basename "
+            "(.exe/.dll).")
+
+
+class PointerOffsetSlotDialectTests(unittest.TestCase):
+    """O3 plan level: hex-arithmetic slots fold, bad slots refuse named."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.table = self.root / "slots.ct"
+        self.table.write_text(
+            '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+            '<CheatEntry><ID>1</ID><Description>"Chase"</Description>'
+            '<VariableType>4 Bytes</VariableType><Address>1040</Address>'
+            '<Offsets><Offset>13A8+118</Offset><Offset>A0+4*4</Offset>'
+            '<Offset>1594+8+118</Offset>'
+            '<Offset>20 (Offset of the name pointer)</Offset></Offsets>'
+            '</CheatEntry>'
+            '<CheatEntry><ID>2</ID><Description>"Bad chase"</Description>'
+            '<VariableType>4 Bytes</VariableType><Address>1040</Address>'
+            '<Offsets><Offset>4/4</Offset></Offsets>'
+            '</CheatEntry></CheatEntries></CheatTable>',
+            encoding="utf-8")
+
+    def test_hex_arithmetic_slots_fold_to_integer_offsets(self):
+        plan = compile_table(self.table, PROCESS)
+        by_id = {entry["id"]: entry for entry in plan["entries"]}
+        self.assertTrue(by_id[1]["supported"], by_id[1]["reason"])
+        self.assertEqual(by_id[1]["pointer_offsets"],
+                         [0x14C0, 0xB0, 0x16B4, 0x20])
+        validate_plan(plan)
+        validate_engine_plan(plan)
+
+    def test_division_slot_refuses_with_the_named_reason(self):
+        plan = compile_table(self.table, PROCESS)
+        entry = {entry["id"]: entry for entry in plan["entries"]}[2]
+        self.assertFalse(entry["supported"])
+        self.assertEqual(
+            entry["reason"],
+            "Pointer offset must be a hexadecimal integer literal or a "
+            "supported address expression.")
+
+    def test_expression_offset_beyond_i64_refuses_at_activation(self):
+        i64_table = self.root / "i64.ct"
+        i64_table.write_text(
+            '<CheatTable CheatEngineTableVersion="45"><UserdefinedSymbols>'
+            '<SymbolEntry><Name>LP</Name><Address>2000</Address></SymbolEntry>'
+            '<SymbolEntry><Name>Base</Name><Address>2100</Address></SymbolEntry>'
+            '</UserdefinedSymbols><CheatEntries>'
+            '<CheatEntry><ID>7</ID><Description>"i64 chase"</Description>'
+            '<VariableType>4 Bytes</VariableType><Address>LP</Address>'
+            '<Offsets><Offset>Base+C000000000000000</Offset></Offsets>'
+            '</CheatEntry></CheatEntries></CheatTable>',
+            encoding="utf-8")
+        plan = compile_table(i64_table, PROCESS)
+        entry = plan["entries"][0]
+        self.assertTrue(entry["supported"], entry["reason"])
+        self.assertEqual(entry["pointer_offsets"],
+                         ["Base+C000000000000000"])
+        self.assertEqual(entry["requires"], ["LP", "Base"])
+        validate_plan(plan)
+        validate_engine_plan(plan)
+        memory = Memory()
+        engine = TrainerEngine(
+            plan, state_dir=self.root / "i64state",
+            process_lock_dir=self.root / "i64shared",
+            memory_factory=lambda name: memory,
+            hook_coordinator=Coordinator())
+        engine.poll()
+        with self.assertRaisesRegex(
+                NativeRuntimeError,
+                "Pointer offset exceeds signed 64 bits\\."):
+            engine.read_value(7)
+        self.assertFalse(memory.writes)
+        engine.close()
+
+
+class DefinePatternRefDialectTests(unittest.TestCase):
+    """O4: define(bytes, "...") pattern defines and assert pattern refs."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+
+    def _table(self, name, script):
+        table = self.root / name
+        table.write_text(
+            '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+            '<CheatEntry><ID>600</ID><Description>"O4"</Description>'
+            '<VariableType>Auto Assembler Script</VariableType>'
+            '<AssemblerScript>' + script + '</AssemblerScript>'
+            '</CheatEntry></CheatEntries></CheatTable>',
+            encoding="utf-8")
+        return table
+
+    SCRIPT = (
+        "[ENABLE]\n"
+        'define(pat, "90 90")\n'
+        "assert(1040,pat)\n"
+        "1040:\n"
+        "db 01 02\n"
+        "[DISABLE]\n"
+        "1040:\n"
+        "db 90 90\n")
+
+    def test_plan_nodes_carry_the_pattern_and_the_reference(self):
+        plan = compile_table(self._table("shape.ct", self.SCRIPT), PROCESS)
+        entry = plan["entries"][0]
+        self.assertTrue(entry["supported"], entry["reason"])
+        nodes = entry["program"]["enable"]
+        self.assertEqual(nodes[0], {"op": "define", "symbol": "pat",
+                                    "pattern": "90 90"})
+        self.assertEqual(nodes[1], {"op": "assert", "address": "1040",
+                                    "pattern_ref": "pat"})
+        self.assertNotIn("pattern", nodes[1])
+        self.assertEqual(nodes[1].get("expression"), None)
+        validate_plan(plan)
+        validate_engine_plan(plan)
+
+    def test_pattern_assert_is_byte_exact_end_to_end(self):
+        memory = StringMemory()
+        memory.data[0x40:0x42] = b"\x90\x90"
+        engine = TrainerEngine(
+            compile_table(self._table("e2e.ct", self.SCRIPT), PROCESS),
+            state_dir=self.root / "state",
+            process_lock_dir=self.root / "shared",
+            memory_factory=lambda name: memory,
+            hook_coordinator=DataCoordinator())
+        engine.poll()
+        self.assertTrue(engine.toggle(600, True))
+        self.assertEqual(memory.read(0x1040, 2), b"\x01\x02")
+        self.assertFalse(engine.toggle(600, False))
+        self.assertEqual(memory.read(0x1040, 2), b"\x90\x90")
+        engine.close()
+
+    def test_unknown_pattern_ref_refuses_without_writing(self):
+        script = ("[ENABLE]\n"
+                  "assert(1040,nosuch)\n"
+                  "1040:\n"
+                  "db 01 02\n"
+                  "[DISABLE]\n"
+                  "1040:\n"
+                  "db 00 00\n")
+        memory = StringMemory()
+        memory.data[0x40:0x42] = b"\x90\x90"
+        engine = TrainerEngine(
+            compile_table(self._table("badref.ct", script), PROCESS),
+            state_dir=self.root / "badrefstate",
+            process_lock_dir=self.root / "badrefshared",
+            memory_factory=lambda name: memory,
+            hook_coordinator=DataCoordinator())
+        engine.poll()
+        message = ("Assertion pattern reference 'nosuch' has no visible "
+                   "define(bytes, ...) pattern definition.")
+        with self.assertRaisesRegex(NativeRuntimeError,
+                                    re.escape(message)):
+            engine.toggle(600, True)
+        self.assertEqual(engine.entry_errors[600], message)
+        self.assertFalse(memory.writes)
+        engine.close()
+
+    def test_inverted_walk_order_refuses_without_writing(self):
+        script = ("[ENABLE]\n"
+                  "assert(1040,pat)\n"
+                  'define(pat, "90 90")\n'
+                  "1040:\n"
+                  "db 01 02\n"
+                  "[DISABLE]\n"
+                  "1040:\n"
+                  "db 00 00\n")
+        memory = StringMemory()
+        memory.data[0x40:0x42] = b"\x90\x90"
+        engine = TrainerEngine(
+            compile_table(self._table("walk.ct", script), PROCESS),
+            state_dir=self.root / "walkstate",
+            process_lock_dir=self.root / "walkshared",
+            memory_factory=lambda name: memory,
+            hook_coordinator=DataCoordinator())
+        engine.poll()
+        message = ("Assertion pattern reference 'pat' has no visible "
+                   "define(bytes, ...) pattern definition.")
+        with self.assertRaisesRegex(NativeRuntimeError,
+                                    re.escape(message)):
+            engine.toggle(600, True)
+        self.assertEqual(engine.entry_errors[600], message)
+        self.assertFalse(memory.writes)
+        engine.close()
+
+    def test_mismatched_image_refuses_at_the_named_address(self):
+        memory = StringMemory()
+        memory.data[0x40:0x42] = b"\x90\x91"
+        engine = TrainerEngine(
+            compile_table(self._table("mismatch.ct", self.SCRIPT), PROCESS),
+            state_dir=self.root / "mmstate",
+            process_lock_dir=self.root / "mmshared",
+            memory_factory=lambda name: memory,
+            hook_coordinator=DataCoordinator())
+        engine.poll()
+        with self.assertRaisesRegex(NativeRuntimeError,
+                                    "Assertion failed at 0x1040\\."):
+            engine.toggle(600, True)
+        self.assertEqual(engine.entry_errors[600],
+                         "Assertion failed at 0x1040.")
+        self.assertFalse(memory.writes)
+        engine.close()
+
+
+class DirectiveStringRefusalTests(unittest.TestCase):
+    """O13 plan level: the combined data-dialect refusals stay byte-stable."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+
+    def _compile(self, name, directive_line):
+        table = self.root / name
+        table.write_text(
+            '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+            '<CheatEntry><ID>700</ID><Description>"O13"</Description>'
+            '<VariableType>Auto Assembler Script</VariableType>'
+            '<AssemblerScript>[ENABLE]'
+            '\nassert(1050,00 00 00 00 00 00 00 00)'
+            '\n1050:\n'
+            + directive_line + '\n'
+            '[DISABLE]'
+            '\n1050:'
+            '\ndb 00 00 00 00 00 00 00 00'
+            '</AssemblerScript></CheatEntry>'
+            '</CheatEntries></CheatTable>',
+            encoding="utf-8")
+        return compile_table(table, PROCESS)["entries"][0]
+
+    def test_string_constant_width_refusals_name_the_directive(self):
+        entry = self._compile("dd5.ct", "dd 'ABCDE'")
+        self.assertFalse(entry["supported"])
+        self.assertEqual(
+            entry["reason"],
+            "Only db supports ASCII string constants. Native assembly: "
+            "Line 4: dd string constants hold at most 4 ANSI characters.")
+        entry = self._compile("dq9.ct", "dq 'ABCDEFGHI'")
+        self.assertFalse(entry["supported"])
+        self.assertEqual(
+            entry["reason"],
+            "Only db supports ASCII string constants. Native assembly: "
+            "Line 4: dq string constants hold at most 8 ANSI characters.")
+
+    def test_non_ansi_and_backslash_refusals_stay_combined(self):
+        entry = self._compile("ddutf.ct", "dd 'Cé'")
+        self.assertFalse(entry["supported"])
+        self.assertEqual(
+            entry["reason"],
+            "Only db supports ASCII string constants. Native assembly: "
+            "Line 4: DD string constants must be ANSI (characters 0-127).")
+        entry = self._compile("dabs.ct", "db 'A\\B'")
+        self.assertFalse(entry["supported"])
+        self.assertEqual(
+            entry["reason"],
+            "Quoted data literals must not contain backslash escapes. "
+            "Native assembly: Line 4: Quoted data literals must not "
+            "contain backslash escapes.")
+
+    def test_dw_utf16_string_accepts_non_ascii_code_points(self):
+        table = self.root / "dwutf.ct"
+        table.write_text(
+            '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+            '<CheatEntry><ID>700</ID><Description>"O13 dw utf16"</Description>'
+            '<VariableType>Auto Assembler Script</VariableType>'
+            '<AssemblerScript>[ENABLE]'
+            '\nassert(1050,00 00 00 00)'
+            '\n1050:'
+            "\ndw 'Cé'"
+            '\n[DISABLE]'
+            '\n1050:'
+            '\ndw 0,0'
+            '</AssemblerScript></CheatEntry>'
+            '</CheatEntries></CheatTable>',
+            encoding="utf-8")
+        entry = compile_table(table, PROCESS)["entries"][0]
+        self.assertTrue(entry["supported"], entry["reason"])
+        memory = StringMemory()
+        engine = TrainerEngine(
+            compile_table(table, PROCESS),
+            state_dir=self.root / "dwstate",
+            process_lock_dir=self.root / "dwshared",
+            memory_factory=lambda name: memory,
+            hook_coordinator=DataCoordinator())
+        engine.poll()
+        self.assertTrue(engine.toggle(700, True))
+        # dw: UTF-16LE words, any code point.
+        self.assertEqual(memory.read(0x1050, 4), b"C\x00\xe9\x00")
+        self.assertFalse(engine.toggle(700, False))
+        self.assertEqual(memory.read(0x1050, 4), b"\x00" * 4)
+        engine.close()
+
+
+class ProviderShapeGateTests(unittest.TestCase):
+    """O9/O1 staging gate: the WP-38 provider-group shape stays blocked."""
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+
+    def _no_staging(self, source):
+        table = write_table(self.root, source)
+        plan = compile_table(table, PROCESS)
+        validate_plan(plan)
+        validate_engine_plan(plan)
+        by_id = {entry["id"]: entry for entry in plan["entries"]}
+        for record_id in (3002, 3003, 3004):
+            child = by_id[record_id]
+            self.assertEqual(child["kind"], "blocked", child["reason"])
+            self.assertFalse(child["supported"])
+            self.assertEqual(child["reason"], SKIP_REASON)
+        self.assertFalse(
+            any(entry.get("runtime_base_required")
+                or entry.get("runtime_base_target")
+                for entry in plan["entries"]))
+        return by_id
+
+    def test_two_symbol_provider_group_stays_blocked(self):
+        by_id = self._no_staging(PROVIDER_TWO_SYMBOLS_SOURCE)
+        self.assertEqual(by_id[3000]["provides"],
+                         ["BaseAddr", "OtherAddr"])
+
+    def test_register_without_proven_release_stays_blocked(self):
+        by_id = self._no_staging(PROVIDER_NO_RELEASE_SOURCE)
+        self.assertEqual(by_id[3000]["provides"], [])
+        self.assertTrue(by_id[3000]["supported"], by_id[3000]["reason"])
+
+    def test_nested_heading_shape_stages_on_the_inner_anchor(self):
+        # DS2 shape: a provider script two levels up is not the anchor's
+        # direct parent, so the staging gate does not fire and the inner
+        # heading becomes the runtime-base anchor instead.
+        table = self.root / "ds2shape.ct"
+        table.write_text(
+            '<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
+            '<CheatEntry><ID>4000</ID><Description>"Provider"</Description>'
+            '<VariableType>Auto Assembler Script</VariableType>'
+            '<AssemblerScript>' + PROVIDER_NO_RELEASE_SOURCE
+            + '</AssemblerScript><CheatEntries>'
+            '<CheatEntry><ID>4001</ID><Description>"[ Pointers ]"</Description>'
+            '<GroupHeader>1</GroupHeader><CheatEntries>'
+            '<CheatEntry><ID>4002</ID><Description>"Mock-Up"</Description>'
+            '<GroupHeader>1</GroupHeader><CheatEntries>'
+            '<CheatEntry><ID>4003</ID><Description>"Value"</Description>'
+            '<VariableType>4 Bytes</VariableType>'
+            '<Address>+10</Address></CheatEntry>'
+            '</CheatEntries></CheatEntry>'
+            '</CheatEntries></CheatEntry>'
+            '</CheatEntries></CheatEntry>'
+            '</CheatEntries></CheatTable>',
+            encoding="utf-8")
+        plan = compile_table(table, PROCESS)
+        validate_plan(plan)
+        validate_engine_plan(plan)
+        by_id = {entry["id"]: entry for entry in plan["entries"]}
+        self.assertTrue(by_id[4003]["supported"], by_id[4003]["reason"])
+        self.assertTrue(by_id[4003]["runtime_base_required"])
+        self.assertEqual(by_id[4003]["runtime_base_anchor"], 4002)
+        self.assertEqual(by_id[4003]["address"], "+10")
+        self.assertTrue(by_id[4002]["runtime_base_target"])
+        self.assertNotIn("runtime_base_target", by_id[4001])
+        self.assertNotIn("runtime_base_target", by_id[4000])
+        memory = Memory()
+        engine = TrainerEngine(
+            plan, state_dir=self.root / "ds2state",
+            process_lock_dir=self.root / "ds2shared",
+            memory_factory=lambda name: memory,
+            hook_coordinator=Coordinator())
+        engine.poll()
+        # Inert until the anchor base is written; the refusal names it.
+        with self.assertRaisesRegex(
+                NativeRuntimeError,
+                r"Runtime base for group record 4002 \('Mock-Up'\) is not "
+                r"provided yet"):
+            engine.read_value(4003)
+        self.assertFalse(memory.writes)
+        # Any supported addressless plan script may write the anchor -
+        # here the grandparent provider script.
+        engine.set_dynamic_address(4002, 0x1040, scope=4000)
+        self.assertEqual(engine.dynamic_addresses[4002], 0x1040)
+        self.assertEqual(engine.read_value(4003), "0")
+        self.assertEqual(engine.set_value(4003, "1234"), "1234")
+        # anchor base 0x1040 + relative 0x10 -> 0x1050
+        self.assertEqual(memory.read(0x1050, 4), struct.pack("<I", 1234))
         engine.close()
 
 
