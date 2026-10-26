@@ -26,7 +26,12 @@ createThread/threadWait gate decision (2026-10-26, merge `2de9c0e`):
 option (2) recorded — capability gate stays, no thread backend ships
 this milestone, byte-stable five-stage gate pins
 `tests/test_native_rt5_thread_gate.py` +17, tests only, zero catalog
-movement (`blocked-catalog-rt5g-main` zero delta). The 0.17 build is cut
+movement (`blocked-catalog-rt5g-main` zero delta); plus the RT-5 item F
+no-effect register ratification (2026-10-26, merge `966fccd`,
+tests-only: the inventory section-8 no-effect/out-of-scope register
+pinned as a byte-stable contract,
+`tests/test_native_rt5_no_effect_register.py` +22, zero catalog
+movement, `blocked-catalog-rt5f-main` zero delta). The 0.17 build is cut
 after the remaining RT-4.2 merge (1,085).
 Superseded: 0.16.3, build
 `native-20261023T065015Z-afbc3eba` (built from `main` at `6a5ba63`,

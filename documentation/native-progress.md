@@ -1359,7 +1359,13 @@ The old 85% closure estimate and 0.11 release step were superseded by the
    directive lines in 8 tables (gate-governed) and 51 Lua-context lines
    in 11 tables (`lua_host` cooperative workers, separate family);
    tests only, zero catalog movement (`blocked-catalog-rt5g-main` zero
-   delta). Next: executing the remaining RT-4 package RT-4.2
+   delta). RT-5 item F no-effect register ratification landed
+   (lane `native-rt5-f`, merge `966fccd`): the inventory §8
+   no-effect/out-of-scope register is pinned as an enforced byte-stable
+   contract — `tests/test_native_rt5_no_effect_register.py` +22 (focused
+   22 OK; main suite 3,670 OK / 25 expected skips); tests-only, zero
+   catalog movement (`blocked-catalog-rt5f-main` zero delta). Next:
+   executing the remaining RT-4 package RT-4.2
    1,085 last (runtime provider model). The user-requested trainer
    UI feature (Scripts view + row context menu with script preview and
    entry assessment) landed 2026-10-24 on branch

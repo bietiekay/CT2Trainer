@@ -492,6 +492,30 @@ cooperative workers, a separate family, not O22-gated); zero first-word
 1,351 blocked of 117,634, zero delta). Full suite on `main` after the
 merge: **3,648 OK / 25 expected skips**.
 
+Update (2026-10-26, RT-5 item F): the no-effect register ratification
+landed (lane `native-rt5-f`, merged to `main` as `966fccd`):
+`tests/test_native_rt5_no_effect_register.py` (+22 tests, 12 classes)
+turns the RT-5 inventory section-8 no-effect / out-of-scope register
+into an enforced, byte-stable contract — the 26 CE UI globals
+(inventory section 7.2 minus messageDialog) keep the exact runtime
+refusal `Unsupported CE Lua API: <name>` with zero target side effects
+(including the uppercase `GetAddressList` vs the hosted lowercase
+`getAddressList` contrast, `playSound`, and the legacy timer helpers);
+the section-7.3 object-method register is pinned per surface (the WP-56
+inert menu/form proxy accepts and discards 14 methods; the addresslist
+and memory-scan named refusals; stringlist file access out-of-profile;
+structure methods unreachable behind the createStructure refusal); the
+table-level Structures, Signature/SignedHash/PublicKey, Forms
+(CETrainer/IconList/UDF1) and Files families warn byte-exactly with
+sorted `ignored_sections` and are plan-inert (differential plan-state
+equality vs a construct-free control); LastState + RealAddress and
+Color/Comments/DisassemblerComments are silent; a plain GroupHeader
+stays a supported navigation heading; ActivateSound/DeactivateSound
+hotkey children are ignored; the usemono() record is blocked with the
+exact composite reason. Tests only; zero catalog movement (remeasure
+`blocked-catalog-rt5f-main`); full main suite after the merge
+**3,670 OK / 25 expected skips**.
+
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
 **Scope and method.** Full clean-room attribution of every blocked row in
