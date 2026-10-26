@@ -301,8 +301,11 @@ class DigitModulePlanTests(unittest.TestCase):
                 '</CheatEntries></CheatTable>')
         row = self.compile(body)["entries"][0]
         self.assertFalse(row["supported"])
-        self.assertEqual(row["reason"],
-                         "Required symbol has no unique supported provider: 20XX.")
+        # The merged (main) provider-lookup report names the referring
+        # record and both remediations; the block semantics are unchanged.
+        self.assertIn(
+            "Required symbol '20XX' is not registered anywhere in this table",
+            row["reason"])
 
 
 class DoubleColonProgramTests(unittest.TestCase):

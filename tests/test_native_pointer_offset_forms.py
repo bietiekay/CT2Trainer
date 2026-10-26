@@ -126,7 +126,7 @@ class DecimalOffsetFormTests(unittest.TestCase):
         plan = self.compile(("0x",))
         entry = self.entry(plan)
         self.assertFalse(entry["supported"])
-        self.assertIn("Required symbol has no unique supported provider: 0x.", entry["reason"])
+        self.assertIn("Required symbol '0x' is not registered anywhere in this table", entry["reason"])
         self.assertEqual(entry["pointer_offsets"], ["0x"])
 
     def test_expression_offset_slots_with_providers_are_accepted(self):

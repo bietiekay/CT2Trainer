@@ -374,7 +374,9 @@ class NativeCompilerTests(unittest.TestCase):
             plan = self.compile(value_record(1, extra='<Offsets><Offset>base+10</Offset></Offsets>'))
             entry = plan["entries"][0]
             self.assertFalse(entry["supported"], entry["reason"])
-            self.assertIn("Required symbol has no unique supported provider: base.", entry["reason"])
+            self.assertIn(
+                "Required symbol 'base' is not registered anywhere in this table",
+                entry["reason"])
 
     def test_pointer_offset_overflow_and_chain_limit_stay_rejected(self):
         overflow = self.compile(value_record(1, extra='<Offsets><Offset>FFFFFFFFFFFFFFFFFFF+1</Offset></Offsets>'))
