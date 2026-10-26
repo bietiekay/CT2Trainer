@@ -337,7 +337,15 @@ entry (`x86/insns.dat:751` `FSTP fpureg [r: dd d8+r]`, correct is
 (`fcomip st0, st1` -> `DF F1` is correct); the two Witcher3 `fstp
 st(0)` rows (one per 4.0x table) therefore link but assemble with wrong
 bytes until root re-pins or locally patches the NASM dependency
-(authorized local-fork path per `AGENTS.md`).
+(authorized local-fork path per `AGENTS.md`). Resolution (root audit
+2026-10-26, see native-progress "NASM 3.02 FSTP encoding audit"): no
+defect in the pinned NASM 3.02 - `DD D8+i` IS the correct encoding of
+FSTP ST(i) per the Intel SDM table (verified with the pinned MIT
+iced-x86 decoder); the original "expected DF C0" reading was wrong, and
+the spurious 0x66/0x67 prefixes in probe output came from test snippets
+without an explicit `bits` directive (this build defaults to 16-bit).
+Witcher3 `fstp st(0)` rows assemble correctly end-to-end; regression
+pins added to `tests/test_native_fpu_st_operand.py`.
 
 Update (2026-10-24, RT-4.5): the AA directive & script-coverage package
 landed (branch `native-rt4-5`, merged to `main` the same day after the

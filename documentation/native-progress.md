@@ -945,18 +945,24 @@ merge over the RT-4.4 + 0.16.4 state, no conflict resolution needed).
   `Sleep` x2 stay generic (bare `call` targets). Lane classification
   audit over all 1,284 zero-candidate rows: 1,038 generic / 217
   new-style / 0 misclassified.
-- **Known root-owned defect (out of lane scope):** the pinned NASM 3.02
-  dependency mis-encodes the FSTP fpureg table entry —
-  `x86/insns.dat` line 751 `FSTP fpureg [r: dd d8+r]` instead of
-  `df c0+r`. Measured: `fstp st0` -> `DD D8`, `fstp st1` -> `DD D9`
-  (both wrong; expected `DF C0` / `DF C1`), while `fcomip st0, st1` ->
-  `DF F1` is correct. NASM 3.02 also rejects the parenthesized
-  `st(N)` syntax outright (bare `st0`-`st7` only), which the tokenizer
-  fold works around at link time. Consequence: the two Witcher3
-  `fstp st(0)` rows (one per 4.0x table) pass our linker but assemble
-  with wrong bytes until root re-pins or locally patches the NASM
-  dependency (authorized local-fork/adaptation path per `AGENTS.md`,
-  with source pin, notice and build evidence).
+- **Known root-owned defect (out of lane scope) — RESOLVED 2026-10-26,
+  no defect exists (root audit; see the audit section below):** the
+  lane reported the pinned NASM 3.02 as mis-encoding the FSTP fpureg
+  table entry (`x86/insns.dat:751` `FSTP fpureg [r: dd d8+r]`, measured
+  `fstp st0` -> `DD D8`, expected `DF C0`). The audit against the Intel
+  SDM instruction table and the pinned MIT iced-x86 decoder shows the
+  expectation was wrong: **FSTP ST(i) is encoded as `DD D8+i`**
+  (`DD D8` decodes as `fstp st(0)`; `DF C0` is FFREEP ST(0)). With the
+  explicit `bits 32`/`bits 64` directives the pipeline always emits,
+  every FST/FSTP/FLD register and memory form matches the Intel table
+  byte-for-byte; the 0x66/0x67 prefixes seen in the lane's probe runs
+  were artifacts of snippets without a `bits` directive (this NASM
+  build defaults to 16-bit mode). NASM 3.02 does reject the
+  parenthesized `st(N)` syntax outright (bare `st0`-`st7` only), which
+  the tokenizer fold works around at link time. The two Witcher3
+  `fstp st(0)` rows therefore link and assemble with correct bytes
+  (DD D8); regression pins added in
+  `tests/test_native_fpu_st_operand.py`.
 
 Tests: 53 new — `tests/test_native_fpu_st_operand.py` (9, including the
 runtime roundtrip `fcomip st(0), st(1)` -> `DF F1` enable write on
@@ -1118,6 +1124,63 @@ bindings unchanged): **zero delta** vs `blocked-catalog-rt45main` —
 zero reason changes (UI-only change, plans byte-identical). The
 feature ships in the 0.17 build, cut after the remaining RT-4.x
 merges (RT-4.3 452, RT-4.2 1,085) per the user decision 2026-10-24.
+
+### NASM 3.02 FSTP encoding audit (root, 2026-10-26)
+
+Root audit of the "FSTP defect" recorded by the RT-4.6 lane (bullet in
+the RT-4.6 section above). Result: **no defect in the pinned NASM
+3.02; the original "expected" encoding was wrong.**
+
+- **Pin integrity:** `.tools/native-tools/nasm.exe` sha256
+  `04ec2385879f7e1c45dbe76c4020970555de48eeb97c23f59620ede061328f51`
+  = the manifest executable hash; a fresh download of the official
+  archive `nasm-3.02-win64.zip` (nasm.us) hashes to
+  `161d0bfaff53c2f9e9f3e69fd0672323ebabafd1268976a5cec11be92a19aee7`
+  = the manifest win64-zip hash, and its `nasm-3.02/nasm.exe` member
+  hashes to the same `04ec2385...`. `nasm -v` reports "NASM version
+  3.02 compiled on Jun 28 2026". The pin is the genuine official
+  build; the identical FSTP/FST lines exist in upstream NASM master
+  (`x86/insns.dat`), so any table error would be upstream-wide.
+- **Intel SDM instruction table (reference, Dec-2023 revision):**
+  `FSTP ST(i)` = `DD D8+i`, `FST ST(i)` = `DD D0+i`, `FLD ST(i)` =
+  `D9 C0+i`; memory forms `FSTP m32` = `D9 /3`, `FSTP m64` = `DD /3`,
+  `FSTP m80` = `DB /7`, `FST m32` = `D9 /2`, `FST m64` = `DD /2`,
+  `FLD m32` = `D9 /0`, `FLD m64` = `DD /0`, `FLD m80` = `DB /5`. The
+  pinned MIT iced-x86 decoder agrees independently (`DD D8` ->
+  `fstp st(0)`, `DD D0` -> `fst st(0)`, `D9 18` -> `fstp dword
+  [eax]`, `DD 18` -> `fstp qword [eax]`, and `DF C0` -> `ffreep
+  st(0)` — the "expected" `DF C0` is in fact FFREEP ST(0)).
+- **Measured with the pinned binary:** with the explicit
+  `bits 32`/`bits 64` directives that CT2Trainer always emits
+  (assembly generation in `aa_program.py` starts every program with
+  `bits {bitness}`), every probe instruction matches the Intel table
+  byte-for-byte: `fstp st0` -> `DD D8`, `fstp st1` -> `DD D9`,
+  `fst st0` -> `DD D0`, `fld st1` -> `D9 C1`, `fadd st1` -> `D8 C1`,
+  `fcomip st0, st1` -> `DF F1`, `fstp dword [eax]` -> `D9 18`,
+  `fstp qword [esp]` -> `DD 1C`, `fst dword [eax]` -> `D9 10`,
+  `fld qword [eax]` -> `DD 00`.
+- **Root cause of the false alarm:** the lane's probe snippets
+  omitted the `bits` directive; this NASM build defaults to 16-bit
+  mode (control: bare `mov eax, 1` -> `66 B8 01 00 00 00`, `mov
+  dword [eax], 1` -> `67 66 C7 00 01 00 00 00`), which adds 0x66/0x67
+  operand/address-size prefixes to every instruction — the source of
+  the unexplained `0x67` prefixes in the earlier readings. No
+  CT2Trainer program ever assembles without the bits directive, so
+  the trainer payload was never affected.
+- **Consequence:** the two Witcher3 `fstp st(0)` rows (one per 4.0x
+  table) assemble correctly end-to-end (token fold `st(0)` -> `st0`,
+  then `bits 32` program -> `DD D8`); no re-pin, no local patch, no
+  compiler-side workaround needed. New regression pins:
+  `tests/test_native_fpu_st_operand.py` (+3: assembler-level byte
+  pins for the FSTP/FST register and memory forms over the pinned
+  binary with explicit bits directives, plus a full-pipeline engine
+  roundtrip of the exact corpus line `fstp st(0)` -> `DD D8` enable
+  write with disable restore). Full local suite after the change
+  (CT2TRAINER_NASM set): 3,590 OK / 25 expected skips
+  (baseline 3,587 + 3, clean run exit 0); catalog remeasure
+  `blocked-catalog-nasm-fstp-audit` zero delta vs
+  `blocked-catalog-ui-scripts` (docs + tests only, no functional
+  change).
 
 ## 3. Deterministic measurement chain
 
