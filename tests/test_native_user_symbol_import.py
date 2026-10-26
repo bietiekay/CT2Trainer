@@ -106,8 +106,10 @@ class UserSymbolNormalizeTests(unittest.TestCase):
         with self.assertRaisesRegex(NativeCompileError,
                                     "All-hexadecimal"):
             _normalize_user_symbols({"DEADBEEF": 1})
+        # RT-4.3 (O10): dots are admitted in symbol names; the hyphen is
+        # still outside the identifier contract.
         with self.assertRaisesRegex(NativeCompileError,
-                                    "ASCII letters, digits or underscores"):
+                                    "digits, underscores or dots"):
             _normalize_user_symbols({"my-sym": 1})
 
     def test_out_of_range_or_non_integer_addresses_are_refused(self):
@@ -332,9 +334,14 @@ class UserSymbolPlanValidationTests(unittest.TestCase):
             validate_plan(plan)
 
     def test_invalid_symbol_key_is_refused(self):
+        # RT-4.3 (O10): a digit-leading key is now a valid CE identifier
+        # (the name stops parsing as hex at its first non-hex character),
+        # so it must pass; the hyphenated key stays refused.
         plan = self.mutate({"123sym": 0x1020})
+        validate_plan(plan)
+        plan = self.mutate({"my-sym": 0x1020})
         with self.assertRaisesRegex(NativeCompileError,
-                                    "ASCII letters, digits or underscores"):
+                                    "digits, underscores or dots"):
             validate_plan(plan)
         plan = self.mutate({"DEADBEEF": 0x1020})
         with self.assertRaisesRegex(NativeCompileError,
