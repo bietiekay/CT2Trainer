@@ -12,18 +12,25 @@ coverage, original-table static coverage and observed effect separate.
 Do not report the reference-table goal as complete from the 42/42
 synthetic matrix or carry stale counts into this overview.
 
-**Active outcome (2026-10-23): 100% of the 151 local-only reference-table
+**Active outcome (2026-10-26): 100% of the 151 local-only reference-table
 paths (143 distinct hashes) must load and support their intended behavior
 through an independent clean-room implementation.** The 0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
-now loads, table load 151/151) landed on `main` 2026-10-23; the RT-5
-API/construct inventory is documented in
-`documentation/rt5-api-inventory.md`. The latest original-table catalog
-(run `blocked-catalog-rt3`, 2026-10-23) has 1,858 blocked of 117,634
-plan entries, 59,642 staged entries and zero load errors (previous:
-1,858 blocked of 117,624 with one legacy-binary load error; original
-baseline: 2,698 blocked, 58,950 staged). The 42/42 feature
+now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
+(value semantics), RT-4.6 (input legacy & authoring gaps) and RT-4.5
+(AA directive & script coverage) landed on `main` 2026-10-24; RT-4.3
+(address expression & identifier dialect) landed on `main` 2026-10-26
+(plus its dedicated dialect test follow-up); RT-5 item G
+(createThread/threadWait gate decision, option 2: the capability gate
+stays, no thread backend ships this milestone) landed 2026-10-26 as
+byte-stable tests-only gate pins. The RT-5 API/construct inventory is
+documented in `documentation/rt5-api-inventory.md`. The latest
+original-table catalog (run `blocked-catalog-rt43-main`, 2026-10-26)
+has 1,351 blocked of 117,634 plan entries, 59,868 staged entries and
+zero load errors (previous: 1,743 after RT-4.5, 1,778 after RT-4.6,
+1,807 after RT-4.4, 1,858 after RT-4.1/RT-3; original baseline:
+2,698 blocked, 58,950 staged). The 42/42 feature
 matrix measures only the 30 pinned synthetic cases; AP-11 has 0/6,143
 confirmed game effects. Read
 [`plans/reference-table-100-roadmap.md`](plans/reference-table-100-roadmap.md)
