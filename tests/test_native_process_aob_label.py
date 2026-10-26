@@ -154,7 +154,7 @@ class ProcessTokenProgramTests(unittest.TestCase):
         validate_program(program)
 
     def test_path_like_module_still_refused(self):
-        with self.assertRaisesRegex(AAError, "module basenames"):
+        with self.assertRaisesRegex(AAError, "module basename"):
             prepare_program(PROCESS_AOB_PROGRAM.replace("$process", '"C:\\x\\y"'))
 
     def test_bounded_path_accepts_process_token(self):

@@ -281,47 +281,13 @@ _OFFSET_SLOT_TOKEN = re.compile(r"[-+*]|(?:0x)?[0-9A-Fa-f]+|#[+-]?[0-9]+")
 _OFFSET_ANNOTATION = re.compile(r"\([^()]*\)")
 
 
-def _parse_offset_slot(text: str) -> int:
-    """Fold one <Offset> slot into a signed int64 value (WP-21).
+_OFFSET_REFUSAL = (
+    "Pointer offset must be a hexadecimal integer literal or a supported "
+    "address expression.")
 
-    The reference corpus uses constant hexadecimal arithmetic in pointer-
-    chase slots ("13A8+118", "A0+4*4", "1594+8+118") and annotated hex
-    ("20 (Offset of the name pointer)").  The bounded grammar is: hex
-    literals (optionally 0x-prefixed) and decimal literals
-    ('#'-prefixed, with the sign before or after the '#', per the CE
-    ConvertHexStrToRealStr convention) combined with '+', '-' and '*'
-    using the usual precedence, an optional leading sign that binds to
-    the first term, plus optional balanced, non-nested parenthesized
-    annotation text that is stripped before evaluation.  WP-14 (C4)
-    remains intact: "+28" is 0x28, "-0x10" is -16, and malformed forms
-    ("++10", "+", bare "0x"),
-    symbol-based offsets ("base+10"), dotted text, empty slots, nested or
-    unbalanced parentheses and empty annotations stay rejected
-    fail-closed.  A slot that happens to consist only of hex digits is
-    evaluated as hex (the same ambiguity CE has in its hex-first offset
-    parse); symbol names containing other characters are refused.
-    """
-    if not isinstance(text, str):
-        raise AAError("Pointer offset must be a hexadecimal integer literal.")
-    core = text.strip()
-    if not core or len(core) > 64:
-        raise AAError("Pointer offset must be a hexadecimal integer literal.")
-    depth = 0
-    for char in core:
-        if char == "(":
-            depth += 1
-        elif char == ")" and depth > 0:
-            depth -= 1
-    if depth != 0:
-        raise AAError("Pointer offset must be a hexadecimal integer literal.")
-    if _OFFSET_ANNOTATION.search(core) is not None:
-        if any(annotation[1:-1].strip() == ""
-               for annotation in _OFFSET_ANNOTATION.findall(core)):
-            raise AAError("Pointer offset must be a hexadecimal integer literal.")
-        core = _OFFSET_ANNOTATION.sub(" ", core).strip()
-    if _OFFSET_SLOT_GRAMMAR.match(core) is None:
-        raise AAError("Pointer offset must be a hexadecimal integer literal.")
-    body = core
+
+def _fold_hex_offset(body: str) -> int:
+    """Fold the hex/decimal arithmetic body of a literal offset slot."""
     first_sign = 1
     if body[0] in "+-":
         first_sign = -1 if body[0] == "-" else 1
@@ -357,14 +323,96 @@ def _parse_offset_slot(text: str) -> int:
     return total
 
 
-def _offsets(offsets: tuple[str, ...]) -> list[int]:
+def _expression_references(node) -> bool:
+    """RT-4.3 (O3): true when an address expression names anything that
+    must be resolved at runtime — a symbol, module-prefixed export,
+    managed label, module base, or a memory read.  Pure constant
+    arithmetic (e.g. "++10") is not an offset reference and stays
+    fail-closed under the literal refusal."""
+    if node.get("kind") in {"symbol", "export", "module", "managed", "deref"}:
+        return True
+    for key in ("value", "left", "right"):
+        child = node.get(key)
+        if isinstance(child, dict) and _expression_references(child):
+            return True
+    return False
+
+
+def _parse_offset_slot(text: str) -> int | str:
+    """Fold one <Offset> slot into a signed int64 or keep an expression.
+
+    The reference corpus uses constant hexadecimal arithmetic in pointer-
+    chase slots ("13A8+118", "A0+4*4", "1594+8+118") and annotated hex
+    ("20 (Offset of the name pointer)").  The bounded grammar is: hex
+    literals (optionally 0x-prefixed) and decimal literals
+    ('#'-prefixed, with the sign before or after the '#', per the CE
+    ConvertHexStrToRealStr convention) combined with '+', '-' and '*'
+    using the usual precedence, an optional leading sign that binds to
+    the first term, plus optional balanced, non-nested parenthesized
+    annotation text that is stripped before evaluation.  WP-14 (C4)
+    remains intact: "+28" is 0x28, "-0x10" is -16, and malformed forms
+    ("++10", "+", bare "0x"), empty slots, nested or unbalanced
+    parentheses and empty annotations stay rejected fail-closed.  A slot
+    that happens to consist only of hex digits is evaluated as hex (the
+    same ambiguity CE has in its hex-first offset parse).
+
+    RT-4.3 (O3): a slot that is not literal arithmetic is accepted when
+    it is a supported address expression — a symbol, module-prefixed
+    export or managed label, or bounded arithmetic/dereferences over
+    them.  The expression is kept verbatim in the plan and resolved at
+    activation against the live symbol table and memory (CE
+    pointer-chain semantics), so hex literals keep working byte-for-byte
+    and expression offsets stay fail-closed only when the expression
+    grammar itself refuses them.
+    """
+    if not isinstance(text, str):
+        raise AAError(_OFFSET_REFUSAL)
+    core = text.strip()
+    if not core or len(core) > 64:
+        raise AAError(_OFFSET_REFUSAL)
+    if _OFFSET_SLOT_GRAMMAR.match(core) is not None:
+        return _fold_hex_offset(core)
+    depth = 0
+    for char in core:
+        if char == "(":
+            depth += 1
+        elif char == ")" and depth > 0:
+            depth -= 1
+    if depth == 0:
+        annotations = _OFFSET_ANNOTATION.findall(core)
+        if annotations and any(annotation[1:-1].strip() == ""
+                               for annotation in annotations):
+            raise AAError(_OFFSET_REFUSAL)
+        if _OFFSET_ANNOTATION.search(core) is not None:
+            stripped = _OFFSET_ANNOTATION.sub(" ", core).strip()
+            if _OFFSET_SLOT_GRAMMAR.match(stripped) is not None:
+                return _fold_hex_offset(stripped)
+    try:
+        node = parse_expression(core)
+    except AddressExpressionError as exc:
+        raise AAError(_OFFSET_REFUSAL) from exc
+    if not _expression_references(node):
+        raise AAError(_OFFSET_REFUSAL)
+    return core
+
+
+def _offsets(offsets: tuple[str, ...]) -> list[int | str]:
     if len(offsets) > 32:
         raise AAError("Pointer chains are limited to 32 offsets.")
     return [_parse_offset_slot(text) for text in offsets]
 
 
-def _effective_address(source: Entry, sources: dict[int, Entry], stack: tuple[int, ...] = ()) -> str:
-    """Flatten relative addresses and XML pointer offsets, without reading memory."""
+def _effective_address(source: Entry, sources: dict[int, Entry], stack: tuple[int, ...] = (),
+                       *, skip: bool = False) -> str:
+    """Flatten relative addresses and XML pointer offsets, without reading memory.
+
+    RT-4.3 (O9/O1): with ``skip=True`` an addressless intermediate
+    ancestor (an addressless script/value record) is transparent for the
+    inherited-base walk, so the base of a farther-up address-bearing
+    ancestor is used; an addressless heading with pointer offsets still
+    refuses in both modes (its inherited base is genuinely ambiguous).
+    The default behaviour is unchanged.
+    """
     if source.id in stack or len(stack) >= 64:
         raise AAError("Inherited address ancestry is cyclic or exceeds 64 records.")
     raw = source.address or ""
@@ -389,17 +437,24 @@ def _effective_address(source: Entry, sources: dict[int, Entry], stack: tuple[in
             if candidate.address and candidate.address.strip():
                 parent_source = candidate
                 break
-            if not candidate.is_group_header:
-                raise AAError("Relative address cannot skip an addressless script/value ancestor.")
             if candidate.pointer_offsets:
                 raise AAError("Relative address cannot skip an addressless heading with pointer offsets; its inherited base is ambiguous.")
+            if not skip and not candidate.is_group_header:
+                raise AAError("Relative address cannot skip an addressless script/value ancestor.")
             parent_id = candidate.parent_id
         if parent_source is None:
             raise AAError("Relative address has no address-bearing ancestor.")
-        base = _effective_address(parent_source, sources, stack + (source.id,))
+        base = _effective_address(parent_source, sources, stack + (source.id,), skip=skip)
         raw = "(" + base + ")" + raw
     for offset in reversed(_offsets(source.pointer_offsets)):
-        raw = "[" + raw + "]" + (f"+{offset:X}" if offset > 0 else f"-{abs(offset):X}" if offset < 0 else "")
+        if isinstance(offset, str):
+            # RT-4.3 (O3): an expression offset cannot be folded into a hex
+            # literal; it is inlined verbatim (parenthesized) so the runtime
+            # expression evaluation resolves it against the live symbol
+            # table and memory at activation.
+            raw = f"[{raw}]+({offset})"
+        else:
+            raw = "[" + raw + "]" + (f"+{offset:X}" if offset > 0 else f"-{abs(offset):X}" if offset < 0 else "")
     try:
         parse_expression(raw)
     except AddressExpressionError as exc:
@@ -609,6 +664,24 @@ def _dropdown_choice_status(value: str, value_type: str, hexadecimal: bool,
     return "literal", ""
 
 
+def _offset_expression_symbols(offsets, known=()) -> list[str]:
+    """RT-4.3 (O3): symbol-kind atoms contributed by expression offset slots.
+
+    Returns each symbol once, in expression order, skipping atoms the
+    address symbols already cover (case-insensitive).
+    """
+    known_cf = {name.casefold() for name in known}
+    found = []
+    for offset in offsets:
+        if isinstance(offset, str):
+            for symbol in expression_symbols(offset):
+                if (symbol.casefold() not in known_cf
+                        and symbol not in found):
+                    found.append(symbol)
+                    known_cf.add(symbol.casefold())
+    return found
+
+
 def _compile_value_address(entry: dict, source: Entry, sources: dict[int, Entry],
                            allow_empty: bool = False) -> None:
     if allow_empty and not (source.address or "").strip():
@@ -632,7 +705,11 @@ def _compile_value_address(entry: dict, source: Entry, sources: dict[int, Entry]
         # The flat base/tail canonical stays on the strict static resolver.
         entry["address"] = canonical
         entry["pointer_offsets"] = _offsets(source.pointer_offsets)
-        entry["requires"] = expression_symbols(canonical)
+        # RT-4.3 (O3): expression offset slots carry their own symbol
+        # dependencies on top of the address symbols.
+        address_symbols = expression_symbols(canonical)
+        entry["requires"] = address_symbols + _offset_expression_symbols(
+            entry["pointer_offsets"], address_symbols)
         return
     # Bounded non-flat shapes (indirection, casts that survive
     # canonicalization, managed method labels) are evaluated by the runtime
@@ -668,22 +745,39 @@ def _validate_value_address(entry: dict, allow_empty: bool = False,
             # WP-38/WP-50: a relative expression address is valid only when
             # its plan-level ancestor walk binds the dynamic address provider
             # of the nearest marked ancestor (a symbol provider, or a
-            # symbol-null direct address-write target); everything else keeps
-            # the existing named refusal byte-for-byte.
+            # symbol-null direct address-write target).  RT-4.3 (O9/O1) adds
+            # the staged runtime-base marker (a relative value whose group
+            # base is written at runtime by the table scripts); everything
+            # else keeps the existing named refusal byte-for-byte.
             if (_dynamic_provider_binding(by_id or {}, entry) is None
-                    and _dynamic_address_binding(by_id or {}, entry) is None):
+                    and _dynamic_address_binding(by_id or {}, entry) is None
+                    and not _runtime_base_marker_ok(by_id or {}, entry)):
                 raise NativeCompileError("Expression-profile addresses must have resolved inherited bases.")
         if entry.get("pointer_offsets") != [] or not isinstance(entry.get("source_address"), str):
             raise NativeCompileError("Expression-profile values require flattened offsets and original address metadata.")
         address_symbols = advanced_expression_symbols(entry["address"])
     else:
         raise NativeCompileError("Unknown native value address profile.")
-    if {symbol.casefold() for symbol in entry["requires"]} != {symbol.casefold() for symbol in address_symbols} or entry["provides"]:
-        raise NativeCompileError("Value symbol dependencies do not match the address.")
     offsets = entry.get("pointer_offsets")
-    if (not isinstance(offsets, list) or len(offsets) > 32
-            or any(type(offset) is not int or abs(offset) > 0x7FFFFFFFFFFFFFFF for offset in offsets)):
+    if not isinstance(offsets, list) or len(offsets) > 32:
         raise NativeCompileError("Invalid pointer offsets.")
+    offset_symbols = _offset_expression_symbols(offsets, address_symbols)
+    for offset in offsets:
+        if type(offset) is int:
+            if abs(offset) > 0x7FFFFFFFFFFFFFFF:
+                raise NativeCompileError("Invalid pointer offsets.")
+        elif isinstance(offset, str):
+            # RT-4.3 (O3): expression offset slots must stay parseable.
+            try:
+                parse_expression(offset)
+            except AddressExpressionError as exc:
+                raise NativeCompileError(str(exc)) from exc
+        else:
+            raise NativeCompileError("Invalid pointer offsets.")
+    expected = {symbol.casefold() for symbol in address_symbols}
+    expected.update(symbol.casefold() for symbol in offset_symbols)
+    if {symbol.casefold() for symbol in entry["requires"]} != expected or entry["provides"]:
+        raise NativeCompileError("Value symbol dependencies do not match the address.")
 
 
 def _native_literal_safe(value: str, value_type: str, hexadecimal: bool,
@@ -1017,6 +1111,45 @@ def _dynamic_address_binding(by_id: dict[int, dict], entry: dict):
         current_id = parent_id
 
 
+def _runtime_base_marker_ok(by_id: dict[int, dict], entry: dict) -> bool:
+    """RT-4.3 (O9/O1): plan gate for a staged runtime-base value.
+
+    True when the entry is marked ``runtime_base_required`` and the plan
+    chain re-derives the marker contract: the anchor heading exists, is
+    supported, addressless and itself marked ``runtime_base_target``;
+    the entry sits below that anchor; and no ancestor carries an
+    ``address_provider`` marker (a proven WP-38/WP-50 binding takes
+    precedence over the staged marker, so both must never coexist on one
+    chain).  A forged, truncated or dangling marker fails closed here.
+    """
+    if entry.get("runtime_base_required") is not True:
+        return False
+    anchor_id = entry.get("runtime_base_anchor")
+    if type(anchor_id) is not int or anchor_id not in by_id:
+        return False
+    anchor = by_id[anchor_id]
+    if (anchor.get("runtime_base_target") is not True
+            or anchor["kind"] != "heading" or not anchor["supported"]
+            or anchor.get("address") != ""
+            or anchor.get("pointer_offsets") != []):
+        return False
+    current_id = entry["id"]
+    visited = {current_id}
+    while True:
+        parent_id = by_id[current_id].get("parent_id")
+        if (parent_id is None or not isinstance(parent_id, int)
+                or parent_id not in by_id or parent_id in visited
+                or len(visited) >= 64):
+            return False
+        visited.add(parent_id)
+        parent = by_id[parent_id]
+        if parent.get("address_provider") is not None:
+            return False
+        if parent_id == anchor_id:
+            return True
+        current_id = parent_id
+
+
 def _is_descendant(by_id: dict[int, dict], descendant_id: int, ancestor_id: int) -> bool:
     """True when descendant_id sits below ancestor_id in the plan tree.
 
@@ -1230,6 +1363,11 @@ def _adopt_dynamic_address_providers(entries: list[dict], sources: dict[int, Ent
         marker_target["address_provider"] = {"provider_id": provider["id"],
                                              "symbol": symbol}
         adopted.append(entry["id"])
+    # RT-4.3 (O9/O1): stage the remaining relative-address refusals that are
+    # structurally clean (no ambiguous offsets on the chain): either an
+    # address-bearing ancestor exists further up (skip-fold recompile) or the
+    # base is runtime-supplied (staged marker on the nearest heading).
+    _stage_runtime_base_markers(entries, sources, nodes, by_id)
     if not adopted:
         return []
     # The marker is plan metadata of the serving heading; keep the heading's
@@ -1239,6 +1377,248 @@ def _adopt_dynamic_address_providers(entries: list[dict], sources: dict[int, Ent
                 and not entry["supported"]):
             entry.pop("address_provider")
     return adopted_warnings
+
+
+_STAGE_RELATIVE_RE = re.compile(r"^[+-]?[0-9A-Fa-f]+\Z")
+
+
+def _anchor_parent_provides_symbols(by_id: dict[int, dict],
+                                    parent_id: int | None) -> bool:
+    """RT-4.3 (O9/O1): the WP-38 provider-group-shape gate for staging.
+
+    True when the anchor heading's direct parent is a supported
+    addressless script with symbol-registration intent - either a proven
+    symbol export (``provides``) or a raw ``registerSymbol`` call in the
+    embedded Lua (a register without a proven release still proves the
+    intent).  That parent-child shape is the WP-38 provider group: the
+    table intends the script's runtime symbol as the group's base, so
+    staging the group onto a runtime-base marker would silently rebase
+    it and the named relative-address refusal stays fail-closed.
+    """
+    if parent_id is None:
+        return False
+    entry = by_id.get(parent_id)
+    if (entry is None or not entry.get("supported")
+            or entry.get("kind") != "script"
+            or entry.get("address") or entry.get("pointer_offsets")):
+        return False
+    if entry.get("provides"):
+        return True
+    program = entry.get("lua_program")
+    return (isinstance(program, dict)
+            and isinstance(program.get("source"), str)
+            and "registerSymbol(" in program["source"])
+
+
+def _stage_runtime_base_markers(entries: list[dict], sources: dict[int, Entry],
+                                nodes: dict[int, ET.Element],
+                                by_id: dict[int, dict]) -> None:
+    """RT-4.3 (O9/O1): stage structurally clean relative-address values.
+
+    Runs after WP-38/WP-50 provider adoption over every remaining blocked
+    value whose refusal is one of the two relative-address refusals:
+
+    - address-bearing ancestor further up (plain or symbol base): the record
+      is recompiled with the skip-fold, so addressless intermediates between
+      the record and its base are transparent (``skip=True``).  The
+      record's own pointer offsets are inlined into the folded expression
+      by ``_effective_address``; a symbol base rides the ordinary
+      dependency machinery.
+    - no address-bearing ancestor at all, no pointer offsets on the record
+      or anywhere on the chain: the record is staged on the runtime-base
+      marker — its address becomes the folded signed-hex relative total on
+      the expression profile, the nearest heading ancestor is marked
+      ``runtime_base_target`` and the engine resolves
+      ``anchor base + offset`` at activation once the table scripts have
+      written the anchor's live base (``set_dynamic_address``).  Until then
+      the row is visible but inert; activation names the missing anchor.
+
+    An addressless heading carrying pointer offsets below a relative record
+    keeps its byte-for-byte refusal (ambiguous inherited base); a relative
+    ancestor with a non-hex address (symbol, cast, expression) is not
+    folded and the record stays blocked.  Addressless script/value
+    ancestors on the chain are transparent for the staging walk; the
+    base-provenance question is decided per anchor: an anchor heading that
+    hangs directly under a supported addressless script with
+    symbol-registration intent is the WP-38 provider-group shape - the
+    table intends that script's runtime symbol as the group's base - so
+    its rows keep the named refusal fail-closed instead of being
+    silently rebased onto a runtime-base marker.
+    """
+    all_sources = tuple(sources.values())
+    for entry in entries:
+        if entry["kind"] != "blocked" or entry.get("source_kind") != "value":
+            continue
+        reason = entry.get("reason")
+        if reason not in (
+                "Relative address cannot skip an addressless script/value ancestor.",
+                "Relative address has no address-bearing ancestor."):
+            continue
+        source = sources[entry["id"]]
+        own = (source.address or "").strip()
+        if not _STAGE_RELATIVE_RE.match(own):
+            continue
+        # Walk the source ancestry once, classifying it (the source model
+        # is canonical for addresses; the plan only contributes the
+        # anchor's provider-marker state below).  Addressless
+        # script/value records on the chain are transparent for the
+        # staging walk; the base-provenance question is decided per
+        # anchor by the provider-group-shape gate below.
+        anchor_id = None
+        address_ancestor = None
+        intermediates: list[int] = []
+        ambiguous = False
+        cur = source
+        visited = {source.id}
+        while True:
+            parent_id = cur.parent_id
+            if (parent_id is None or parent_id not in sources
+                    or parent_id in visited or len(visited) >= 64):
+                break
+            visited.add(parent_id)
+            anc = sources[parent_id]
+            if anc.pointer_offsets:
+                ambiguous = True
+            addr = (anc.address or "").strip()
+            if addr:
+                if addr.startswith(("+", "-")) and _STAGE_RELATIVE_RE.match(addr):
+                    intermediates.append(parent_id)
+                    cur = anc
+                    continue
+                address_ancestor = parent_id
+                break
+            if anc.is_group_header:
+                if anchor_id is None:
+                    anchor_id = parent_id
+            cur = anc
+        profile = None
+        if source.variable_type in _PROFILE_VALUE_TYPES:
+            properties = {key: nodes[entry["id"]].findtext(key)
+                          for key in ("ByteLength", "BitStart", "BitLength",
+                                      "ShowAsBinary", "Length", "Unicode",
+                                      "CodePage", "ZeroTerminate")}
+            properties.update(ShowAsHex=source.show_as_hex,
+                              ShowAsSigned=source.show_as_signed)
+            if source.variable_type == "String":
+                properties = {key: value for key, value in properties.items()
+                              if value is not None}
+            try:
+                profile = prepare_value_profile(source.variable_type, properties)
+            except AAError:
+                continue
+            if not profile["actionable"]:
+                continue
+        if address_ancestor is not None:
+            # Skip-fold: an address-bearing ancestor further up provides the
+            # base; addressless intermediates are transparent.
+            try:
+                folded = _effective_address(source, sources, skip=True)
+            except AAError:
+                continue
+            if not folded.strip():
+                continue
+            entry["kind"] = "value"
+            entry["supported"] = True
+            entry["reason"] = ("Native relative value; the inherited base is "
+                               "resolved at runtime from the address-bearing "
+                               "ancestor record.")
+            entry["address"] = folded
+            entry["address_profile"] = "expression/v1"
+            entry["pointer_offsets"] = []
+            required = advanced_expression_symbols(folded)
+            for symbol in required:
+                try:
+                    validate_symbol(symbol)
+                except AAError:
+                    entry["kind"] = "blocked"
+                    entry["supported"] = False
+                    entry["reason"] = "Unsupported address expression in the " \
+                                      "skipped relative base."
+                    entry.pop("value_profile", None)
+                    entry["dropdown"] = {"choices": [], "read_only": False}
+                    continue
+            entry["requires"] = required
+            entry["dependency_ids"] = []
+            if profile is not None:
+                entry["value_profile"] = profile
+            try:
+                entry["dropdown"] = (_string_dropdown(source, nodes, profile)
+                                      if source.variable_type == "String"
+                                      else _dropdown(source, all_sources, profile))
+            except DropdownLinkMissingError:
+                entry["dropdown"] = {"choices": [], "read_only": False}
+            except AAError as exc:
+                entry["kind"] = "blocked"
+                entry["supported"] = False
+                entry["reason"] = str(exc)
+                entry["dropdown"] = {"choices": [], "read_only": False}
+                entry.pop("value_profile", None)
+            continue
+        if ambiguous or source.pointer_offsets:
+            # An addressless heading with pointer offsets on the chain - or
+            # the record's own pointer offsets - cannot be expressed as the
+            # flat staged total; the named refusal stays byte-for-byte.
+            continue
+        if anchor_id is None:
+            continue
+        anchor = by_id[anchor_id]
+        if anchor.get("address_provider") is not None:
+            # A proven provider binding already serves this heading; the
+            # WP-38/WP-50 adoption above owns those rows.
+            continue
+        if _anchor_parent_provides_symbols(by_id, sources[anchor_id].parent_id):
+            # The WP-38 provider-group shape: the anchor hangs directly
+            # under the script that registers the group's base symbol,
+            # so the table intends a symbol base, not a heading base
+            # written at runtime.  Staging here would silently rebase
+            # the group; the named relative-address refusal stays
+            # fail-closed.
+            continue
+        total = int(own.lstrip("+-") or "0", 16)
+        if own[0] == "-":
+            total = -total
+        for mid_id in intermediates:
+            mid_addr = (sources[mid_id].address or "").strip()
+            if not _STAGE_RELATIVE_RE.match(mid_addr):
+                continue
+            value = int(mid_addr.lstrip("+-"), 16)
+            if mid_addr[0] == "-":
+                value = -value
+            total += value
+        if abs(total) > 0x7FFFFFFFFFFFFFFF:
+            continue
+        staged_address = f"+{total:X}" if total >= 0 else f"-{abs(total):X}"
+        entry["kind"] = "value"
+        entry["supported"] = True
+        entry["reason"] = (
+            f"Staged relative value: the group base (heading {anchor_id} "
+            f"'{anchor['label']}') has no static address and no supported "
+            f"provider; it is written at runtime by the table scripts. "
+            f"Activation requires that live base and names the anchor "
+            f"while it is missing.")
+        entry["address"] = staged_address
+        entry["address_profile"] = "expression/v1"
+        entry["pointer_offsets"] = []
+        entry["requires"] = []
+        entry["dependency_ids"] = []
+        entry["runtime_base_required"] = True
+        entry["runtime_base_anchor"] = anchor_id
+        if profile is not None:
+            entry["value_profile"] = profile
+        try:
+            entry["dropdown"] = (_string_dropdown(source, nodes, profile)
+                                  if source.variable_type == "String"
+                                  else _dropdown(source, all_sources, profile))
+        except DropdownLinkMissingError:
+            entry["dropdown"] = {"choices": [], "read_only": False}
+        except AAError as exc:
+            entry["kind"] = "blocked"
+            entry["supported"] = False
+            entry["reason"] = str(exc)
+            entry["dropdown"] = {"choices": [], "read_only": False}
+            entry.pop("value_profile", None)
+            continue
+        anchor["runtime_base_target"] = True
 
 
 def _table_lua_source(root) -> str:
@@ -2080,6 +2460,19 @@ def validate_plan(plan: dict) -> None:
                             or _is_addressless_placeholder(entry)):
                         raise NativeCompileError(
                             "Dynamic address provider requires a supported addressless target record.")
+            # RT-4.3 (O9/O1): the runtime-base markers are additive plan
+            # metadata; shape-checked here, cross-checked against the full
+            # ID map in the plan-wide pass below.
+            if entry.get("runtime_base_required") is True:
+                if (entry["kind"] != "value" or not entry["supported"]
+                        or entry.get("address_profile") != "expression/v1"
+                        or type(entry.get("runtime_base_anchor")) is not int):
+                    raise NativeCompileError("Invalid runtime-base staged value metadata.")
+            if entry.get("runtime_base_target") is True:
+                if (entry["kind"] != "heading" or not entry["supported"]
+                        or entry.get("address") != ""
+                        or entry.get("pointer_offsets") != []):
+                    raise NativeCompileError("Runtime-base target requires a supported addressless heading.")
             if ('program' in entry or 'lua_program' in entry) and (not entry['supported'] or entry['kind'] != 'script'):
                 raise NativeCompileError("Executable source profiles require a supported script record.")
             if sum(key in entry for key in ('program','lua_program','global_program')) > 1:
@@ -2378,6 +2771,22 @@ def validate_plan(plan: dict) -> None:
                     if _is_descendant(by_id, entry["id"], provider["id"]):
                         raise NativeCompileError(
                             "Dynamic address target must not be a descendant of its provider.")
+            if entry.get("runtime_base_required") is True:
+                # RT-4.3 (O9/O1): the staged row must re-derive its whole
+                # anchor contract (anchor exists, is a supported addressless
+                # heading marked runtime_base_target, the row sits below it,
+                # no address_provider marker rides the same chain).
+                if not _runtime_base_marker_ok(by_id, entry):
+                    raise NativeCompileError(
+                        "Staged runtime-base row does not re-derive its anchor contract.")
+            if entry.get("runtime_base_target") is True:
+                referenced = any(
+                    e.get("runtime_base_required") is True
+                    and e.get("runtime_base_anchor") == entry["id"]
+                    for e in entries)
+                if not referenced:
+                    raise NativeCompileError(
+                        "Runtime-base target without any staged value record.")
             dropdown = entry.get("dropdown")
             if isinstance(dropdown, dict):
                 link_target = dropdown.get("link_target_id")

@@ -107,8 +107,10 @@ class ManagedMethodProgramTests(unittest.TestCase):
         self.assertEqual(program["positional_labels"], ["mylabel"])
 
     def test_three_segment_form_is_admitted_as_managed_label(self):
-        # RT-4.5 (O18): the corpus three-segment namespace form
-        # Namespace.Class:BaseClass:Method is one managed atom.
+        # RT-4.5 (O18) / RT-4.3 (O27): the corpus three-segment namespace
+        # form (A:B:C, Namespace.Class:BaseClass:Method) is one managed
+        # atom, recorded verbatim - never a local positional label, never
+        # in requires.
         program = prepare_program(
             "[ENABLE]\nA:B:C:\ndb c3\n[DISABLE]\nA:B:C:\ndb c3\n",
             "FixtureTarget.exe")
@@ -117,6 +119,8 @@ class ManagedMethodProgramTests(unittest.TestCase):
         validate_program(program)
 
     def test_four_segment_form_is_refused(self):
+        # RT-4.5 (O18): the bounded colon tail keeps four-segment forms
+        # fail-closed; the refusal names the first unadmitted tail token.
         with self.assertRaisesRegex(ProgramError, "Invalid address expression near ':D'"):
             prepare_program(
                 "[ENABLE]\nA:B:C:D:\ndb c3\n[DISABLE]\nA:B:C:D:\ndb c3\n",

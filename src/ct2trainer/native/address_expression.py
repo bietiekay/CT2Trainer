@@ -15,15 +15,26 @@ class AddressExpressionError(ValueError):
 # module-prefixed forms Module.Class::Method / Module.Class:Method, where
 # the module prefix is one or more dotted basename segments (digits and
 # hyphens allowed, e.g. Kena-Win64-Shipping.UMochiState::execHasItem).
-# RT-4.5 (O18): the colon-separated tail is bounded to one or two
-# separators, admitting the three-segment namespace form
+# RT-4.5 (O18) / RT-4.3 (O27): the colon-separated tail is bounded to one
+# or two separators, admitting the three-segment namespace form
 # Namespace.Class:BaseClass:Method (e.g.
-# FailBetter.Core.QAssoc.BaseClasses:BaseQAssocWithLevel:get_Level) while
-# keeping the two-segment forms and the double-colon alias unchanged.
-# Offsets attach like any other base atom.  The full name is kept verbatim,
-# classified as kind "managed" and resolved through the injected symbol
-# map, never as a module export and never as symbol requires.
+# FailBetter.Core.QAssoc.BaseClasses:BaseQAssocWithLevel:get_Level or
+# Failbetter.Core.QAssoc.BaseClasses:BaseQPossession:set_EffectiveLevelM)
+# while keeping the two-segment forms and the double-colon alias
+# unchanged; deeper colon chains fail closed.  Offsets attach like any
+# other base atom.  The full name is kept verbatim, classified as kind
+# "managed" and resolved through the injected symbol map, never as a
+# module export and never as symbol requires.
 _MANAGED_LABEL = re.compile(r"(?:[A-Za-z0-9_$][A-Za-z0-9_$\-]*\.)*[A-Za-z_$][A-Za-z0-9_]*(?:::?[A-Za-z_$][A-Za-z0-9_]*){1,2}\Z")
+
+
+def is_managed_label(text: str) -> bool:
+    """RT-4.3 (O4): True when the text is exactly one managed method label
+    (``Class:Method``, ``Class::Method``, ``Module.Class::Method``, or the
+    three-segment ``Namespace.Class:BaseClass:Method`` form).  Managed
+    labels resolve through the injected symbol map, never through module
+    exports and never through the ordinary symbol table."""
+    return type(text) is str and _MANAGED_LABEL.fullmatch(text) is not None
 # Module basenames that start with a digit (WP-22): 20XX.exe, 1234.dll, ...
 # The .exe/.dll suffix is what disambiguates them from a bare integer, and
 # the alternative is ordered BEFORE the bare-integer alternative in _TOKEN
@@ -42,8 +53,22 @@ _DIGIT_MODULE = re.compile(r"[0-9][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*\.(?:[Ee][Xx]
 # unaffected: the prefix requires a terminating colon.  RT-4.5 (O18): the
 # tail admits one or two colon (or double-colon) separators, so the
 # three-segment namespace form tokenizes as one managed atom instead of a
-# two-segment atom plus an untokenizable ":Method" tail.
-_TOKEN = re.compile(r'\s*("[^"\r\n]+"|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|(?:[A-Za-z0-9_$][A-Za-z0-9_$\-]*\.)*[A-Za-z_$][A-Za-z0-9_]*(?:::?[A-Za-z_$][A-Za-z0-9_]*){1,2}|@?[A-Za-z_$][A-Za-z0-9_.$]*|' + _DIGIT_MODULE.pattern + r'|[0-9][0-9a-fA-F]*|[+\-*/()\[\]])')
+# two-segment atom plus an untokenizable ":Method" tail.  RT-4.3 (O10):
+# digit-leading symbol names (8PathSteal, 20XXstyle) are valid CE
+# identifiers (label() val('$'+name) check: the name stops parsing as hex
+# at the first non-hex character); the alternative requires a non-hex
+# character after the leading digit run, so a fully hex token keeps
+# tokenizing as a bare integer and never changes integer parsing.  It
+# sits after _DIGIT_MODULE (the .exe/.dll suffix form still wins) and
+# before the bare-integer alternative.  The hyphen-module alternative
+# anchors on the .exe/.dll suffix; its trailing negative lookahead keeps
+# module-qualified exports (Kernel32.dll.GetTickCount64,
+# NativeHookFixture.exe.fixture_result) out of reach, so the whole atom
+# still tokenizes as one export through the letter-leading alternative
+# exactly as before this alternative was introduced.
+_DIGIT_LEADING_SYMBOL = r"[0-9][0-9a-fA-F]*[g-zG-Z_.$][A-Za-z0-9_.$]*"
+_HYPHEN_MODULE = r"[A-Za-z_$][A-Za-z0-9_$\-]*(?:\.[A-Za-z0-9_$\-]+)*\.(?:[Ee][Xx][Ee]|[Dd][Ll][Ll])(?!\.[A-Za-z_$])"
+_TOKEN = re.compile(r'\s*("[^"\r\n]+"|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|(?:[A-Za-z0-9_$][A-Za-z0-9_$\-]*\.)*[A-Za-z_$][A-Za-z0-9_]*(?:::?[A-Za-z_$][A-Za-z0-9_]*){1,2}|' + _HYPHEN_MODULE + r'|@?[A-Za-z_$][A-Za-z0-9_.$]*|' + _DIGIT_MODULE.pattern + '|' + _DIGIT_LEADING_SYMBOL + r'|[0-9][0-9a-fA-F]*|[+\-*/()\[\]])')
 MAX_ADDRESS = 0xFFFFFFFFFFFFFFFF
 # Closed set of bounded type-cast names (WP-30).  Matched case-insensitive
 # at the token level; a cast never changes the symbol set or plan metadata.
@@ -142,7 +167,8 @@ def parse_expression(text: str, *, max_deref: int = 32) -> dict:
         elif token.startswith('"'):
             atom = token[1:-1]
             if any(char in atom for char in "/\\:") or not atom.casefold().endswith((".exe", ".dll")):
-                raise AddressExpressionError("Quoted atoms must be module basenames.")
+                raise AddressExpressionError(
+                    f"Quoted atom '{atom}' must be a module basename (.exe/.dll).")
             value = {"kind": "module", "name": atom}
         elif _MANAGED_LABEL.fullmatch(token):
             # IL2CPP injection label (Class:Method or the Class::Method
@@ -152,6 +178,15 @@ def parse_expression(text: str, *, max_deref: int = 32) -> dict:
         elif _DIGIT_MODULE.fullmatch(token):
             # Module basename starting with a digit (WP-22); same module
             # resolution path as letter-leading basenames.
+            value = {"kind": "module", "name": token}
+        elif re.fullmatch(_DIGIT_LEADING_SYMBOL, token):
+            # Digit-leading symbol name (RT-4.3 O10): a non-hex character is
+            # guaranteed inside the token, so it can never be a hex constant;
+            # it resolves through the ordinary symbol table.
+            value = {"kind": "symbol", "name": token}
+        elif re.fullmatch(_HYPHEN_MODULE, token):
+            # Hyphenated module basename (RT-4.3 O10); the .exe/.dll suffix
+            # anchors it, so it can never be a symbol or a hex constant.
             value = {"kind": "module", "name": token}
         elif re.fullmatch(r"@?[A-Za-z_$][A-Za-z0-9_.$]*", token):
             if token.casefold().endswith((".exe", ".dll")) or token == "$process":
@@ -233,6 +268,14 @@ def resolve_expression(text: str, memory, symbols: Mapping[str, int] | None = No
                 name = process_name
             return memory.module(name)[0]
         if kind == "export":
+            # CE symhandler order (RT-4.3 O10): the symbol table is consulted
+            # before the module export table, so a registered symbol whose
+            # name carries a dot shadows the export lookup of the same
+            # spelled atom.  Parse-time classification and the plan symbol
+            # set are unchanged; only the runtime lookup order differs.
+            symbol_key = node["name"].casefold()
+            if symbol_key in folded:
+                return folded[symbol_key]
             if not hasattr(memory, "resolve_export"):
                 raise AddressExpressionError("The memory backend has no remote PE export resolver.")
             module, export = node["name"].rsplit(".", 1)

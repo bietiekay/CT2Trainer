@@ -23,7 +23,11 @@ from ct2trainer.native.engine import (NativeRuntimeError, TrainerEngine,
                                       validate_plan as validate_engine_plan)
 
 PROCESS = "FixtureTarget.exe"
-OFFSET_REFUSAL = "Pointer offset must be a hexadecimal integer literal."
+# RT-4.3 (O3): the literal grammar is only the first gate; a slot that is a
+# supported address expression is staged for runtime resolution instead, so
+# the named refusal names both accepted shapes.
+OFFSET_REFUSAL = ("Pointer offset must be a hexadecimal integer literal "
+                  "or a supported address expression.")
 OVERFLOW_REFUSAL = "Pointer offset exceeds signed 64 bits."
 INT64_MAX = 0x7FFFFFFFFFFFFFFF
 
@@ -102,14 +106,44 @@ class DecimalOffsetFormTests(unittest.TestCase):
                 self.assertEqual(entry["pointer_offsets"], expected)
 
     def test_malformed_decimal_forms_stay_refused(self):
-        for slot in ("", "#", "#12a", "12#3", "++10", "+", "0x",
-                     "base+10", "a.b", "#1 (", "#(x)", "# 100", "0x10 0x20"):
+        # RT-4.3 (O3): slots that are neither a bounded literal nor a
+        # supported address expression stay fail-closed under the
+        # expression-aware refusal message.
+        for slot in ("", "#", "#12a", "12#3", "++10", "+",
+                     "#1 (", "#(x)", "# 100", "0x10 0x20"):
             with self.subTest(slot=slot):
                 plan = self.compile((slot,))
                 entry = self.entry(plan)
                 self.assertFalse(entry["supported"])
                 self.assertEqual(entry["reason"], OFFSET_REFUSAL)
                 self.assertEqual(entry["pointer_offsets"], [])
+
+    def test_digit_only_token_offset_refused_at_provider_lookup(self):
+        # RT-4.3 (O10): "0x" is not an all-hex name ("x" is not a hex
+        # digit), so it is a valid symbol name; with no provider in the
+        # table the entry stays fail-closed at the provider lookup, not
+        # at the offset grammar.
+        plan = self.compile(("0x",))
+        entry = self.entry(plan)
+        self.assertFalse(entry["supported"])
+        self.assertIn("Required symbol '0x' is not registered anywhere in this table", entry["reason"])
+        self.assertEqual(entry["pointer_offsets"], ["0x"])
+
+    def test_expression_offset_slots_with_providers_are_accepted(self):
+        # RT-4.3 (O3): offset slots that are supported address expressions
+        # are staged for runtime resolution - "base+10" against the
+        # table's own registered symbol, "a.b" as a module-qualified
+        # export atom (no symbol requirement).
+        for slot in ("base+10", "a.b"):
+            with self.subTest(slot=slot):
+                plan = self.compile((slot,))
+                entry = self.entry(plan)
+                self.assertTrue(entry["supported"], entry["reason"])
+                self.assertEqual(entry["pointer_offsets"], [slot])
+                self.assertEqual(entry["requires"], ["base"])
+        for plan in (self.compile(("base+10",)), self.compile(("a.b",))):
+            validate_plan(plan)
+            validate_engine_plan(plan)
 
     def test_signed_64_bit_bounds(self):
         # The '#' decimal form accepts exactly signed-64 extremes; the hex

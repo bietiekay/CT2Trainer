@@ -47,7 +47,8 @@ import struct
 from collections.abc import Mapping
 
 from .aa import AAError, validate_symbol, normalize_pattern
-from .patterns import (MAX_PLACEHOLDER_TOKENS, is_placeholder_ref_token,
+from .patterns import (MAX_PATTERN_BYTES, MAX_PLACEHOLDER_TOKENS,
+                       is_placeholder_ref_token,
                        is_placeholder_token, pattern_byte_length,
                        pattern_has_placeholder_token, placeholder_spans,
                        symbol_is_placeholder_shaped,
@@ -75,7 +76,12 @@ _REGISTERS |= {f"r{index}{suffix}" for index in range(8, 16) for suffix in ("", 
 _REGISTERS |= {f"{kind}{index}" for kind in ("xmm", "ymm", "zmm", "mm", "k", "st", "cr", "dr") for index in range(32)}
 _KEYWORDS = {"byte", "word", "dword", "qword", "tword", "oword", "xmmword", "yword", "ymmword", "zword", "zmmword", "short", "near", "far", "strict", "rel", "abs", "to"}
 _FORBIDDEN = {"bits", "org", "section", "segment", "global", "extern", "common", "equ", "times", "incbin", "include", "resw", "resd", "resq", "istruc", "struc", "endstruc", "iend", "absolute", "default", "cpu", "warning", "map", "alignb"}
-_TOKEN_OPERAND = re.compile(r"'[^'\r\n\\]'|"+r'"[^"\r\n]+"|@@?[A-Za-z_][A-Za-z0-9_]*|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|[A-Za-z_$][A-Za-z0-9_.$]*|[0-9][0-9a-fA-F]*|\s+|[][+\-*/(),:]')
+# RT-4.3 (O10): hyphenated module basenames (Octopath_Traveler-Win64-
+# Shipping.exe) are one operand atom; the .exe/.dll suffix anchors the match
+# so plain hyphenated identifiers keep tokenizing as before.  Ordered before
+# the identifier alternative so the full basename wins over its prefix.
+_HYPHEN_MODULE_OPERAND = r"[A-Za-z_$][A-Za-z0-9_$\-]*(?:\.[A-Za-z0-9_$\-]+)*\.(?:[Ee][Xx][Ee]|[Dd][Ll][Ll])"
+_TOKEN_OPERAND = re.compile(r"'[^'\r\n\\]'|"+r'"[^"\r\n]+"|@@?[A-Za-z_][A-Za-z0-9_]*|0[xX][0-9a-fA-F]+|\$[0-9a-fA-F]+|#[0-9]+|' + _HYPHEN_MODULE_OPERAND + r'|@?[A-Za-z_$][A-Za-z0-9_.$]*|[0-9][0-9a-fA-F]*|\s+|[][+\-*/(),:]')
 # RT-4.6 (CE 7.5 Assemblerunit.pas:3283-3291 parity): ST(0) through ST(7) are
 # single FPU register tokens, exactly one digit inside the parentheses.
 _ST_REGISTER = re.compile(r"\(([0-7])\)")
@@ -152,6 +158,35 @@ def _pattern(text: str) -> str:
         raise ProgramError(str(exc)) from exc
 
 
+# RT-4.3 (O4): define(bytes, "HH HH ...") — one byte per token, hex or the
+# wildcard spellings the pattern grammar accepts (? / X / *).
+_BYTE_PATTERN_TOKEN = re.compile(r"[0-9A-Fa-f?X*]{1,2}\Z")
+
+
+def _byte_pattern_value(text: str) -> str | None:
+    """The byte-pattern form of a define value (CE idiom).
+
+    Returns the normalized scan/assert pattern when the value is a run of
+    at least two pattern-byte tokens; returns None otherwise, so a single
+    token keeps the numeric/expression define semantics and a non-pattern
+    value fails closed in the expression grammar.
+    """
+    value = text.strip()
+    if len(value) >= 2 and value[0] == value[-1] == '"':
+        value = value[1:-1]
+    tokens = value.split()
+    if len(tokens) < 2 or len(tokens) > MAX_PATTERN_BYTES:
+        return None
+    if not all(_BYTE_PATTERN_TOKEN.fullmatch(token) for token in tokens):
+        return None
+    try:
+        return normalize_pattern(value)
+    except AAError as exc:
+        # The tokens are pattern-shaped, so the grammar itself rejects the
+        # value (all-wildcard or over the 4096-byte bound) — keep its reason.
+        raise ProgramError(f"Define byte pattern is invalid: {exc}") from exc
+
+
 def _expression(text: str) -> str:
     try:
         parse_expression(text)
@@ -200,13 +235,24 @@ def _data_values(text: str, directive: str) -> list[str]:
     size = {"db": 1, "dw": 2, "dd": 4, "dq": 8}[directive]
     for value in values:
         if value.startswith('"') or value.startswith("'"):
-            # WP-43: single-quoted string literals are accepted exactly where
-            # double-quoted ones are (db only, ASCII only); backslash escapes
-            # are refused in both quote styles.
-            if directive != "db" or any(ord(char) > 127 for char in value[1:-1]):
-                raise ProgramError("Only db supports ASCII string constants.")
-            if "\\" in value[1:-1]:
+            content = value[1:-1]
+            # WP-43: backslash escapes are refused in both quote styles.
+            if "\\" in content:
                 raise ProgramError("Quoted data literals must not contain backslash escapes.")
+            if directive == "dw":
+                # RT-4.3 (O13): dw encodes the string as UTF-16LE words of any
+                # length (CE string semantics); no length limit, any code point.
+                continue
+            if any(ord(char) > 127 for char in content):
+                raise ProgramError(
+                    f"{directive.upper()} string constants must be ANSI "
+                    "(characters 0-127).")
+            if directive == "dd" and len(content) > 4:
+                raise ProgramError(
+                    "dd string constants hold at most 4 ANSI characters.")
+            if directive == "dq" and len(content) > 8:
+                raise ProgramError(
+                    "dq string constants hold at most 8 ANSI characters.")
         elif is_placeholder_token(value):
             # WP-57: bare s<N> references are admitted only by db (their
             # captured bytes are substituted at link time); the definition
@@ -221,6 +267,26 @@ def _data_values(text: str, directive: str) -> list[str]:
         else:
             _expression(value)
     return values
+
+
+def _data_value_size(value: str, directive: str, placeholder_definitions: dict[str, int]) -> int:
+    """Static byte size of one data value (RT-4.3 O13: directive-aware).
+
+    Quoted strings: db one byte per ANSI character, dw two bytes per
+    character (UTF-16LE), dd/dq always the full unit width (the string is
+    packed little-endian and zero-padded at emission).  Placeholder refs
+    keep the WP-57 definition byte count; every other value is one unit.
+    """
+    if value.startswith(('"', "'")):
+        content = value[1:-1]
+        if directive == "db":
+            return len(content)
+        if directive == "dw":
+            return len(content.encode("utf-16-le"))
+        return 4 if directive == "dd" else 8
+    if is_placeholder_ref_token(value):
+        return placeholder_definitions.get(value.casefold(), 1)
+    return {"db": 1, "dw": 2, "dd": 4, "dq": 8}[directive]
 
 
 def _operand_tokens(text: str):
@@ -446,6 +512,12 @@ def _parse_line(line: str) -> dict:
         if name == "define":
             if len(args) != 2:
                 raise ProgramError("define requires two arguments.")
+            pattern = _byte_pattern_value(args[1])
+            if pattern is not None:
+                # RT-4.3 (O4): define(bytes, "HH HH ...") stores a byte
+                # pattern for assert(..., bytes) references; it carries no
+                # address value, so the node keeps no "expression" key.
+                return {"op": "define", "symbol": validate_symbol(args[0]), "pattern": pattern}
             if _float_bits(args[1]) is None:
                 _expression(args[1])
             return {"op": "define", "symbol": validate_symbol(args[0]), "expression": args[1]}
@@ -512,7 +584,18 @@ def _parse_line(line: str) -> dict:
                 if pattern_has_placeholder_token(args[1]):
                     raise ProgramError(
                         "Placeholder tokens are not supported in assertions or data literals.")
-                node["pattern"] = _pattern(args[1])
+                data = args[1].strip()
+                if (re.fullmatch(r"[A-Za-z0-9_.]+", data) is not None
+                        and re.fullmatch(r"[0-9A-Fa-f]+", data) is None):
+                    # RT-4.3 (O4): a single identifier that is not a hex
+                    # literal is a reference to a define(bytes, ...) byte
+                    # pattern; resolution is deferred to preflight, where
+                    # only earlier-visible pattern defines count.  A fully
+                    # hex single token (assert(addr, AB) == one byte 0xAB)
+                    # stays a literal scan pattern.
+                    node["pattern_ref"] = validate_symbol(data)
+                else:
+                    node["pattern"] = _pattern(args[1])
             return node
         if name == "disassemble":
             if len(args) != 2:
@@ -599,7 +682,19 @@ def _node_refs(node: dict) -> list[str]:
                 values.extend(expression_symbols(value))
     if node["op"] == "instruction":
         text = node["text"].split(None, 1)
-        for token in _operand_tokens(text[1] if len(text) == 2 else ""):
+        tokens = _operand_tokens(text[1] if len(text) == 2 else "")
+        cursor = 0
+        while cursor < len(tokens):
+            token = tokens[cursor]
+            if (token == "(" and cursor + 2 < len(tokens)
+                    and tokens[cursor + 1].casefold() in CAST_TYPES
+                    and tokens[cursor + 2] == ")"):
+                # Bounded type cast (WP-30): the cast name is a value no-op,
+                # never a symbol reference (RT-4.3 O10: (int)99999 used to
+                # leak the cast name into the program's symbol requires).
+                cursor += 3
+                continue
+            cursor += 1
             if is_placeholder_ref_token(token):
                 continue
             if _SYMBOL_TOKEN.fullmatch(token) and token.casefold() not in _REGISTERS | _KEYWORDS and not re.fullmatch("[0-9A-Fa-f]+", token) and token.casefold() not in {"@f", "@b"}:
@@ -647,6 +742,7 @@ def _pure_literal_profile(program):
 def _literal_bytes(node, memory, program):
     """Independently bind each pure scalar/string emitter to its exact bytes."""
     width = {"db": 1, "dw": 2, "dd": 4, "dq": 8}[node["directive"]]
+    directive = node["directive"]
     result = bytearray()
     def scalar(ast):
         kind = ast["kind"]
@@ -672,7 +768,19 @@ def _literal_bytes(node, memory, program):
         return value
     for text in node["values"]:
         if text.startswith(('"', "'")):
-            result.extend(text[1:-1].encode("ascii"))
+            # RT-4.3 (O13): directive-aware string bytes — db one byte per
+            # ANSI character, dw UTF-16LE words, dd/dq the string packed
+            # little-endian and zero-padded to the unit width.
+            content = text[1:-1]
+            if directive == "dw":
+                result.extend(content.encode("utf-16-le"))
+            else:
+                raw = content.encode("ascii")
+                if directive == "dd":
+                    raw = raw.ljust(4, b"\x00")
+                elif directive == "dq":
+                    raw = raw.ljust(8, b"\x00")
+                result.extend(raw)
         else:
             floating = _float_bits(text)
             value = floating[0] if floating else scalar(parse_expression(text))
@@ -736,7 +844,8 @@ def _allocation_capabilities(nodes: list[dict], allocations: list[str]) -> tuple
     # Defined aliases into allocations are conservative. They may be used as
     # cursors, branch targets, or destinations, so preserve both permissions.
     for node in nodes:
-        if node["op"] == "define" and _float_bits(node["expression"]) is None:
+        # RT-4.3 (O4): byte-pattern defines carry no expression key.
+        if node["op"] == "define" and "expression" in node and _float_bits(node["expression"]) is None:
             targets = {owners[symbol.casefold()] for symbol in expression_symbols(node["expression"]) if symbol.casefold() in owners}
             if targets:
                 aliases.update(targets)
@@ -1224,7 +1333,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
                         f"Placeholder token {name} is defined more than once in the pattern.")
                 placeholder_definitions[name] = count
     for node in sections["preamble"] + sections["enable"] + sections["disable"]:
-        if node["op"] == "assert" and pattern_has_placeholder_token(node["pattern"]):
+        if node["op"] == "assert" and "pattern" in node and pattern_has_placeholder_token(node["pattern"]):
             raise ProgramError(
                 "Placeholder tokens are not supported in assertions or data literals.")
         if node["op"] == "data":
@@ -1264,7 +1373,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
             op = node["op"]
             # WP-57: a bare s<N> db value expands to its definition's M bytes at
             # link time, so the static estimate counts the definition byte count.
-            estimated_bytes += node["count"] if op == "nops" else node["size"] if op == "readmem" else node["alignment"] - 1 if op == "align" else node["bytes"] if op == "reserve" else 15 if op == "instruction" else 64 if op == "reassemble" else sum(len(value[1:-1]) if value.startswith(('"', "'")) else placeholder_definitions.get(value.casefold(), 1) if is_placeholder_ref_token(value) else {"db": 1, "dw": 2, "dd": 4, "dq": 8}[node["directive"]] for value in node["values"]) if op == "data" else 0
+            estimated_bytes += node["count"] if op == "nops" else node["size"] if op == "readmem" else node["alignment"] - 1 if op == "align" else node["bytes"] if op == "reserve" else 15 if op == "instruction" else 64 if op == "reassemble" else sum(_data_value_size(value, node["directive"], placeholder_definitions) for value in node["values"]) if op == "data" else 0
     if estimated_bytes > MAX_TOTAL_BYTES:
         raise ProgramError("Program exceeds its total generated-byte bound.")
     allocation_executable, allocation_writable = _allocation_capabilities(sections["enable"], allocations)
@@ -1383,6 +1492,10 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
     except ValueError as exc:
         raise ProgramError(str(exc)) from exc
     resolved = _symbol_map({} if symbols is None else symbols)
+    # RT-4.3 (O4): byte-pattern defines (define(bytes, ...)) are visible to
+    # assert pattern references in walk order (preamble, then phase nodes);
+    # they carry no address value and never resolve or defer.
+    pattern_defs: dict[str, str] = {}
     requests = []
     deferred = []
     guards = []
@@ -1472,10 +1585,16 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
                         extra=region_extra)
             resolved[node["symbol"].casefold()] = addr
         elif op == "define":
-            try:
-                resolved[node["symbol"].casefold()] = _resolve(node["expression"], memory, resolved, program)
-            except AddressExpressionError:
-                deferred.append(node)
+            if "pattern" in node:
+                # RT-4.3 (O4): byte-pattern define; no address value, no
+                # resolution, never deferred — visible to assert pattern
+                # references from this point in the walk.
+                pattern_defs[node["symbol"].casefold()] = node["pattern"]
+            else:
+                try:
+                    resolved[node["symbol"].casefold()] = _resolve(node["expression"], memory, resolved, program)
+                except AddressExpressionError:
+                    deferred.append(node)
         elif op in {"alloc", "globalalloc"}:
             near = _resolve(node["near"], memory, resolved, program) if node["near"] else None
             if op == "globalalloc":
@@ -1488,7 +1607,18 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
             requests.append({"name": node["symbol"], "size": node["size"], "near": near, "executable": executable, "writable": writable})
         elif op == "assert":
             address = _resolve(node["address"], memory, resolved, program)
-            patterns = node["pattern"].split()
+            pattern = node.get("pattern")
+            if pattern is None:
+                # RT-4.3 (O4): assert(address, sym) — the symbol references a
+                # define(bytes, ...) pattern; only pattern defines earlier in
+                # the same walk (preamble, then this phase) are visible.
+                reference = node.get("pattern_ref") or ""
+                pattern = pattern_defs.get(reference.casefold())
+                if pattern is None:
+                    raise ProgramError(
+                        f"Assertion pattern reference '{reference}' has no visible "
+                        "define(bytes, ...) pattern definition.")
+            patterns = pattern.split()
             actual = memory.read(address, len(patterns))
             if len(actual) != len(patterns) or any(any(nibble != "?" and nibble != format(byte, "02X")[index] for index, nibble in enumerate(pattern)) for byte, pattern in zip(actual, patterns)):
                 raise ProgramError(f"Assertion failed at 0x{address:X}.")
@@ -2131,7 +2261,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
     names.update({spelling: names[key] for key, spelling in declared.items() if key in _REGISTERS and spelling != key})
     atom_addresses = {}
     for node in nodes + preflight["deferred_defines"]:
-        texts = [node["text"].split(None, 1)[1]] if node["op"] == "instruction" and len(node["text"].split(None, 1)) == 2 else node["values"] if node["op"] == "data" else [node["expression"]] if node["op"] == "define" else []
+        texts = [node["text"].split(None, 1)[1]] if node["op"] == "instruction" and len(node["text"].split(None, 1)) == 2 else node["values"] if node["op"] == "data" else [node["expression"]] if node["op"] == "define" and "expression" in node else []
         for text in texts:
             if node["op"] == "data" and text.startswith(('"', "'")):
                 continue
@@ -2256,7 +2386,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                     metadata_names.extend((f"tf_instruction_start_{index}", f"tf_instruction_end_{index}"))
     for iteration in range(8):
         lines = [f"bits {program['bitness']}", "default rel" if program["bitness"] == 64 else "default abs"]
-        scalar_defines = {node["symbol"].casefold() for node in program["preamble"] + nodes if node["op"] == "define" and _scalar_expression(node["expression"])}
+        scalar_defines = {node["symbol"].casefold() for node in program["preamble"] + nodes if node["op"] == "define" and "expression" in node and _scalar_expression(node["expression"])}
         for ordinal, (key, address) in enumerate(resolved.items()):
             if key in scalar_defines:
                 lines.append(f"{names[key]} equ 0x{address:X}")
@@ -2330,7 +2460,23 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                             values.extend(f"0x{byte:02X}"
                                           for byte in bytes.fromhex(captured_map[key]))
                         elif value.startswith(('"', "'")):
-                            values.extend(f"0x{ord(char):X}" for char in value[1:-1])
+                            # RT-4.3 (O13): directive-aware string bytes.  db
+                            # emits one byte operand per character; dw emits
+                            # the UTF-16LE bytes one 16-bit operand per word;
+                            # dd/dq pack the little-endian zero-padded string
+                            # into a single dword/qword operand.
+                            content = value[1:-1]
+                            if node["directive"] == "db":
+                                values.extend(f"0x{byte:02X}"
+                                              for byte in content.encode("ascii"))
+                            elif node["directive"] == "dw":
+                                raw = content.encode("utf-16-le")
+                                values.extend(f"0x{raw[i + 1]:02X}{raw[i]:02X}"
+                                              for i in range(0, len(raw), 2))
+                            else:
+                                width = 4 if node["directive"] == "dd" else 8
+                                raw = content.encode("ascii").ljust(width, b"\x00")
+                                values.append("0x" + raw[::-1].hex())
                         else:
                             values.append(_translate_operands(value, names, memory, resolved, program, backward, forward, captures=captures))
                     lines.append(node["directive"] + " " + ",".join(values))
@@ -2446,8 +2592,10 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
             if not _literal_data(node):
                 continue
             start, end = locations[f"tf_literal_start_{index}"], locations[f"tf_literal_end_{index}"]
-            unit = {"db": 1, "dw": 2, "dd": 4, "dq": 8}[node["directive"]]
-            expected_size = unit * sum(len(value) - 2 if value.startswith(('"', "'")) else 1 for value in node["values"])
+            captured_sizes = {key: len(bytes.fromhex(raw))
+                               for key, raw in captured_map.items()}
+            expected_size = sum(_data_value_size(value, node["directive"], captured_sizes)
+                                for value in node["values"])
             if not address <= start <= end <= address + size or end - start != expected_size:
                 raise ProgramError("Assembled literal data provenance differs from its source or block bounds.")
             if _allow_external_literals and literal_data:

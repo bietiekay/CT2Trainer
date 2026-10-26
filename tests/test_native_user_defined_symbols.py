@@ -196,8 +196,8 @@ class UdsTableParseTests(unittest.TestCase):
                 "(All-hexadecimal symbol names are ambiguous and "
                 "unsupported.); entry ignored.",
                 "UserdefinedSymbols entry 'my-sym': invalid symbol name "
-                "(Symbol must contain ASCII letters, digits or underscores.); "
-                "entry ignored.",
+                "(Symbol must contain ASCII letters, digits, underscores or "
+                "dots.); entry ignored.",
             ),
         )
 
@@ -476,9 +476,11 @@ class UdsPlanValidationTests(unittest.TestCase):
             validate_plan(plan)
 
     def test_invalid_symbol_key_is_refused(self):
-        plan = self.mutate({"123sym": 0x10000000})
+        # RT-4.3 (O10): digit-leading names are now valid symbol names; a
+        # hyphen remains outside the grammar.
+        plan = self.mutate({"my-sym": 0x10000000})
         with self.assertRaisesRegex(NativeCompileError,
-                                    "ASCII letters, digits or underscores"):
+                                    "ASCII letters, digits, underscores or dots"):
             validate_plan(plan)
         plan = self.mutate({"DEADBEEF": 0x10000000})
         with self.assertRaisesRegex(NativeCompileError, "All-hexadecimal"):

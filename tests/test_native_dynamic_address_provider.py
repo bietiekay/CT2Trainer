@@ -166,9 +166,10 @@ class DynamicAddressProviderPlanTests(unittest.TestCase):
         # A malformed marker value is refused before any cross-check.
         self._forge(lambda by_id: by_id[3001].update(address_provider="BaseAddr"),
                     "Invalid dynamic address provider metadata\\.")
-        # A marker symbol outside the symbol grammar.
+        # A marker symbol that is a fully hexadecimal name (ambiguous with a
+        # hex constant; the CE label() contract refuses it).
         self._forge(lambda by_id: by_id[3001]["address_provider"].update(symbol="9bad"),
-                    "Symbol must contain ASCII letters, digits or underscores\\.")
+                    "All-hexadecimal symbol names are ambiguous and unsupported\\.")
         # A named provider that does not exist (no relative children: the
         # dedicated unknown-record path is reached, not the value check).
         self._forge(lambda by_id: by_id[3001]["address_provider"].update(provider_id=9999),
