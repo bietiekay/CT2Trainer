@@ -115,7 +115,7 @@ code/build boundaries in
   CE/Python) and on a real Steam Deck under Proton with touch operation.
   `runtime_unverified` stays set until both pass.
 
-## 2. Confirmed state (0.9.0-rc2 + WP-14..58 + 0.16 field-fix re-cut 2 + 0.16.1/0.16.2/0.16.3/0.16.4 field fixes + RT-4.1 + RT-3 + RT-4.4 + RT-5 inventory, 2026-10-24)
+## 2. Confirmed state (0.9.0-rc2 + WP-14..58 + 0.16 field-fix re-cut 2 + 0.16.1/0.16.2/0.16.3/0.16.4 field fixes + RT-4.1 + RT-3 + RT-4.4 + RT-4.6 + RT-4.5 + RT-4.3 + RT-5 inventory, 2026-10-26)
 
 | Item | Value |
 | --- | --- |
@@ -1123,7 +1123,7 @@ bindings unchanged): **zero delta** vs `blocked-catalog-rt45main` —
 1,743 blocked, zero compile errors, zero newly blocked/unblocked,
 zero reason changes (UI-only change, plans byte-identical). The
 feature ships in the 0.17 build, cut after the remaining RT-4.x
-merges (RT-4.3 452, RT-4.2 1,085) per the user decision 2026-10-24.
+merges (RT-4.2 1,085) per the user decision 2026-10-24.
 
 ### NASM 3.02 FSTP encoding audit (root, 2026-10-26)
 
@@ -1182,6 +1182,105 @@ the RT-4.6 section above). Result: **no defect in the pinned NASM
   `blocked-catalog-ui-scripts` (docs + tests only, no functional
   change).
 
+### RT-4.3 address expression & identifier dialect (lane `native-rt4-3`, 2026-10-26)
+
+Lane work (branch `native-rt4-3`, base `4b9f359`) executed to
+completion by the root integrator after the lane subagent stalled;
+rebased onto `main` @ `29adebb` with four conflicts resolved:
+`address_expression.py` keeps main's bounded `{1,2}` managed-label
+tail from RT-4.5 (O18) plus the lane's `is_managed_label`,
+`_HYPHEN_MODULE` (negative lookahead) and `_DIGIT_LEADING_SYMBOL`
+atoms; `aa_program.py` keeps the lane's `_HYPHEN_MODULE_OPERAND`
+(tokenizer level, no lookahead) plus main's `_ST_REGISTER`;
+`tests/test_native_address_tokens.py` keeps main's pinned four-segment
+refusal row; `tests/test_native_managed_method.py` keeps main's
+three-segment admission and four-segment refusal with the merged
+RT-4.5/RT-4.3 comment.
+
+- **O1 RELADDR_SKIP (331 class, 195 rows cleared):** a
+  relative-address record whose intermediate ancestors are addressless
+  script/value records now skips them and adopts the nearest
+  address-bearing ancestor, staging `address="(base)+offset"` with
+  `address_profile="expression/v1"` and no symbol requires. The WP-38
+  provider-group shape keeps its named relative refusal. Forged or
+  dangling markers fail closed at the plan gate.
+- **O9 RELADDR_NO_ANC (10 class, 8 rows cleared):** relative records
+  with no static address-bearing ancestor stage as
+  address-required-at-runtime — the group heading carries
+  `runtime_base_target=True` and the value carries
+  `runtime_base_required=True` plus `runtime_base_anchor=<heading id>`;
+  the plan cross-check (`_runtime_base_marker_ok`) refuses forged or
+  dangling markers; the engine's `set_dynamic_address` writes the
+  anchor only from a supported addressless `kind=script` writer scope,
+  with named refusals for non-anchor records, out-of-range values and
+  missing bases.
+- **O3 PTR_OFFSET_HEX (53 class, 51 rows cleared):** pointer-offset
+  slots that are supported address expressions stage verbatim and
+  resolve against the live symbol table at activation
+  (`_resolve_pointer_offset` expression branch); hex literals are
+  unchanged and malformed forms keep the expression-aware refusal
+  ("Pointer offset must be a hexadecimal integer literal or a
+  supported address expression.").
+- **O10 SYM_CHARS (8 class, 5 rows cleared + cascades):** digit-leading
+  symbol names (`8PathSteal`, `20XX`) and dot-bearing names are
+  admitted per the CE `label()` contract — `validate_symbol` accepts
+  `[A-Za-z0-9_.]+` and refuses only fully-hex names (the ambiguous
+  `val('$'+name)` case); the `address_expression` tokenizer gains the
+  `_DIGIT_LEADING_SYMBOL` atom (a non-hex character must follow the
+  leading digit run, so fully-hex tokens stay integers) and the
+  `_HYPHEN_MODULE` atom (hyphen module basenames; the trailing negative
+  lookahead keeps `.exe`/`.dll`-qualified export atoms whole).
+  Provider-lookup cascades on now-parseable symbol names cleared 90
+  further rows.
+- **O23 QUOTED_ATOM (1 row, stays blocked):** quoted atoms must be
+  module basenames; the refusal now names the offending token
+  ("Quoted atom '$proces' must be a module basename (.exe/.dll)."),
+  a reason-changed row, still blocked.
+- **O27/O4 Type:Member and trailing-token atoms (38 rows cleared):**
+  multi-segment `A:B:C` and `Namespace.Class:BaseClass:Method` managed
+  labels (bounded `{1,2}` tail per RT-4.5 O18) resolve through the
+  injected IL2CPP resolver with the per-label named refusal
+  ("IL2CPP resolver returned an invalid address for A:B:C." when the
+  live binding is missing); the Sunless Skies O27 row cleared.
+- **O13 INDIRECT_DATA (5 rows cleared):** directive-aware string data
+  bytes — `db` one ANSI byte per char, `dw` UTF-16LE words of any
+  length, `dd`/`dq` ANSI chars packed little-endian and zero-padded
+  into one unit (CE string semantics); the external-literal engine
+  path admits the pure-literal program as committed-RW data with
+  sealed per-block permits and the byte-exact disable restore.
+
+Tests: dedicated `tests/test_native_address_expression_dialect.py`
+(+20: export-atom tokenization incl. the
+`NativeHookFixture.exe.fixture_result` suffix-preserving case,
+digit-leading/dot/hyphen grammar, O3 plan + engine chain with
+forged-slot fail-closed, O1/O9 staging E2E with forged markers, O27
+resolver E2E, O13 byte-exact engine writes) plus pins in
+`test_native_address_tokens.py` (+2), `test_native_compiler.py` (+1),
+`test_native_pointer_offset_forms.py` (+2),
+`test_native_single_quote_data_literals.py` (+2),
+`test_native_assembler.py`, `test_native_managed_method.py`,
+`test_native_user_defined_symbols.py`,
+`test_native_user_symbol_import.py` (O10 identifier-contract pins),
+`test_native_dynamic_address_provider.py`,
+`test_native_process_aob_label.py`,
+`test_native_aa_literals.py`. Lane final suite: 3,613 tests, only the
+3 known path-dependent non-main failures, 25 expected skips. Full
+suite on `main` after the merge: **3,613 OK / 25 expected skips**
+(clean run exit 0; merge-base baseline 3,590). Catalog remeasure (run
+`blocked-catalog-rt43-main`, 2026-10-26, frozen manifest and process
+bindings unchanged): **1,743 -> 1,351 blocked** of 117,634 (net -392;
+supported 115,891 -> 116,283, staged 59,735 -> 59,868; zero load
+errors, zero newly blocked rows; 12 rows reason-changed, all still
+blocked and explained). Composition of the 392 unblocked rows: O1 195,
+O3 51, O4/O27 atoms 38, O9 8, O13 5, O10 direct 5 plus 90 dependent
+symbol/provider rows; leading per-table unblocks: Octopath_Traveler2
+193, DS2 33, Cyberpunk 30, SOTTR 11, Callisto V1.1 9,
+SandFallFinalFRF 40 across the five variants, LikeaDragonIshin pair
+15. The residual O1/O9 rows (136 + 2) keep their terminal reason:
+their chain carries no static address-bearing ancestor — the base is
+supplied by an addressless runtime script (RT-4.2 runtime provider
+model); the O1/O3/O4/O9/O10/O13 grammar roots they carried are fixed.
+
 ## 3. Deterministic measurement chain
 
 All committed `gap_inventory/` artifacts are reproducible byte-identically
@@ -1219,7 +1318,8 @@ The old 85% closure estimate and 0.11 release step were superseded by the
 
 1. **RT-4 and RT-5 (RT-1/RT-2 done 2026-10-21, RT-3 done 2026-10-23,
    RT-4.1 done 2026-10-22, RT-4.4 done 2026-10-23, RT-4.5 done
-   2026-10-24, RT-4.6 done 2026-10-24, RT-5 inventory done 2026-10-23):**
+   2026-10-24, RT-4.6 done 2026-10-24, RT-4.3 done 2026-10-26, RT-5
+   inventory done 2026-10-23):**
    the 151-path/143-hash manifest is frozen; every remaining blocker is
    attributed to an upstream cause with per-class contracts, risks and
    expected deltas (RT-2 root-cause map in the roadmap). RT-4.1 symbol
@@ -1241,8 +1341,15 @@ The old 85% closure estimate and 0.11 release step were superseded by the
    dealloc name-list semantics, usemono parity-scope refusal,
    three-segment managed labels, global DISABLE reset regions,
    symbol-only luaCall envelopes, label/data global-region closure —
-   see the RT-4.5 section above). Next: executing the remaining RT-4
-   packages RT-4.3 452, RT-4.2 1,085 last. The user-requested trainer
+   see the RT-4.5 section above). RT-4.3 address expression &
+   identifier dialect landed (O1 relative-address skip-fold + O9
+   runtime-base marker staging, O3 pointer-offset expression slots,
+   O10 identifier dialect, O23 token-named quoted-atom refusal,
+   O27/O4 Type:Member managed labels, O13 directive-aware string data
+   bytes — see the RT-4.3 section above; catalog remeasure
+   `blocked-catalog-rt43-main` 1,743 -> 1,351 blocked, net -392, zero
+   newly blocked). Next: executing the remaining RT-4 package RT-4.2
+   1,085 last (runtime provider model). The user-requested trainer
    UI feature (Scripts view + row context menu with script preview and
    entry assessment) landed 2026-10-24 on branch
    `native-0.17-ui-script-inspector` (suite 3,587 OK / 25 expected

@@ -1,6 +1,6 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-24. **Latest verified release:** 0.16.4, build
+**Updated:** 2026-10-26. **Latest verified release:** 0.16.4, build
 `native-20261024T003853Z-a8cf04fc` (built from `main` at `988ff8e`,
 2026-10-24): the Sinking City 2 trainer-crash-observability field fix
 (from the 0.16.3 field test: the windowed trainer process died
@@ -14,7 +14,15 @@ kill the windowed process, and the restore loop logs
 unchanged) on top of the 0.16.3 content, the RT-4.4 value-semantics,
 the RT-4.6 input-legacy and the RT-4.5 AA-directive merges (catalog
 remeasure `blocked-catalog-rt45main`: 1,743 blocked of 117,634, zero
-newly blocked rows).
+newly blocked rows); `main` since the 0.16.4 cut additionally carries
+the RT-4.3 address-expression & identifier-dialect merge (2026-10-26,
+merge `cd3217d`): O1 relative-address skip-fold + O9 runtime-base
+staging, O3 pointer-offset expression slots, O10 identifier dialect,
+O23 token-named quoted-atom refusal, O27/O4 Type:Member managed
+labels, O13 directive-aware db/dw/dd/dq string bytes — catalog
+remeasure `blocked-catalog-rt43-main`: 1,743 -> 1,351 blocked of
+117,634, zero newly blocked rows; the 0.17 build is cut after the
+remaining RT-4.2 merge (1,085).
 Superseded: 0.16.3, build
 `native-20261023T065015Z-afbc3eba` (built from `main` at `6a5ba63`,
 2026-10-23) - the Sinking City 2 activation field fix (two root

@@ -76,7 +76,7 @@ the original reference corpus and raw catalogs local-only.
 | RT-1 | Reproducible full-corpus baseline | Versioned local manifest for 151 paths/143 hashes; exact process bindings; same-source catalog; per-table and per-reason counts; record IDs and provider chains; 0.16 comparison with no unaccounted regression. Separate parse errors, inert records, staged rows, actionable rows, and table-level constructs. |
 | RT-2 | Root-cause map for every residual | Resolve all 2,698 blocked entries to an upstream cause or verified malformed authoring input. Follow provider cascades to their root; distinguish real missing semantics from false positives and duplicate provider policy. Record a testable contract, risk, and expected delta for each class. |
 | RT-3 | Load all table formats | Investigate the remaining legacy binary CT format with a clean-room parser or documented conversion path; preserve record identity and data. Table load reaches 151/151, subject to explicit evidence for genuinely unreadable inputs. — done 2026-10-23 (clean-room parser `src/ct2trainer/legacy_ct.py`; `SuperMeatBoy.CT` loads with all 10 records supported; run `blocked-catalog-rt3`). |
-| RT-4 | Close high-volume plan gaps | Execute the RT-2 root-cause-map packages in suggested order by expected delta over risk: RT-4.1 symbol provider fidelity (dupIgnore policy, dup labels, wildcard-cleanup scoping) 820 — done 2026-10-22 (remeasured 2,698 -> 1,858 blocked), RT-4.3 address expression & identifier dialect 452, RT-4.4 value semantics 65, RT-4.5 AA directive & script coverage 57, RT-4.6 input legacy & authoring gaps 219, RT-4.2 runtime provider model 1,085 (last: its AA_HIDDEN portion clears progressively as root packages land). The split sums to 2,698. Each package: leading-table inspection, an independently authored synthetic case, the class contract as a testable assertion, owned-target runtime tests where effects matter, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. A reason count is not an independent feature count; remeasure after each fix. |
+| RT-4 | Close high-volume plan gaps | Execute the RT-2 root-cause-map packages in suggested order by expected delta over risk: RT-4.1 symbol provider fidelity (dupIgnore policy, dup labels, wildcard-cleanup scoping) 820 — done 2026-10-22 (remeasured 2,698 -> 1,858 blocked), RT-4.3 address expression & identifier dialect 452 — done 2026-10-26 (remeasured 1,743 -> 1,351 blocked), RT-4.4 value semantics 65, RT-4.5 AA directive & script coverage 57, RT-4.6 input legacy & authoring gaps 219, RT-4.2 runtime provider model 1,085 (last: its AA_HIDDEN portion clears progressively as root packages land). The split sums to 2,698. Each package: leading-table inspection, an independently authored synthetic case, the class contract as a testable assertion, owned-target runtime tests where effects matter, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. A reason count is not an independent feature count; remeasure after each fix. |
 | RT-5 | Runtime trainer parity | Inventory every used CE Lua/AA API and game-facing table-level construct, including dynamic records, callbacks, target threads, managed resolution, string hex view, and byte-width dropdown semantics. Implement each needed behavior with bounded contracts, teardown rules, and owned-target tests; classify purely visual UI as outside scope. |
 | RT-6 | Full original-table validation | For each path, produce a plan-inspection result and targeted runtime observations against a pinned game build where available. Record skipped or inaccessible targets honestly. Run the Windows clean-machine and Deck/Proton/touch protocols; keep `runtime_unverified` until both pass. |
 | RT-7 | Release gate | Rebuild only through `scripts/Build-Native.ps1`; full suite and source/frozen parity; `ce_inputs: []`; archive hashes and provenance; update tracker, ledger, and verification before declaring 100%. |
@@ -396,6 +396,72 @@ onto the trailing-tokens refusal; TheSinkingCity id=258084 onto the
 changed-reinitialization refusal (`bFastTravel`). No supported
 regressions.
 
+Update (2026-10-26, RT-4.3): the address-expression & identifier-dialect
+package landed (lane `native-rt4-3`, executed by the root integrator
+after the lane subagent stalled; rebased onto `main` @ `29adebb`, four
+conflicts resolved: main's bounded `{1,2}` managed-label tail from
+RT-4.5 (O18) kept, the lane's hyphen-module and digit-leading-symbol
+atoms kept, test pins aligned to the merged unregistered-symbol
+report). Code: (a) O1 relative-address skip-fold — a relative-address
+record under addressless script/value ancestors stages on the nearest
+address-bearing ancestor as an expression address (`(1040)+20`,
+`address_profile=expression/v1`, no symbol requires); (b) O9
+runtime-base markers — group headings carry
+`runtime_base_required`/`runtime_base_anchor`/`runtime_base_target`
+with a plan-level cross-check that fails closed on forged or dangling
+markers, and the engine's `set_dynamic_address(anchor, value,
+scope=writer)` is restricted to a supported addressless `kind=script`
+writer record; (c) O3 pointer-offset slots accept supported address
+expressions (staged verbatim in `pointer_offsets`, resolved against
+the live symbol table at activation; hex literals unchanged, malformed
+forms keep the expression-aware refusal); (d) O10 identifier dialect —
+digit-leading symbol names (`8PathSteal`, `20XX`) and dot-bearing names
+are admitted per the CE `label()` contract (`val('$'+name)` stops at
+the first non-hex character; fully-hex names stay refused by the
+label contract), hyphen module basenames
+(`Octopath_Traveler-Win64-Shipping.exe`) tokenize as one atom while
+`.exe`/`.dll`-qualified export atoms stay whole (trailing negative
+lookahead); (e) O23 quoted atoms must be module basenames and the
+refusal now names the offending token (`Quoted atom '$proces' must be
+a module basename (.exe/.dll)`); (f) O27/O4 Type:Member managed
+labels (`A:B:C`, `Namespace.Class:BaseClass:Method`, tail bounded to
+one or two separators per the RT-4.5 O18 form) resolve through the
+injected IL2CPP resolver with a per-label named refusal otherwise;
+(g) O13 directive-aware string data bytes (`db` one ANSI byte per
+char, `dw` UTF-16LE words of any length, `dd`/`dq` ANSI chars packed
+little-endian and zero-padded into one unit). Tests: new dedicated
+`tests/test_native_address_expression_dialect.py` (20 tests:
+export-atom tokenization, identifier/quoted-atom/managed-label
+grammar, O3 plan + engine chain with forged-slot fail-closed, O1/O9
+staging E2E with forged-marker fail-closed, O27 resolver E2E with
+named refusals, O13 byte-exact engine writes over the external-literal
+data path) plus 7 pin additions/updates across
+`test_native_address_tokens`, `test_native_compiler`,
+`test_native_pointer_offset_forms`, `test_native_single_quote_data_literals`,
+`test_native_assembler`, `test_native_managed_method`,
+`test_native_user_symbol_import`. Full suite on `main` after the
+merge: **3,613 OK / 25 expected skips** (clean run exit 0; merge-base
+suite 3,590 plus the dedicated dialect file and net lane test
+additions). Catalog remeasure (local, run `blocked-catalog-rt43-main`,
+frozen manifest `gap_inventory/reference-manifest.json` and process
+bindings unchanged): **1,743 -> 1,351 blocked** (net -392; 117,634
+total unchanged, supported 115,891 -> 116,283, staged 59,735 ->
+59,868, zero load errors). Composition of the 392 unblocked rows by
+their old terminal reason: O1 relative-address skip-fold 195, O3
+pointer-offset expression slots 51, O4/O27 trailing-token and
+Type:Member address-expression atoms 38 (incl. the Sunless Skies O27
+row), O10 identifier-dialect direct rows 5 plus 90 dependent rows whose
+symbol/provider-lookup terminal reason was cleared by the new grammar,
+O9 runtime-base staging 8, O13 indirect data 5. 12 rows
+reason-changed while staying blocked (all explained: the token-named
+quoted-atom refusal on the Cyberpunk `$proces` row, refined per-symbol
+reports, cleanup-ownership report rewording). **Zero newly blocked
+rows**, zero supported regressions. The residual O1/O9 rows (136 + 2)
+keep their terminal reason: their chain carries no static
+address-bearing ancestor — the base is supplied by an addressless
+runtime script (RT-4.2 runtime provider model); the O1/O3/O4/O9/O10/O13
+grammar roots they carried are fixed.
+
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
 **Scope and method.** Full clean-room attribution of every blocked row in
@@ -485,25 +551,29 @@ Grand total = 2,698.
 | RT-4.6 Input legacy & authoring gaps | No-provider symbols (user config / cross-table / dynamic Lua), legacy symbols (BaseAddress, stat names, register-like tokens, module names without .exe) | R5 (91), R6 (128) | 219 |
 | **Total** | | | **2,698** ✓ |
 
-Package status (2026-10-24): **RT-4.5 done** - catalog remeasure
-`blocked-catalog-rt45main`: **1,743 blocked** of 117,634 (net -35 over
-the RT-4.6 state of 1,778: 35 unblocked, 0 newly blocked, 7 rows
-reason-changed, all still blocked and explained; detail in the RT-4.5
-update in the investigation queue above). History: RT-4.6 (2026-10-24,
-remeasure `blocked-catalog-rt46`) 1,807 -> 1,778 of 117,634 (net -29);
-RT-4.4 (2026-10-23, remeasure `blocked-catalog-rt44`) 1,858 -> 1,807 of
-117,634 (net -51: O6 30, O7 8, O8 13); RT-3 (2026-10-23) cleared the one
-legacy-binary load error (151/151 load, 1,858 blocked of 117,634);
-RT-4.1 (2026-10-22, remeasure `blocked-catalog-rt41`) 2,698 -> 1,858 of
-117,624 (net -840: 842 unblocked, 2 explained Cyberpunk shared-global
-regressions). The user-requested trainer UI feature (Scripts view +
-row context menu with script preview and entry assessment) landed on
-branch `native-0.17-ui-script-inspector` 2026-10-24 (suite 3,587 OK /
+Package status (2026-10-26): **RT-4.3 done** — catalog remeasure
+`blocked-catalog-rt43-main`: **1,351 blocked** of 117,634 (net -392 over
+the 1,743 state after the RT-4.5/UI-script merges: 392 unblocked,
+0 newly blocked, 12 rows reason-changed all still blocked and
+explained; detail in the RT-4.3 update in the investigation queue).
+History: RT-4.5 (2026-10-24, remeasure `blocked-catalog-rt45main`)
+1,778 -> 1,743 of 117,634 (net -35: RDR2 1, Resonance 1, SOTTR 2,
+Shinkansen Sunless Sea 1, Subnautica_e67616 28, TheSinkingCity 2;
+zero newly blocked; 7 rows reason-changed, all still blocked and
+explained); RT-4.6 (2026-10-24, remeasure `blocked-catalog-rt46`)
+1,807 -> 1,778 of 117,634 (net -29); RT-4.4 (2026-10-23, remeasure
+`blocked-catalog-rt44`) 1,858 -> 1,807 of 117,634 (net -51: O6 30,
+O7 8, O8 13); RT-3 (2026-10-23) cleared the one legacy-binary load
+error (151/151 load, 1,858 blocked of 117,634); RT-4.1 (2026-10-22,
+remeasure `blocked-catalog-rt41`) 2,698 -> 1,858 of 117,624 (net -840:
+842 unblocked, 2 explained Cyberpunk shared-global regressions). The
+user-requested trainer UI feature (Scripts view + row context menu
+with script preview and entry assessment) landed on branch
+`native-0.17-ui-script-inspector` 2026-10-24 (suite 3,587 OK /
 25 expected skips; catalog remeasure `blocked-catalog-ui-scripts`
 zero delta — UI-only change); per the user decision 2026-10-24 the
-0.17 build is cut after all RT-4.x merges. Next packages by
-suggested order: RT-4.3 address expression & identifier dialect (452),
-RT-4.2 runtime provider model (1,085, last).
+0.17 build is cut after all RT-4.x merges. Next package by
+suggested order: RT-4.2 runtime provider model (1,085, last).
 
 Suggested execution order: RT-4.1 (820, lowest risk and the largest
 guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),
