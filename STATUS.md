@@ -79,14 +79,14 @@ defines the work and completion gates.
 | --- | --- | --- |
 | Independently built product | 0.16.4 source and Windows portable ZIPs passed the offline build with **3,479 tests OK, 25 expected skips**, and `ce_inputs: []`. | Keep the clean-room build and release checks green after each change. |
 | Synthetic feature coverage | **42/42** declared feature classes and **7,475/7,475** action weight covered across **30 synthetic tables**. | This metric does not establish support for every original table or a real game effect. Add synthetic cases when a new behavior is found. |
-| Original reference tables | All **151/151** table paths load after the RT-3 legacy-binary CT loader (2026-10-23). Local static catalog (RT-4.5 remeasure, run `blocked-catalog-rt45main`, frozen manifest `gap_inventory/reference-manifest.json`) classifies **115,891 supported**, including **59,735 staged**, out of **117,634 plan entries**. | **1,743 entries are blocked** (was 2,698 before RT-4.1, 1,858 after RT-4.1/RT-3, 1,807 after RT-4.4, 1,778 after RT-4.6; RT-4.5 cleared 35 rows — aobscanregion + cleanup-ownership, global-init profiles, symbol-only envelopes — with zero newly blocked rows and 7 reason-only changes). Staged entries still need their runtime conditions proved. |
+| Original reference tables | All **151/151** table paths load after the RT-3 legacy-binary CT loader (2026-10-23). Local static catalog (RT-4.3 remeasure, run `blocked-catalog-rt43-main`, 2026-10-26, frozen manifest `gap_inventory/reference-manifest.json`) classifies **116,283 supported**, including **59,868 staged**, out of **117,634 plan entries**. | **1,351 entries are blocked** (was 2,698 before RT-4.1, 1,858 after RT-4.1/RT-3, 1,807 after RT-4.4, 1,778 after RT-4.6, 1,743 after RT-4.5; RT-4.3 cleared 392 rows — O1 relative-address skip-fold 195, O3 pointer-offset expression slots 51, O4/O27 atoms 38, O9 runtime-base staging 8, O13 indirect data 5, O10 direct 5 plus 90 dependent provider-lookup rows — with zero newly blocked rows and 12 reason-only changes). Staged entries still need their runtime conditions proved. |
 | Observed game effects | Owned fixtures and selected runtime chains have tests. | The AP-11 campaign has **0 of 6,143** game effects confirmed. Original-table behavior must be checked against pinned game builds or explicitly equivalent owned targets. |
 | Final platforms | The 0.9.0-rc2 portable converter and a generated trainer were user-tested without CE or Python; later fixture tests cover many runtime paths. The 0.16 re-cut was field-tested 2026-10-21 (new WP-58 UI confirmed good; one cheat = table/build mismatch, no fix; the state-lock orphan after a blocked close was fixed in code the same day, see the ledger). The Sinking City 2 table-load warnings were made accurate in 0.16.1 (2026-10-21): table-version reference 45 → 46 field-verified, `{$LUA}`/`ShellExecute` wording now states the supported native behavior — the table itself loaded fine (see the ledger). The 0.16.1 field test (2026-10-21, Sinking City 2) exposed a startup block behind a stale `state.lock`: WP-57 hook journals with `captured_placeholders` failed the recovery schema; fixed on `main` 2026-10-22 (0.16.2, built as `native-20261022T160328Z-0423fb21` — see the ledger). The 0.16.2 field test (2026-10-22, Sinking City 2) exposed the next activation failure: the startup brick from the still-missing journal field `value_data_ranges` plus a module-snapshot retry aimed at the wrong Win32 code (mislabeled 24 instead of 1116) without backoff while the game was still loading DLLs (field log: Win32 error 24 nine ms after attach); both root causes fixed on `main` 2026-10-23, shipped as 0.16.3 (see the ledger). | The 0.16 re-cut has no recorded full clean-machine acceptance. Clean Windows and real Steam Deck/Proton/touch acceptance remain open. `runtime_unverified` stays set. |
 
 **The 42/42 result is real, but it measures the synthetic feature matrix.**
-The 1,743 blocked entries (after the RT-4.5 remeasure, was 1,778 after
-RT-4.6, 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3 and 2,698 at the
-Wave-4 baseline), staged
+The 1,351 blocked entries (after the RT-4.3 remeasure, was 1,743 after
+RT-4.5, 1,778 after RT-4.6, 1,807 after RT-4.4, 1,858 after
+RT-4.1/RT-3 and 2,698 at the Wave-4 baseline), staged
 runtime behavior, and absent game-effect evidence are why the overall
 100% reference-table goal is still open.
 "Supported" in the static catalog means plan admission, not confirmed
@@ -127,11 +127,16 @@ regenerated under the pinned run id
    the actionable per-symbol report); RT-4.5 AA directive & script
    coverage landed 2026-10-24 (catalog remeasure
    `blocked-catalog-rt45main`: 1,778 -> 1,743 blocked, 35 rows
-   cleared, zero newly blocked, 7 reason-only changes); the RT-5
-   API/construct inventory is documented in
-   `documentation/rt5-api-inventory.md`. Remaining: RT-4.3 address
-   expression & identifier dialect (452), then RT-4.2 1,085 last, then
-   the RT-5 implementation items.
+   cleared, zero newly blocked, 7 reason-only changes); RT-4.3 address
+   expression & identifier dialect landed 2026-10-26 (catalog remeasure
+   `blocked-catalog-rt43-main`: 1,743 -> 1,351 blocked, 392 rows
+   cleared, zero newly blocked, 12 reason-only changes; dedicated
+   dialect tests now at 38). The RT-5 API/construct inventory is
+   documented in `documentation/rt5-api-inventory.md`; RT-5 item G
+   (createThread/threadWait gate decision, option 2 — gate stays, no
+   thread backend this milestone) landed 2026-10-26, tests-only, zero
+   catalog movement. Remaining: RT-4.2 runtime provider model (1,085;
+   last RT-4 package), then the RT-5 implementation items A-F.
 4. **Trainer UI feature (user request, done 2026-10-24):** the
    `Scripts` filter view (every script record, blocked/unselected
    included with their reason; headings and values hidden) and the row
