@@ -21,8 +21,13 @@ staging, O3 pointer-offset expression slots, O10 identifier dialect,
 O23 token-named quoted-atom refusal, O27/O4 Type:Member managed
 labels, O13 directive-aware db/dw/dd/dq string bytes — catalog
 remeasure `blocked-catalog-rt43-main`: 1,743 -> 1,351 blocked of
-117,634, zero newly blocked rows; the 0.17 build is cut after the
-remaining RT-4.2 merge (1,085).
+117,634, zero newly blocked rows; plus the RT-5 item G
+createThread/threadWait gate decision (2026-10-26, merge `2de9c0e`):
+option (2) recorded — capability gate stays, no thread backend ships
+this milestone, byte-stable five-stage gate pins
+`tests/test_native_rt5_thread_gate.py` +17, tests only, zero catalog
+movement (`blocked-catalog-rt5g-main` zero delta). The 0.17 build is cut
+after the remaining RT-4.2 merge (1,085).
 Superseded: 0.16.3, build
 `native-20261023T065015Z-afbc3eba` (built from `main` at `6a5ba63`,
 2026-10-23) - the Sinking City 2 activation field fix (two root

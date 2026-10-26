@@ -1348,7 +1348,18 @@ The old 85% closure estimate and 0.11 release step were superseded by the
    O27/O4 Type:Member managed labels, O13 directive-aware string data
    bytes — see the RT-4.3 section above; catalog remeasure
    `blocked-catalog-rt43-main` 1,743 -> 1,351 blocked, net -392, zero
-   newly blocked). Next: executing the remaining RT-4 package RT-4.2
+   newly blocked). RT-5 item G createThread/threadWait gate decision
+   landed (lane `native-rt5-g`, merge `2de9c0e`): option (2) recorded —
+   capability gate stays, no thread backend ships this milestone;
+   byte-stable five-stage gate pins
+   `tests/test_native_rt5_thread_gate.py` +17 (focused 17 OK; main
+   suite 3,648 OK / 25 expected skips); census re-derived: exactly 2
+   O22 rows (Witcher3 4.02HF1_G25v2 + 4.03_G25v2, id 192) and 77
+   first-word `createThread` usages across 18 tables split into 26 AA
+   directive lines in 8 tables (gate-governed) and 51 Lua-context lines
+   in 11 tables (`lua_host` cooperative workers, separate family);
+   tests only, zero catalog movement (`blocked-catalog-rt5g-main` zero
+   delta). Next: executing the remaining RT-4 package RT-4.2
    1,085 last (runtime provider model). The user-requested trainer
    UI feature (Scripts view + row context menu with script preview and
    entry assessment) landed 2026-10-24 on branch

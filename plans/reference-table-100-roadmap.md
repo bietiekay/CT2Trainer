@@ -462,6 +462,36 @@ address-bearing ancestor — the base is supplied by an addressless
 runtime script (RT-4.2 runtime provider model); the O1/O3/O4/O9/O10/O13
 grammar roots they carried are fixed.
 
+Update (2026-10-26, RT-5 item G): the `createThread`/`threadWait` backend
+decision landed (lane `native-rt5-g`, merged to `main` as `2de9c0e`).
+Decision record: option (2) — keep the capability gate, no thread backend
+ships this milestone; a bounded owned-thread backend requires a root
+design review first (owned-thread lifecycle, debug-event ownership,
+join semantics, exact disable teardown, journal receipt — the sketch
+lives in the lane report and is input for the next-work roadmap).
+Deliverable: `tests/test_native_rt5_thread_gate.py` (17 tests) pinning
+the five-stage fail-closed chain byte-stable — tokenizer
+(`Unsupported AA directive: createthread.` / `threadwait.`), one-shot
+grammar, `prepare_program` staged-runtime gate (`createThread()/
+threadWait() are gated in the native staged runtime: no thread backend
+is part of the shipped trainer profile.`), the converter composite
+reason identical to the launch-base catalog row, preflight/dry-link
+injected-backend refusals plus the threadWait-before-createThread
+ordering refusal, and the TrainerEngine default-binding
+`NativeRuntimeError` with zero allocation/symbol/write side effects;
+a positive-control injected-backend roundtrip proves the gate is
+exactly the missing binding. Census re-derived (not carried over):
+exactly 2 O22 catalog rows at the launch base (Witcher3
+4.02HF1_G25v2 + 4.03_G25v2, id 192, "Call Function"); over the
+151-path reference corpus, 77 first-word `createThread` usages across
+18 tables split into 26 AA directive lines in 8 tables (governed by
+the gate) and 51 Lua-context lines in 11 tables (`lua_host`
+cooperative workers, a separate family, not O22-gated); zero first-word
+`threadWait` lines. Tests only, zero catalog movement (remeasure
+`blocked-catalog-rt5g-main` vs `blocked-catalog-rt43tests-main`:
+1,351 blocked of 117,634, zero delta). Full suite on `main` after the
+merge: **3,648 OK / 25 expected skips**.
+
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
 **Scope and method.** Full clean-room attribution of every blocked row in
