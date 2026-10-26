@@ -69,10 +69,20 @@ class LiteralOnlyTests(unittest.TestCase):
     def test_character_literals_cannot_become_data_names_or_address_authority(self):
         # WP-43: a single-quoted db byte string is a legitimate data value;
         # the remaining refusals keep the quote-out-of-grammar boundary.
-        for line in ("dw 'R'","dd 'R'","dq 'R'","label('R')","registersymbol('R')",
+        # RT-4.3 (O13): quoted single-character constants in dw/dd/dq are
+        # now accepted data values (UTF-16LE / packed little-endian units,
+        # zero-padded); only the name positions below stay refused.
+        for line in ("label('R')","registersymbol('R')",
                      "define('R',1000)","define(alias,'R')","alloc('R',1000)","'R':"):
             with self.subTest(line=line),self.assertRaises(aa.ProgramError):aa.prepare_program(source(line),bitness=32)
         with self.assertRaises(aa.ProgramError):aa._expression("'R'")
+        for line, prefix in (("dw 'R'", b"\x52\x00"),
+                             ("dd 'R'", b"\x52\x00\x00\x00"),
+                             ("dq 'R'", b"\x52\x00\x00\x00\x00\x00\x00\x00")):
+            with self.subTest(line=line):
+                result = link(aa.prepare_program(source(line), bitness=32), Memory())
+                raw = bytes.fromhex(next(block['bytes'] for block in result['blocks'] if block['is_allocation']))
+                self.assertEqual(raw[:len(prefix)], prefix)
 
     def test_quote_aware_comments_and_arg_depth_preserve_punctuation(self):
         for char in '{};/,"#%()[]$`~':
@@ -205,7 +215,7 @@ class DataDialectRegisterTests(unittest.TestCase):
     def test_register_symbol_wildcard_refused(self):
         # The data dialect has no scoped cleanup wildcard: validate_symbol
         # rejects the asterisk token.
-        with self.assertRaisesRegex(AAError, "Symbol must contain ASCII letters, digits or underscores."):
+        with self.assertRaisesRegex(AAError, "Symbol must contain ASCII letters, digits, underscores or dots."):
             compile_script(self._script("registersymbol(*)", "unregistersymbol(Alpha, Beta)"))
 
 

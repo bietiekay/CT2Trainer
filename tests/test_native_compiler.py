@@ -316,12 +316,16 @@ class NativeCompilerTests(unittest.TestCase):
         self.assertEqual(plan["entries"][0]["pointer_offsets"], [0x28, -16, 0x28])
 
     def test_malformed_pointer_offset_literals_stay_rejected(self):
-        for text in ("++10", "+", "0x", "", "10-", "x1", "1 0"):
+        # RT-4.3 (O3/O10): the literal grammar still refuses malformed
+        # forms, now under the expression-aware refusal; "0x" and "x1"
+        # are valid identifier names (not fully hex) and take the
+        # symbol-offset path instead.
+        for text in ("++10", "+", "", "10-", "1 0"):
             with self.subTest(offset=text):
                 plan = self.compile(value_record(1, extra=f'<Offsets><Offset>{text}</Offset></Offsets>'))
                 entry = plan["entries"][0]
                 self.assertFalse(entry["supported"], entry["reason"])
-                self.assertIn("Pointer offset must be a hexadecimal integer literal.", entry["reason"])
+                self.assertIn("Pointer offset must be a hexadecimal integer literal or a supported address expression.", entry["reason"])
 
     def test_pointer_offset_constant_folding_accepts_corpus_forms(self):
         # WP-21: constant hexadecimal arithmetic in pointer-chase slots is
@@ -352,14 +356,25 @@ class NativeCompilerTests(unittest.TestCase):
                 validate_plan(plan)
                 validate_runtime_plan(plan)
 
-    def test_pointer_offset_malformed_forms_stay_rejected_with_the_literal_reason(self):
-        for text in ("base+10", "GameEngine.GameInstance", "20 ()", "20 (unclosed",
-                     "(dword)[sym+B8]*4", "[sym+3]++14", "(10)(20)"):
+    def test_pointer_offset_expression_slots_and_malformed_forms(self):
+        # RT-4.3 (O3): supported address expressions are accepted in
+        # pointer-chase slots and resolved at runtime against the symbol
+        # table; only malformed forms stay fail-closed, now under the
+        # expression-aware refusal message.
+        for text in ("20 ()", "20 (unclosed", "(10)(20)"):
             with self.subTest(offset=text):
                 plan = self.compile(value_record(1, extra=f'<Offsets><Offset>{text}</Offset></Offsets>'))
                 entry = plan["entries"][0]
                 self.assertFalse(entry["supported"], "expected rejection: " + entry["reason"])
-                self.assertEqual(entry["reason"], "Pointer offset must be a hexadecimal integer literal.")
+                self.assertEqual(entry["reason"],
+                                 "Pointer offset must be a hexadecimal integer literal or a supported address expression.")
+        # A symbol expression offset is staged and fails closed at the
+        # provider lookup, not at the offset grammar.
+        with self.subTest(offset="base+10"):
+            plan = self.compile(value_record(1, extra='<Offsets><Offset>base+10</Offset></Offsets>'))
+            entry = plan["entries"][0]
+            self.assertFalse(entry["supported"], entry["reason"])
+            self.assertIn("Required symbol has no unique supported provider: base.", entry["reason"])
 
     def test_pointer_offset_overflow_and_chain_limit_stay_rejected(self):
         overflow = self.compile(value_record(1, extra='<Offsets><Offset>FFFFFFFFFFFFFFFFFFF+1</Offset></Offsets>'))

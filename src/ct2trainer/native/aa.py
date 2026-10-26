@@ -19,7 +19,11 @@ MAX_SCRIPT_BYTES = 1024 * 1024
 MAX_OPERATIONS = 4096
 MAX_PATCH_BYTES = 65536
 MAX_PATTERN_BYTES = 4096
-_SYMBOL = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
+# RT-4.3 (O10): CE's label()/rsIsNotAValidIdentifier contract (autoassembler
+# label() val('$'+name) check) admits identifier characters including digits
+# and dots; only a name that parses fully as a hexadecimal literal is
+# ambiguous with an AA hex constant and refused.
+_SYMBOL = re.compile(r"[A-Za-z0-9_.]+\Z")
 _HEX = re.compile(r"(?:0x|\$)?[0-9a-fA-F]+\Z", re.IGNORECASE)
 _BASE = r'(?:"[A-Za-z0-9_ .()\-]+"|[A-Za-z_][A-Za-z0-9_.]*|(?:0x|\$)?[0-9A-Fa-f]+)'
 _EXPRESSION = re.compile(r"(?P<base>" + _BASE + r")(?P<tail>(?:\s*[+-]\s*(?:0x|\$)?[0-9A-Fa-f]+)*)\Z", re.IGNORECASE)
@@ -32,7 +36,7 @@ class AAError(ValueError):
 
 def validate_symbol(symbol: str) -> str:
     if not isinstance(symbol, str) or len(symbol) > 128 or not _SYMBOL.fullmatch(symbol):
-        raise AAError("Symbol must contain ASCII letters, digits or underscores.")
+        raise AAError("Symbol must contain ASCII letters, digits, underscores or dots.")
     if _HEX.fullmatch(symbol):
         raise AAError("All-hexadecimal symbol names are ambiguous and unsupported.")
     return symbol
@@ -59,6 +63,28 @@ def _strip_leading_casts(expression: str) -> str:
             return expression
         expression = expression[closing + 1:].lstrip()
     return expression
+
+
+def _data_dialect_base_kind(node: dict) -> str:
+    """Classify the base atom of one bounded data-dialect expression.
+
+    Returns "managed" only when exactly one managed method label sits at
+    the base with integer-only arithmetic around it (optionally behind a
+    cast prefix), "integer" for pure hex arithmetic, and "other" for
+    symbols, modules and any other shape.  Used where the strict base
+    regex failed, so the managed case is the sole new acceptance.
+    """
+    kind = node["kind"]
+    if kind in {"integer", "managed"}:
+        return kind
+    if kind in {"cast", "unary"}:
+        return _data_dialect_base_kind(node["value"])
+    if kind == "binary" and node["operator"] in {"+", "-"}:
+        left = _data_dialect_base_kind(node["left"])
+        if left == "other" or _data_dialect_base_kind(node["right"]) != "integer":
+            return "other"
+        return left
+    return "other"
 
 
 def _flat_expression_shape(node: dict) -> bool:
@@ -336,6 +362,13 @@ def _section(lines: list[str], inherited: set[str]) -> tuple[list[dict], set[str
                 raise AAError(
                     "Indirect address expressions are not supported in the data dialect: "
                     f"{expression!r}.")
+            if _data_dialect_base_kind(parse_expression(expression)) == "managed":
+                # RT-4.3 (O4): a managed method label (Class:Method,
+                # Module.Class::Method, A:B:C) is a valid base atom in the
+                # data dialect; it resolves through the injected symbol map
+                # at activation and never enters the record's requirements
+                # (the managed kind is excluded from expression_symbols).
+                return validate_expression(expression)
             raise AAError(f"Unsupported address expression: {expression!r}.")
         expression = validate_expression(expression)
         for symbol in expression_symbols(expression):

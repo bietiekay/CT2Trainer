@@ -472,16 +472,20 @@ def validate_plan(plan: dict) -> None:
                 if entry.get('address_profile') == 'expression/v1':
                     from .address_expression import parse_expression, expression_symbols as expression_refs
                     from .compiler import (_dynamic_address_binding,
-                                          _dynamic_provider_binding)
+                                          _dynamic_provider_binding,
+                                          _runtime_base_marker_ok)
                     parse_expression(entry['address'])
                     if entry['address'].lstrip().startswith(('+','-')):
-                        # WP-38/WP-50: relative expression addresses are
-                        # valid only when the plan-level ancestor walk binds
-                        # the dynamic address provider of the nearest marked
-                        # ancestor (a symbol provider heading, or a
-                        # symbol-null direct address-write target).
+                        # WP-38/WP-50/RT-4.3: relative expression addresses
+                        # are valid only when the plan-level ancestor walk
+                        # binds the dynamic address provider of the nearest
+                        # marked ancestor (a symbol provider heading, or a
+                        # symbol-null direct address-write target) — or the
+                        # row is staged on the runtime-base marker of an
+                        # addressless group heading (RT-4.3 O9/O1).
                         if (_dynamic_provider_binding(by_id, entry) is None
-                                and _dynamic_address_binding(by_id, entry) is None):
+                                and _dynamic_address_binding(by_id, entry) is None
+                                and not _runtime_base_marker_ok(by_id, entry)):
                             raise NativeRuntimeError('Flattened address profiles require resolved inherited bases')
                     if entry.get('pointer_offsets') != [] or not isinstance(entry.get('source_address'),str):
                         raise NativeRuntimeError('Flattened address profiles require original source addresses and empty offsets')
@@ -492,14 +496,31 @@ def validate_plan(plan: dict) -> None:
                     expression_refs=expression_symbols
             except (AAError, ValueError) as exc:
                 raise NativeRuntimeError(str(exc)) from exc
-            if ({name.casefold() for name in entry.get("requires", [])}
-                    != {name.casefold() for name in expression_refs(entry["address"])}
+            offsets = entry.get("pointer_offsets", [])
+            if not isinstance(offsets, list) or len(offsets) > 32:
+                raise NativeRuntimeError("Invalid pointer offsets")
+            offset_refs = []
+            for offset in offsets:
+                if type(offset) is int:
+                    if abs(offset) > 0x7FFFFFFFFFFFFFFF:
+                        raise NativeRuntimeError("Invalid pointer offsets")
+                elif isinstance(offset, str):
+                    # RT-4.3 (O3): expression offset slots must stay
+                    # parseable; their symbol-kind atoms join the plan
+                    # requires set.
+                    from .address_expression import parse_expression
+                    try:
+                        parse_expression(offset)
+                    except ValueError as exc:
+                        raise NativeRuntimeError(str(exc)) from exc
+                    offset_refs.extend(expression_refs(offset))
+                else:
+                    raise NativeRuntimeError("Invalid pointer offsets")
+            expected = {name.casefold() for name in expression_refs(entry["address"])}
+            expected.update(name.casefold() for name in offset_refs)
+            if ({name.casefold() for name in entry.get("requires", [])} != expected
                     or entry.get("provides")):
                 raise NativeRuntimeError("Value symbol dependencies do not match its address")
-            offsets = entry.get("pointer_offsets", [])
-            if (not isinstance(offsets, list) or len(offsets) > 32
-                    or any(type(v) is not int or abs(v) > 0x7FFFFFFFFFFFFFFF for v in offsets)):
-                raise NativeRuntimeError("Invalid pointer offsets")
             if (type(entry.get("show_as_hex")) is not bool
                     or entry.get("show_as_signed") is not None and type(entry["show_as_signed"]) is not bool):
                 raise NativeRuntimeError("Invalid numeric display flags")
@@ -3159,6 +3180,11 @@ class TrainerEngine:
         every call, so a forged runtime write is refused by name).  ``None``
         clears the live base; an integer must stay inside the target memory
         range.  The write is effect-free beyond the live-base registry.
+
+        RT-4.3 (O9/O1): a planned ``runtime_base_target`` heading (the anchor
+        of a staged relative value) accepts the write from any supported
+        addressless script record of the plan — the table's own
+        base-finding scripts — with the same per-call plan re-check.
         """
         if type(identifier) is not int or identifier not in self.entries:
             raise NativeRuntimeError("Dynamic address target is not a plan record.")
@@ -3171,11 +3197,25 @@ class TrainerEngine:
                 except Exception as exc:
                     raise NativeRuntimeError(
                         "Dynamic address must be an integer in address range.") from exc
-        marker = self.entries[identifier].get("address_provider")
-        if (not isinstance(marker, dict) or marker.get("symbol") is not None
-                or type(marker.get("provider_id")) is not int
-                or scope != marker.get("provider_id")):
-            raise NativeRuntimeError("Dynamic address write outside the planned provider contract.")
+        target = self.entries[identifier]
+        if target.get("runtime_base_target") is True:
+            # RT-4.3 (O9/O1): planned runtime-base anchor for a staged
+            # relative value.  The live group base is written by the
+            # table's own supported addressless scripts (the base-finding
+            # scripts of the group); the writer is re-checked against the
+            # plan at every call, mirroring the marker contract above.
+            writer = self.entries.get(scope) if type(scope) is int else None
+            if (writer is None or not writer.get("supported")
+                    or writer.get("kind") != "script" or writer.get("address")
+                    or writer.get("pointer_offsets")):
+                raise NativeRuntimeError(
+                    "Runtime-base anchor write outside the planned provider contract.")
+        else:
+            marker = target.get("address_provider")
+            if (not isinstance(marker, dict) or marker.get("symbol") is not None
+                    or type(marker.get("provider_id")) is not int
+                    or scope != marker.get("provider_id")):
+                raise NativeRuntimeError("Dynamic address write outside the planned provider contract.")
         if value is None:
             self.dynamic_addresses.pop(identifier, None)
             return
@@ -4217,10 +4257,45 @@ class TrainerEngine:
                                               parent=self.dynamic_addresses[target_id],
                                               process_name=self.plan['process_name'],
                                               pointer_size=self.memory.pointer_size)
+                # RT-4.3 (O9/O1): a staged relative value on the
+                # runtime-base marker; the anchor heading's live base is
+                # written at runtime by the table's own scripts into the
+                # dynamic-address registry (set_dynamic_address) and read
+                # fresh here, never cached from attach time.
+                if entry.get("runtime_base_required") is True:
+                    anchor_id = entry.get("runtime_base_anchor")
+                    if type(anchor_id) is not int or anchor_id not in self.entries:
+                        raise NativeRuntimeError(
+                            "Staged runtime-base row has an invalid anchor record.")
+                    if anchor_id in self.dynamic_addresses:
+                        return resolve_expression(address, self.memory, self.symbols,
+                                                  parent=self.dynamic_addresses[anchor_id],
+                                                  process_name=self.plan['process_name'],
+                                                  pointer_size=self.memory.pointer_size)
+                    anchor_entry = self.entries[anchor_id]
+                    raise NativeRuntimeError(
+                        f"Runtime base for group record {anchor_id} "
+                        f"('{anchor_entry.get('label', '')}') is not provided yet: "
+                        "the table scripts that write the group base must run "
+                        "first; activation names the anchor while it is missing.")
                 raise NativeRuntimeError('Flattened address profiles require resolved inherited bases')
             return resolve_expression(entry['address'],self.memory,self.symbols,
                                       process_name=self.plan['process_name'],pointer_size=self.memory.pointer_size)
-        return self.memory.resolve_pointer(entry["address"], entry.get("pointer_offsets", []), self.symbols)
+        offsets = [self._resolve_pointer_offset(offset) if isinstance(offset, str) else offset
+                   for offset in entry.get("pointer_offsets", [])]
+        return self.memory.resolve_pointer(entry["address"], offsets, self.symbols)
+
+    def _resolve_pointer_offset(self, text: str) -> int:
+        """RT-4.3 (O3): resolve an address-expression pointer-offset slot
+        against the live symbol table and memory (CE pointer-chain
+        semantics); the value is applied as a signed 64-bit offset."""
+        from .address_expression import resolve_expression
+        value = resolve_expression(text, self.memory, self.symbols,
+                                   process_name=self.plan['process_name'],
+                                   pointer_size=self.memory.pointer_size)
+        if abs(value) > 0x7FFFFFFFFFFFFFFF:
+            raise NativeRuntimeError("Pointer offset exceeds signed 64 bits.")
+        return value
 
     @staticmethod
     def _value_size(entry: dict) -> int:

@@ -116,13 +116,29 @@ class DigitModuleGrammarTests(unittest.TestCase):
         self.assertEqual(parse_expression("#42"), {"kind": "integer", "value": 42})
         self.assertEqual(parse_expression("1000"), {"kind": "integer", "value": 0x1000})
 
-    def test_digit_tokens_without_module_suffix_stay_refused(self):
-        for text, message in (("20XX", "Unexpected trailing address expression tokens."),
-                              ("20XX.ex+10", "Unexpected trailing address expression tokens."),
-                              ("20XX.exe.foo+1", "Invalid address expression near '.foo+1'.")):
-            with self.subTest(text=text):
-                with self.assertRaisesRegex(AddressExpressionError, re.escape(message)):
-                    parse_expression(text)
+    def test_digit_leading_symbol_and_module_grammar(self):
+        # RT-4.3 (O10): a digit-leading token that contains at least one
+        # non-hex character is an ordinary symbol name (CE label() contract:
+        # the name stops parsing as hex at the first non-hex character);
+        # fully hex spellings stay integers, .exe/.dll spellings stay modules.
+        self.assertEqual(
+            parse_expression("20XX"),
+            {"kind": "symbol", "name": "20XX"})
+        self.assertEqual(
+            parse_expression("20XX.ex+10"),
+            {"kind": "binary", "operator": "+",
+             "left": {"kind": "symbol", "name": "20XX.ex"},
+             "right": {"kind": "integer", "value": 0x10}})
+        self.assertEqual(
+            parse_expression("20XX.exe+10"),
+            {"kind": "binary", "operator": "+",
+             "left": {"kind": "module", "name": "20XX.exe"},
+             "right": {"kind": "integer", "value": 0x10}})
+        with self.subTest(text="20XX.exe.foo+1"):
+            with self.assertRaisesRegex(
+                    AddressExpressionError,
+                    re.escape("Invalid address expression near '.foo+1'.")):
+                parse_expression("20XX.exe.foo+1")
 
 
 class DoubleColonLabelGrammarTests(unittest.TestCase):
@@ -166,6 +182,8 @@ class DoubleColonLabelGrammarTests(unittest.TestCase):
         self.assertEqual(expression_symbols("A:B+10"), [])
 
     def test_malformed_colon_forms_stay_refused(self):
+        # RT-4.3 (O27): "A:B:C" now parses as a multi-segment managed
+        # label; the malformed forms below still fail closed.
         for text, message in (("A:::B", "Invalid address expression near ':::B'."),
                               ("Mod.Cls:Base:M:Extra", "Invalid address expression near ':Extra'."),
                               (":B", "Invalid address expression near ':B'."),
@@ -274,14 +292,17 @@ class DigitModulePlanTests(unittest.TestCase):
             with self.assertRaises(error):
                 validator(missing_source)
 
-    def test_digit_address_without_module_suffix_stays_blocked(self):
+    def test_digit_symbol_address_without_provider_stays_blocked(self):
+        # RT-4.3 (O10): "20XX" now parses as a symbol name; without a
+        # supported provider record it stays blocked (fail-closed).
         body = ('<CheatTable CheatEngineTableVersion="45"><CheatEntries>'
                 '<CheatEntry><ID>940</ID><Description>"Bad"</Description>'
                 '<VariableType>4 Bytes</VariableType><Address>20XX</Address></CheatEntry>'
                 '</CheatEntries></CheatTable>')
         row = self.compile(body)["entries"][0]
         self.assertFalse(row["supported"])
-        self.assertEqual(row["reason"], "Unexpected trailing address expression tokens.")
+        self.assertEqual(row["reason"],
+                         "Required symbol has no unique supported provider: 20XX.")
 
 
 class DoubleColonProgramTests(unittest.TestCase):

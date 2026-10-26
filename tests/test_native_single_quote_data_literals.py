@@ -6,6 +6,11 @@ parsing, data dialect db) and instruction operands — and they produce
 byte-identical results.  Backslash escapes inside quoted data literals are
 refused fail-closed in both quote styles; symbol, module and address
 grammars stay quote-unaware.
+
+RT-4.3 (O13) extended the native-dialect string semantics per directive:
+db stays one byte per ANSI character; dw encodes the string as UTF-16LE
+words of any length; dd/dq pack the string little-endian into one unit,
+zero-padded (CE string semantics).
 """
 import unittest
 
@@ -63,21 +68,49 @@ class SingleQuotedDataLiteralTests(unittest.TestCase):
         self.assertEqual(_literal_bytes(node_s, None, {}),
                          _literal_bytes(node_d, None, {}))
 
-    def test_native_non_db_directives_refuse_single_quoted_strings(self):
-        for directive in ("dw", "dd", "dq"):
-            with self.subTest(directive=directive):
-                with self.assertRaisesRegex(ProgramError,
-                                            "Only db supports ASCII string constants"):
-                    aa._data_values("'RR'", directive)
+    def test_native_dw_dd_dq_accept_quoted_strings(self):
+        # RT-4.3 (O13): dw encodes the string as UTF-16LE words of any
+        # length; dd/dq pack the string little-endian into one unit,
+        # zero-padded (CE string semantics).
+        self.assertEqual(aa._data_values("'RR'", "dw"), ["'RR'"])
+        self.assertEqual(aa._data_values("'RRRR'", "dd"), ["'RRRR'"])
+        self.assertEqual(aa._data_values("'RRRRRRRR'", "dq"), ["'RRRRRRRR'"])
+        self.assertEqual(
+            _literal_bytes({"op": "data", "directive": "dw", "values": ["'RR'"]}, None, {}),
+            b"R\x00R\x00")
+        self.assertEqual(
+            _literal_bytes({"op": "data", "directive": "dd", "values": ["'RR'"]}, None, {}),
+            b"RR\x00\x00")
+        self.assertEqual(
+            _literal_bytes({"op": "data", "directive": "dd", "values": ["'RRRR'"]}, None, {}),
+            b"RRRR")
+        self.assertEqual(
+            _literal_bytes({"op": "data", "directive": "dq", "values": ["'RR'"]}, None, {}),
+            b"RR\x00\x00\x00\x00\x00\x00")
+        # dw accepts non-ASCII and encodes it as UTF-16LE.
+        self.assertEqual(
+            _literal_bytes({"op": "data", "directive": "dw", "values": ["'\u00e9'"]}, None, {}),
+            b"\xe9\x00")
+
+    def test_native_dd_dq_string_too_long_refused(self):
+        with self.assertRaisesRegex(ProgramError, "at most 4 ANSI characters"):
+            aa._data_values("'RRRRR'", "dd")
+        with self.assertRaisesRegex(ProgramError, "at most 8 ANSI characters"):
+            aa._data_values("'RRRRRRRRR'", "dq")
 
     def test_native_backslash_and_non_ascii_refused(self):
         with self.assertRaisesRegex(ProgramError, "backslash"):
             aa._data_values("'a\\b'", "db")
         with self.assertRaisesRegex(ProgramError, "backslash"):
             aa._data_values('"a\\b"', "db")
-        with self.assertRaisesRegex(ProgramError,
-                                    "Only db supports ASCII string constants"):
+        with self.assertRaisesRegex(ProgramError, "backslash"):
+            aa._data_values("'a\\b'", "dw")
+        with self.assertRaisesRegex(ProgramError, "ANSI"):
             aa._data_values("'éé'", "db")
+        with self.assertRaisesRegex(ProgramError, "ANSI"):
+            aa._data_values("'éé'", "dd")
+        with self.assertRaisesRegex(ProgramError, "ANSI"):
+            aa._data_values("'éé'", "dq")
 
     def test_native_full_program_db_single_quoted(self):
         profile = aa.prepare_program(_source("db '======>G25'"), bitness=64)
