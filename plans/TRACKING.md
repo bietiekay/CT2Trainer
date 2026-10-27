@@ -99,13 +99,19 @@ game-facing action.
   reason-changed rows (UI-only change, zero catalog effect).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
-- Latest verified release: 0.16.4, build
-  `native-20261024T003853Z-a8cf04fc` (cut from `main` @ `988ff8e`),
-  in-build suite 3,479 OK / 25 expected skips, `ce_inputs: []`;
-  ships the Sinking City 2 crash-observability field fix (process-wide
-  excepthook/faulthandler sinks into the opt-in debug log, unguarded
-  Tk poll callback wrapped fail-closed, per-wish restore-entry
-  logging) on top of the 0.16.3 content; superseded 0.16.3
+- Latest verified release: 0.17, build
+  `native-20261027T094839Z-ec6c6f55` (cut from `main` @ `ee41630`),
+  in-build suite 3,692 OK / 25 expected skips, `ce_inputs: []`;
+  ships the RT-4.2 runtime provider model (last RT-4 package; catalog
+  remeasure `blocked-catalog-rt42-main`: 1,351 -> 1,053 blocked of
+  117,634, 298 rows unblocked, zero newly blocked, 28 reason-only
+  changes) plus the RT-4.3 address-expression & identifier-dialect
+  merge, the RT-4.5 and RT-4.6 merges, the trainer UI Scripts view and
+  row context menu, and the RT-5 item G / F gate ratifications on top
+  of the 0.16.4 content; superseded 0.16.4
+  `native-20261024T003853Z-a8cf04fc` (in-build 3,479/25, Sinking City
+  2 crash-observability field fix on top of the 0.16.3 content) and
+  superseded 0.16.3
   `native-20261023T065015Z-afbc3eba` (in-build 3,421/25, user-tested,
   field finding: Sinking City 2 silent trainer death) and superseded
   0.16.2 `native-20261022T160328Z-0423fb21` (in-build 3,415/25,

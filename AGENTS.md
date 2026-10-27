@@ -51,9 +51,10 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-24, 0.16.4 released (build
-`native-20261024T003853Z-a8cf04fc` cut from `main` @ `988ff8e`; previous
-0.16.3 `native-20261023T065015Z-afbc3eba` @ `6a5ba63`, previous
+**CT2Trainer (status 2026-10-27, 0.17 released (build
+`native-20261027T094839Z-ec6c6f55` cut from `main` @ `ee41630`;
+previous 0.16.4 `native-20261024T003853Z-a8cf04fc` @ `988ff8e`,
+previous 0.16.3 `native-20261023T065015Z-afbc3eba` @ `6a5ba63`, previous
 0.16.2 `native-20261022T160328Z-0423fb21` @ `68eeb00`, previous
 0.16.1 `native-20261021T161241Z-b0566a25` @ `d1c61f2`, previous
 0.16 field-fix re-cut 2 `native-20261021T123801Z-8c5c4e1e` @ `108170b`,
@@ -186,16 +187,23 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261024T003853Z-a8cf04fc` (0.16.4,
-cut from `main` @ `988ff8e`; in-build suite 3479 OK / 25 regular
+**Latest verified build:** `native-20261027T094839Z-ec6c6f55` (0.17,
+cut from `main` @ `ee41630`; in-build suite 3692 OK / 25 regular
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
-gate; source ZIP `CT2Trainer-0.16.4-source.zip` sha256
-`87e1f448ce3a9b72386b62ffb8c981e451242c3bf88ecb030e9979c29733e47f`
-(13,075,064 bytes), portable ZIP
-`CT2Trainer-0.16.4-windows-portable.zip` sha256
-`ffa08832fe0f6673ef00054c15395990846a67a709a6d19c9e78becad35d6807`
-(28,645,790 bytes)).
-0.16.4 ships the Sinking City 2 trainer-crash-observability field fix
+gate; source ZIP `CT2Trainer-0.17-source.zip` sha256
+`08af7d402df6380713f75cd270a27b9eb512e78a173d169ebd142f9411e65eee`
+(13,162,166 bytes), portable ZIP
+`CT2Trainer-0.17-windows-portable.zip` sha256
+`ee6ad2ec4b72705b6a48f6631343c4caef1056f7bca5400ec0c5ebd8159ac15a`
+(28,710,096 bytes)).
+0.17 ships the RT-4.2 runtime provider model (last RT-4 package;
+catalog remeasure `blocked-catalog-rt42-main`: 1,351 -> 1,053
+blocked, 298 rows unblocked, zero newly blocked, 28 reason-only
+changes) plus the RT-4.3 address-expression & identifier-dialect
+merge, the RT-4.5 and RT-4.6 merges, the trainer UI Scripts view and
+row context menu, and the RT-5 item G / F gate ratifications, on top
+of the 0.16.4 content. Superseded 0.16.4 build: the
+Sinking City 2 trainer-crash-observability field fix
 (0.16.3 field test 2026-10-23: the windowed trainer process died
 silently mid wish-restore - last event the TALENTPTR aobscan at
 18:49:31, zero follow-up events - and the restart was blocked by the

@@ -1,21 +1,12 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-26. **Latest verified release:** 0.16.4, build
-`native-20261024T003853Z-a8cf04fc` (built from `main` at `988ff8e`,
-2026-10-24): the Sinking City 2 trainer-crash-observability field fix
-(from the 0.16.3 field test: the windowed trainer process died
-silently mid wish-restore with zero follow-up log events and the
-restart was blocked by the correct state-lock refusal while the game
-was alive; `arm_crash_reporting()` now sinks
-excepthook/threading-hook/faulthandler evidence into the opt-in debug
-log, `TrainerWindow.poll` fails closed instead of letting an exception
-kill the windowed process, and the restore loop logs
-`restore-entry-start` per wish; state-lock fail-closed behavior
-unchanged) on top of the 0.16.3 content, the RT-4.4 value-semantics,
-the RT-4.6 input-legacy and the RT-4.5 AA-directive merges (catalog
-remeasure `blocked-catalog-rt45main`: 1,743 blocked of 117,634, zero
-newly blocked rows); `main` since the 0.16.4 cut additionally carries
-the RT-4.3 address-expression & identifier-dialect merge (2026-10-26,
+**Updated:** 2026-10-27. **Latest verified release:** 0.17, build
+`native-20261027T094839Z-ec6c6f55` (built from `main` at `ee41630`,
+2026-10-27): the RT-4.2 runtime provider model (last RT-4 package;
+catalog remeasure `blocked-catalog-rt42-main`: 1,351 -> 1,053
+blocked, 298 rows unblocked, zero newly blocked, 28 reason-only
+changes) on top of the 0.16.4 content, the RT-4.3
+address-expression & identifier-dialect merge (2026-10-26,
 merge `cd3217d`): O1 relative-address skip-fold + O9 runtime-base
 staging, O3 pointer-offset expression slots, O10 identifier dialect,
 O23 token-named quoted-atom refusal, O27/O4 Type:Member managed
@@ -31,14 +22,23 @@ no-effect register ratification (2026-10-26, merge `966fccd`,
 tests-only: the inventory section-8 no-effect/out-of-scope register
 pinned as a byte-stable contract,
 `tests/test_native_rt5_no_effect_register.py` +22, zero catalog
-movement, `blocked-catalog-rt5f-main` zero delta); plus the RT-4.2
-runtime provider model merge (2026-10-27, merge `bb86983`): keep-first
-duplicate-provider scope fallback, mixed-dialect `unregistersymbol`
-release evidence, bounded API-export registry with link-time
-resolution — catalog remeasure `blocked-catalog-rt42-main`: 1,351 ->
-1,053 blocked of 117,634, zero newly blocked rows; RT-4 is complete
-and the 0.17 build is cut after it.
-Superseded: 0.16.3, build
+movement, `blocked-catalog-rt5f-main` zero delta). RT-4 is complete;
+in-build suite 3,692 OK / 25 expected skips, `ce_inputs: []`.
+Superseded: 0.16.4, build
+`native-20261024T003853Z-a8cf04fc` (built from `main` at `988ff8e`,
+2026-10-24): the Sinking City 2 trainer-crash-observability field fix
+(from the 0.16.3 field test: the windowed trainer process died
+silently mid wish-restore with zero follow-up log events and the
+restart was blocked by the correct state-lock refusal while the game
+was alive; `arm_crash_reporting()` now sinks
+excepthook/threading-hook/faulthandler evidence into the opt-in debug
+log, `TrainerWindow.poll` fails closed instead of letting an exception
+kill the windowed process, and the restore loop logs
+`restore-entry-start` per wish; state-lock fail-closed behavior
+unchanged) on top of the 0.16.3 content, the RT-4.4 value-semantics,
+the RT-4.6 input-legacy and the RT-4.5 AA-directive merges (catalog
+remeasure `blocked-catalog-rt45main`: 1,743 blocked of 117,634, zero
+newly blocked rows). Superseded: 0.16.3, build
 `native-20261023T065015Z-afbc3eba` (built from `main` at `6a5ba63`,
 2026-10-23) - the Sinking City 2 activation field fix (two root
 causes from the 0.16.2 field test: the recovery assessment still
