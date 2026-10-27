@@ -149,6 +149,11 @@ def _block(entry: dict, reason: str) -> None:
     entry.pop("lua_program", None)
     entry.pop("global_program", None)
     entry.pop("value_profile", None)
+    # RT-4.2 (R7): a blocked record cannot carry the api_exports marker —
+    # resolution may have set it for an earlier symbol before a later one
+    # (or a later pass) blocked the record, and the plan validator refuses
+    # the marker on anything but a supported script record.
+    entry.pop("api_exports", None)
     entry["provides"] = []
 
 
@@ -178,6 +183,21 @@ _AOBSKAN_LABEL = re.compile(
 _CALL_TARGET = re.compile(
     r"\bcall\s+(?:(?:near|short|abs|far)\s+)*([A-Za-z_$][A-Za-z0-9_]*)(?![A-Za-z0-9_.$\-])",
     re.IGNORECASE)
+
+# RT-4.2 (R7): bounded Windows API export registry.  A bare call target
+# (no record, table-Lua or user-symbol provider) that names one of these
+# system exports is a static known target: the plan carries an explicit
+# ``api_exports`` marker (exact source spelling + owning module basename),
+# the engine resolves it against the attached target's live PE export
+# table at link time, and an absent export fails closed with a named,
+# actionable refusal before any target memory is touched.  The registry is
+# deliberately minimal (the corpus only needs user32 entries) and
+# extensible by adding a casefolded name; names outside it keep the
+# classic unsupported-provider refusal.
+_API_EXPORT_MODULES = {
+    "getasynckeystate": ("user32.dll", "GetAsyncKeyState"),
+    "findwindowa": ("user32.dll", "FindWindowA"),
+}
 
 
 def _symbol_source_survey(scripts: dict[int, str]) -> tuple[set[str], set[str]]:
@@ -833,6 +853,12 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
     missing definition gets the actionable per-symbol report.
     """
     providers: dict[str, list[dict]] = {}
+    # RT-4.2 (R3): the ordered keep-first scope per symbol, retained so a
+    # dependent can fall back to the first still-supported candidate when
+    # the kept (document-order first) provider is itself blocked.  Only
+    # non-compatible duplicate sets get an entry; the shared-global
+    # (compatible) branch is untouched and keeps its ambiguity refusal.
+    provider_alternatives: dict[str, list[dict]] = {}
     for entry in entries:
         if entry["supported"] and entry["kind"] == "script":
             for symbol in entry["provides"]:
@@ -884,6 +910,10 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
             # provider cannot shadow them at runtime.
             scope = chosen if chosen else candidates
             kept = scope[0]
+            # RT-4.2 (R3): keep the ordered scope for the dependency
+            # fallback; the provider list below still collapses to the kept
+            # first candidate (byte-stable plans while it stays supported).
+            provider_alternatives[symbol] = scope
             for entry in scope[1:]:
                 # RT-4.1: keep the duplicate entry supported; only its
                 # registration of this symbol is shadowed by the kept
@@ -917,79 +947,125 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
             if any(provider["id"] != entry["id"] for provider in providers.get(key, [])):
                 entry["requires"].append(symbol)
                 known.add(key)
+    def _resolve_entry(entry: dict) -> str | None:
+        """Re-resolve one supported record's symbol requirements.
+
+        Mutates ``entry["dependency_ids"]`` in place (reset first; the
+        partial list up to the failing symbol is left on a block, matching
+        the historical pass semantics).  Returns the block reason, or
+        ``None`` when the record stays supported.  Per-symbol resolution
+        order: keep-first supported provider -> keep-first scope fallback
+        (RT-4.2 R3, when the kept provider was itself blocked) ->
+        table-level provider (no record dependency) -> Windows API export
+        registry (RT-4.2 R7, no record dependency, plan marker) -> named
+        refusal.
+        """
+        entry["dependency_ids"] = []
+        # WP-49 (GC-E7): a record's own registration satisfies its own
+        # reference to a symbol it provides; no self-edge is emitted and
+        # the record stays supported regardless of other providers.
+        own_provided = {name.casefold() for name in entry.get("provides", [])}
+        for symbol in entry["requires"]:
+            key = symbol.casefold()
+            if key in own_provided:
+                continue
+            supported = [candidate for candidate in providers.get(key, [])
+                         if candidate["supported"] and candidate["id"] != entry["id"]]
+            # WP-45 (GC-E4): selection-aware provider resolution — a
+            # selected provider wins over the table-wide provider set, so
+            # an explicitly chosen variant serves its dependents.  When no
+            # provider of this symbol is selected, the full supported set
+            # is kept: the selection closure below can still pull in an
+            # initially unselected sole provider (byte-stable default).
+            if selected is not None:
+                selected_supported = [candidate for candidate in supported
+                                       if candidate["id"] in selected]
+                if selected_supported:
+                    supported = selected_supported
+            if len(supported) == 0:
+                # RT-4.2 (R3): keep-first fallback.  When the kept
+                # (document-order first) provider is itself blocked, the
+                # first still-supported candidate in keep-first scope order
+                # takes over the requirement; the dependent's activation
+                # ordering follows that provider, so static resolution and
+                # runtime registration stay in agreement.  The shared-global
+                # branch never reaches here (its candidates stay in
+                # ``providers`` and keep the unique-provider refusal).
+                alternative = [candidate for candidate in
+                               provider_alternatives.get(key, ())
+                               if candidate["supported"] and candidate["id"] != entry["id"]]
+                if selected is not None:
+                    selected_alternative = [candidate for candidate in alternative
+                                            if candidate["id"] in selected]
+                    if selected_alternative:
+                        alternative = selected_alternative
+                if alternative:
+                    supported = [alternative[0]]
+            if len(supported) == 0:
+                if ((uds_symbols and key in uds_symbols)
+                        or (table_lua_symbols and key in table_lua_symbols)
+                        or (user_symbols and key in user_symbols)):
+                    # WP-46 (part 1) / WP-54 (c) / RT-4.6: no supported
+                    # record provides this symbol, so a table-level
+                    # provider covers the requirement; no record
+                    # dependency arises and the record stays supported.
+                    # The UDS address is seeded into the runtime symbol
+                    # table by the engine from the plan field; the
+                    # table-Lua address is registered live by the
+                    # table-scope bootstrap, which precedes wish restore;
+                    # the user-symbol address is seeded by the engine
+                    # after the UDS seed (an explicit operator import
+                    # overrides a table-level definition of the same
+                    # name).
+                    continue
+                # RT-4.2 (R7): a bare Windows API export call target with
+                # no record or table-level provider is a static known
+                # target; the plan marker carries the owning module and
+                # the engine resolves it against the attached target's
+                # live PE export table at link time (a registered symbol
+                # of the same name always wins; an absent export fails
+                # closed with a named, actionable refusal).  The registry
+                # is deliberately bounded (see _API_EXPORT_MODULES); names
+                # outside it keep the classic unsupported-provider
+                # refusals below.
+                api_pair = _API_EXPORT_MODULES.get(key)
+                if api_pair is not None and entry["kind"] == "script":
+                    entry.setdefault("api_exports", {})[api_pair[1]] = api_pair[0]
+                    continue
+                # RT-4.6: with no supported provider and no table-level
+                # fallback, the raw-source survey decides which report
+                # the operator sees.  A symbol registered somewhere in
+                # the table source (its provider record exists but is
+                # blocked for another reason) or a bare call target
+                # (Windows API export territory) keeps the generic
+                # reason; anything else is a missing definition, and
+                # the actionable per-symbol report names the referring
+                # record and both remediations.
+                if key not in source_registered and key not in api_call_targets:
+                    symbol_path = entry["path"]
+                    return (
+                        f"Required symbol '{symbol}' is not registered "
+                        f"anywhere in this table (referenced by '{symbol_path}'): "
+                        f"no record defines it and it is not a "
+                        f"user-defined symbol. Import it as a user "
+                        f"symbol with its target address, or add a "
+                        f"record that registers it "
+                        f"(registersymbol/registerSymbol/label/aobscan).")
+                return f"Required symbol has no unique supported provider: {symbol}."
+            if len(supported) > 1:
+                return f"Required symbol has no unique supported provider: {symbol}."
+            entry["dependency_ids"].append(supported[0]["id"])
+        return None
+
     while True:
         changed = False
         for entry in entries:
             if not entry["supported"] or entry["kind"] == "heading":
                 continue
-            entry["dependency_ids"] = []
-            # WP-49 (GC-E7): a record's own registration satisfies its own
-            # reference to a symbol it provides; no self-edge is emitted and
-            # the record stays supported regardless of other providers.
-            own_provided = {name.casefold() for name in entry.get("provides", [])}
-            for symbol in entry["requires"]:
-                if symbol.casefold() in own_provided:
-                    continue
-                supported = [candidate for candidate in providers.get(symbol.casefold(), [])
-                             if candidate["supported"] and candidate["id"] != entry["id"]]
-                # WP-45 (GC-E4): selection-aware provider resolution — a
-                # selected provider wins over the table-wide provider set, so
-                # an explicitly chosen variant serves its dependents.  When no
-                # provider of this symbol is selected, the full supported set
-                # is kept: the selection closure below can still pull in an
-                # initially unselected sole provider (byte-stable default).
-                if selected is not None:
-                    selected_supported = [candidate for candidate in supported
-                                           if candidate["id"] in selected]
-                    if selected_supported:
-                        supported = selected_supported
-                if len(supported) != 1:
-                    if (len(supported) == 0
-                            and ((uds_symbols
-                                   and symbol.casefold() in uds_symbols)
-                                  or (table_lua_symbols
-                                      and symbol.casefold() in table_lua_symbols)
-                                  or (user_symbols
-                                      and symbol.casefold() in user_symbols))):
-                        # WP-46 (part 1) / WP-54 (c) / RT-4.6: no supported
-                        # record provides this symbol, so a table-level
-                        # provider covers the requirement; no record
-                        # dependency arises and the record stays supported.
-                        # The UDS address is seeded into the runtime symbol
-                        # table by the engine from the plan field; the
-                        # table-Lua address is registered live by the
-                        # table-scope bootstrap, which precedes wish restore;
-                        # the user-symbol address is seeded by the engine
-                        # after the UDS seed (an explicit operator import
-                        # overrides a table-level definition of the same
-                        # name).
-                        continue
-                    # RT-4.6: with no supported provider and no table-level
-                    # fallback, the raw-source survey decides which report
-                    # the operator sees.  A symbol registered somewhere in
-                    # the table source (its provider record exists but is
-                    # blocked for another reason) or a bare call target
-                    # (Windows API export territory) keeps the generic
-                    # reason; anything else is a missing definition, and
-                    # the actionable per-symbol report names the referring
-                    # record and both remediations.
-                    if (len(supported) == 0
-                            and symbol.casefold() not in source_registered
-                            and symbol.casefold() not in api_call_targets):
-                        symbol_path = entry["path"]
-                        _block(entry, (
-                            f"Required symbol '{symbol}' is not registered "
-                            f"anywhere in this table (referenced by '{symbol_path}'): "
-                            f"no record defines it and it is not a "
-                            f"user-defined symbol. Import it as a user "
-                            f"symbol with its target address, or add a "
-                            f"record that registers it "
-                            f"(registersymbol/registerSymbol/label/aobscan)."))
-                    else:
-                        _block(entry, f"Required symbol has no unique supported provider: {symbol}.")
-                    changed = True
-                    break
-                entry["dependency_ids"].append(supported[0]["id"])
+            reason = _resolve_entry(entry)
+            if reason is not None:
+                _block(entry, reason)
+                changed = True
         if not changed:
             break
     # Symbol dependencies, not XML parents, determine activation order.
@@ -1024,13 +1100,27 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
                 frames.append((dependency_id, False))
     for entry_id in cyclic:
         _block(by_id[entry_id], "Symbol dependency cycle is unsupported.")
+    # Final pass: after the resolution fixpoint and the cycle blocks, a
+    # dependent's provider may still have been blocked in a later pass.
+    # Re-resolve the dependent against the current supported state: with
+    # the RT-4.2 (R3) fallback a still-supported keep-first alternative
+    # may now serve the requirement, so the dependent stays supported with
+    # the updated dependency; only without any remaining supported
+    # provider, table-level provider or API-export marker does it block.
     changed = True
     while changed:
         changed = False
         for entry in entries:
-            if entry["supported"] and any(not by_id[dependency]["supported"]
-                                          for dependency in entry.get("dependency_ids", [])):
-                _block(entry, "Required symbol provider is blocked.")
+            if not entry["supported"] or entry["kind"] == "heading":
+                continue
+            if all(by_id[dependency]["supported"]
+                   for dependency in entry.get("dependency_ids", ())):
+                continue
+            reason = _resolve_entry(entry)
+            if reason is not None:
+                _block(entry, reason)
+                changed = True
+            else:
                 changed = True
 
 
@@ -2431,6 +2521,33 @@ def validate_plan(plan: dict) -> None:
                     validate_symbol(symbol)
                 if len({symbol.casefold() for symbol in entry[key]}) != len(entry[key]):
                     raise NativeCompileError("Duplicate symbol requirement/provider.")
+            # RT-4.2 (R7): api_exports is an additive plan marker on
+            # supported AA script records — a bounded mapping of exact
+            # export name -> owning module basename for bare call targets
+            # that no record, table-Lua or user-symbol provider serves.
+            # The engine resolves each name against the attached target's
+            # live PE export table at link time; an absent export fails
+            # closed with a named refusal.  Every marker key must be a
+            # record requirement (the symbol the program actually
+            # references), and the marker never rides on non-script or
+            # blocked records.
+            api_exports = entry.get("api_exports")
+            if api_exports is not None:
+                if (not isinstance(api_exports, dict) or not api_exports
+                        or len(api_exports) > 32):
+                    raise NativeCompileError("API export markers must be bounded nonempty mappings.")
+                if entry["kind"] != "script" or not entry["supported"]:
+                    raise NativeCompileError("API export markers require a supported script record.")
+                for export, module in api_exports.items():
+                    if not isinstance(export, str) or not isinstance(module, str):
+                        raise NativeCompileError("API export markers must map export names to module basenames.")
+                    validate_symbol(export)
+                    if re.fullmatch(r"[A-Za-z0-9._-]+\.(?:dll|exe)", module) is None:
+                        raise NativeCompileError("API export modules must be PE basenames.")
+                    if export.casefold() not in {require.casefold() for require in entry["requires"]}:
+                        raise NativeCompileError("API export markers must reference a record requirement.")
+                if len({export.casefold() for export in api_exports}) != len(api_exports):
+                    raise NativeCompileError("Duplicate API export marker.")
             # WP-38/WP-50: the additive address_provider field is shape-
             # checked here (a symbol marker rides on a supported addressless
             # heading; a symbol-null marker rides on the supported addressless
