@@ -2,6 +2,97 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.17 (2026-10-27)
+
+- RT-4.2 runtime provider model (last RT-4 package, ~1,085-row scope):
+  R3 keep-first duplicate-provider scope fallback (a blocked kept
+  provider no longer strands its dependents; the first
+  still-supported candidate in the keep-first scope resolves the
+  symbol; single-candidate and shared-global-compatible branches keep
+  their classic refusals), R4 mixed-dialect release evidence (AA
+  `unregistersymbol(` release proof from `{$asm}` [DISABLE] parts per
+  the CE 7.5 split-on-commas/whitespace contract, `*` wildcard and
+  scalar trailing args excluded; Lua `unregisterSymbol` stays
+  strict-pair per the gettop==1 handler), R7 bounded API-export
+  registry (bare `call GetAsyncKeyState` / `FindWindowA` supported with
+  the exact `api_exports` plan marker, forged-marker refusals in both
+  plan validators, link-time resolution against the target's live
+  export table with a fail-closed refusal before any write).
+  Catalog: 1,351 -> 1,053 blocked (net -298: R4 Lua runtime symbol
+  providers 286 rows now staged - DS2 118, HorizonForbiddenWest 82 per
+  copy, ForgottonAnne dMoveValueMultiplier 2, Witcher3 bIsLevel 1 per
+  copy; R7 GetAsyncKeyState 12 rows supported - ForgottonAnne 7,
+  trine2 3, Witcher3 1 per copy; R3 catalog-neutral; 5 previously
+  supported-plain rows re-staged through the now-supported runtime
+  providers; zero newly blocked; 28 rows reason-changed, all still
+  blocked and explained). Dedicated
+  `tests/test_native_rt42_runtime_provider.py` (21 tests) plus the R7
+  pin migration in `tests/test_native_undefined_provider_report.py`.
+- RT-4.3 address expression & identifier dialect: O1 relative-address
+  skip-fold over addressless script/value ancestors, O9 runtime-base
+  marker staging on group headings, O3 pointer-offset expression slots
+  (hex-arithmetic fold, expression slots resolved against the live
+  symbol table at activation), O10 identifier dialect (digit-leading
+  and dot-bearing names per the CE `label()` contract), O23
+  quoted-atom module-basename refusal, O27/O4 Type:Member managed
+  labels through the injected IL2CPP resolver, O13 directive-aware
+  db/dw/dd/dq string bytes. Catalog: 1,743 -> 1,351 blocked (net
+  -392, zero newly blocked, 12 rows reason-changed and still
+  explained); dedicated
+  `tests/test_native_address_expression_dialect.py` with 38 tests
+  after the dedicated dialect-test follow-up.
+- RT-4.5 AA directive & script coverage: named usemono() parity-scope
+  refusal (O15), CE dealloc name-list semantics (O12), managed-label
+  regex bounded to a {1,2} colon tail (O18), global DISABLE reset
+  regions and pure-global records (O19/O21), symbol-only luaCall
+  envelopes (O20), per-record symbol-handover refusals (O5). Catalog:
+  1,778 -> 1,743 blocked (net -35, zero newly blocked).
+- RT-4.6 input legacy & authoring gaps: actionable per-symbol
+  "not registered anywhere in this table" report with raw-source
+  registration survey (R5/R6 closure), x87 `st`/`st(N)` FPU-operand
+  fold, optional user-symbol import. Catalog: 1,807 -> 1,778 blocked
+  (net -29; 218 rows reason-changed onto the actionable per-symbol
+  report, all still blocked).
+- NASM 3.02 FSTP encoding audit (RT-4.6 follow-up): the "FSTP table
+  defect" was a misdiagnosis - no defect in the pinned NASM 3.02 (per
+  the Intel SDM table FSTP ST(i) = DD D8+i; probe artifacts came from
+  snippets missing the bits directive); docs corrected in place, +3
+  regression pins (byte-exact FSTP/FST forms plus a full-pipeline
+  fstp st(0) roundtrip).
+- Trainer UI (user feature 2026-10-24): new "Scripts" filter chip
+  (every kind==script record, blocked/unselected shown dimmed with the
+  exact reason) and the row context menu - script preview, copy
+  script text, "What is happening here" plan-based assessment,
+  details; pure text builders in ui_script_view.py, plan format and
+  engine contract unchanged, +25 tests.
+- RT-5 item G createThread/threadWait gate decision: option (2)
+  recorded - the capability gate stays, no thread backend ships this
+  milestone (a bounded owned-thread backend awaits the root design
+  review); byte-stable five-stage fail-closed pins in
+  `tests/test_native_rt5_thread_gate.py` (+17); census re-derived:
+  exactly 2 O22 rows (Witcher3 4.02HF1_G25v2 + 4.03_G25v2, id 192) and
+  77 first-word createThread usages across 18 tables (26 AA lines / 8
+  tables gate-governed; 51 Lua lines / 11 tables are the separate
+  lua_host cooperative-worker family).
+- RT-5 item F no-effect register ratification: the rt5-api-inventory
+  no-effect register is pinned as an enforced byte-stable contract in
+  `tests/test_native_rt5_no_effect_register.py` (+22 tests / 12
+  classes: 26 CE UI globals with exact named refusals, section-7.3
+  object-method register per surface, table-level
+  Structures/Signature/PublicKey/Forms/Files byte-exact warnings +
+  sorted plan-inert ignored_sections, Lua lifecycle no-ops); tests
+  only, zero catalog movement.
+- Reference-table catalog state at the 0.17 cut: run
+  `blocked-catalog-rt42-main` (2026-10-27) over the 151-path/143-hash
+  frozen manifest: 151/151 load, 117,634 total, 116,581 supported
+  (60,161 staged), 1,053 blocked, zero load errors; residual blocked
+  rows are deliberate gates (thread capability, bounded API-export
+  registry, cleanup-ownership) plus table-side symbols registered only
+  by the tables' own runtime Lua (globals outside the clean-room
+  provider set, user labels, bare targets beyond the registry).
+  First minor release of the reference-table 100% program; full local
+  suite on main after the final merge: 3,692 OK / 25 expected skips.
+
 ## 0.16.4 (2026-10-24)
 
 - Sinking City 2 trainer-crash observability field fix (0.16.3 field
