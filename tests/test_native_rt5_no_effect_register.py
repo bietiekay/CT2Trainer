@@ -699,8 +699,10 @@ class CeUiGlobalRefusalTests(unittest.TestCase):
         self.assertEqual(self.memory.ops, [])
 
     def test_hosted_lower_case_getAddressList_contrasts_with_uppercase(self):
-        # CE 7.5 registers only the lowercase form; the uppercase variant
-        # from the newer-CE register stays a named refusal.
+        # CE 7.5 registers both casings (first-character case-flipped
+        # lua_register wrapper, LuaHandler.pas:213-228); the host
+        # registers only lowercase, so the uppercase call stays a
+        # named refusal.
         self.assertIsNotNone(self.host.execute("return getAddressList()"))
         with self.assertRaises(LuaHostError) as ctx:
             self.host.execute("return GetAddressList()")

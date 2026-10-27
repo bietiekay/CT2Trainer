@@ -330,9 +330,13 @@ the tree (authoritative file: `LuaHandler.pas`, plus `LuaStrings.pas`,
 bootstrap functions, proxy methods).
 
 Result: 61 names match the CE global surface (one, `GetAddressList`,
-casefold-only — CE 7.5 registers just the lowercase `getAddressList`),
-36 CE object methods, 28 Lua stdlib/builtins, 269 table-local or
-obfuscated names.
+casefold-only — CE 7.5 registers the name plus its first-character
+case-flipped variant through the local `lua_register` wrapper
+(`LuaHandler.pas:213-228`), so the uppercase call resolves there; the
+CT2Trainer host registers only the lowercase form, so the uppercase
+call is a named refusal here — a genuine, trivial host case-sensitivity
+gap, not a newer-CE construct), 36 CE object methods, 28
+stdlib/builtins, 269 table-local or obfuscated names.
 
 Note: the census covered table Lua only. `{$lua}` sections inside
 AssemblerScripts and `LuaCall` are routed through the same host
@@ -406,10 +410,13 @@ warning at load; decision item E), `control_setVisible` (16/4),
 (4/2), `setMethodProperty` (4/4), `menu_getItems` (4/2),
 `createCheckBox` (2/2), `createComponentClass` (2/2),
 `createOpenDialog` (2/2), `createStructureForm` (2/2), `createImage`
-(1/1), `GetAddressList` (1/1 — the case-sensitive uppercase variant of
-the hosted `getAddressList`; CE 7.5 registers only the lowercase form,
-so the call is a named refusal on the CT2Trainer host as well; used
-only in the AtomicHeart dark-mode / rainbow-background visual code),
+(1/1), `GetAddressList` (1/1 — the uppercase variant of the hosted
+`getAddressList`; CE 7.5 also registers the first-character case-flipped
+variant (`LuaHandler.pas:213-228`), so the call resolves there and the
+named refusal on the CT2Trainer host is a genuine, trivial
+case-sensitivity gap, not a newer-CE construct; the AtomicHeart
+dark-mode / rainbow-background usage is purely visual, so the no-effect
+decision stands on usage grounds),
 `timer_onTimer`/`timer_setEnabled`/`timer_setInterval` (1/1
 each, legacy TTimer helper style).
 
