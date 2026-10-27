@@ -139,9 +139,11 @@ regenerated under the pinned run id
    dialect tests now at 38). The RT-5 API/construct inventory is
    documented in `documentation/rt5-api-inventory.md`; RT-5 item G
    (createThread/threadWait gate decision, option 2 — gate stays, no
-   thread backend this milestone) landed 2026-10-26, tests-only, zero
-   catalog movement. Remaining: RT-4.2 runtime provider model (1,085;
-   last RT-4 package), then the RT-5 implementation items A-F.
+   thread backend this milestone) and RT-5 item F (no-effect register
+   ratification, `tests/test_native_rt5_no_effect_register.py` +22)
+   both landed 2026-10-26, tests-only, zero catalog movement.
+   Remaining: RT-4.2 runtime provider model (1,085; last RT-4
+   package), then the RT-5 implementation items A-E.
 4. **Trainer UI feature (user request, done 2026-10-24):** the
    `Scripts` filter view (every script record, blocked/unselected
    included with their reason; headings and values hidden) and the row
