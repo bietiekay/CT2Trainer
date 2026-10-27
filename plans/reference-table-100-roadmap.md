@@ -76,7 +76,7 @@ the original reference corpus and raw catalogs local-only.
 | RT-1 | Reproducible full-corpus baseline | Versioned local manifest for 151 paths/143 hashes; exact process bindings; same-source catalog; per-table and per-reason counts; record IDs and provider chains; 0.16 comparison with no unaccounted regression. Separate parse errors, inert records, staged rows, actionable rows, and table-level constructs. |
 | RT-2 | Root-cause map for every residual | Resolve all 2,698 blocked entries to an upstream cause or verified malformed authoring input. Follow provider cascades to their root; distinguish real missing semantics from false positives and duplicate provider policy. Record a testable contract, risk, and expected delta for each class. |
 | RT-3 | Load all table formats | Investigate the remaining legacy binary CT format with a clean-room parser or documented conversion path; preserve record identity and data. Table load reaches 151/151, subject to explicit evidence for genuinely unreadable inputs. — done 2026-10-23 (clean-room parser `src/ct2trainer/legacy_ct.py`; `SuperMeatBoy.CT` loads with all 10 records supported; run `blocked-catalog-rt3`). |
-| RT-4 | Close high-volume plan gaps | Execute the RT-2 root-cause-map packages in suggested order by expected delta over risk: RT-4.1 symbol provider fidelity (dupIgnore policy, dup labels, wildcard-cleanup scoping) 820 — done 2026-10-22 (remeasured 2,698 -> 1,858 blocked), RT-4.3 address expression & identifier dialect 452 — done 2026-10-26 (remeasured 1,743 -> 1,351 blocked), RT-4.4 value semantics 65, RT-4.5 AA directive & script coverage 57, RT-4.6 input legacy & authoring gaps 219, RT-4.2 runtime provider model 1,085 (last: its AA_HIDDEN portion clears progressively as root packages land). The split sums to 2,698. Each package: leading-table inspection, an independently authored synthetic case, the class contract as a testable assertion, owned-target runtime tests where effects matter, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. A reason count is not an independent feature count; remeasure after each fix. |
+| RT-4 | Close high-volume plan gaps | Execute the RT-2 root-cause-map packages in suggested order by expected delta over risk: RT-4.1 symbol provider fidelity (dupIgnore policy, dup labels, wildcard-cleanup scoping) 820 — done 2026-10-22 (remeasured 2,698 -> 1,858 blocked), RT-4.3 address expression & identifier dialect 452 — done 2026-10-26 (remeasured 1,743 -> 1,351 blocked), RT-4.4 value semantics 65, RT-4.5 AA directive & script coverage 57, RT-4.6 input legacy & authoring gaps 219, RT-4.2 runtime provider model 1,085 (last: its AA_HIDDEN portion clears progressively as root packages land) - done 2026-10-27 (remeasured 1,351 -> 1,053 blocked). The split sums to 2,698. Each package: leading-table inspection, an independently authored synthetic case, the class contract as a testable assertion, owned-target runtime tests where effects matter, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. A reason count is not an independent feature count; remeasure after each fix. |
 | RT-5 | Runtime trainer parity | Inventory every used CE Lua/AA API and game-facing table-level construct, including dynamic records, callbacks, target threads, managed resolution, string hex view, and byte-width dropdown semantics. Implement each needed behavior with bounded contracts, teardown rules, and owned-target tests; classify purely visual UI as outside scope. |
 | RT-6 | Full original-table validation | For each path, produce a plan-inspection result and targeted runtime observations against a pinned game build where available. Record skipped or inaccessible targets honestly. Run the Windows clean-machine and Deck/Proton/touch protocols; keep `runtime_unverified` until both pass. |
 | RT-7 | Release gate | Rebuild only through `scripts/Build-Native.ps1`; full suite and source/frozen parity; `ce_inputs: []`; archive hashes and provenance; update tracker, ledger, and verification before declaring 100%. |
@@ -605,12 +605,18 @@ Grand total = 2,698.
 | RT-4.6 Input legacy & authoring gaps | No-provider symbols (user config / cross-table / dynamic Lua), legacy symbols (BaseAddress, stat names, register-like tokens, module names without .exe) | R5 (91), R6 (128) | 219 |
 | **Total** | | | **2,698** ✓ |
 
-Package status (2026-10-26): **RT-4.3 done** — catalog remeasure
-`blocked-catalog-rt43-main`: **1,351 blocked** of 117,634 (net -392 over
-the 1,743 state after the RT-4.5/UI-script merges: 392 unblocked,
-0 newly blocked, 12 rows reason-changed all still blocked and
-explained; detail in the RT-4.3 update in the investigation queue).
-History: RT-4.5 (2026-10-24, remeasure `blocked-catalog-rt45main`)
+Package status (2026-10-27): **RT-4.2 done** — catalog remeasure
+`blocked-catalog-rt42-main`: **1,053 blocked** of 117,634 (net -298 over
+the 1,351 state after the RT-4.3 merge: 298 unblocked — R4 Lua runtime
+symbol providers 286 (now staged), R7 GetAsyncKeyState bare-call rows 12
+(supported with the api_exports plan marker, link-time export
+resolution), R3 keep-first scope fallback catalog-neutral — 0 newly
+blocked, 28 rows reason-changed all still blocked and explained; detail
+in the RT-4.2 update in the investigation queue). RT-4 is complete.
+History: RT-4.3 (2026-10-26, remeasure `blocked-catalog-rt43-main`)
+1,743 -> 1,351 of 117,634 (net -392: 392 unblocked, 0 newly blocked,
+12 rows reason-changed all still blocked and explained); RT-4.5
+(2026-10-24, remeasure `blocked-catalog-rt45main`)
 1,778 -> 1,743 of 117,634 (net -35: RDR2 1, Resonance 1, SOTTR 2,
 Shinkansen Sunless Sea 1, Subnautica_e67616 28, TheSinkingCity 2;
 zero newly blocked; 7 rows reason-changed, all still blocked and
@@ -626,14 +632,17 @@ with script preview and entry assessment) landed on branch
 `native-0.17-ui-script-inspector` 2026-10-24 (suite 3,587 OK /
 25 expected skips; catalog remeasure `blocked-catalog-ui-scripts`
 zero delta — UI-only change); per the user decision 2026-10-24 the
-0.17 build is cut after all RT-4.x merges. Next package by
-suggested order: RT-4.2 runtime provider model (1,085, last).
+0.17 build is cut after the RT-4.2 merge. RT-4 is complete; the next
+work is the RT-5 implementation items A-E per the inventory (roadmap
+RT-5 row).
 
 Suggested execution order: RT-4.1 (820, lowest risk and the largest
 guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),
-RT-4.6 (219), and RT-4.2 (1,085) last — its AA_HIDDEN portion clears
-progressively as the root packages land, and the residual is runtime
-provider work. Remeasure the catalog after each package (roadmap rule).
+RT-4.6 (219), and RT-4.2 (1,085) last — its AA_HIDDEN portion cleared
+progressively as the root packages landed, and the residual is runtime
+provider work — done 2026-10-27 (remeasured 1,351 -> 1,053 blocked).
+All six RT-4 packages are complete. Remeasure the catalog after each
+package (roadmap rule).
 
 ### CE 7.5 behavioral conclusions (read-only reference, probes closed 2026-10-21)
 

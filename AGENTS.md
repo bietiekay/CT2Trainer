@@ -21,16 +21,20 @@ now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
 (value semantics), RT-4.6 (input legacy & authoring gaps) and RT-4.5
 (AA directive & script coverage) landed on `main` 2026-10-24; RT-4.3
 (address expression & identifier dialect) landed on `main` 2026-10-26
-(plus its dedicated dialect test follow-up); RT-5 item G
+(plus its dedicated dialect test follow-up); RT-4.2 (runtime provider
+model: keep-first duplicate-provider scope fallback, mixed-dialect
+unregistersymbol release evidence, bounded API-export registry with
+link-time resolution) landed on `main` 2026-10-27, completing RT-4;
+RT-5 item G
 (createThread/threadWait gate decision, option 2: the capability gate
 stays, no thread backend ships this milestone) landed 2026-10-26 as
 byte-stable tests-only gate pins. The RT-5 API/construct inventory is
 documented in `documentation/rt5-api-inventory.md`. The latest
-original-table catalog (run `blocked-catalog-rt43-main`, 2026-10-26)
-has 1,351 blocked of 117,634 plan entries, 59,868 staged entries and
-zero load errors (previous: 1,743 after RT-4.5, 1,778 after RT-4.6,
-1,807 after RT-4.4, 1,858 after RT-4.1/RT-3; original baseline:
-2,698 blocked, 58,950 staged). The 42/42 feature
+original-table catalog (run `blocked-catalog-rt42-main`, 2026-10-27)
+has 1,053 blocked of 117,634 plan entries, 60,161 staged entries and
+zero load errors (previous: 1,351 after RT-4.3, 1,743 after RT-4.5,
+1,778 after RT-4.6, 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3;
+original baseline: 2,698 blocked, 58,950 staged). The 42/42 feature
 matrix measures only the 30 pinned synthetic cases; AP-11 has 0/6,143
 confirmed game effects. Read
 [`plans/reference-table-100-roadmap.md`](plans/reference-table-100-roadmap.md)

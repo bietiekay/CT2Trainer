@@ -1281,6 +1281,114 @@ their chain carries no static address-bearing ancestor — the base is
 supplied by an addressless runtime script (RT-4.2 runtime provider
 model); the O1/O3/O4/O9/O10/O13 grammar roots they carried are fixed.
 
+### RT-4.2 runtime provider model (lane `native-rt4-2`, 2026-10-27)
+
+Lane work (branch `native-rt4-2`, base `0a471a2`, single commit
+`9e092dc`; the original lane session stopped after a status-only reply,
+the relaunched session completed the WIP that root had pre-verified:
+compiler.py, engine.py, lua_symbol_providers.py,
+tests/test_native_undefined_provider_report.py).
+
+- **R3 KEEP_FIRST_FALLBACK:** when the kept (document-order first)
+  provider of a non-compatible duplicate-provider set is itself blocked
+  for an unrelated reason, a dependent record re-resolves against the
+  keep-first scope and the first still-supported candidate takes over
+  the requirement (the dependent's activation ordering follows that
+  provider, so static resolution and runtime registration stay in
+  agreement). Single-candidate symbols are unaffected (the classic
+  generic reason stays), and the shared-global (compatible) duplicate
+  branch keeps its ambiguity refusal. Catalog-neutral on the corpus at
+  this stage: no blocked keep-first provider row exists.
+- **R4 MIXED_DIALECT_RELEASE:** release evidence is also collected from
+  the `kind == 'asm'` parts of the [DISABLE] phase — the AA
+  `unregistersymbol(` form, multi-name per call (CE 7.5 splits the
+  argument list on commas/whitespace, autoassembler.pas:2492), the
+  wildcard `*` contributes no named evidence and scalar trailing
+  arguments (true/false/nil) are excluded. The strict-pair Lua
+  `unregisterSymbol` regex is unchanged and stays the only Lua release
+  evidence (the CE handler gates on parameters == 1,
+  LuaHandler.pas:5292 — a 2-/3-argument Lua call is a no-op). This
+  unblocks records whose Lua side registers the symbol and whose
+  `{$asm}` envelope releases it in the AA form (the corpus shape behind
+  the 286-row R4 delta).
+- **R7 API_EXPORT_REGISTRY:** a bounded Windows API export registry —
+  bare `call` targets in the registry (GetAsyncKeyState, FindWindowA,
+  both user32.dll; registry bound 1..32 entries, growth = casefolded
+  entries) compile to supported records carrying the exact `api_exports`
+  plan marker (export spelling -> module basename); both plan validators
+  refuse forged markers (bounded nonempty mapping, PE basename modules,
+  must reference a record requirement, no duplicate casefold names);
+  the engine resolves each export against the attached target's live PE
+  export table at link time
+  (`ProcessMemory.resolve_export`, memory.py:844) with the byte-exact
+  5-byte relative call encoding; a live registered symbol of the same
+  name always wins without re-resolution, the bare name never enters
+  the shared symbol map, and an absent export fails closed with a named
+  refusal before any target memory is touched (the failed enable stays
+  visibly inactive and is not a saved wish). Disable retains the
+  allocation (retention policy, same contract as
+  `test_native_allocation_only_enable`).
+
+Tests: dedicated `tests/test_native_rt42_runtime_provider.py` (865
+lines, 21 tests: R3 plan 4 incl. the shared-global ambiguity pin, R4
+plan 3 + extractor 6 incl. wildcard and scalar-tail exclusions and the
+MAX_PROVIDERS valve, R4 engine 1 full roundtrip, R7 plan 3, R7 validate
+1 / 7 sub-cases forged markers, R7 engine 3) plus the R7 pin migration
+in `tests/test_native_undefined_provider_report.py` (+1, 1 -> 2: the
+supported registry row pins `api_exports`, `requires` and empty
+`dependency_ids`; the outside-registry row keeps the generic reason).
+Lane final suite: Ran 3,635 / 3,632 OK / 25 skipped (only the 3 known
+path-dependent non-main failures). Full suite on `main` after the
+merge: **3,692 OK / 25 expected skips** (merge commit `bb86983`).
+Catalog remeasure (run `blocked-catalog-rt42-main`, 2026-10-27, frozen
+manifest and process bindings unchanged):
+**1,351 -> 1,053 blocked** of 117,634 (net -298; supported 116,283 ->
+116,581, staged 59,868 -> 60,161; zero load errors, zero newly blocked
+rows; 28 rows reason-changed, all still blocked and explained — the
+reason advances to the next unresolved bare target after the resolved
+one: Sleep 24, ShowWindow 2, PlayerCharacter 1, and DS2 id 25478 whose
+resolved Trampolines provider exposes the missing user label
+UseItem_skip). Composition of the 298 unblocked rows: R4 Lua runtime
+symbol providers 286 — DS2 118 (myPtr 44, myPtr3 28, myPtr2 17,
+g_GameModule 10, g_DSPlayerSystem 8, Trampolines 4, g_* globals),
+HorizonForbiddenWest 82 per copy (BoardGameBoardUnit 20,
+LevelBasedXpArray 10, mProperties 10, g_GameModule 11, Trampolines 7,
+g_* and component symbols), ForgottonAnne dMoveValueMultiplier 2,
+Witcher3 bIsLevel 1 per copy — now staged for runtime resolution; R7
+GetAsyncKeyState bare-call rows 12 (ForgottonAnne 7, trine2 3,
+Witcher3 1 per copy) supported with the api_exports plan marker and
+link-time export resolution; R3 catalog-neutral. 288 of the 298 rows
+are now staged and 10 plain supported, plus 5 previously
+supported-plain rows moving to staged (the record's address now
+resolves through a supported runtime provider at activation: HFW
+'Disable All Bound Checks' x2 copies via the [ Initialize ] script,
+trine2 x3 via the newly supported parent script).
+
+Open items carried (not wired this lane):
+
+- **R7 entry-patch install contract:** a bare `call` as the entry patch
+  of an owned allocation is plan-supported but refused at install by
+  the pinned return-context contract
+  (`tests/test_native_debug_coordinator`); the corpus-realistic shape
+  is a cave trampoline with a `jmp` entry, which is what the engine
+  tests cover. Plan-level catalog classification is unaffected.
+- **autoAssemble arg2 host parity:** the CT2Trainer Lua host requires a
+  falsy second argument (targetSelf guard), while CE 7.5 also accepts
+  the corpus's table `disableInfo` as arg2 (LuaHandler.pas:2853; corpus
+  form `autoAssemble(body, false, disableinfo)`). Recorded open, no
+  behavior change this lane.
+- **API-export registry scope:** deliberately minimal (2 entries,
+  user32.dll only); the bounded 1..32 marker contract is in place, so
+  extension is a registry-entry change, not a contract change.
+- **Live export table unverified on real game processes** (owned-target
+  evidence only; the fixture export table is synthetic).
+
+RT-4 is complete; the residual blocked rows carry table-side symbols
+registered only by the tables' own runtime Lua (globals outside the
+clean-room provider set), user labels, bare targets beyond the bounded
+API-export registry (Sleep, ShowWindow, ...) and the deliberate gates
+(thread capability, cleanup-ownership, addressless ancestors).
+
 ## 3. Deterministic measurement chain
 
 All committed `gap_inventory/` artifacts are reproducible byte-identically
@@ -1318,8 +1426,8 @@ The old 85% closure estimate and 0.11 release step were superseded by the
 
 1. **RT-4 and RT-5 (RT-1/RT-2 done 2026-10-21, RT-3 done 2026-10-23,
    RT-4.1 done 2026-10-22, RT-4.4 done 2026-10-23, RT-4.5 done
-   2026-10-24, RT-4.6 done 2026-10-24, RT-4.3 done 2026-10-26, RT-5
-   inventory done 2026-10-23):**
+   2026-10-24, RT-4.6 done 2026-10-24, RT-4.3 done 2026-10-26,
+   RT-4.2 done 2026-10-27, RT-5 inventory done 2026-10-23):**
    the 151-path/143-hash manifest is frozen; every remaining blocker is
    attributed to an upstream cause with per-class contracts, risks and
    expected deltas (RT-2 root-cause map in the roadmap). RT-4.1 symbol
@@ -1364,26 +1472,33 @@ The old 85% closure estimate and 0.11 release step were superseded by the
    no-effect/out-of-scope register is pinned as an enforced byte-stable
    contract — `tests/test_native_rt5_no_effect_register.py` +22 (focused
    22 OK; main suite 3,670 OK / 25 expected skips); tests-only, zero
-   catalog movement (`blocked-catalog-rt5f-main` zero delta). Next:
-   executing the remaining RT-4 package RT-4.2
-   1,085 last (runtime provider model). The user-requested trainer
+   catalog movement (`blocked-catalog-rt5f-main` zero delta). RT-4.2
+   runtime provider model landed (lane `native-rt4-2`, merge
+   `bb86983`): keep-first duplicate-provider scope fallback (R3),
+   mixed-dialect `unregistersymbol` release evidence per the CE 7.5
+   AA/Lua contracts (R4), bounded API-export registry with
+   link-time resolution (R7) — see the RT-4.2 section above; catalog
+   remeasure `blocked-catalog-rt42-main` 1,351 -> 1,053
+   blocked, net -298, zero newly blocked. RT-4 is complete;
+   next: the RT-5 implementation items A-E. The user-requested trainer
    UI feature (Scripts view + row context menu with script preview and
    entry assessment) landed 2026-10-24 on branch
    `native-0.17-ui-script-inspector` (suite 3,587 OK / 25 expected
    skips; catalog remeasure `blocked-catalog-ui-scripts` zero delta —
    see the Trainer UI section above); it ships in the 0.17 build cut
    after the remaining RT-4.x merges (user decision 2026-10-24). The
-   latest snapshot has **1,743/117,634 blocked entries**, 115,891
-   supported (59,735 staged), and zero load errors (run
-   `blocked-catalog-ui-scripts`, zero-delta re-verification of the
-   RT-4.5 state after the UI change). This is static evidence only.
-2. **RT-4.x through RT-5:** close the remaining address, value, AA
-   directive, input-legacy and runtime-provider gaps (RT-4.x) and the
-   RT-5 implementation items A-G inventoried in
+   latest snapshot has **1,053/117,634 blocked entries**, 116,581
+   supported (60,161 staged), and zero load errors (run
+   `blocked-catalog-rt42-main`). This is static evidence only.
+2. **RT-5 implementation items A-E:** RT-4.x is complete (RT-4.2
+   runtime provider model landed 2026-10-27, merge `bb86983`); RT-5
+   items F (no-effect register ratification) and G (createThread/
+   threadWait gate decision) landed 2026-10-26, tests-only. Remaining:
+   the RT-5 implementation items A-E inventoried in
    `documentation/rt5-api-inventory.md` (embedded-file loader contract,
    bounded process-info APIs, table-callback dispatch, CheatCodes
-   code patches, messageDialog decision, no-effect register, thread
-   backend) with independent synthetic cases and owned-target tests.
+   code patches, messageDialog decision) with independent synthetic
+   cases and owned-target tests.
    Pure visual Forms rendering (WP-42) is outside the requested
    trainer-behavior scope; any form control that causes a game-facing
    action remains in scope.

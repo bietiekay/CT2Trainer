@@ -31,8 +31,13 @@ no-effect register ratification (2026-10-26, merge `966fccd`,
 tests-only: the inventory section-8 no-effect/out-of-scope register
 pinned as a byte-stable contract,
 `tests/test_native_rt5_no_effect_register.py` +22, zero catalog
-movement, `blocked-catalog-rt5f-main` zero delta). The 0.17 build is cut
-after the remaining RT-4.2 merge (1,085).
+movement, `blocked-catalog-rt5f-main` zero delta); plus the RT-4.2
+runtime provider model merge (2026-10-27, merge `bb86983`): keep-first
+duplicate-provider scope fallback, mixed-dialect `unregistersymbol`
+release evidence, bounded API-export registry with link-time
+resolution — catalog remeasure `blocked-catalog-rt42-main`: 1,351 ->
+1,053 blocked of 117,634, zero newly blocked rows; RT-4 is complete
+and the 0.17 build is cut after it.
 Superseded: 0.16.3, build
 `native-20261023T065015Z-afbc3eba` (built from `main` at `6a5ba63`,
 2026-10-23) - the Sinking City 2 activation field fix (two root
@@ -121,7 +126,8 @@ regenerated under the pinned run id
    2,698) are in the roadmap's RT-2 root-cause map (lane final
    report, 2026-10-21 21:14, authoritative record).
 3. **Implement the missing behavior (RT-3 to RT-5; RT-3, RT-4.1,
-   RT-4.4, RT-4.6 and RT-4.5 done):** RT-3 legacy-binary CT loading
+   RT-4.2, RT-4.3, RT-4.4, RT-4.5 and RT-4.6 done):** RT-3
+   legacy-binary CT loading
    landed 2026-10-23 (clean-room parser, `SuperMeatBoy.CT` 10/10
    supported, table load 151/151); RT-4.4 value semantics landed
    2026-10-23 (catalog remeasure `blocked-catalog-rt44`: 1,858 ->
@@ -136,14 +142,16 @@ regenerated under the pinned run id
    expression & identifier dialect landed 2026-10-26 (catalog remeasure
    `blocked-catalog-rt43-main`: 1,743 -> 1,351 blocked, 392 rows
    cleared, zero newly blocked, 12 reason-only changes; dedicated
-   dialect tests now at 38). The RT-5 API/construct inventory is
+   dialect tests now at 38); RT-4.2 runtime provider model landed
+   2026-10-27 (catalog remeasure `blocked-catalog-rt42-main`: 1,351 ->
+   1,053 blocked, 298 rows cleared, zero newly blocked, 28
+   reason-only changes). The RT-5 API/construct inventory is
    documented in `documentation/rt5-api-inventory.md`; RT-5 item G
    (createThread/threadWait gate decision, option 2 — gate stays, no
    thread backend this milestone) and RT-5 item F (no-effect register
    ratification, `tests/test_native_rt5_no_effect_register.py` +22)
    both landed 2026-10-26, tests-only, zero catalog movement.
-   Remaining: RT-4.2 runtime provider model (1,085; last RT-4
-   package), then the RT-5 implementation items A-E.
+   Remaining: the RT-5 implementation items A-E.
 4. **Trainer UI feature (user request, done 2026-10-24):** the
    `Scripts` filter view (every script record, blocked/unselected
    included with their reason; headings and values hidden) and the row
