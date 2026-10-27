@@ -42,6 +42,24 @@ evidence is adopted *without* a matching unregister: the symbol is
 released by the owner scope at detach instead of by a disable phase, so
 requiring the pair would keep every genuine one-shot provider unproven.
 Non-one-shot records keep the strict register ∩ unregister rule.
+
+RT-4.2 (R4) adds the mixed-dialect release form seen in the corpus:
+records that register their symbols in the ENABLE Lua
+(``unregisterSymbol("X")``/``registerSymbol("X", addr, true)``
+re-entrance pairs) and release them in an ``{$asm}`` [DISABLE] section
+(``unregistersymbol( X )``, unquoted).  Release evidence is therefore
+collected from the static AA dialect parts of the disable phase as well.
+The AA directive is the multi-name form (CE 7.5 autoassembler.pas:2492:
+the argument list is split on commas/whitespace, so several names per
+call are valid) and ``unregistersymbol(*)`` expands to the program's own
+registered symbols at runtime, so the wildcard contributes no named
+evidence.  The extraction is restricted to ``kind == 'asm'`` parts: in
+the Lua dialect the same spelling is the Lua API call that CE 7.5 only
+honors with exactly one argument (LuaHandler.pas:5292: the symbol is
+deleted only when parameters:=lua_gettop(L) == 1; a 2-/3-argument call
+is a no-op), so the strict-pair regex stays the only Lua release
+evidence.  The strict intersection rule (and the MAX_PROVIDERS valve) is
+unchanged.
 """
 
 from __future__ import annotations
@@ -75,6 +93,18 @@ _UNREGISTER_CALL = re.compile(
 # symbol='Name' table field (the PRAGMATA AOB-table shape)
 _SYMBOL_FIELD = re.compile(
     r"(?<![A-Za-z0-9_])symbol\s*=\s*['\"]([A-Za-z_][A-Za-z0-9_]*)['\"]")
+# RT-4.2 (R4): the AA release form — unquoted names, optionally several per
+# call, optionally quoted (CE's AA unregistersymbol accepts both spellings).
+# The wildcard argument (*) expands to the program's own phase-owned names
+# at runtime, so it contributes no named evidence.
+_AA_UNREGISTER_CALL = re.compile(
+    r"(?i)(?<![A-Za-z0-9_])unregistersymbol\s*\(([^)]*)\)")
+_AA_UNREGISTER_NAME = re.compile(
+    r"[\"']?([A-Za-z_][A-Za-z0-9_]*)[\"']?")
+# Scalar keywords that are never symbol names; the Lua form
+# ``unregisterSymbol('Name', false)`` must not contribute its trailing
+# argument as a release.
+_AA_UNREGISTER_SCALARS = {"true", "false", "nil"}
 
 
 def _without_comments(text: str) -> str:
@@ -132,10 +162,13 @@ def extract_lua_symbol_providers(parts, *, one_shot: bool = False) -> list[str]:
     while active and release on deactivation.
 
     ``parts`` are the parsed ``_Part`` objects from ``lua_program._parse``;
-    only parts with ``kind == 'lua'`` are inspected.  Registration evidence
-    is collected from the ``enable`` phase, release evidence from the
-    ``disable`` phase; the result is their intersection, sorted
-    case-insensitively.  Returns an empty list when nothing is proven.
+    only parts with ``kind == 'lua'`` (and, for RT-4.2 (R4) release
+    evidence, the ``kind == 'asm'`` parts of the ``disable`` phase) are
+    inspected.  Registration evidence is collected from the ``enable``
+    phase, release evidence from the ``disable`` phase (Lua
+    ``unregisterSymbol`` and AA ``unregistersymbol`` alike); the result is
+    their intersection, sorted case-insensitively.  Returns an empty list
+    when nothing is proven.
 
     ``one_shot`` selects the WP-46 part 2 adoption rule for records
     classified one-shot (missing/empty [DISABLE]): the ENABLE-phase
@@ -148,10 +181,10 @@ def extract_lua_symbol_providers(parts, *, one_shot: bool = False) -> list[str]:
     registered: set[str] = set()
     released: set[str] = set()
     for part in parts:
-        if part.kind != "lua" or not part.text:
+        if part.kind not in ("lua", "asm") or not part.text:
             continue
         text = _without_comments(part.text)
-        if part.phase == "enable":
+        if part.phase == "enable" and part.kind == "lua":
             registered.update(
                 match.group(1) for match in _REGISTER_CALL.finditer(text))
             registered.update(
@@ -159,6 +192,25 @@ def extract_lua_symbol_providers(parts, *, one_shot: bool = False) -> list[str]:
         elif part.phase == "disable":
             released.update(
                 match.group(1) for match in _UNREGISTER_CALL.finditer(text))
+            # RT-4.2 (R4): mixed-dialect records release their Lua-
+            # registered symbols in an {$asm} disable section with the
+            # unquoted AA form; the named argument is release evidence.
+            # Strictly static-AA dialect: in the Lua dialect the same
+            # spelling is the Lua API call that CE 7.5 only honors with
+            # exactly one argument (LuaHandler.pas:5292: the symbol is
+            # deleted only when parameters:=lua_gettop(L) == 1, so a
+            # 2-/3-argument call is a no-op and carries no release
+            # evidence); the strict-pair regex above stays the only
+            # Lua release evidence.  The AA directive is the multi-name
+            # form (autoassembler.pas:2492 splits the argument list on
+            # commas/whitespace) and the wildcard (*) expands to the
+            # program's own registered symbols at runtime, so it
+            # contributes no named evidence.
+            if part.kind == "asm":
+                for call in _AA_UNREGISTER_CALL.finditer(text):
+                    for name in _AA_UNREGISTER_NAME.findall(call.group(1)):
+                        if name.casefold() not in _AA_UNREGISTER_SCALARS:
+                            released.add(name)
     if one_shot:
         adopted = registered - released
     else:

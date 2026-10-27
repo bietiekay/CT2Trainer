@@ -4,9 +4,14 @@ When a requirement has no supported provider and no table-level fallback
 (UDS / table Lua / user-symbol import), the raw-source registration survey
 splits the report: a symbol registered somewhere in the table source
 (provider record exists but is blocked for another reason) or a bare
-``call`` target (Windows API export territory) keeps the classic generic
-reason, while a name registered nowhere gets the actionable per-symbol
-report that names the referring record and both remediations.
+``call`` target keeps the classic generic reason, while a name registered
+nowhere gets the actionable per-symbol report that names the referring
+record and both remediations.  RT-4.2 (R7) changed the bare-target
+branch: a bare call target inside the bounded API export registry
+(GetAsyncKeyState / FindWindowA) now compiles to a supported record
+carrying the exact ``api_exports`` plan marker and resolves against the
+attached target's live export table at link time, so the generic reason
+stays the report for bare targets outside the registry.
 """
 from __future__ import annotations
 
@@ -149,15 +154,40 @@ class ClassificationTests(unittest.TestCase):
         self.assertFalse(by_id[1]["supported"])
         self.assertEqual(by_id[2]["reason"], GENERIC.format(sym="MissingA"))
 
-    def test_bare_call_target_keeps_the_generic_reason(self):
+    def test_bare_call_target_uses_the_api_export_registry(self):
+        # RT-4.2 (R7): a bare call target inside the bounded registry is
+        # a static known target; the record stays supported and carries
+        # the exact api_exports marker (export spelling -> module
+        # basename) the engine resolves against the attached target's
+        # live PE export table at link time.  No record dependency
+        # arises, so no staged metadata is emitted.
         plan = plan_for(script_entry(
             1, "Caller",
             "[ENABLE]\nFixtureTarget.exe+40:\ncall GetAsyncKeyState\n"
             "[DISABLE]\nFixtureTarget.exe+40:\ndb 00 00 00 00 00"))
         entry = plan["entries"][0]
+        self.assertTrue(entry["supported"], entry["reason"])
+        self.assertEqual(entry["api_exports"],
+                         {"GetAsyncKeyState": "user32.dll"})
+        self.assertEqual(entry["requires"], ["GetAsyncKeyState"])
+        self.assertEqual(entry["dependency_ids"], [])
+        self.assertNotIn("staged", entry)
+
+    def test_bare_call_target_outside_registry_keeps_the_generic_reason(self):
+        # A bare call target outside the bounded registry has no record
+        # or table-level provider and no static resolution: the record
+        # stays blocked with the classic generic reason and carries no
+        # api_exports marker (the survey still sees it as a bare call
+        # target, so the actionable per-symbol report does not fire).
+        plan = plan_for(script_entry(
+            1, "Caller",
+            "[ENABLE]\nFixtureTarget.exe+40:\ncall SomeUnregisteredApi\n"
+            "[DISABLE]\nFixtureTarget.exe+40:\ndb 00 00 00 00 00"))
+        entry = plan["entries"][0]
         self.assertFalse(entry["supported"])
         self.assertEqual(entry["reason"],
-                         GENERIC.format(sym="GetAsyncKeyState"))
+                         GENERIC.format(sym="SomeUnregisteredApi"))
+        self.assertIsNone(entry.get("api_exports"))
 
     def test_module_qualified_call_never_registers_a_bare_target(self):
         # `call user32.X` tokens are module-qualified (a dot continuation),

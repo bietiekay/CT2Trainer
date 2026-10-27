@@ -713,8 +713,15 @@ def validate_plan(plan: dict) -> None:
         # reference to a symbol it provides; no self-edge exists in the plan
         # and the DFS must not fabricate one from the raw metadata.
         own_provided = {name.casefold() for name in entry.get("provides", [])}
+        # RT-4.2 (R7): the api_exports plan marker covers bare API call
+        # targets that no record or table-level provider serves; the engine
+        # resolves each export against the attached target's live PE export
+        # table at link time, so the marker carries no record dependency.
+        api_covered = {export.casefold() for export in (entry.get("api_exports") or {})}
         for name in entry.get("requires", []):
             if name.casefold() in own_provided:
+                continue
+            if name.casefold() in api_covered:
                 continue
             provider = providers.get(name.casefold())
             if provider is None:
@@ -2089,9 +2096,14 @@ class TrainerEngine:
         if entry["id"] in trail:
             raise NativeRuntimeError("Symbol dependency cycle")
         trail.add(entry["id"])
+        # RT-4.2 (R7): requirements covered by this record's own api_exports
+        # marker are resolved at link time against the target's live export
+        # table; no record provider exists for them, so the dependency walk
+        # skips them (fail-closed resolution happens in _install_program).
+        api_served = {export.casefold() for export in (entry.get("api_exports") or {})}
         for symbol in entry.get("requires", []):
             key = symbol.casefold()
-            if key in self.symbols:
+            if key in self.symbols or key in api_served:
                 continue
             provider = self.providers.get(key)
             if provider is None:
@@ -2882,7 +2894,8 @@ class TrainerEngine:
             raise NativeRuntimeError(str(exc)) from exc
 
     def _enable_program(self, entry: dict, persist: bool) -> None:
-        manager, linked, live = self._install_program(entry['program'], entry['id'])
+        manager, linked, live = self._install_program(entry['program'], entry['id'],
+                                                      api_exports=entry.get("api_exports"))
         self.hooks[entry['id']] = manager
         self.applied[entry['id']] = [_Patch(b['address'], bytes.fromhex(b['original']), bytes.fromhex(b['bytes'])) for b in live]
         self.local_symbols[entry['id']] = linked['symbols']
@@ -3450,6 +3463,7 @@ class TrainerEngine:
                     return pool.make_consumer(lease,path,coordinator=kwargs.pop('coordinator'),**kwargs)
                 manager,linked,live=self._install_program(program,entry['id'],manager_factory=factory,
                                                         scan_memory=scan_memory,publication_guard=capture.recheck,
+                                                        api_exports=entry.get("api_exports"),
                                                         staged_restore=tuple(self._staged_copy_ranges(entry,'disable',scan_symbols=resolved['symbols'])))
                 pool.confirm_enabled(lease,program)
                 self.hooks[entry['id']]=manager
@@ -3703,13 +3717,22 @@ class TrainerEngine:
         return ordinary, executable
 
     @restoration_entry
-    def _install_program(self, program: dict, owner: int | str, *, publication_guard=None,manager_factory=None,scan_memory=None,staged_restore=()) -> tuple[Any, dict, list]:
+    def _install_program(self, program: dict, owner: int | str, *, publication_guard=None,manager_factory=None,scan_memory=None,staged_restore=(),api_exports=None) -> tuple[Any, dict, list]:
         """Shared owned AA publication path for records and Lua child receipts.
 
         staged_restore carries the concrete (address, size) pairs of staged
         global_to_target copies; those entries are restored by the staged
         readmem at disable time, so the consumer's own disable text must not
         repeat them.
+
+        api_exports is the record entry's RT-4.2 (R7) plan marker: the
+        exact export name -> owning module basename mapping of bare API
+        call targets that no record, table-Lua or user-symbol provider
+        serves.  Each name is resolved against the attached target's live
+        PE export table and injected into the per-install symbol overlay
+        (a live registered symbol of the same name always wins; an absent
+        export fails closed with a named refusal before any target memory
+        is touched).  None for non-record installs (Lua child receipts).
         """
         from .aa_program import preflight_program, link_program
         from .hooks import HookManager, HookUncertain
@@ -3735,6 +3758,35 @@ class TrainerEngine:
                 if label.casefold() in self.symbols:
                     raise NativeRuntimeError(f'Managed method label {label} conflicts with an active symbol.')
                 symbols[label.casefold()] = address
+        # RT-4.2 (R7): the plan-level api_exports marker names the bare
+        # Windows API export call targets no provider record serves.  Each
+        # name resolves against the attached target's live PE export table
+        # and joins the per-install symbol overlay so the assembler link
+        # finds it.  A live registered symbol of the same name always wins
+        # (the shared map is the source of truth for live registrations);
+        # an absent export fails closed with a named, actionable refusal
+        # before any target memory is allocated or changed.
+        if api_exports:
+            if symbols is self.symbols:
+                symbols = dict(self.symbols)
+            for export, module in api_exports.items():
+                key = export.casefold()
+                if key in symbols:
+                    continue
+                try:
+                    address = self.memory.resolve_export(module, export)
+                except Exception as exc:
+                    raise NativeRuntimeError(
+                        f"Windows API export '{export}' (module {module}) "
+                        f"is not resolvable in the attached target process: "
+                        f"{exc} The record was not activated; no target "
+                        f"memory was changed.") from exc
+                if self.debug_log.enabled:
+                    self.debug_log.log("api-export", **{"entry_id": owner,
+                                                        "export": export,
+                                                        "module": module,
+                                                        "address": hex(address)})
+                symbols[key] = address
         link_memory=self.memory if scan_memory is None else scan_memory
         disassembler = None
         thread_model = None
