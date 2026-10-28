@@ -1,6 +1,6 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-27. **Latest verified release:** 0.17, build
+**Updated:** 2026-10-28. **Latest verified release:** 0.17, build
 `native-20261027T094839Z-ec6c6f55` (built from `main` at `ee41630`,
 2026-10-27): the RT-4.2 runtime provider model (last RT-4 package;
 catalog remeasure `blocked-catalog-rt42-main`: 1,351 -> 1,053
@@ -22,8 +22,15 @@ no-effect register ratification (2026-10-26, merge `966fccd`,
 tests-only: the inventory section-8 no-effect/out-of-scope register
 pinned as a byte-stable contract,
 `tests/test_native_rt5_no_effect_register.py` +22, zero catalog
-movement, `blocked-catalog-rt5f-main` zero delta). RT-4 is complete;
-in-build suite 3,692 OK / 25 expected skips, `ce_inputs: []`.
+movement, `blocked-catalog-rt5f-main` zero delta); plus the RT-5 item A
+embedded `<Files>` extraction & Lua surface (2026-10-28, merge `479977c`):
+new `src/ct2trainer/native/embedded_files.py` dual-branch codec (CE-alphabet
+Ascii85 + 4-byte-LE size prefix; hex read-until-EOF for other/missing
+`Encoding`), fail-closed table-load decode, `findTableFile`/`readStringLocal`/
+stringstream/stringlist surface, +53 tests; zero catalog delta
+(`blocked-catalog-rt5a-main`), full main suite 3,745 OK / 25 expected skips.
+RT-4 is complete; RT-5 item A is the first RT-5 implementation item landed.
+The 0.17 in-build suite: 3,692 OK / 25 expected skips, `ce_inputs: []`.
 Superseded: 0.16.4, build
 `native-20261024T003853Z-a8cf04fc` (built from `main` at `988ff8e`,
 2026-10-24): the Sinking City 2 trainer-crash-observability field fix

@@ -27,13 +27,18 @@ unregistersymbol release evidence, bounded API-export registry with
 link-time resolution) landed on `main` 2026-10-27, completing RT-4;
 RT-5 item G
 (createThread/threadWait gate decision, option 2: the capability gate
-stays, no thread backend ships this milestone) landed 2026-10-26 as
-byte-stable tests-only gate pins. The RT-5 API/construct inventory is
-documented in `documentation/rt5-api-inventory.md`. The latest
-original-table catalog (run `blocked-catalog-rt42-main`, 2026-10-27)
-has 1,053 blocked of 117,634 plan entries, 60,161 staged entries and
-zero load errors (previous: 1,351 after RT-4.3, 1,743 after RT-4.5,
-1,778 after RT-4.6, 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3;
+stays, no thread backend ships this milestone) and item F (no-effect
+register ratification, tests only) landed on `main` 2026-10-26; RT-5
+item A (embedded `<Files>` extraction: new `embedded_files.py`
+dual-branch codec, fail-closed table-load decode, `findTableFile` /
+`readStringLocal` / stringstream / stringlist Lua surface, +53 tests)
+landed on `main` 2026-10-28 (merge `479977c`). The RT-5 API/construct
+inventory is documented in `documentation/rt5-api-inventory.md`. The
+latest original-table catalog (run `blocked-catalog-rt5a-main`,
+2026-10-28, zero delta vs `blocked-catalog-rt42-main`) has 1,053 blocked
+of 117,634 plan entries, 60,161 staged entries and zero load errors
+(previous: 1,351 after RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6,
+1,807 after RT-4.4, 1,858 after RT-4.1/RT-3;
 original baseline: 2,698 blocked, 58,950 staged). The 42/42 feature
 matrix measures only the 30 pinned synthetic cases; AP-11 has 0/6,143
 confirmed game effects. Read

@@ -516,6 +516,72 @@ exact composite reason. Tests only; zero catalog movement (remeasure
 `blocked-catalog-rt5f-main`); full main suite after the merge
 **3,670 OK / 25 expected skips**.
 
+Update (2026-10-28, RT-5 item A): the embedded `<Files>` extraction and
+Lua-surface package landed (lane `native-rt5-a`, merged to `main` as
+`479977c`). New clean-room module `src/ct2trainer/native/embedded_files.py`
+implements the CE-7.5 dual-branch codec: an exact `Encoding="Ascii85"`
+attribute decodes the CE-alphabet Ascii85 text to a raw-deflate stream
+that expands to a 4-byte little-endian size prefix that must equal the
+remaining payload; any other or missing `Encoding` value takes CE's hex
+branch (hex text -> raw deflate, read until EOF, no size prefix), verified
+against `luafile.pas::createFromXML`. Both branches carry named refusals
+(empty text, single-character Ascii85 tail, out-of-alphabet / non-hex
+character, odd hex count, truncated / invalid deflate, size-prefix
+mismatch, content over the 4 MiB per-file bound). The per-file bound is
+4 MiB (one `readStringLocal` call must be able to return the whole file,
+tracking the per-call transport limit); the per-table total stays at 16 MiB.
+`table.py::_parse_embedded_files` decodes every entry fail-closed (a single
+undecodable entry aborts the table load with a named `TableError`);
+`EmbeddedFile` + `Table.embedded_files` project through `to_dict`.
+Duplicate names are tolerated (CE table-load parity); the compiler emits
+`embedded_files` casefold-sorted, only when non-empty, and both plan
+validators re-derive hash/size from the stored text (schema-1 plans cannot
+carry them). The engine seeds `_embedded_files` / `_embedded_by_name` at
+init via `setdefault` (case-sensitive exact-name, first-occurrence-wins).
+`lua_host` adds the `findTableFile`/`FindTableFile` dispatch (nil when
+absent; dual `stream.memory` / `file.Stream` access shapes), `readStringLocal`
+(token-based `ct2tf:` / `ct2ss:`, strict UTF-8, wide-string refusal, plus
+two documented clean-room deviations — omitted/negative maxsize returns the
+full content instead of CE's default 50 bytes, and no NUL truncation because
+the content is the asset itself), the `stringstream.*` surface
+(create/copyFrom/dataString/size/destroy, per-scope registry bounded at
+256 objects / 16 MiB), `tablefile.delete` and `createTableFile` fail-closed
+refusals, and the stringlist `Text` getter/setter (CRLF-to-LF, positional
+split keeping empty lines, one trailing newline does not add a phantom
+item, destroy). A `load`/`loadstring` compat wrapper restricts to string
+chunks in text mode (function-chunk and binary-mode refused);
+`dofile`/`loadfile`/`coroutine` stay nil. The stringlist `Text` setter had a
+`gmatch` bug (no captures returns matched strings, not positions) fixed with
+a find-based positional loop. Tests: `tests/test_native_rt5_embedded_files.py`
++53 (codec roundtrip over all tail lengths + hex-branch roundtrip + the exact
+named decode refusals; `validate_embedded_files` forgery matrix + hex
+acceptance + duplicate tolerance + 64-file / 16 MiB bounds; table-load
+contract with hex-branch positive + invalid-hex named refusals + duplicate
+tolerance + per-file and total bounds; plan projection casefold-sorted +
+both validators' forged-hash/size/schema-1/hex-entry; end-to-end P5
+table-Lua shape with a byte-exact 4641 write and disable restore plus the
+engine registry seed; the RiftApart record shape
+tFileList -> createStringStream -> copyFrom -> stringlist.Text -> loadstring;
+readStringLocal maxsize and NUL semantics; invalid-UTF-8 named refusal;
+casefold-duplicate case-sensitive resolution; exact-duplicate
+first-occurrence-wins; string-stream-token readStringLocal; 12-case refusal
+matrix with zero memory writes) plus pin updates in `test_native_lua`
+(sandbox `load`/`loadstring` wrapper), `test_native_rt5_no_effect_register`
+(`<Files>` no longer in the omitted warnings, exact `embedded_files`
+projection) and `test_native_table_completeness` /
+`test_native_user_defined_symbols` (`embedded_files` in the completeness
+contract). Focused 221 tests across 5 files OK; full suite on `main` after
+the merge **3,745 OK / 25 expected skips** (baseline 3,692). Catalog
+remeasure (local, run `blocked-catalog-rt5a-main`, frozen manifest and
+process bindings unchanged): **zero delta** — 151/151 load, 117,634 total,
+116,581 supported (60,161 staged), 1,053 blocked, 0 compile errors, 0 newly
+blocked, 0 reason-changed. The reference tables carrying a non-empty
+`<Files>` section (9 files / 7 distinct games: P5Strikers + copy, RiftApart,
+Octopath2, DeathStrandingDC + compatibility, Cronos, Resonance,
+SinkingCity) now gain `embedded_files` in their plans; no record blocking
+status moves. `runtime_unverified` remains: the embedded-file record effects
+are untested on a live target.
+
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
 **Scope and method.** Full clean-room attribution of every blocked row in
