@@ -56,7 +56,12 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-27, 0.17 released (build
+**CT2Trainer (status 2026-10-28, 0.18 in flight on `main` @ `a731619`
+(trainer UI row-details window: right-click / long-press on a row offers
+"Row details" leading the context menu - one read-only window with the raw
+script source, the plain-language assessment and the concrete actions the
+trainer performs per entry; +22 tests, main suite 3,767 OK / 25 expected
+skips; build not yet cut), 0.17 released (build
 `native-20261027T094839Z-ec6c6f55` cut from `main` @ `ee41630`;
 previous 0.16.4 `native-20261024T003853Z-a8cf04fc` @ `988ff8e`,
 previous 0.16.3 `native-20261023T065015Z-afbc3eba` @ `6a5ba63`, previous

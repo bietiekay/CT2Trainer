@@ -242,6 +242,22 @@ game-facing action.
   `blocked-catalog-rt45main` (UI-only change). Ships in the 0.17
   build, cut after the remaining RT-4.x merges (RT-4.2 1,085) per the
   user decision 2026-10-24.
+- Trainer UI row-details window (2026-10-28, main commit `a731619`,
+  user request, VERSION 0.17 -> 0.18): right-click / long-press on a row
+  now offers "Row details" leading the context menu - a single read-only
+  900x700 Toplevel combining the raw script source (static Auto Assembler
+  / embedded Lua / global program / normalized operation list), the
+  plain-language assessment (what it does / what is known) and the
+  concrete actions the trainer performs for the entry (enable/disable
+  operations, capabilities, CE Lua API calls extracted from embedded-Lua
+  sources, memory writes for value rows, group-activation cascade for
+  flagged group headings); new pure builders `entry_actions` /
+  `row_details` / `lua_apis_used` in `ui_script_view.py` (display-only
+  CE-API vocabulary, no runtime dependency), context-menu wiring
+  refactored to the unit-testable `_context_menu_items` in `ui.py`, the
+  existing script-preview / assessment / details items unchanged; 22 new
+  tests (`tests/test_native_ui_row_details.py`); main suite 3,767 OK /
+  25 expected skips; 0.18 build cut after the docs commit.
 
 ## Historical evidence
 
