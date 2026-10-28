@@ -8,8 +8,9 @@ rectangles, page slicing) lives in ``ui_rows``; the window/chrome contract
 (row heights, touch minimum, ``layout_violations``) lives in
 ``ui_layout``.  This module renders that model and forwards tap,
 long-press, drag and key input to the unchanged engine contract.  The
-row context menu (right-click or long-press) offers the script preview,
-the entry assessment, a copy of the script text and the unchanged Info
+row context menu (right-click or long-press) offers the combined row
+details window (raw script + assessment + actions used, 0.18), the
+script preview, a copy of the script text and the unchanged Info
 dialog; the pure text builders live in ``ui_script_view``.
 
 Deliberately unchanged by the redesign: the audio tones
@@ -48,7 +49,7 @@ from .ui_rows import (ACCENT_BAR_WIDTH, ACCENT_ERROR, ACCENT_OFF, ACCENT_ON,
                       ROW_HEIGHT_SECTION, SECTION_CHEVRON_W, SECTION_NAME_GAP,
                       STATE_BLOCKED, STATE_ON, STATE_STAGED, TEXT_DIM,
                       RowSnapshot, build_rows, find_row, slice_pages)
-from .ui_script_view import entry_assessment, script_preview
+from .ui_script_view import entry_assessment, row_details, script_preview
 
 
 # High-contrast dark palette: dark background, bright text.
@@ -577,19 +578,28 @@ class TrainerWindow:
             return
         self._show_context_menu(entry, (event.x_root, event.y_root))
 
+    def _context_menu_items(self, entry):
+        """(label, command) pairs of the row context menu, pure enough to
+        be unit-tested without a display.  The combined row-details window
+        (0.18) leads the menu; the existing single-purpose items stay."""
+        items = [("Row details", lambda: self.show_row_details(entry))]
+        preview = script_preview(entry)
+        if preview is not None:
+            items.append(("Script preview",
+                          lambda: self.show_script_preview(entry)))
+            items.append(("Copy script text",
+                          lambda p=preview: self._copy_script_text(p)))
+        items.append(("What is happening here",
+                      lambda: self.show_assessment(entry)))
+        items.append(("Details", lambda: self.info(entry)))
+        return items
+
     def _show_context_menu(self, entry, position):
         if position is None:
             return
         menu = tk.Menu(self.root, tearoff=0)
-        preview = script_preview(entry)
-        if preview is not None:
-            menu.add_command(label="Script preview",
-                             command=lambda: self.show_script_preview(entry))
-            menu.add_command(label="Copy script text",
-                             command=lambda p=preview: self._copy_script_text(p))
-        menu.add_command(label="What is happening here",
-                         command=lambda: self.show_assessment(entry))
-        menu.add_command(label="Details", command=lambda: self.info(entry))
+        for label, command in self._context_menu_items(entry):
+            menu.add_command(label=label, command=command)
         try:
             menu.tk_popup(int(position[0]), int(position[1]))
         finally:
@@ -630,6 +640,55 @@ class TrainerWindow:
                                             self.engine.entry_errors.get(entry["id"])))
         text.configure(state="disabled")
         text.pack(fill="both", expand=True)
+        self._button(window, "Close", lambda: window.destroy()).pack(
+            side="right", padx=10, pady=8)
+
+    def show_row_details(self, entry):
+        """Combined row-details window (0.18): one read-only Toplevel with
+        the raw script source, the plain-language assessment (what it does
+        / what is known) and the concrete actions the trainer performs for
+        the entry.  Content comes from the pure ``row_details`` builder so
+        the exact text is unit-tested in tests/test_native_ui_row_details.py.
+        """
+        details = row_details(entry, self.engine.entries,
+                              self.engine.applied,
+                              self.engine.entry_errors.get(entry["id"]))
+        window = tk.Toplevel(self.root)
+        window.title(details["title"])
+        window.configure(bg=BG)
+        window.geometry("900x700")
+        window.transient(self.root)
+        outer = tk.Frame(window, bg=BG)
+        outer.pack(fill="both", expand=True)
+
+        def section(label, text, mono=True, wrap="none", height=None):
+            tk.Label(outer, text=label, bg=BG, fg=FG,
+                     font=("Segoe UI", 12, "bold"), anchor="w").pack(
+                fill="x", padx=10, pady=(8, 2))
+            widget = scrolledtext.ScrolledText(
+                outer, font=("Consolas", 10) if mono else ("Segoe UI", 11),
+                bg=BG_CARD, fg=FG, insertbackground=FG,
+                wrap=wrap, padx=10, pady=6, height=height)
+            widget.insert("1.0", text)
+            widget.configure(state="disabled")
+            widget.pack(fill="both", expand=True)
+
+        if details["script"] is not None:
+            # The raw source keeps a fixed share of the window; the two
+            # text sections below split the rest.
+            section("Script (raw source)", details["script"]["body"],
+                    mono=True, wrap="none", height=14)
+        else:
+            tk.Label(outer,
+                     text="Script: no executable source "
+                          "(record blocked; see the assessment below)",
+                     bg=BG, fg=FG_DIM, font=("Segoe UI", 11),
+                     anchor="w").pack(fill="x", padx=10, pady=(8, 2))
+        section("What it does / what is known", details["assessment"],
+                mono=False, wrap="word")
+        section("Actions used",
+                details["actions"] or "No direct memory action",
+                mono=True, wrap="none")
         self._button(window, "Close", lambda: window.destroy()).pack(
             side="right", padx=10, pady=8)
 

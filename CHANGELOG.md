@@ -2,6 +2,23 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.18 (2026-10-28)
+
+- Trainer UI row-details window: right-click / long-press on a row now
+  offers "Row details" (leads the context menu) - a single read-only
+  window combining the raw script source (static Auto Assembler /
+  embedded Lua / global program / normalized operation list), the
+  plain-language assessment (what it does / what is known) and the
+  concrete actions the trainer performs for the entry (enable/disable
+  operations, capabilities, CE Lua API calls in embedded-Lua sources,
+  memory writes for value rows, group-activation cascade for flagged
+  group headings).  New pure builders `entry_actions` / `row_details` /
+  `lua_apis_used` in `ui_script_view.py` (display-only CE-API
+  vocabulary, no runtime dependency); context-menu wiring refactored to
+  a unit-testable `_context_menu_items` in `ui.py`; the existing
+  script-preview / assessment / details items are unchanged.
+  `tests/test_native_ui_row_details.py` +22 tests.
+
 ## 0.17 (2026-10-27)
 
 - RT-4.2 runtime provider model (last RT-4 package, ~1,085-row scope):

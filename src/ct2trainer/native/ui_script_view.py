@@ -2,18 +2,76 @@
 
 ``script_preview`` renders the executable source behind a plan entry (the
 static Auto Assembler program, the embedded Lua program, the global
-allocation program, or the normalized enable/disable operation list) and
+allocation program, or the normalized enable/disable operation list),
 ``entry_assessment`` produces the plain-language "what happens here" read
-from plan metadata only.  Both are pure (no Tk, no engine) so the exact
-dialog text is unit-testable; ``TrainerWindow`` shows the results in
-read-only dialogs and uses the preview result to decide which menu items
-exist.
+from plan metadata only, and ``entry_actions`` / ``row_details`` provide
+the combined row-details window content (script + assessment + actions
+used).  All builders are pure (no Tk, no engine) so the exact dialog text
+is unit-testable; ``TrainerWindow`` shows the results in read-only
+dialogs and uses the preview result to decide which menu items exist.
 """
 from __future__ import annotations
 
 import json
+import re
 
 from .ui_layout import STAGED_PENDING, activation_set_summary, staged_card_state
+
+#: Display-only vocabulary of game-facing CE global API names, used by
+#: ``lua_apis_used`` for the row-details "Actions used" section.  This is
+#: NOT the host's functional allowlist (that lives in ``lua_host.py`` /
+#: ``lua_bootstrap.py``); it exists so the UI can show which CE APIs a
+#: record's embedded Lua calls without importing the runtime host.  Purely
+#: informational - nothing here drives execution or refusals.
+CE_ACTION_APIS = frozenset({
+    # memory reads / writes
+    "readInteger", "readSmallInteger", "readQword", "readFloat",
+    "readDouble", "readPointer", "readString", "readBytes",
+    "writeInteger", "writeSmallInteger", "writeQword", "writeFloat",
+    "writeDouble", "writeString", "writeBytes",
+    # address / symbols
+    "getAddress", "getAddressSafe", "getAddressOfSymbol",
+    "getAddressOfSymbolSafe", "registerSymbol", "unregisterSymbol",
+    "getModuleSize", "getProcHandle",
+    # process / target
+    "openProcess", "attachProcess", "detachProcess", "getOpenProcessID",
+    "getProcessIDFromProcessName", "getProcessList", "targetIs64Bit",
+    "enumModules", "getCEVersion",
+    # scans
+    "aobscan", "aobscanmodule", "aobscanregion",
+    # input / speedhack
+    "isKeyPressed", "getXBox360ControllerState",
+    "speedhack_setSpeed", "speedhack_getSpeed",
+    # user-facing side effects
+    "showMessage", "messageDialog", "executeCodeEx", "fullAccess",
+    "shellExecute", "createTimer",
+    # strings / table files / AA interaction
+    "createStringList", "createStringStream", "findTableFile",
+    "readStringLocal", "createTableFile", "autoAssemble",
+    # managed resolution
+    "LaunchMonoDataCollector", "mono_enumDomains", "mono_findMethod",
+    "mono_invoke_method",
+})
+
+_CASEFOLD_LOOKUP = {name.casefold(): name for name in CE_ACTION_APIS}
+_LUA_CALL_NAME = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+
+
+def lua_apis_used(source: str) -> list[str]:
+    """Game-facing CE API names called in an embedded-Lua source.
+
+    Display-only extraction: every identifier directly followed by ``(``
+    is matched against ``CE_ACTION_APIS`` (case-insensitive, since CE
+    registers first-letter case-flipped variants); method calls on local
+    objects (``sl.add(...)``, ``string.match(...)``) and plain Lua stdlib
+    calls do not match.  Returns the canonical names, casefold-sorted.
+    """
+    found = set()
+    for match in _LUA_CALL_NAME.finditer(source or ""):
+        canonical = _CASEFOLD_LOOKUP.get(match.group(1).casefold())
+        if canonical is not None:
+            found.add(canonical)
+    return sorted(found, key=str.casefold)
 
 
 def _format_path(path) -> str:
@@ -233,3 +291,99 @@ def entry_assessment(entry: dict, entries: dict,
     if kind == "script":
         lines.append("Runtime verified: " + ("yes" if entry.get("runtime_verified") else "no"))
     return "\n".join(lines)
+
+
+def _operations_text(enable_operations, disable_operations) -> list[str]:
+    """The two normalized phases as rendered operation lines."""
+    lines: list[str] = []
+    for phase, operations in (("ENABLE", enable_operations),
+                              ("DISABLE", disable_operations)):
+        operations = operations or []
+        if not operations:
+            continue
+        if lines:
+            lines.append("")
+        lines.append(f"[{phase}]")
+        lines.extend(_render_operation(operation) for operation in operations)
+    return lines
+
+
+def entry_actions(entry: dict) -> str:
+    """The concrete actions the trainer performs for this entry.
+
+    Plan metadata only: the normalized enable/disable operation list for
+    Auto Assembler programs and plain operation entries, the static AA
+    envelope operations plus the CE Lua API calls for embedded-Lua
+    records, the global allocations, the memory write for value records
+    and the group-activation cascade for flagged group headings.  The
+    empty string means the entry performs no direct action (blocked
+    records, plain section headings).
+    """
+    kind = entry.get("kind")
+    lines: list[str] = []
+    if kind == "script":
+        backing = script_backing(entry)
+        if backing == "program":
+            program = entry["program"]
+            lines.extend(_operations_text(program.get("enable"),
+                                          program.get("disable")))
+            capabilities = program.get("capabilities") or []
+            if capabilities:
+                lines.append("Capabilities: " + _names(capabilities))
+        elif backing == "operations":
+            lines.extend(_operations_text(entry.get("enable"),
+                                          entry.get("disable")))
+        elif backing == "lua_program":
+            lua = entry["lua_program"]
+            static = lua.get("static_program")
+            if isinstance(static, dict):
+                lines.extend(_operations_text(static.get("enable"),
+                                              static.get("disable")))
+            apis = lua_apis_used(lua.get("source") or "")
+            if apis:
+                lines.append("Lua APIs used: " + _names(apis))
+        elif backing == "global_program":
+            globals_ = entry["global_program"].get("globals") or []
+            lines.append(f"Global allocation program: "
+                         f"{len(globals_)} global allocation(s)")
+    elif kind == "value":
+        variable_type = entry.get("variable_type") or "value"
+        address = entry.get("address")
+        if address:
+            lines.append(f"Write {variable_type} to {address} on Apply")
+        else:
+            lines.append(f"Write {variable_type} on Apply")
+        if entry.get("show_as_hex"):
+            lines.append("Display: hex")
+    elif kind == "heading":
+        if entry.get("parent_activation") is not None:
+            lines.append("Group toggle: runs the parent-activation cascade "
+                         "on toggle")
+    while lines and lines[-1] == "":
+        lines.pop()
+    return "\n".join(lines)
+
+
+def row_details(entry: dict, entries: dict,
+                applied=frozenset(), error: str | None = None) -> dict:
+    """Combined content of the row-details window (pure, no Tk).
+
+    One window for the whole row read: the raw script source (when the
+    entry carries an executable one), the plain-language assessment
+    (what it does / what is known, via ``entry_assessment``) and the
+    concrete actions used (via ``entry_actions``).  ``script`` is None for
+    entries without an executable source; ``actions`` is the empty string
+    when the entry performs no direct action.  Deterministic for a fixed
+    (entry, entries, applied, error) input so the tests can pin it.
+    """
+    label = str(entry.get("label", ""))
+    preview = script_preview(entry)
+    script = None
+    if preview is not None:
+        script = {"title": preview[0], "body": preview[1]}
+    return {
+        "title": f"Row details - {label} (id {entry.get('id')})",
+        "script": script,
+        "assessment": entry_assessment(entry, entries, applied, error),
+        "actions": entry_actions(entry),
+    }
