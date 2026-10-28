@@ -494,8 +494,13 @@ Ordered after the RT-4 lanes land (RT-4.6 219 rows, then RT-4.2
 1,085 rows last):
 
 1. Item A — embedded files + `findTableFile`/`readStringLocal`.
+   **Done 2026-10-28** (lane `native-rt5-a`, merge `479977c`).
 2. Item C — bounded process-info APIs (single-target semantics,
    inert auto-attach stringlist, arch query, alias fixes).
+   **Done 2026-10-28** (lane `native-rt5-c`, commit `0167825`; 11 APIs:
+   getProcessIDFromProcessName, getProcessList, getAutoAttachList,
+   getOpenedProcessID, getSettings, integerToUserData, targetIs64Bit,
+   enumModules, disassemble, stringlist_add, getCEVersion pinned '7.5').
 3. Item D — `onOpenProcess`/`onTableLoad` dispatch for the 2
    FearlessRev tables.
 4. Item B — code-patch plan path for `CheatCodes` (or recorded

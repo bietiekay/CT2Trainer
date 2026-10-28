@@ -40,9 +40,17 @@ new `src/ct2trainer/native/embedded_files.py` dual-branch codec (CE-alphabet
 Ascii85 + 4-byte-LE size prefix; hex read-until-EOF for other/missing
 `Encoding`), fail-closed table-load decode, `findTableFile`/`readStringLocal`/
 stringstream/stringlist surface, +53 tests; zero catalog delta
-(`blocked-catalog-rt5a-main`), full main suite 3,745 OK / 25 expected skips.
-RT-4 is complete; RT-5 item A is the first RT-5 implementation item landed.
-The 0.17 in-build suite: 3,692 OK / 25 expected skips, `ce_inputs: []`.
+(`blocked-catalog-rt5a-main`), full main suite 3,745 OK / 25 expected
+skips; plus the RT-5 item C bounded process-info Lua API family
+(2026-10-28, commit `0167825`): 11 CE 7.5 process-info APIs under the
+clean-room single-target model (getProcessIDFromProcessName,
+getProcessList, getAutoAttachList, getOpenedProcessID, getSettings,
+integerToUserData, targetIs64Bit, enumModules, disassemble,
+stringlist_add, getCEVersion pinned '7.5'), item-A-style allowlist
+wiring, +23 tests; zero catalog delta (`blocked-catalog-rt5c-main`), full
+main suite 3,790 OK / 25 expected skips. RT-4 is complete; RT-5 items A
+and C are the first implementation items landed. The 0.17 in-build suite:
+3,692 OK / 25 expected skips, `ce_inputs: []`.
 Superseded: 0.16.4, build
 `native-20261024T003853Z-a8cf04fc` (built from `main` at `988ff8e`,
 2026-10-24): the Sinking City 2 trainer-crash-observability field fix

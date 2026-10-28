@@ -32,10 +32,18 @@ register ratification, tests only) landed on `main` 2026-10-26; RT-5
 item A (embedded `<Files>` extraction: new `embedded_files.py`
 dual-branch codec, fail-closed table-load decode, `findTableFile` /
 `readStringLocal` / stringstream / stringlist Lua surface, +53 tests)
-landed on `main` 2026-10-28 (merge `479977c`). The RT-5 API/construct
-inventory is documented in `documentation/rt5-api-inventory.md`. The
-latest original-table catalog (run `blocked-catalog-rt5a-main`,
-2026-10-28, zero delta vs `blocked-catalog-rt42-main`) has 1,053 blocked
+landed on `main` 2026-10-28 (merge `479977c`). RT-5 item C (bounded
+process-info Lua API family: 11 CE 7.5 process-info APIs under the
+clean-room single-target model — getProcessIDFromProcessName,
+getProcessList, getAutoAttachList, getOpenedProcessID, getSettings,
+integerToUserData, targetIs64Bit, enumModules, disassemble,
+stringlist_add, getCEVersion pinned '7.5' — item-A-style allowlist
+wiring, +23 tests) landed on `main` 2026-10-28 (commit `0167825`,
+full main suite 3,790 OK / 25 expected skips, zero catalog delta
+`blocked-catalog-rt5c-main`). The RT-5 API/construct inventory is
+documented in `documentation/rt5-api-inventory.md`. The
+latest original-table catalog (run `blocked-catalog-rt5c-main`,
+2026-10-28, zero delta vs `blocked-catalog-rt5a-main`) has 1,053 blocked
 of 117,634 plan entries, 60,161 staged entries and zero load errors
 (previous: 1,351 after RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6,
 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3;

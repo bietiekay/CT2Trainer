@@ -582,6 +582,68 @@ SinkingCity) now gain `embedded_files` in their plans; no record blocking
 status moves. `runtime_unverified` remains: the embedded-file record effects
 are untested on a live target.
 
+Update (2026-10-28, RT-5 item C): the bounded process-info Lua API family
+landed (lane `native-rt5-c`, commit `0167825`, merged to `main` the same
+day). Eleven APIs implement the CE 7.5 process-info surface under the
+clean-room single-target model — every API answers only from the attached
+target (plan process binding, attached pointer width, target module
+table, bounded memory disassembly); no OS process or module enumeration
+beyond the target. `getProcessIDFromProcessName` (exact/casefold match
+against the plan process binding returns the attached pid, anything else
+0 — documented deviation from CE's nil; the corpus tolerates both
+shapes), `getProcessList` (single-entry pid->name map resolving the
+`pl[pid]` and `pairs()` corpus shapes; documented single-target bound),
+`getAutoAttachList` (inert per-scope singleton stringlist, fresh per host
+run, reset in `cancel_resources`), `getOpenedProcessID` (one-line
+passthrough alias of `getOpenProcessID`), `getSettings` (inert settings
+object; `Value` answers '' for any missing key — CE parity for a missing
+registry value; writes stored on the object and discarded; non-string
+section is a named refusal), `integerToUserData` (identity — addresses
+are plain integers in the host value model), `targetIs64Bit` (pointer
+width 8 -> true, 4 -> false; no arguments), `enumModules` (single-module
+answer with Name/Address/Size/Is64Bit/PathToFile; PathToFile falls back
+to the EXE name when the backend reports no image path — documented
+deviation; covers the GoW `for i=1,#modList` shape), `disassemble`
+(bounded iced-x86 exposure over target memory: the CE line shape
+`<8-digit hex address> - <hex bytes> - <opcode operands>` in the pinned
+iced Intel syntax — documented deviation from CE's uppercase style;
+optional second argument count 1..4096 returns the per-instruction line
+list — documented clean-room extension with no corpus usage; named
+refusals for argument count, count bound, invalid instruction and bounded
+read ending first), `stringlist_add` (the CE `strings_add` startup-global
+alias, list-first argument order, driving the owned dot-call `.add`
+contract, returning the new 0-based ordinal; named refusal for
+non-string-list and destroyed list) and `getCEVersion` (ROOT DECISION:
+pinned constant string '7.5' — documented deviation from CE's number
+answer; tables use it as a CE-version gate and the product implements
+the CE 7.5 surface). Wiring exactly like item A: table-scope
+`TABLE_LUA_READ_ONLY_NAMES` += the five dispatch names, record-scope
+function list += five, `_ReadOnlyBroker._READS` += five so every pure
+query is admitted under syntax checking; no plan fields, no engine path
+changes. Every out-of-profile call is a named refusal with zero memory
+writes and no applied record. Tests: `tests/test_native_rt5_process_info.py`
++23 (byte-exact pid/count/shape markers via writeInteger read-back, x86
+plan plus pointer_size=4 memory for the 32-bit targetIs64Bit/enumModules/
+disassemble behavior, byte-exact disassemble lines incl. the 5-byte mov
+and the 2-line count form, 14-case refusal matrix plus 3 standalone
+disassemble refusals with zero memory writes and no applied record,
+out-of-scope names still refused, table-scope allowlist admits all five
+dispatch reads with a clean bootstrap); focused 23 OK. Full suite on
+`main` after the merge **3,790 OK / 25 expected skips** (baseline 3,767).
+Catalog remeasure (local, run `blocked-catalog-rt5c-main`, frozen manifest
+and process bindings unchanged): **zero delta** vs
+`blocked-catalog-rt5a-main` — 151/151 load, 117,634 total, 116,581
+supported (60,161 staged), 1,053 blocked, 0 compile errors, 0 newly
+blocked, 0 reason-changed. 44 of the 151 reference tables reference at
+least one item-C API (getCEVersion 27 tables / 36 calls,
+getProcessIDFromProcessName 19 / 35, getProcessList 7 / 14,
+getOpenedProcessID 6 / 8, getAutoAttachList 5 / 5, targetIs64Bit 5 / 32,
+enumModules 5 / 6, disassemble 3 / 11, stringlist_add 3 / 3, getSettings
+2 / 4, integerToUserData 2 / 4); the catalog is unaffected because it is
+static plan-level and the APIs are pure runtime host reads.
+`runtime_unverified` remains: the API answers are untested on a live
+target.
+
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
 **Scope and method.** Full clean-room attribution of every blocked row in
