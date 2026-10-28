@@ -48,6 +48,12 @@ TABLE_LUA_READ_ONLY_NAMES = frozenset({
     'findTableFile', 'readStringLocal',
     'stringstream.create', 'stringstream.copyFrom', 'stringstream.dataString',
     'stringstream.size', 'stringstream.destroy',
+    # RT-5 item C: bounded single-target process-info queries (plan data
+    # plus the attached target's identity/architecture; disassemble is a
+    # bounded read-only target probe).  Like the other read-class names
+    # they never write target memory and are admitted in the table scope.
+    'getProcessIDFromProcessName', 'getProcessList', 'targetIs64Bit',
+    'enumModules', 'disassemble',
 })
 
 #: Named block reasons per refused API class (activation block, never parse

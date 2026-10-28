@@ -570,7 +570,9 @@ local functions={
   'getXBox360ControllerState','showMessage','print','executeCodeEx','fullAccess',
   'speedhack_setSpeed','speedhack_getSpeed','attachProcess','detachProcess',
   'LaunchMonoDataCollector','mono_enumDomains','mono_findMethod','mono_invoke_method',
-  'openProcess','shellExecute','readStringLocal'
+  'openProcess','shellExecute','readStringLocal',
+  'getProcessIDFromProcessName','getProcessList','targetIs64Bit','enumModules',
+  'disassemble'
 }
 for _, name in ipairs(functions) do
   _G[name]=function(...) return call(name,...) end
@@ -587,6 +589,65 @@ _G.ReadStringLocal=function(...) return call('readStringLocal',...) end
 -- spellings, so both are defined).
 function createTableFile(...) error('createTableFile is outside this profile',2) end
 function CreateTableFile(...) error('createTableFile is outside this profile',2) end
+-- RT-5 item C: process-info family (bounded single-target model).
+-- getCEVersion: ROOT DECISION (documented clean-room deviation) — the
+-- tables use it as a CE-version compatibility gate and the product
+-- implements the CE 7.5 behavior surface, so the version query reports
+-- the CE-equivalent version as the constant string '7.5' instead of the
+-- own product version (CE 7.5 itself returns the number 7.5, LuaHandler
+-- pushnumber; the string spelling is the pinned decision, tests pin it).
+function getCEVersion() return '7.5' end
+-- getAutoAttachList: CE returns the (singleton) auto-attach list; here
+-- auto-attach has no effect in the single-target model, so the call
+-- returns an inert per-scope stringlist (fresh per host run, reset on
+-- cancellation).  Mutations succeed but are stored nowhere.
+local _auto_attach_list = nil
+function getAutoAttachList()
+  if _auto_attach_list == nil then _auto_attach_list = createStringlist() end
+  return _auto_attach_list
+end
+-- getOpenedProcessID: CE alias of getOpenProcessID (one-line passthrough).
+_G.getOpenedProcessID = function(...) return call('getOpenProcessID', ...) end
+-- getSettings: bounded no-op.  CE returns a settings object whose Value
+-- table is indexed by setting name; the corpus reads .Value['...'] and
+-- branches on the result (Resonance/SC2 CheckCEinfo).  A fresh empty
+-- settings object is the least-surprising inert default: unknown keys
+-- answer '' (CE parity for a missing registry value), so the default
+-- branches proceed.  Writes are stored on the object and discarded.
+function getSettings(section)
+  if section ~= nil and type(section) ~= 'string' then
+    error('getSettings requires a section name',2)
+  end
+  local value = setmetatable({}, {
+    __index=function(_, key)
+      if type(key)=='string' then return '' end
+      error('Settings keys are text',2)
+    end
+  })
+  return setmetatable({Value=value}, {
+    __index=function(_, key)
+      if key=='Value' or key=='value' then return value end
+      error('Unsupported settings property: '..tostring(key),2)
+    end,
+    __metatable='CT2Trainer settings (inert)'
+  })
+end
+-- integerToUserData: pointer/int conversion helper.  In the host value
+-- model addresses are plain integers, so the conversion is the identity
+-- (documented deviation from CE's integer-to-userdata mapping); any
+-- deeper structure access on the result stays on the inert WP-56 surface.
+function integerToUserData(value) return value end
+-- stringlist_add: CE startup global alias of strings_add
+-- (LuaHandler 'stringlist_add=strings_add'); appends an item to a string
+-- list object and returns the new 0-based ordinal.  It drives the
+-- owned object surface (the dot-call .add contract pinned by the
+-- scan-broker tests), which carries the item-type named refusal.
+function stringlist_add(list, value, extra)
+  if type(list) ~= 'table' or getmetatable(list) ~= 'CT2Trainer string list' then
+    error('stringlist_add requires a string list object',2)
+  end
+  return list.add(value, extra)
+end
 -- WP-56: inert CE menu surface.  The native trainer owns its own UI, so
 -- record scripts that build or toggle menu entries (compact-view toggles,
 -- support links) run to completion against no-op proxies: property reads
@@ -838,7 +899,7 @@ local function cancel_resources()
   for _,data in pairs(scans) do data.dead=true; data.addresses=nil end
   scan_count=0; current_record_id=nil; memrec=nil
   for _,data in pairs(stringlists) do data.items={} end
-  stringlist_count=0; stringlists={}
+  stringlist_count=0; stringlists={}; _auto_attach_list=nil
 end
 local function cancel()
   -- This may be entered recursively from a Python broker while a user chunk
@@ -928,6 +989,11 @@ class _ReadOnlyBroker:
         'findTableFile', 'readStringLocal',
         'stringstream.create', 'stringstream.copyFrom', 'stringstream.dataString',
         'stringstream.size', 'stringstream.destroy',
+        # RT-5 item C: bounded single-target process-info queries (plan
+        # data, target identity/architecture, bounded read-only memory
+        # disassembly) — pure reads, safe under syntax checking.
+        'getProcessIDFromProcessName', 'getProcessList', 'targetIs64Bit',
+        'enumModules', 'disassemble',
     }
 
     def __init__(self, parent: 'LuaHost', *, allow_assembler: bool = True):
@@ -1447,6 +1513,68 @@ class LuaHost:
                 self._trusted_housekeeping = False
                 if self.memory_pool is not None:
                     self.memory_pool._refresh_limits()
+
+
+def _disassemble_lines(memory, address: int, count: int,
+                       pointer_size: int) -> list[str]:
+    """Bounded iced disassembly behind the Lua ``disassemble()`` API.
+
+    Reads one bounded probe (``count * 15`` bytes, halved on read failure,
+    mirroring the owned IcedDisassemblerPort) and formats exactly
+    ``count`` consecutive instructions in the CE line shape
+    ``<8-digit hex address> - <hex bytes> - <opcode operands>``.  A read
+    that cannot cover the run, an invalid instruction, or a non-32/64-bit
+    target is a named refusal; nothing is partially returned.  The
+    formatter is the pinned iced-x86 Intel syntax (CE prints its own
+    uppercase style; the corpus pattern-matches the structure, not the
+    letter case).
+    """
+    import iced_x86
+
+    from .aa_directives import (ADDRESS_LIMIT_32, ADDRESS_LIMIT_64,
+                                MAX_DISASSEMBLE_COUNT, MAX_INSTRUCTION_BYTES)
+    bitness = 64 if pointer_size == 8 else 32
+    if bitness not in (32, 64):
+        raise LuaHostError('disassemble requires a 32- or 64-bit target')
+    limit = ADDRESS_LIMIT_32 if bitness == 32 else ADDRESS_LIMIT_64
+    if type(address) is not int or not 0 < address <= limit:
+        raise LuaHostError(
+            'disassemble requires a resolved bounded integer address')
+    if type(count) is not int or not 1 <= count <= MAX_DISASSEMBLE_COUNT:
+        raise LuaHostError(
+            'disassemble count must be an integer within 1..4096')
+    requested = min(count * MAX_INSTRUCTION_BYTES, limit - address + 1)
+    probe = requested
+    while True:
+        try:
+            raw = memory.read(address, probe)
+            break
+        except Exception:
+            if probe <= 1:
+                raise LuaHostError(
+                    'disassemble target memory read failed at 0x%X' % address)
+            probe //= 2
+    if type(raw) is not bytes or len(raw) != probe:
+        raise LuaHostError(
+            'disassemble target memory read returned the wrong byte count')
+    decoder = iced_x86.Decoder(bitness, raw, ip=address)
+    lines: list[str] = []
+    while len(lines) < count and decoder.can_decode:
+        instruction = decoder.decode()
+        if instruction.code == iced_x86.Code.INVALID:
+            raise LuaHostError(
+                'disassemble invalid instruction at 0x%X' % instruction.ip)
+        start = instruction.ip
+        raw_bytes = raw[start - address:start - address + instruction.len]
+        lines.append('%08X - %s - %s' % (
+            start,
+            ' '.join('%02X' % byte for byte in raw_bytes),
+            str(instruction)))
+    if len(lines) < count:
+        raise LuaHostError(
+            'disassemble could not decode %d instruction(s) at 0x%X '
+            '(bounded read ends first)' % (count, address))
+    return lines
 
 
 class EngineLuaBroker:
@@ -2038,6 +2166,86 @@ class EngineLuaBroker:
                 raise LuaHostError('tablefile.delete requires a table-file token')
             raise LuaHostError(
                 'Table-file deletion is outside this profile')
+        if name == 'getProcessIDFromProcessName':
+            # RT-5 item C (corpus: AtomicHeart/HellPie/Oregon/Scorn/
+            # CallistoProtocol, DS2, HorizonForbiddenWest, TheThaumaturge,
+            # disco, ds, TombRaider, Witcher3 pair, LustFromBeyond):
+            # bounded single-target lookup.  Exact or casefold match against
+            # the attached target's EXE name (the plan's process binding)
+            # returns its PID; anything else returns 0.  Documented
+            # deviation from CE 7.5 (LuaHandler pushes nothing, i.e. nil,
+            # when not found): the corpus tolerates both (Resonance/SC2
+            # 'if sPID == nil then sPID = 0'; Witcher3/LustFromBeyond
+            # 'if not getProcessIDFromProcessName(...)' fall into the
+            # fail-closed openProcess-mismatch path either way).  Pure plan
+            # data + target identity, so admissible under syntax checking.
+            if len(arguments) != 1 or type(arguments[0]) is not str or not arguments[0]:
+                raise LuaHostError(
+                    'getProcessIDFromProcessName requires exactly one non-empty process name')
+            if arguments[0].casefold() == e.plan['process_name'].casefold():
+                return int(memory.pid)
+            return 0
+        if name == 'getProcessList':
+            # RT-5 item C (corpus: Resonance/SC2 onOpenProcess-style code,
+            # AtomicHeart/HellPie/Oregon/Scorn/CallistoProtocol 'pl[pid]'
+            # checks): CE returns a pid->name map of every running process;
+            # the bounded single-target model answers with exactly one
+            # entry, the attached target.  Resolves the corpus shapes
+            # pl[pid] -> name and 'for pid, name in pairs(...)'.  Documented
+            # bounded deviation from CE's full process list.
+            if arguments:
+                raise LuaHostError('getProcessList takes no arguments')
+            return {int(memory.pid): e.plan['process_name']}
+        if name == 'targetIs64Bit':
+            # RT-5 item C (corpus: Borderlands3 x26, CallistoProtocol,
+            # working.ct, Resonance, SC2): architecture query from the
+            # attached target's pointer width (8 -> 64-bit, 4 -> 32-bit).
+            if arguments:
+                raise LuaHostError('targetIs64Bit takes no arguments')
+            return memory.pointer_size == 8
+        if name == 'enumModules':
+            # RT-5 item C (corpus: GoW 'for i=1,#modList', Borderlands3
+            # '[1].PathToFile', Resonance/SC2 '[1].Name/.Address',
+            # AtomicHeart/CallistoProtocol/working '[1].PathToFile'): CE
+            # returns the target's module list (1-based array with fields
+            # Name/Address/Is64Bit/PathToFile); the bounded single-module
+            # model answers with exactly the attached EXE.  Documented
+            # deviation: PathToFile is the full image path when the memory
+            # backend reports one (ProcessMemory.image_path), otherwise the
+            # EXE name (the fixture memory backend has no image path).
+            if arguments:
+                raise LuaHostError(
+                    'enumModules takes no arguments (single-target model)')
+            exe = e.plan['process_name']
+            base, size = memory.module(exe)
+            image_path = getattr(memory, 'image_path', '') or exe
+            return [{'Name': exe, 'Address': int(base), 'Size': int(size),
+                     'Is64Bit': memory.pointer_size == 8,
+                     'PathToFile': image_path}]
+        if name == 'disassemble':
+            # RT-5 item C (corpus: Borderlands3, Resonance, SC2): bounded
+            # exposure of the owned iced disassembler over target memory.
+            # CE's disassemble() takes exactly one address argument and
+            # returns the text of the one instruction at that address; the
+            # bounded count extension (second argument, 1..4096) returns a
+            # list of per-instruction lines and has no corpus usage yet
+            # (documented clean-room extension).  Line shape mirrors the
+            # CE disassembler text '<8-digit hex address> - <hex bytes> -
+            # <opcode operands>' (Intel syntax from the pinned iced-x86
+            # formatter; the corpus pattern-matches the structure —
+            # brackets, comma, mnemonic prefix — not letter case).
+            # Read-only target probe, admissible under syntax checking.
+            if len(arguments) not in (1, 2):
+                raise LuaHostError(
+                    'disassemble takes an address and an optional count')
+            addr = address(arguments[0])
+            count = 1
+            if len(arguments) == 2:
+                count = arguments[1]
+            lines = _disassemble_lines(memory, addr, count, memory.pointer_size)
+            if len(arguments) == 1:
+                return lines[0]
+            return lines
         raise LuaHostError('Unsupported CE Lua API: '+name)
 
     def _mutate(self, address: int, data: bytes, syntaxcheck: bool) -> bool:
