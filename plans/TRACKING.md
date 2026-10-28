@@ -101,10 +101,14 @@ game-facing action.
   reason-changed rows (UI-only change, zero catalog effect).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
-- Latest verified release: 0.17, build
-  `native-20261027T094839Z-ec6c6f55` (cut from `main` @ `ee41630`),
-  in-build suite 3,692 OK / 25 expected skips, `ce_inputs: []`;
-  ships the RT-4.2 runtime provider model (last RT-4 package; catalog
+- Latest verified release: 0.18, build
+  `native-20261028T131208Z-55922918` (cut from `main` @ `70c5a61`),
+  in-build suite 3,767 OK / 25 expected skips, `ce_inputs: []`;
+  ships the trainer UI row-details window on top of the 0.17 content;
+  superseded 0.17 `native-20261027T094839Z-ec6c6f55` (cut from
+  `main` @ `ee41630`, in-build suite 3,692 OK / 25 expected skips,
+  `ce_inputs: []`) which ships the RT-4.2 runtime provider model (last
+  RT-4 package; catalog
   remeasure `blocked-catalog-rt42-main`: 1,351 -> 1,053 blocked of
   117,634, 298 rows unblocked, zero newly blocked, 28 reason-only
   changes) plus the RT-4.3 address-expression & identifier-dialect
@@ -257,7 +261,12 @@ game-facing action.
   refactored to the unit-testable `_context_menu_items` in `ui.py`, the
   existing script-preview / assessment / details items unchanged; 22 new
   tests (`tests/test_native_ui_row_details.py`); main suite 3,767 OK /
-  25 expected skips; 0.18 build cut after the docs commit.
+  25 expected skips; cut as 0.18 build
+  `native-20261028T131208Z-55922918` (in-build suite 3,767/25,
+  `ce_inputs: []`, `runtime_unverified` kept per gate; source ZIP
+  sha256 `3d8612ed97dbfb80a4c4fc95f9899852285ac184a738a03932bc9fad240ed967`,
+  portable ZIP sha256
+  `9e4080e07b33f3b2a3a97178891916b711955b96f9b0fa6139a6b120fea3b9ca`).
 
 ## Historical evidence
 

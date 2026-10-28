@@ -1,6 +1,18 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-28. **Latest verified release:** 0.17, build
+**Updated:** 2026-10-28. **Latest verified release:** 0.18, build
+`native-20261028T131208Z-55922918` (built from `main` at `70c5a61`,
+2026-10-28): the trainer UI row-details window - right-click /
+long-press on a row now offers "Row details" leading the context menu,
+a single read-only window combining the raw script source (static Auto
+Assembler / embedded Lua / global program / normalized operation list),
+the plain-language assessment (what it does / what is known) and the
+concrete actions the trainer performs for the entry (new pure builders
+`entry_actions` / `row_details` / `lua_apis_used` in
+`ui_script_view.py`, +22 tests in
+`tests/test_native_ui_row_details.py`); in-build suite 3,767 OK / 25
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+per gate. Superseded: 0.17, build
 `native-20261027T094839Z-ec6c6f55` (built from `main` at `ee41630`,
 2026-10-27): the RT-4.2 runtime provider model (last RT-4 package;
 catalog remeasure `blocked-catalog-rt42-main`: 1,351 -> 1,053
@@ -30,16 +42,6 @@ Ascii85 + 4-byte-LE size prefix; hex read-until-EOF for other/missing
 stringstream/stringlist surface, +53 tests; zero catalog delta
 (`blocked-catalog-rt5a-main`), full main suite 3,745 OK / 25 expected skips.
 RT-4 is complete; RT-5 item A is the first RT-5 implementation item landed.
-0.18 is in flight on `main` (2026-10-28, commit `a731619`, build not yet
-cut): the trainer UI row-details window - right-click / long-press on a row
-now offers "Row details" leading the context menu, a single read-only
-window combining the raw script source (static Auto Assembler / embedded
-Lua / global program / normalized operation list), the plain-language
-assessment (what it does / what is known) and the concrete actions the
-trainer performs for the entry (new pure builders `entry_actions` /
-`row_details` / `lua_apis_used` in `ui_script_view.py`, +22 tests in
-`tests/test_native_ui_row_details.py`; main suite 3,767 OK / 25 expected
-skips).
 The 0.17 in-build suite: 3,692 OK / 25 expected skips, `ce_inputs: []`.
 Superseded: 0.16.4, build
 `native-20261024T003853Z-a8cf04fc` (built from `main` at `988ff8e`,

@@ -56,13 +56,14 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-28, 0.18 in flight on `main` @ `a731619`
-(trainer UI row-details window: right-click / long-press on a row offers
+**CT2Trainer (status 2026-10-28, 0.18 released (build
+`native-20261028T131208Z-55922918` cut from `main` @ `70c5a61` - the
+trainer UI row-details window: right-click / long-press on a row offers
 "Row details" leading the context menu - one read-only window with the raw
 script source, the plain-language assessment and the concrete actions the
-trainer performs per entry; +22 tests, main suite 3,767 OK / 25 expected
-skips; build not yet cut), 0.17 released (build
-`native-20261027T094839Z-ec6c6f55` cut from `main` @ `ee41630`;
+trainer performs per entry; +22 tests, in-build suite 3,767 OK / 25
+expected skips, `ce_inputs: []`); previous 0.17
+`native-20261027T094839Z-ec6c6f55` @ `ee41630`;
 previous 0.16.4 `native-20261024T003853Z-a8cf04fc` @ `988ff8e`,
 previous 0.16.3 `native-20261023T065015Z-afbc3eba` @ `6a5ba63`, previous
 0.16.2 `native-20261022T160328Z-0423fb21` @ `68eeb00`, previous
@@ -197,10 +198,26 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261027T094839Z-ec6c6f55` (0.17,
-cut from `main` @ `ee41630`; in-build suite 3692 OK / 25 regular
+**Latest verified build:** `native-20261028T131208Z-55922918` (0.18,
+cut from `main` @ `70c5a61`; in-build suite 3767 OK / 25 regular
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
-gate; source ZIP `CT2Trainer-0.17-source.zip` sha256
+gate; source ZIP `CT2Trainer-0.18-source.zip` sha256
+`3d8612ed97dbfb80a4c4fc95f9899852285ac184a738a03932bc9fad240ed967`
+(13,190,182 bytes), portable ZIP
+`CT2Trainer-0.18-windows-portable.zip` sha256
+`9e4080e07b33f3b2a3a97178891916b711955b96f9b0fa6139a6b120fea3b9ca`
+(28,740,039 bytes)).
+0.18 ships the trainer UI row-details window (right-click / long-press
+on a row offers "Row details" leading the context menu - one read-only
+window with the raw script source, the plain-language assessment and
+the concrete actions the trainer performs per entry; new pure builders
+`entry_actions` / `row_details` / `lua_apis_used` in
+`ui_script_view.py`, +22 tests in `tests/test_native_ui_row_details.py`)
+on top of the 0.17 content. Superseded 0.17 build:
+`native-20261027T094839Z-ec6c6f55` (0.17, cut from `main` @ `ee41630`;
+in-build suite 3692 OK / 25 regular skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.17-source.zip` sha256
 `08af7d402df6380713f75cd270a27b9eb512e78a173d169ebd142f9411e65eee`
 (13,162,166 bytes), portable ZIP
 `CT2Trainer-0.17-windows-portable.zip` sha256
