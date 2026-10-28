@@ -50,8 +50,12 @@ Families covered (register entry -> pinned code truth):
   CT2Trainer keeps its own state model): silently ignored, zero warnings.
 - ``ActivateSound``/``DeactivateSound`` hotkey children (decorative
   toggle sound): silently ignored by the hotkey parser.
-- Embedded images + ``License.txt`` (``<Files>`` section with
-  file-named children): "Table-level sections not interpreted: Files."
+- Embedded files (``<Files>`` section with file-named children, RT-5
+  item A): decoded fail-closed at table load (CE-alphabet Ascii85 + raw
+  deflate + 4-byte LE size prefix) and projected into
+  ``plan["embedded_files"]``; no warning, no ignored-section entry, and
+  the differential compile proves records, counts and reasons stay
+  untouched.
 - ``Color``/``GroupHeader``/``Comments``/``DisassemblerComments``
   presentation: no warning; a plain ``GroupHeader`` pins as supported
   heading with reason "Navigation heading; CE group activation is not
@@ -88,6 +92,8 @@ from __future__ import annotations
 import shutil
 import tempfile
 import unittest
+import zlib
+from hashlib import sha256
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -178,11 +184,48 @@ FORMS_ICONLIST_UDF_SECTION = """  <Forms>
   </Forms>
 """
 
-FILES_SECTION = """  <Files>
-    <OCTfooterlogo.png Encoding="Ascii85">Em^R!8[m-WQYgg</OCTfooterlogo.png>
-    <License.txt>fixture license text</License.txt>
-  </Files>
-"""
+def _embed_file_text(content: bytes) -> str:
+    """RT-5 item A fixture helper: raw stored text of one embedded file —
+    CE-alphabet Ascii85 over the raw-deflate stream of the 4-byte
+    little-endian size prefix plus the content (decoder: the corpus
+    format, verified byte-exact on the reference tables)."""
+    alphabet = ("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                "abcdefghijklmnopqrstuvwxyz!#$%()*+,-./:;=?@[]^_{}")
+
+    def block(value: int) -> str:
+        digits = []
+        for _ in range(5):
+            value, r = divmod(value, 85)
+            digits.append(alphabet[r])
+        return "".join(reversed(digits))
+
+    payload = len(content).to_bytes(4, "little") + content
+    raw = zlib.compress(payload, 9)[2:-4]
+    out: list[str] = []
+    i, n = 0, len(raw)
+    while i + 4 <= n:
+        out.append(block(int.from_bytes(raw[i:i + 4], "big")))
+        i += 4
+    rem = n - i
+    if rem:
+        pad = 4 - rem
+        value = int.from_bytes(raw[i:i + rem]
+                               + (85 ** pad - 1).to_bytes(pad, "big"), "big")
+        out.append(block(value)[:5 - pad])
+    return "".join(out)
+
+
+_LOGO_BYTES = b"rt5 fixture logo bytes"
+_LICENSE_BYTES = b"fixture license text"
+
+FILES_SECTION = (
+    '  <Files>\n'
+    '    <OCTfooterlogo.png Encoding="Ascii85">'
+    + _embed_file_text(_LOGO_BYTES) + "</OCTfooterlogo.png>\n"
+    '    <License.txt Encoding="Ascii85">'
+    + _embed_file_text(_LICENSE_BYTES) + "</License.txt>\n"
+    '  </Files>\n'
+)
 
 PRESENTATION_RECORD = """    <CheatEntry>
       <ID>0</ID>
@@ -279,8 +322,8 @@ COMBINED_CONTROL_CT = _header(
 
 COMBINED_EXTRA_WARNINGS = [
     "Embedded CE forms are present; check UI conflicts.",
-    "Table-level sections not interpreted: Files, Forms, PublicKey, "
-    "Signature, SignedHash, Structures.",
+    "Table-level sections not interpreted: Forms, PublicKey, Signature, "
+    "SignedHash, Structures.",
 ]
 
 # Table Lua calling a spread of register APIs; every call is individually
@@ -485,23 +528,34 @@ class FormsNoEffectTests(unittest.TestCase):
 
 
 class EmbeddedFilesNoEffectTests(unittest.TestCase):
-    """Embedded images + License.txt (<Files> section): warning only."""
+    """Embedded images + License.txt (<Files> section): decoded, projected,
+    record-inert (RT-5 item A replaced the old warning-only handling)."""
 
     def setUp(self):
         self._temp = tempfile.TemporaryDirectory()
         self.addCleanup(self._temp.cleanup)
         self.directory = Path(self._temp.name)
 
-    def test_embedded_files_section_warns_and_is_inert(self):
+    def test_embedded_files_are_decoded_projected_and_inert(self):
         base = _compile(self.directory, "base.ct", BASE_CT)
         plan = _compile(self.directory, "files.ct",
                         _header(BASE_RECORD, FILES_SECTION))
-        self.assertEqual(plan["warnings"],
-                         ["Table-level sections not interpreted: Files."])
-        self.assertEqual(plan["ignored_sections"], ["Files"])
-        _assert_plan_inert(self, plan, base,
-                           extra_warnings=["Table-level sections not interpreted: Files."],
-                           extra_ignored=["Files"])
+        # The Files section is interpreted now: no omission warning and no
+        # ignored-section entry remain; the decoded files are projected
+        # (casefold-sorted: License.txt before OCTfooterlogo.png).
+        self.assertEqual(plan["warnings"], [])
+        self.assertEqual(plan["ignored_sections"], [])
+        self.assertEqual(plan["embedded_files"], [
+            {"name": "License.txt", "encoding": "Ascii85",
+             "text": _embed_file_text(_LICENSE_BYTES),
+             "sha256": sha256(_LICENSE_BYTES).hexdigest(),
+             "size": len(_LICENSE_BYTES)},
+            {"name": "OCTfooterlogo.png", "encoding": "Ascii85",
+             "text": _embed_file_text(_LOGO_BYTES),
+             "sha256": sha256(_LOGO_BYTES).hexdigest(),
+             "size": len(_LOGO_BYTES)},
+        ])
+        _assert_plan_inert(self, plan, base)
         _assert_no_term_in_any_reason(plan, ("Files", "License"))
         self.assertTrue(plan["entries"][0]["supported"])
         self.assertEqual(plan["entries"][0]["reason"], "")
@@ -586,13 +640,13 @@ class CombinedRatificationTableTests(unittest.TestCase):
         # per-case hotkey note in record order.
         self.assertEqual(plan["warnings"], [
             "Embedded CE forms are present; check UI conflicts.",
-            "Table-level sections not interpreted: Files, Forms, PublicKey, "
+            "Table-level sections not interpreted: Forms, PublicKey, "
             "Signature, SignedHash, Structures.",
             "Record 2 ('hotkey value with sounds'): hotkey SPACE (Activate) "
             "not registered: record has no activation action.",
         ])
         self.assertEqual(plan["ignored_sections"],
-                         ["Files", "Forms", "PublicKey", "Signature",
+                         ["Forms", "PublicKey", "Signature",
                           "SignedHash", "Structures"])
         self.assertEqual(plan["counts"],
                          {"total": 3, "supported": 3, "actionable": 2,
@@ -616,9 +670,8 @@ class CombinedRatificationTableTests(unittest.TestCase):
         # two pinned register warnings the plans are state-identical.
         _assert_plan_inert(self, plan, control,
                            extra_warnings=list(COMBINED_EXTRA_WARNINGS),
-                           extra_ignored=["Files", "Forms", "PublicKey",
-                                          "Signature", "SignedHash",
-                                          "Structures"])
+                           extra_ignored=["Forms", "PublicKey", "Signature",
+                                          "SignedHash", "Structures"])
         _assert_no_term_in_any_reason(plan, NO_EFFECT_TERMS)
 
 

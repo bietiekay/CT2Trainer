@@ -42,6 +42,12 @@ TABLE_LUA_READ_ONLY_NAMES = frozenset({
     'isKeyPressed', 'getXBox360ControllerState',
     'speedhack_getSpeed',
     'print',
+    # RT-5 item A: embedded <Files> lookups (plan data) and string-stream
+    # access (per-scope host state) never touch target memory, so the
+    # table scope admits them exactly like the other read-class names.
+    'findTableFile', 'readStringLocal',
+    'stringstream.create', 'stringstream.copyFrom', 'stringstream.dataString',
+    'stringstream.size', 'stringstream.destroy',
 })
 
 #: Named block reasons per refused API class (activation block, never parse
