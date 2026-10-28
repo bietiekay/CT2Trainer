@@ -15,6 +15,8 @@ from __future__ import annotations
 import sys
 import unittest
 import xml.etree.ElementTree as ET
+import zlib
+from hashlib import sha256
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -127,11 +129,56 @@ class PerTableCompletenessTests(unittest.TestCase):
                                  f"{rel} unexpectedly carries an embedded Files section")
 
 
-class AssetsSectionRecognitionTests(unittest.TestCase):
-    """A synthetic table with an embedded Files section is recognized, not lost."""
+_CE_BASE85_ALPHABET = (
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz!#$%()*+,-./:;=?@[]^_{}"
+)
 
-    def test_files_section_is_reported_ignored(self):
+
+def _ce_base85_block(value: int) -> str:
+    digits = []
+    for _ in range(5):
+        value, r = divmod(value, 85)
+        digits.append(_CE_BASE85_ALPHABET[r])
+    return "".join(reversed(digits))
+
+
+def _encode_ce_base85(data: bytes) -> str:
+    """Encode bytes with the CE table-file Ascii85 alphabet.
+
+    A short final block is padded with the decoder's value-84 padding
+    (every trailing digit is the alphabet's value-84 character) so the
+    dropped digits are exactly the pad's digits.
+    """
+    out = []
+    i, n = 0, len(data)
+    while i + 4 <= n:
+        out.append(_ce_base85_block(int.from_bytes(data[i:i + 4], "big")))
+        i += 4
+    rem = n - i
+    if rem:
+        pad = 4 - rem
+        value = int.from_bytes(data[i:i + rem] + (85 ** pad - 1).to_bytes(pad, "big"),
+                               "big")
+        out.append(_ce_base85_block(value)[:5 - pad])
+    return "".join(out)
+
+
+def _embed_file_text(content: bytes) -> str:
+    """Raw stored text of one embedded file: Ascii85 over the raw-deflate
+    stream of the 4-byte little-endian size prefix plus the content."""
+    payload = len(content).to_bytes(4, "little") + content
+    return _encode_ce_base85(zlib.compress(payload, 9)[2:-4])
+
+
+class AssetsSectionRecognitionTests(unittest.TestCase):
+    """A synthetic table with an embedded Files section is decoded and
+    projected, not lost (RT-5 item A)."""
+
+    def test_files_section_is_decoded_and_projected(self):
         import tempfile
+        content = b"rt5-asset-payload-2026"
+        encoded = _embed_file_text(content)
         with tempfile.TemporaryDirectory(prefix="ct2-assets-") as d:
             d = Path(d)
             ct = d / "assets.ct"
@@ -141,11 +188,19 @@ class AssetsSectionRecognitionTests(unittest.TestCase):
                 '<Address>401000</Address><VariableType>4 Bytes</VariableType>'
                 "<Value>1</Value></CheatEntry>"
                 "</CheatEntries>"
-                "<Files><File>extra\\asset.bin</File></Files>"
+                '<Files><asset.bin Encoding="Ascii85">' + encoded
+                + "</asset.bin></Files>"
                 "</CheatTable>", encoding="utf-8")
             plan = compile_table(str(ct), process_name="probe.exe", architecture="x64")
-            self.assertIn("Files", plan.get("ignored_sections", []),
-                          "embedded Files (Assets) section must be recognized, not silently dropped")
+            self.assertNotIn("Files", plan.get("ignored_sections", []),
+                            "interpreted Files section must not be reported ignored")
+            self.assertEqual(plan["embedded_files"], [{
+                "name": "asset.bin",
+                "encoding": "Ascii85",
+                "text": encoded,
+                "sha256": sha256(content).hexdigest(),
+                "size": len(content),
+            }])
             self.assertEqual(plan["counts"]["total"], 1)
 
 

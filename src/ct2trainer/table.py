@@ -88,6 +88,27 @@ class UserDefinedSymbol:
 
 
 @dataclass(frozen=True)
+class EmbeddedFile:
+    """One accepted embedded file of the table-level <Files> section (RT-5 item A).
+
+    Cheat Engine embeds auxiliary files (Lua scripts, text) in the table;
+    each entry is stored Ascii85-encoded (CE alphabet) around a raw
+    deflate stream with a 4-byte little-endian size prefix.  ``text`` keeps
+    the raw encoded source verbatim so the plan validators can re-derive
+    ``sha256``/``size`` without the CT file; ``sha256``/``size`` describe
+    the decoded content.  Embedded content is inert input data for the
+    table Lua (never target memory); undecodable entries abort the table
+    load fail-closed (CE fails to load such tables too).
+    """
+
+    name: str
+    encoding: str
+    text: str
+    sha256: str
+    size: int
+
+
+@dataclass(frozen=True)
 class Entry:
     id: int
     label: str
@@ -214,6 +235,10 @@ class Table:
     # XML sources keep None.  Not serialized by to_dict(): it is derivable
     # from the source bytes through ct2trainer.legacy_ct.
     converted_xml: bytes | None = None
+    # RT-5 item A: decoded embedded <Files> (name, raw encoded text, content
+    # hash and size); the compiler projects them into the plan field
+    # embedded_files, from which the engine rebuilds the runtime registry.
+    embedded_files: tuple[EmbeddedFile, ...] = ()
 
     @property
     def counts(self) -> dict[str, int]:
@@ -265,6 +290,14 @@ class Table:
             "user_defined_symbols": [
                 {"name": symbol.name, "address": symbol.address}
                 for symbol in self.user_defined_symbols
+            ],
+            # RT-5 item A: embedded <Files> summary; the raw encoded text stays
+            # in the source CT (the plan carries it, the presentation dict
+            # only mirrors the derived metadata).
+            "embedded_files": [
+                {"name": f.name, "encoding": f.encoding,
+                 "sha256": f.sha256, "size": f.size}
+                for f in self.embedded_files
             ],
             "entries": [entry.to_dict() for entry in self.entries],
         }
@@ -494,6 +527,64 @@ def read_table(path: str | Path) -> Table:
         from .legacy_ct import legacy_ct_to_table
         return legacy_ct_to_table(source, data)
     return _parse_xml_table(source, data)
+
+
+def _parse_embedded_files(root: ET.Element) -> tuple[EmbeddedFile, ...]:
+    """RT-5 item A: extract and verify the table-level <Files> section.
+
+    Every entry is judged fail-closed: an undecodable payload or an
+    oversized section aborts the table load with a named TableError (CE
+    fails to load such a table as well).  The Encoding attribute selects
+    the decode branch exactly like CE createFromXML (the exact value
+    ``Ascii85`` uses the Ascii85 size-prefix pipeline; any other or
+    missing value takes the hex read-until-EOF branch).  Duplicate names
+    are tolerated, matching the CE table load; the runtime lookup
+    resolves the first occurrence.  Accepted entries keep their raw
+    encoded text so the plan validators can re-derive hash and size
+    without the CT file.
+    """
+    from .native.embedded_files import (
+        MAX_EMBEDDED_FILES,
+        MAX_EMBEDDED_TOTAL_BYTES,
+        EmbeddedFileError,
+        decode_embedded_file,
+    )
+    section = root.find("Files")
+    if section is None:
+        return ()
+    children = list(section)
+    if len(children) > MAX_EMBEDDED_FILES:
+        raise TableError(
+            f"Files section carries {len(children)} embedded files; the "
+            f"bound is {MAX_EMBEDDED_FILES}.")
+    files: list[EmbeddedFile] = []
+    total = 0
+    for child in children:
+        name = child.tag
+        if not isinstance(name, str) or not name:
+            raise TableError("Files section carries an entry without a file name.")
+        encoding = (child.attrib.get("Encoding") or "").strip()
+        text = (child.text or "").strip()
+        if not text:
+            raise TableError(f"Embedded file '{name}' is empty.")
+        try:
+            content = decode_embedded_file(text, encoding)
+        except EmbeddedFileError as exc:
+            raise TableError(
+                f"Embedded file '{name}' cannot be decoded: {exc}") from exc
+        total += len(content)
+        if total > MAX_EMBEDDED_TOTAL_BYTES:
+            raise TableError(
+                f"Embedded files exceed their "
+                f"{MAX_EMBEDDED_TOTAL_BYTES // (1024 * 1024)} MiB total bound.")
+        files.append(EmbeddedFile(
+            name=name,
+            encoding=encoding,
+            text=text,
+            sha256=sha256(content).hexdigest(),
+            size=len(content),
+        ))
+    return tuple(files)
 
 
 def _parse_xml_table(source: Path, data: bytes) -> Table:
@@ -733,6 +824,10 @@ def _parse_xml_table(source: Path, data: bytes) -> Table:
         for element in root
         if element.tag != "CheatEntries"
     )
+    # RT-5 item A: embedded <Files> are decoded fail-closed at load;
+    # an undecodable entry raises TableError before any record is built
+    # into a plan (the whole table load is refused, as in CE).
+    embedded_files = _parse_embedded_files(root)
     return Table(
         source=source,
         source_sha256=sha256(data).hexdigest(),
@@ -746,4 +841,5 @@ def _parse_xml_table(source: Path, data: bytes) -> Table:
         sections=sections,
         warnings=tuple(warnings),
         user_defined_symbols=tuple(uds_symbols),
+        embedded_files=embedded_files,
     )

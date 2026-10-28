@@ -341,7 +341,7 @@ end
 local stringlists, stringlist_count, stringlist_item_limit={},0,65536
 local function stringlist_new()
   if stringlist_count>=256 then error('String list object limit exceeded',2) end
-  local data={items={},case_sensitive=false,updates=0}
+  local data={items={},case_sensitive=false,updates=0,dead=false}
   local function ordinal(index)
     if type(index)~='number' or index%1~=0 or index<0 or index>=#data.items then
       error('String list index out of range',2)
@@ -373,6 +373,7 @@ local function stringlist_new()
   local object
   object=setmetatable({}, {
     __index=function(_,key)
+      if data.dead then error('String list is destroyed',2) end
       if type(key)=='number' then return data.items[ordinal(key)+1] end
       if key=='add' then return function(value,extra)
         if extra~=nil and extra~=0 then error('String list object data is outside this profile',2) end
@@ -421,6 +422,17 @@ local function stringlist_new()
       if key=='setCaseSensitive' then return function(value)
         data.case_sensitive=value~=nil and value~=false
       end end
+      -- RT-5 item A (RiftApart record {$lua} shape: addressList.Text=...):
+      -- bulk text access. Getter joins items with newlines.
+      if key=='text' or key=='Text' then
+        return table.concat(data.items,'\n')
+      end
+      if key=='destroy' then
+        return function()
+          if data.dead then return end
+          data.dead=true
+        end
+      end
       if key=='loadFromFile' or key=='saveToFile' then
         error('String list file access is outside this profile',2)
       end
@@ -438,6 +450,30 @@ local function stringlist_new()
         data.case_sensitive=value~=nil and value~=false
         return
       end
+      if key=='text' or key=='Text' then
+        -- RT-5 item A: CE StringList.text bulk set. Normalize CRLF to LF
+        -- and split positionally on newlines (find returns positions; a
+        -- capture-less gmatch would return the match, not the position),
+        -- keeping empty lines (CE TStrings semantics); a single trailing
+        -- newline does not create a final empty item.
+        if type(value)~='string' then error('String list text requires text',2) end
+        if data.dead then error('String list is destroyed',2) end
+        local norm=value:gsub('\r\n','\n')
+        if norm:sub(-1)=='\n' then norm=norm:sub(1,#norm-1) end
+        local items={}
+        if norm~='' then
+          local start=1
+          local pos=norm:find('\n')
+          while pos do
+            items[#items+1]=norm:sub(start,pos-1)
+            start=pos+1
+            pos=norm:find('\n',start)
+          end
+          items[#items+1]=norm:sub(start)
+        end
+        data.items=items
+        return
+      end
       error('String list property is outside this profile',2)
     end,
     __metatable='CT2Trainer string list'
@@ -451,6 +487,80 @@ end
 function createStringList()
   return createStringlist()
 end
+-- RT-5 item A: embedded table files and string streams.
+local function tablefile_stream(token, size)
+  local position=0
+  return setmetatable({_ct2token=token},{
+    __index=function(_,key)
+      if key=='Size' or key=='size' then return size end
+      if key=='Memory' or key=='memory' then return token end
+      if key=='Position' or key=='position' then return position end
+      if key=='write' or key=='clear' or key=='seek' then
+        error('Table-file stream writes are outside this profile',2)
+      end
+      error('Unsupported table-file stream property: '..tostring(key),2)
+    end,
+    __newindex=function(_,key,value)
+      if key=='Position' or key=='position' then position=value; return end
+      error('Table-file stream is read-only',2)
+    end
+  })
+end
+local function tablefile_object(name,token,size)
+  local stream=tablefile_stream(token,size)
+  return setmetatable({name=name},{
+    __index=function(_,key)
+      if key=='Stream' or key=='stream' then return stream end
+      if key=='getData' or key=='GetData' then return function() return stream end end
+      if key=='name' or key=='Name' then return name end
+      if key=='delete' or key=='Delete' then
+        return function() call('tablefile.delete',token) end
+      end
+      if key=='saveToFile' then
+        error('saveToFile is outside this profile',2)
+      end
+      error('Unsupported table-file property: '..tostring(key),2)
+    end,
+    __newindex=function() error('Table-file object is read-only',2) end
+  })
+end
+function findTableFile(name)
+  local result=call('findTableFile',name)
+  if result==nil then return nil end
+  return tablefile_object(result.name,result.token,result.size)
+end
+function FindTableFile(...) return findTableFile(...) end
+local function stringstream_new(token)
+  return setmetatable({_ct2token=token},{
+    __index=function(_,key)
+      if key=='copyFrom' then
+        return function(source,size)
+          local src=source
+          if type(source)=='table' and rawget(source,'_ct2token') then
+            src=rawget(source,'_ct2token')
+          end
+          call('stringstream.copyFrom',token,src,size)
+        end
+      end
+      if key=='DataString' or key=='dataString' then
+        return call('stringstream.dataString',token)
+      end
+      if key=='Size' or key=='size' then
+        return call('stringstream.size',token)
+      end
+      if key=='destroy' then
+        return function() call('stringstream.destroy',token) end
+      end
+      error('Unsupported string stream property: '..tostring(key),2)
+    end,
+    __newindex=function() error('String stream is read-only',2) end
+  })
+end
+function createStringStream()
+  local result=call('stringstream.create')
+  return stringstream_new(result.token)
+end
+function CreateStringStream() return createStringStream() end
 local functions={
   'getAddress','getAddressSafe','getModuleSize','readInteger','readSmallInteger',
   'readQword','readFloat','readDouble','readPointer','readString',
@@ -460,7 +570,7 @@ local functions={
   'getXBox360ControllerState','showMessage','print','executeCodeEx','fullAccess',
   'speedhack_setSpeed','speedhack_getSpeed','attachProcess','detachProcess',
   'LaunchMonoDataCollector','mono_enumDomains','mono_findMethod','mono_invoke_method',
-  'openProcess','shellExecute'
+  'openProcess','shellExecute','readStringLocal'
 }
 for _, name in ipairs(functions) do
   _G[name]=function(...) return call(name,...) end
@@ -470,6 +580,13 @@ end
 -- flipped), so record scripts use either spelling.
 _G.OpenProcess=function(...) return call('openProcess',...) end
 _G.ShellExecute=function(...) return call('shellExecute',...) end
+_G.ReadStringLocal=function(...) return call('readStringLocal',...) end
+-- RT-5 item A: embedded table files are static plan data.  Creating new
+-- table files would mutate the persistent table, so the call is a named
+-- fail-closed refusal (CE registers the name on both first-letter
+-- spellings, so both are defined).
+function createTableFile(...) error('createTableFile is outside this profile',2) end
+function CreateTableFile(...) error('createTableFile is outside this profile',2) end
 -- WP-56: inert CE menu surface.  The native trainer owns its own UI, so
 -- record scripts that build or toggle menu entries (compact-view toggles,
 -- support links) run to completion against no-op proxies: property reads
@@ -766,6 +883,24 @@ end
 -- Remove loading, filesystem, shell, foreign native modules and Python introspection.
 python=nil; package=nil; require=nil; io=nil; os=nil; debug=nil
 dofile=nil; loadfile=nil; _G.load=nil; collectgarbage=nil; coroutine=nil
+-- RT-5 item A: corpus tables load chunks from embedded table files (P5 shape:
+-- assert(load(sl))(); RiftApart shape: loadstring(...)()). The global loader
+-- comes back as a compatibility wrapper around the host chunk loader
+-- (string chunks, text mode): a loaded chunk inherits this restricted
+-- environment, so dynamic loading stays off and every host call stays
+-- broker-gated.
+local function compat_load(chunk, chunkname, mode, env)
+  if type(chunk) ~= 'string' then error('load requires a string chunk', 2) end
+  if chunkname ~= nil and type(chunkname) ~= 'string' then
+    error('load chunkname must be a string', 2)
+  end
+  if mode ~= nil and mode ~= 't' then error('load mode is text-only', 2) end
+  local result, err = load(chunk, chunkname, 't', env or _G)
+  if result == nil then return nil, err end
+  return result
+end
+_G.load = compat_load
+_G.loadstring = compat_load
 -- run keeps its loader in a private upvalue supplied below by the host.
 return run,pulse,cancel
 '''
@@ -787,6 +922,12 @@ class _ReadOnlyBroker:
         # WP-56: the record-Lua CE stubs are pure (identity check / no-op),
         # so they are safe to execute during syntax checking as well.
         'openProcess', 'shellExecute',
+        # RT-5 item A: embedded <Files> lookups and string-stream access
+        # are plan data / per-scope host state, safe under syntax checking
+        # (stream state is kept in a per-check-epoch registry).
+        'findTableFile', 'readStringLocal',
+        'stringstream.create', 'stringstream.copyFrom', 'stringstream.dataString',
+        'stringstream.size', 'stringstream.destroy',
     }
 
     def __init__(self, parent: 'LuaHost', *, allow_assembler: bool = True):
@@ -1332,6 +1473,32 @@ class EngineLuaBroker:
                                  for name, action in (menu_actions or {}).items())
         self.generation = 0
         self.identity = engine.memory.identity if engine.memory is not None else None
+        # RT-5 item A: createStringStream registry.  Each Lua scope owns its
+        # streams for the scope's lifetime (CE creates a fresh TStringStream
+        # per call).  Syntax-check calls run against a per-check-epoch
+        # registry so a disposable check never leaks stream state into the
+        # live scope.
+        self._string_streams: dict[str, bytearray] = {}
+        self._string_stream_bytes = [0]
+        self._check_streams: dict[str, bytearray] = {}
+        self._check_stream_bytes = [0]
+        self._check_stream_epoch = False
+        self._string_stream_counter = 0
+
+    def _stream_scope(self, syntaxcheck: bool) -> tuple[dict, list]:
+        """(registry, byte-budget holder) for the current call context.
+
+        Live calls share the scope's registry; a syntax-check epoch starts
+        with a fresh registry (cleared at epoch entry, never mid-check).
+        """
+        if syntaxcheck:
+            if not self._check_stream_epoch:
+                self._check_stream_epoch = True
+                self._check_streams = {}
+                self._check_stream_bytes[0] = 0
+            return self._check_streams, self._check_stream_bytes
+        self._check_stream_epoch = False
+        return self._string_streams, self._string_stream_bytes
 
     def invalidate(self) -> None:
         self.generation += 1
@@ -1716,6 +1883,161 @@ class EngineLuaBroker:
             if len(arguments) == 0 or type(arguments[0]) is not str or not arguments[0]:
                 raise LuaHostError('shellExecute requires a non-empty command')
             return None
+        if name == 'findTableFile':
+            # RT-5 item A (P5/Octopath table-Lua shape, RiftApart record
+            # {$lua}): exact-name, case-sensitive lookup into the plan's
+            # embedded <Files> (engine registry rebuilt at init from the
+            # validated plan field).  Nil when absent (CE parity: the
+            # caller asserts or branches); never a refusal.  Pure plan
+            # data, so admissible under syntax checking as well.
+            if len(arguments) != 1 or type(arguments[0]) is not str or not arguments[0]:
+                raise LuaHostError('findTableFile requires exactly one file name')
+            index = e._embedded_by_name.get(arguments[0])
+            if index is None:
+                return None
+            return {'name': arguments[0], 'token': 'ct2tf:%d' % index,
+                    'size': len(e._embedded_files[index])}
+        if name == 'readStringLocal':
+            # RT-5 item A: read an embedded-file or string-stream payload
+            # as a UTF-8 string.  Documented deviations from CE readStringEx:
+            # the address argument is a stream token (ct2tf:<i> / ct2ss:<n>),
+            # not a real local-process pointer, so any other value is
+            # refused fail-closed; an omitted or negative maxsize returns
+            # the full content (CE defaults to 50 bytes); there is no NUL
+            # truncation because the content is the asset itself (CE stops
+            # at the first NUL); wide strings are refused with a named
+            # error (CE would read maxsize+1 wide chars).
+            if len(arguments) not in (1, 2, 3):
+                raise LuaHostError(
+                    'readStringLocal takes an address and up to two options (maxsize, wide)')
+            address = arguments[0]
+            if type(address) is not str:
+                raise LuaHostError(
+                    'readStringLocal requires an embedded-file or string-stream token')
+            maxsize = None
+            if len(arguments) > 1 and arguments[1] is not None:
+                maxsize = arguments[1]
+                if type(maxsize) is not int:
+                    raise LuaHostError('readStringLocal maxsize must be an integer')
+            if len(arguments) > 2 and arguments[2] is not None:
+                if type(arguments[2]) is not bool:
+                    raise LuaHostError('readStringLocal wide flag must be boolean')
+                if arguments[2]:
+                    raise LuaHostError(
+                        'readStringLocal wide strings are outside this profile')
+            raw = None
+            if address.startswith('ct2tf:'):
+                try:
+                    index = int(address.rpartition(':')[2])
+                except ValueError:
+                    index = -1
+                if not 0 <= index < len(e._embedded_files):
+                    raise LuaHostError(
+                        'readStringLocal token does not name an embedded file: ' + address)
+                raw = e._embedded_files[index]
+            elif address.startswith('ct2ss:'):
+                store, _budget = self._stream_scope(syntaxcheck)
+                if address not in store:
+                    raise LuaHostError(
+                        'readStringLocal token does not name a live string stream: ' + address)
+                raw = bytes(store[address])
+            else:
+                raise LuaHostError(
+                    'readStringLocal requires an embedded-file or string-stream token')
+            if maxsize is not None and maxsize >= 0:
+                raw = raw[:maxsize]
+            try:
+                return raw.decode('utf-8')
+            except UnicodeDecodeError as exc:
+                raise LuaHostError(
+                    'Embedded content is not valid UTF-8 text: ' + str(exc)) from exc
+        if name in ('stringstream.create', 'stringstream.copyFrom',
+                   'stringstream.dataString', 'stringstream.size',
+                   'stringstream.destroy'):
+            # RT-5 item A (RiftApart record {$lua} shape): host-owned string
+            # streams (CE TStringStream surface: copyFrom, DataString, Size,
+            # destroy).  Content is inert scope data, never target memory;
+            # streams are bounded per scope (256 objects / 16 MiB).
+            from .embedded_files import (MAX_STRING_STREAMS,
+                                         MAX_STRING_STREAM_BYTES)
+            if name == 'stringstream.create':
+                if arguments:
+                    raise LuaHostError('stringstream.create takes no arguments')
+                store, budget = self._stream_scope(syntaxcheck)
+                if len(store) >= MAX_STRING_STREAMS:
+                    raise LuaHostError('String stream object limit exceeded')
+                token = 'ct2ss:%d' % self._string_stream_counter
+                self._string_stream_counter += 1
+                store[token] = bytearray()
+                return {'token': token, 'size': 0}
+            if len(arguments) < 1 or type(arguments[0]) is not str:
+                raise LuaHostError('stringstream calls require a string stream token')
+            store, budget = self._stream_scope(syntaxcheck)
+            if name == 'stringstream.copyFrom':
+                if len(arguments) not in (2, 3):
+                    raise LuaHostError(
+                        'stringstream.copyFrom takes (source) or (source, size)')
+                dst, src = arguments[0], arguments[1]
+                if not dst.startswith('ct2ss:'):
+                    raise LuaHostError(
+                        'stringstream.copyFrom destination must be a string stream')
+                size = None
+                if len(arguments) == 3 and arguments[2] is not None:
+                    size = arguments[2]
+                    if type(size) is not int or not 0 <= size <= MAX_STRING_STREAM_BYTES:
+                        raise LuaHostError(
+                            'stringstream.copyFrom size is outside its bound')
+                if dst not in store:
+                    raise LuaHostError('String stream is not open: ' + dst)
+                if type(src) is str and src.startswith('ct2tf:'):
+                    try:
+                        index = int(src.rpartition(':')[2])
+                    except ValueError:
+                        index = -1
+                    if not 0 <= index < len(e._embedded_files):
+                        raise LuaHostError(
+                            'copyFrom source does not name an embedded file: ' + src)
+                    data = bytes(e._embedded_files[index])
+                elif type(src) is str and src.startswith('ct2ss:'):
+                    if src not in store:
+                        raise LuaHostError('copyFrom source stream is not open: ' + src)
+                    data = bytes(store[src])
+                elif type(src) is str:
+                    data = src.encode('utf-8')
+                else:
+                    raise LuaHostError(
+                        'copyFrom source must be an embedded file, a string stream or text')
+                if size is not None:
+                    data = data[:size]
+                if budget[0] + len(data) > MAX_STRING_STREAM_BYTES:
+                    raise LuaHostError('String stream byte budget exceeded')
+                store[dst] = data
+                budget[0] = sum(len(v) for v in store.values())
+                return None
+            if arguments[0] not in store:
+                raise LuaHostError('String stream is not open: ' + arguments[0])
+            if name == 'stringstream.dataString':
+                raw = bytes(store[arguments[0]])
+                try:
+                    return raw.decode('utf-8')
+                except UnicodeDecodeError as exc:
+                    raise LuaHostError(
+                        'String stream content is not valid UTF-8 text: ' + str(exc)) from exc
+            if name == 'stringstream.size':
+                return len(store[arguments[0]])
+            # stringstream.destroy
+            del store[arguments[0]]
+            budget[0] = sum(len(v) for v in store.values())
+            return None
+        if name == 'tablefile.delete':
+            # RT-5 item A (RiftApart embedded AOBSaver.lua shape): deleting an
+            # embedded table file would modify the table's persistent content.
+            # Embedded files are inert input for this session, so the call is
+            # a named fail-closed refusal (record activation fails with it).
+            if len(arguments) != 1 or type(arguments[0]) is not str:
+                raise LuaHostError('tablefile.delete requires a table-file token')
+            raise LuaHostError(
+                'Table-file deletion is outside this profile')
         raise LuaHostError('Unsupported CE Lua API: '+name)
 
     def _mutate(self, address: int, data: bytes, syntaxcheck: bool) -> bool:

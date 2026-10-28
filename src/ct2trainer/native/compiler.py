@@ -2334,7 +2334,11 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     if table.has_table_lua:
         warnings.append("Table Lua is not executed on load. Read-only helpers replay in each Lua activation; top-level writes, callbacks and unsupported APIs block activation.")
     for section in table.sections:
-        if section.name not in {"CheatEntries", "LuaScript", "UserdefinedSymbols"}:
+        # RT-5 item A: <Files> is interpreted (embedded_files plan field,
+        # decoded fail-closed at table load); it no longer counts as
+        # omitted.
+        if section.name not in {"CheatEntries", "LuaScript", "UserdefinedSymbols",
+                                "Files"}:
             omitted.append(section.name)
     if omitted:
         warnings.append("Table-level sections not interpreted: " + ", ".join(sorted(set(omitted))) + ".")
@@ -2450,6 +2454,18 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                  if key not in supported_provides}
     if user_plan:
         plan["user_symbols"] = user_plan
+    # RT-5 item A: embedded <Files> content. The plan carries the raw stored
+    # Ascii85 text plus derived metadata (name, encoding, sha256, size),
+    # sorted by casefolded name; emitted only when non-empty (byte-stable
+    # plans otherwise, WP-40 convention).  Both plan validators re-derive
+    # sha256/size from the stored text, so forged entries are refused.
+    embedded_plan = [
+        {"name": f.name, "encoding": f.encoding, "text": f.text,
+         "sha256": f.sha256, "size": f.size}
+        for f in sorted(table.embedded_files, key=lambda f: f.name.casefold())
+    ]
+    if embedded_plan:
+        plan["embedded_files"] = embedded_plan
     # WP-54 (b): table-scope symbol names the combined table source proves
     # to register, minus the symbols a supported script record provides —
     # record providers always win, so the bootstrap skips symbols a
@@ -3155,6 +3171,23 @@ def validate_plan(plan: dict) -> None:
             if user_keys & record_provides:
                 raise NativeCompileError(
                     "user_symbols may not shadow a record-provided symbol.")
+        # RT-5 item A: embedded <Files> metadata — strict-validated by
+        # re-deriving sha256 and size from the stored raw encoded text
+        # (Ascii85 branch when the stored encoding is exactly 'Ascii85',
+        # CE hex branch otherwise; bounded counts, 4 MiB per file, 16 MiB
+        # total, duplicate names tolerated with first-match-wins lookup).
+        # Refused here and, through the engine validator's delegation, by
+        # both plan gates.
+        embedded = plan.get("embedded_files")
+        if embedded is not None:
+            from .embedded_files import (EmbeddedFileError,
+                                         validate_embedded_files)
+            if plan["schema"] != 2:
+                raise NativeCompileError("embedded_files requires schema 2")
+            try:
+                validate_embedded_files(embedded)
+            except EmbeddedFileError as exc:
+                raise NativeCompileError(str(exc)) from exc
         # WP-54 (b): the table-Lua symbol list is re-derived byte-exactly
         # from the table bootstrap source — the same literal-pair
         # extraction (one-shot adoption) plus the record-provider residual

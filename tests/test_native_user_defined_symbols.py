@@ -9,9 +9,11 @@ symbol-table seed.
 """
 from __future__ import annotations
 
+import zlib
 from copy import deepcopy
 import tempfile
 import unittest
+from hashlib import sha256
 from pathlib import Path
 import xml.sax.saxutils
 
@@ -49,6 +51,38 @@ def value_entry(entry_id: int, description: str, address: str) -> str:
         f"<VariableType>4 Bytes</VariableType>"
         f"<Address>{xml.sax.saxutils.escape(address)}</Address></CheatEntry>"
     )
+
+
+_CE_BASE85_ALPHABET = (
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "abcdefghijklmnopqrstuvwxyz!#$%()*+,-./:;=?@[]^_{}"
+)
+
+
+def _embed_file_text(content: bytes) -> str:
+    """Raw stored text of one embedded file (RT-5 item A fixture helper):
+    Ascii85 (CE alphabet) over the raw-deflate stream of the 4-byte
+    little-endian size prefix plus the content."""
+    def block(value: int) -> str:
+        digits = []
+        for _ in range(5):
+            value, r = divmod(value, 85)
+            digits.append(_CE_BASE85_ALPHABET[r])
+        return "".join(reversed(digits))
+    out = []
+    payload = len(content).to_bytes(4, "little") + content
+    raw = zlib.compress(payload, 9)[2:-4]
+    i, n = 0, len(raw)
+    while i + 4 <= n:
+        out.append(block(int.from_bytes(raw[i:i + 4], "big")))
+        i += 4
+    rem = n - i
+    if rem:
+        pad = 4 - rem
+        value = int.from_bytes(raw[i:i + rem] + (85 ** pad - 1).to_bytes(pad, "big"),
+                               "big")
+        out.append(block(value)[:5 - pad])
+    return "".join(out)
 
 
 def alloc_provider_entry(entry_id: int, description: str, symbol: str) -> str:
@@ -354,21 +388,27 @@ class UdsWarningSuppressionTests(unittest.TestCase):
         return path
 
     def test_empty_uds_does_not_enter_omitted_warning(self):
+        # RT-5 item A: a decodable embedded file is now interpreted (the
+        # plan carries embedded_files), so an empty UDS plus a valid Files
+        # section produces no omission warning at all.
+        encoded = _embed_file_text(b"fixture license text")
         path = self.write_ct(
             "empty+files.ct",
-            "<UserdefinedSymbols/><Files><FileEntry/></Files>",
+            '<UserdefinedSymbols/><Files>'
+            '<License.txt Encoding="Ascii85">' + encoded +
+            "</License.txt></Files>",
             value_entry(1, "Plain", "1000"),
         )
         plan = compile_table(str(path), PROCESS)
-        self.assertEqual(plan["ignored_sections"], ["Files"])
-        self.assertIn(
-            "Table-level sections not interpreted: Files.",
-            plan["warnings"],
-        )
-        self.assertNotIn(
-            "UserdefinedSymbols",
-            " ".join(plan["warnings"]),
-        )
+        self.assertEqual(plan["ignored_sections"], [])
+        self.assertEqual(plan["warnings"], [])
+        self.assertEqual(plan["embedded_files"], [{
+            "name": "License.txt",
+            "encoding": "Ascii85",
+            "text": encoded,
+            "sha256": sha256(b"fixture license text").hexdigest(),
+            "size": 20,
+        }])
 
     def test_fully_interpreted_uds_does_not_enter_omitted_warning(self):
         path = self.write_ct(

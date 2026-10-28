@@ -1406,6 +1406,20 @@ class TrainerEngine:
             self.applied: dict[int, list[_Patch]] = {}
             self.local_symbols: dict[int, dict[str, int]] = {}
             self.symbols: dict[str, int] = {}
+            # RT-5 item A: embedded <Files> registry rebuilt from the plan.
+            # The plan is validated (raw Ascii85 text re-decoded, hash and
+            # size re-derived) before this point, so the decode below is
+            # trusted; content is inert input data for table/record Lua,
+            # never target memory.  Lookup is case-sensitive and first-match,
+            # matching CE's findTableFile resolution order.
+            from .embedded_files import decode_embedded_file
+            self._embedded_files: list[bytes] = []
+            self._embedded_by_name: dict[str, int] = {}
+            for _index, _stored in enumerate(plan.get("embedded_files") or ()):
+                _content = decode_embedded_file(
+                    _stored["text"], _stored["encoding"])
+                self._embedded_files.append(_content)
+                self._embedded_by_name.setdefault(_stored["name"], _index)
             # RT-4.1 (CE dupIgnore narrowing, WP-37 keep-first): per-entry
             # ownership of the symbols each entry actually registered.
             # A symbol owned by one active entry keeps that binding when a

@@ -495,9 +495,22 @@ class NativeLuaTests(unittest.TestCase):
         two.cancel()
 
     def test_environment_has_no_python_filesystem_or_native_loader(self):
-        self.assertTrue(self.host.execute('return python==nil and io==nil and os==nil and require==nil and package==nil and debug==nil and load==nil and coroutine==nil'))
+        # Filesystem, Python introspection and scheduler primitives stay
+        # stripped; RT-5 item A restores load/loadstring as a restricted
+        # string-chunk wrapper (see the sandbox block in lua_host.py).
+        self.assertTrue(self.host.execute(
+            'return python==nil and io==nil and os==nil and require==nil '
+            'and package==nil and debug==nil and dofile==nil and loadfile==nil '
+            'and collectgarbage==nil and coroutine==nil'))
         with self.assertRaises(LuaHostError): self.host.execute('getAddress.__globals__')
         with self.assertRaises(LuaHostError): self.host.execute('return readInteger.__class__')
+        # The restricted loader accepts string chunks in text mode ...
+        self.assertTrue(self.host.execute('local f=load("return 41+1"); return f()==42'))
+        # ... but refuses the native loader shapes (function chunks, binary).
+        with self.assertRaisesRegex(LuaHostError, 'requires a string chunk'):
+            self.host.execute('load(function() return 1 end)')
+        with self.assertRaisesRegex(LuaHostError, 'text-only'):
+            self.host.execute('load("return 1", nil, "b")')
 
     def test_ordinary_metatable_identity_mutation_and_weak_mode_survive(self):
         self.assertEqual(self.host.execute('mt={__index={value=7},__add=function(a,b) return a.n+b.n end}; a=setmetatable({n=2},mt); b=setmetatable({n=3},mt); mt.__index.value=9; return getmetatable(a)==mt,a.value,a+b'),
