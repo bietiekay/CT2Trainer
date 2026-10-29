@@ -49,10 +49,10 @@ the item-C string pin, addresslist getMemoryRecord/Count/
 MemoryRecord[i] lookups, registerAutoAssemblerCommand custom directives
 table-scope with built-in names refused, +27 tests) landed on `main`
 2026-10-29 (merge `dde9f04`, full main suite 3,817 OK / 25 expected
-skips, zero catalog delta `blocked-catalog-rt5c2-main`). The RT-5 API/construct inventory is
+skips, zero catalog delta `blocked-catalog-rt5c2-main`). RT-5 item D (onOpenProcess/onTableLoad callback dispatch: CE-sequence table-scope dispatch after a clean table-Lua bootstrap - onOpenProcess with the attached target PID, onTableLoad with the Lua literal false, documented bounded deviation: no before-load phase; pcall-wrapped dispatch chunks with literal argument injection, 'absent'/'ok'/'error: <msg>' -> no event / table-callback / table-callback-error, throwing-callback containment with plan byte-identity, idempotent per confirmed attach with re-attach re-fire, +9 tests) landed on `main` 2026-10-29 (merge `9294bb8`, full main suite 3,826 OK / 25 expected skips, zero catalog delta `blocked-catalog-rt5d-main`). The RT-5 API/construct inventory is
 documented in `documentation/rt5-api-inventory.md`. The
-latest original-table catalog (run `blocked-catalog-rt5c2-main`,
-2026-10-29, zero delta vs `blocked-catalog-rt5c-main`) has 1,053 blocked
+latest original-table catalog (run `blocked-catalog-rt5d-main`,
+2026-10-29, zero delta vs `blocked-catalog-rt5c2-main`) has 1,053 blocked
 of 117,634 plan entries, 60,161 staged entries and zero load errors
 (previous: 1,351 after RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6,
 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3;

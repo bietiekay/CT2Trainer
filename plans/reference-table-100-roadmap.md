@@ -698,6 +698,54 @@ supported (60,161 staged), 1,053 blocked, 0 compile errors, 0 newly
 blocked, 0 reason-changed). `runtime_unverified` remains: journal record
 effects and custom-directive expansion are untested on a live target.
 
+Update (2026-10-29, RT-5 item D): the table's onOpenProcess/onTableLoad callback dispatch landed (lane `native-rt5-d`, commit
+`fb1253b`, merged to `main` as `9294bb8`): after a clean
+table-Lua bootstrap (the `meta['executed']` branch of
+`_run_table_lua_bootstrap`, after the `table-lua-executed` event)
+the trainer fires the table's CE callbacks on the table-scope host
+in the CE sequence — `onOpenProcess` first with the attached
+target PID (`memory.pid` as a Lua number, always available at the
+bootstrap call site), then `onTableLoad` with the Lua literal
+`false` (documented bounded deviation: the once-per-attach
+bootstrap has no before-load phase, so the callback only ever sees
+`false`). Each callback runs inside one pcall-wrapped dispatch
+chunk with the argument injected as a literal (the PID as an int
+literal — no string injection; the chunk itself uses only stdlib
+`rawget`/`type`/`pcall`/`tostring`, so no table-scope allowlist
+change is needed and callbacks may call the already-admitted
+item-C APIs); result handling: `'absent'` (missing or present but
+not a function) dispatches nothing and logs nothing, `'ok'` logs
+`table-callback`, `'error: <msg>'` logs `table-callback-error`
+with the callback name and the pcall error text (corpus shape: the
+table-local `getTable` helper indexing the nil `mForm` — the pcall
+error contains `attempt to index a nil value`); a throwing callback
+is contained, `plan["table_lua"]` stays byte-identical (executed
+True, empty reasons — the clean bootstrap stays clean for the
+dependent record scripts), the second callback still dispatches,
+and the attach continues unblocked (a Python-level host failure
+logs `table-callback-error` fail-soft). The dispatch is idempotent
+by construction (one clean bootstrap per confirmed attach with a
+fresh host; re-attach re-fires on the fresh scope) with no extra
+flag; refused or failed bootstraps retire the scope and skip the
+dispatch. Tests: new
+`tests/test_native_rt5_table_callbacks.py` +9 (CE order + arguments
+pinned through the table-scope host read-back, the item-C
+game-facing chain `getProcessList()[processId]` -> process name ->
+`getProcessIDFromProcessName` back to the PID, throwing-callback
+containment with exact meta byte-identity, absent and non-function
+(`onOpenProcess = 42`) with zero `table-callback*` events,
+idempotent across polls, re-attach re-fire, the C2 dynamic
+addresslist surface usable from a callback, onTableLoad only ever
+false, refused bootstrap skips the dispatch). Full main suite after
+the merge **3,826 OK / 25 expected skips** (baseline 3,817).
+Catalog remeasure (run `blocked-catalog-rt5d-main`): **zero delta**
+vs
+`blocked-catalog-rt5c2-main` (151/151 load, 117,634 total, 116,581
+supported (60,161 staged), 1,053 blocked, 0 compile errors, 0 newly
+blocked, 0 reason-changed) — the dispatch is runtime host behavior
+and the catalog is static plan-level. `runtime_unverified` remains:
+the callback answers are untested on a live target.
+
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
 **Scope and method.** Full clean-room attribution of every blocked row in

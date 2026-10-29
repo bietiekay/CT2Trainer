@@ -445,10 +445,20 @@ position, string = casefolded description, absent answers nil).
 
 CE dispatches `onTableLoad(before)` (OpenSave.pas:337/998) and
 `onOpenProcess(processId)` (ProcessHandlerUnit.pas:193) via
-`LUA_functioncall`. The CT2Trainer host does not dispatch them. Two
-tables define `onOpenProcess` (Resonance, SC2): it sets
+`LUA_functioncall`. Two tables define both callbacks
+(Resonance, Sinking City 2): `onOpenProcess` sets
 `myGame = getProcessList()[processId]`, and the table scan Lua uses
-`getAddress(myGame)` — a game-facing dependency chain (item D).
+`getAddress(myGame)` — a game-facing dependency chain.
+**Hosted by item D (2026-10-29, lane `native-rt5-d`):** after a
+clean table-Lua bootstrap the CT2Trainer host dispatches
+`onOpenProcess` with the attached target PID, then `onTableLoad`
+with the literal false (bounded deviation: no before-load
+phase), each in a pcall-wrapped chunk with literal argument
+injection; 'absent'/'ok'/'error: <msg>' -> no event /
+`table-callback` / `table-callback-error`; a throwing callback
+(corpus shape: the table-local `getTable` indexing the nil
+`mForm`) is contained without touching `plan["table_lua"]`;
+refused or failed bootstraps skip the dispatch.
 
 ### 7.5 Non-CE names (269)
 
@@ -475,7 +485,10 @@ host provides its own, `lua_host.py:650`), `redirectPrint`
   `native-rt5-c`) + 2026-10-29 (item C2, lane `native-rt5-c2`:
   createMemoryRecord session journal + custom AA directives).**
 - D. Callback dispatch `onOpenProcess`/`onTableLoad` — 2 FearlessRev
-  tables, `myGame` chain.
+  tables, `myGame` chain. **Done 2026-10-29 (item D, lane
+  `native-rt5-d`): CE-sequence table-scope dispatch after a clean
+  bootstrap, pcall-wrapped, `plan["table_lua"]` untouched;
+  `table-callback` / `table-callback-error` debug events; +9 tests.**
 - E. `messageDialog` decision — 31 tables, 69 calls; currently named
   refusal + load-time review warning.
 
@@ -514,7 +527,16 @@ Ordered after the RT-4 lanes land (RT-4.6 219 rows, then RT-4.2
     getMemoryRecord lookups, registerAutoAssemblerCommand/
     unregisterAutoAssemblerCommand table-scope custom directives.
 3. Item D — `onOpenProcess`/`onTableLoad` dispatch for the 2
-   FearlessRev tables.
+   FearlessRev tables. **Done 2026-10-29** (lane `native-rt5-d`,
+   commit `fb1253b`, merge `9294bb8`): CE-sequence table-scope
+   dispatch after a clean bootstrap (onOpenProcess with the
+   attached target PID, onTableLoad with the literal false),
+   pcall-wrapped chunks with literal argument injection,
+   throwing-callback containment with `plan["table_lua"]`
+   byte-identical, idempotent per confirmed attach with re-attach
+   re-fire, refused bootstraps skip the dispatch,
+   `tests/test_native_rt5_table_callbacks.py` +9, zero catalog
+   delta (`blocked-catalog-rt5d-main`).
 4. Item B — code-patch plan path for `CheatCodes` (or recorded
    scope decision).
 5. Item E — `messageDialog` decision (no-op with review flag vs

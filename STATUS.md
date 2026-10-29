@@ -59,7 +59,18 @@ getMemoryRecord/Count/MemoryRecord[i] lookups,
 registerAutoAssemblerCommand custom AA directives (table scope, built-in
 names refused), `tests/test_native_rt5_dynamic_records.py` +27; zero
 catalog delta (`blocked-catalog-rt5c2-main`), full main suite 3,817 OK /
-25 expected skips. RT-4 is complete; RT-5 items A, C and C2 are the
+25 expected skips; plus the RT-5 item D onOpenProcess/onTableLoad
+callback dispatch (2026-10-29, merge `9294bb8`): CE-sequence
+table-scope dispatch after a clean table-Lua bootstrap (onOpenProcess
+with the attached target PID, onTableLoad with the Lua literal false -
+documented bounded deviation: no before-load phase), pcall-wrapped
+dispatch chunks with literal argument injection, 'absent'/'ok'/
+'error: <msg>' -> no event / table-callback / table-callback-error,
+throwing-callback containment with plan byte-identity, idempotent per
+confirmed attach with re-attach re-fire,
+`tests/test_native_rt5_table_callbacks.py` +9; zero catalog delta
+(`blocked-catalog-rt5d-main`), full main suite 3,826 OK / 25 expected
+skips. RT-4 is complete; RT-5 items A, C, C2 and D are the
 first implementation items landed. The 0.17 in-build suite:
 3,692 OK / 25 expected skips, `ce_inputs: []`.
 Superseded: 0.16.4, build
