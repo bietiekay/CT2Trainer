@@ -285,7 +285,11 @@ class TableLuaBrokerUnitTests(unittest.TestCase):
                                       generation=broker.generation, syntaxcheck=False))
         self.assertEqual(broker.reasons,
                          ['Table Lua uses a write API: writeInteger.',
-                          'Table Lua uses a write API: record.set.'])
+                          # RT-5 item C2: record.set routes to the engine
+                          # dispatch; a malformed call records the exact
+                          # engine named refusal (the WP-41 taxonomy reason
+                          # for 'record.set' stays pinned above).
+                          'MemoryRecord set requires an identifier, key and value'])
 
     def test_read_only_names_are_forwarded_to_the_wrapped_dispatch(self):
         broker = TableLuaBroker(self.engine)

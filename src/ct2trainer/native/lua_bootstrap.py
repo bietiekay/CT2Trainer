@@ -54,6 +54,21 @@ TABLE_LUA_READ_ONLY_NAMES = frozenset({
     # they never write target memory and are admitted in the table scope.
     'getProcessIDFromProcessName', 'getProcessList', 'targetIs64Bit',
     'enumModules', 'disassemble',
+    # RT-5 item C2: the dynamic addresslist record surface (CE
+    # createMemoryRecord session-journal contract).  The lookups are pure
+    # reads of the engine's in-memory session journal; the mutation names
+    # (createMemoryRecord, record.delete, record.reparent,
+    # record.offsetSet/offsetTextSet and record.set) mutate that journal
+    # only - never the compiled plan or any .ct - and the root decision
+    # admits them in the table scope where the corpus tables create
+    # records.  record.set keeps the WP-41 write-API refusal for
+    # plan-record IDs (the table broker answers nil with the named reason
+    # and routes dynamic IDs to the engine journal instead); syntax
+    # checking refuses every journal mutation with the exact named reason.
+    'addresslist.getMemoryRecord', 'record.isDynamic', 'record.child',
+    'record.offsetGet', 'record.offsetTextGet',
+    'addresslist.createMemoryRecord', 'record.set', 'record.delete',
+    'record.reparent', 'record.offsetSet', 'record.offsetTextSet',
 })
 
 #: Named block reasons per refused API class (activation block, never parse

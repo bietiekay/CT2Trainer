@@ -26,8 +26,10 @@ loaded; the fixtures reproduce the corpus usage shapes):
   address-expression input, and the named refusals (argument count, count
   bounds, invalid instruction, bounded read ending first, out-of-range
   address) with zero memory writes;
-- the pure-Lua globals: getCEVersion (the pinned constant string '7.5' -
-  documented deviation from CE's number return), getAutoAttachList (inert
+- the pure-Lua globals: getCEVersion (the pinned number 7.5 - CE 7.5
+  LuaHandler pushnumber parity; the item-C string pin is superseded by
+  the C2 corpus evidence that the version gates are numeric),
+  getAutoAttachList (inert
   per-scope singleton stringlist), getSettings (inert settings object
   whose Value answers '' for any missing key - CE parity for a missing
   registry value; non-string section refused), integerToUserData
@@ -354,9 +356,18 @@ class ProcessInfoRuntimeTests(unittest.TestCase):
     # -- pure-Lua globals -------------------------------------------------------------
 
     def test_get_ce_version_is_the_pinned_constant(self):
+        # RT-5 item C2 supersession: the pinned answer is the NUMBER 7.5.
+        # The corpus gates numerically (Borderlands3/Cygni/P3R
+        # 'getCEVersion() < 7.x', AtomicHeart 'getCEVersion() ~= 7.5',
+        # DS2/HFW 'CEVersion ~= getCEVersion()') and the string usages
+        # (tonumber / string.match / concatenation) all accept the number
+        # through Lua coercion.
         engine = self.attach_lua(
             "local v = getCEVersion()\n"
-            "assert(v == '7.5', 'version: ' .. tostring(v))\n"
+            "assert(v == 7.5, 'version: ' .. tostring(v))\n"
+            "assert(type(v) == 'number', 'numeric: ' .. type(v))\n"
+            "assert(v < 7.6 and v >= 7.2, 'numeric corpus gate')\n"
+            "assert(v ~= 7.4, 'inequality gate')\n"
             "local gate = 'CE ' .. v\n"
             "assert(gate == 'CE 7.5', gate)\n"
             "writeInteger(0x1050, #gate)\n")
@@ -411,9 +422,11 @@ class ProcessInfoRuntimeTests(unittest.TestCase):
         self.assertEqual(self.marker(engine), 1)
 
     def test_out_of_scope_names_stay_refused(self):
-        for source in ("createMemoryRecord()",
-                       "registerAutoAssemblerCommand('a', 'b')",
-                       "messageDialog('x')"):
+        # RT-5 item C2 moved the createMemoryRecord /
+        # registerAutoAssemblerCommand record-scope cases to
+        # tests/test_native_rt5_dynamic_records.py (they now have exact
+        # named refusals of their own); messageDialog (item E) stays here.
+        for source in ("messageDialog('x')",):
             with self.subTest(case=source):
                 engine = self.attach_lua(source)
                 with self.assertRaises(NativeRuntimeError):

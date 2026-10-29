@@ -846,7 +846,12 @@ class ObjectMethodRefusalTests(unittest.TestCase):
         self.assertEqual(self.memory.ops, [])
 
     def test_addresslist_ui_methods_are_named_refusals(self):
-        for method in ("getMemoryRecord", "disableAllWithoutExecute"):
+        # RT-5 item C2 supersession: 'getMemoryRecord' is now the supported
+        # lookup API (integer -> flat 0-based position, string -> casefolded
+        # description, absent -> nil); its contract is pinned in
+        # tests/test_native_rt5_dynamic_records.py.  Only the out-of-profile
+        # UI method keeps the named refusal here.
+        for method in ("disableAllWithoutExecute",):
             with self.subTest(method=method):
                 with self.assertRaisesRegex(
                         LuaHostError,
