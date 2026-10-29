@@ -269,7 +269,13 @@ class LuaActivation:
         if syntaxcheck:
             if disable_info is not None:
                 raise LuaHostError('Syntax checking cannot retire an assembler receipt')
-            program = prepare_program(source, self.engine.plan['process_name'], bitness=self.engine.memory.pointer_size * 8)
+            # RT-5 item C2: the syntax-check pass expands the table-scope
+            # custom AA directives (registerAutoAssemblerCommand) exactly
+            # like the live pass; the corpus callbacks guard their work
+            # behind 'if syntaxcheck then return end'.
+            program = prepare_program(source, self.engine.plan['process_name'], bitness=self.engine.memory.pointer_size * 8,
+                                       custom_commands=self.engine._aa_command_registry(),
+                                       syntaxcheck=True)
             ordinary, executable = self.engine._owned_provider_data()
             caps = set(program.get("capabilities", ()))
             disassembler = self.engine._disassembler_for(self.engine.memory) if "disassemble" in caps else None
@@ -282,7 +288,9 @@ class LuaActivation:
                              disassembler=disassembler,
                              thread_model=thread_model,
                              protection_model=protection_model,
-                             export_model=export_model)
+                             export_model=export_model,
+                              custom_commands=self.engine._aa_command_registry(),
+                              syntaxcheck=True)
             return {'ok': True, 'disableInfo': None}
         if disable_info is not None:
             if not isinstance(disable_info, dict) or set(disable_info) != {'token'}:
@@ -295,7 +303,8 @@ class LuaActivation:
             return {'ok': True, 'disableInfo': None}
         if len(self.assemblies) >= 128:
             raise LuaHostError('Lua activation assembler-receipt limit exceeded')
-        program = prepare_program(source, self.engine.plan['process_name'], bitness=self.engine.memory.pointer_size * 8)
+        program = prepare_program(source, self.engine.plan['process_name'], bitness=self.engine.memory.pointer_size * 8,
+                                  custom_commands=self.engine._aa_command_registry())
         if len(self.symbols) + len(program['provides']) > 4096:
             raise LuaHostError('Lua activation symbol limit exceeded')
         publication_guard = None
@@ -311,7 +320,8 @@ class LuaActivation:
                 for result in results:
                     recheck_result(result, self.engine.memory)
         manager, linked, _ = self.engine._install_program(program, 'lua:' + str(self.identifier),
-                                                          publication_guard=publication_guard)
+                                                          publication_guard=publication_guard,
+                                                          custom_commands=self.engine._aa_command_registry())
         token = uuid.uuid4().hex
         self.assemblies[token] = {'hash': digest, 'manager': manager, 'exports': linked['exports'],
                                   'requires': program['requires'], 'program': program, 'linked': linked}
@@ -542,7 +552,8 @@ class LuaActivation:
         captured_preamble, captured_enable, _ = self._aa_sections(original['source'])
         replacement = prepare_program(preamble + '\n[ENABLE]\n' + captured_enable +
                                       '\n[DISABLE]\n' + disable,
-                                      self.engine.plan['process_name'], bitness=original['bitness'])
+                                      self.engine.plan['process_name'], bitness=original['bitness'],
+                                      custom_commands=self.engine._aa_command_registry())
         if replacement['preamble'] != original['preamble'] or replacement['enable'] != original['enable']:
             raise LuaHostError('Disable Lua changed the captured AA preamble or enable program')
         ordinary, executable = self.engine._owned_provider_data()
@@ -550,7 +561,8 @@ class LuaActivation:
         symbols.update(item['linked']['symbols'])
         inverse = link_program(replacement, self.engine.memory, symbols,
                                item['manager'].allocation_map(), phase='disable',
-                               owned_data_ranges=ordinary, owned_executable_data_ranges=executable)
+                               owned_data_ranges=ordinary, owned_executable_data_ranges=executable,
+                               custom_commands=self.engine._aa_command_registry())
         restored = sorted((row['address'], row['bytes'].lower()) for row in inverse['blocks']
                           if not row['is_allocation'])
         expected = sorted((row['address'], row['original'].lower()) for row in item['manager'].entries)

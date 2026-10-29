@@ -87,7 +87,6 @@ class NativeLuaHelperTests(unittest.TestCase):
                     return True
                 return super().call(name, args, **options)
         for source in ('writeInteger(4096,1)', 'writeBytes(4096,1)',
-                       'getAddressList().getMemoryRecordByID(1).Active=true',
                        'autoAssemble("owned")'):
             with self.subTest(source=source):
                 broker = LaxBroker()
@@ -112,6 +111,20 @@ class NativeLuaHelperTests(unittest.TestCase):
                 self.assertFalse(host.cancelled)
                 self.assertEqual(host.helper_sources, ('partial=17; ' + source,))
                 self.assertFalse(any(item[0] in {'registerSymbol', 'unregisterSymbol'}
+                                      for item in broker.calls))
+                self.assertEqual(host.execute('return partial'), 17)
+        # RT-5 item C2: the same replay no-op covers the table source's
+        # record mutation — record.set on a plan record is inert in a
+        # record helper scope (the live table-scope bootstrap already ran
+        # it), so the install succeeds and the broker is never reached.
+        for source in ('getAddressList().getMemoryRecordByID(1).Active=true',):
+            with self.subTest(source=source):
+                broker = LaxBroker()
+                host = LuaHost(broker)
+                host.install_helpers('partial=17; ' + source)
+                self.assertFalse(host.cancelled)
+                self.assertEqual(host.helper_sources, ('partial=17; ' + source,))
+                self.assertFalse(any(item[0] == 'record.set'
                                       for item in broker.calls))
                 self.assertEqual(host.execute('return partial'), 17)
 

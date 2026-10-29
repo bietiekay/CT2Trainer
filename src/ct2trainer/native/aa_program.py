@@ -44,7 +44,7 @@ import json
 import math
 import re
 import struct
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 
 from .aa import AAError, validate_symbol, normalize_pattern
 from .patterns import (MAX_PATTERN_BYTES, MAX_PLACEHOLDER_TOKENS,
@@ -66,6 +66,21 @@ MAX_NODES = 8192
 MAX_PROCESS_SCANS = 16
 MAX_BLOCK_BYTES = 1024 * 1024
 MAX_TOTAL_BYTES = 4 * 1024 * 1024
+# RT-5 item C2: registered custom AA directives (CE registerAutoAssemblerCommand
+# contract) expand at compile time.  Bounded so one table callback cannot
+# explode the program or the compiler's memory.
+MAX_CUSTOM_RESULT_CHARS = 1024 * 1024
+MAX_CUSTOM_EXPANSION_LINES = 4096
+# The complete built-in command grammar (lowercase) that _parse_line admits.
+# RT-5 item C2: a registered custom AA directive may not shadow one of these
+# names (the registration is refused, the built-in keeps the line).
+AA_BUILTIN_DIRECTIVES = frozenset({
+    "threadwait", "usemono", "createthread", "protect", "unprotect",
+    "getmodulehandle", "getprocaddress", "aobscan", "aobscanmodule",
+    "aobscanregion", "alloc", "globalalloc", "define", "label",
+    "registersymbol", "unregistersymbol", "registerlabel", "dealloc",
+    "fullaccess", "readmem", "reassemble", "assert", "disassemble",
+})
 _SYMBOL_TOKEN = re.compile(r"@?[A-Za-z_][A-Za-z0-9_]*\Z")
 # Named @ label, single or double @ (WP-30d): ``@foo``, ``@@Ashot``.
 # Program-local only (no table-wide lookup); unknown labels keep the
@@ -992,15 +1007,112 @@ def _inline_nested_invocations(pruned, nested, labels, define_lines: set) -> dic
     return {"lines": result, "invocations": invocations, "external": external}
 
 
+def _expand_custom_commands(prepared, custom_commands, define_texts, syntaxcheck):
+    """RT-5 item C2: expand registered custom AA directives in one pass.
+
+    Clean-room equivalent of the CE 7.5 registerAutoAssemblerCommand
+    dispatch (autoassembler.pas 1865-2014, read-only reference):
+
+    - a line matches when the uppercase of the whole text before its first
+      ``(`` equals the uppercase registered name;
+    - the callback receives the argument string between the first ``(``
+      and the last ``)`` in original case (empty when there is no closing
+      paren);
+    - before matching, the line's ``{$define}`` tokens are substituted
+      (case-insensitive, word-boundary, original literal text) so the
+      callback sees resolved text; substitution affects only the text the
+      callback sees - non-matching lines pass through untouched, so with
+      no custom commands registered the plan stays byte-identical;
+    - a string result replaces the line with its lines (CR/LF/CRLF split;
+      a trailing newline creates no empty line), inserted at the same
+      position with the original line number; the inserted lines are
+      re-processed in the same pass, so expansions can nest;
+    - a nil/empty result deletes the line (corpus guard idiom
+      ``if syntaxcheck then return end``).
+
+    Fail-closed: a non-string result, an oversized result and more than
+    ``MAX_CUSTOM_EXPANSION_LINES`` produced lines in one pass (recursive
+    expansion cannot loop) each raise :class:`ProgramError`.
+    """
+    if not custom_commands:
+        return prepared
+    registered = {str(name).upper(): fn for name, fn in custom_commands.items()}
+    define_subs = []
+    for name, value in define_texts.items():
+        define_subs.append((re.compile(
+            r"(?<![A-Za-z0-9_])" + re.escape(name) + r"(?![A-Za-z0-9_])",
+            re.IGNORECASE), value))
+
+    def substitute(line):
+        for pattern, value in define_subs:
+            line = pattern.sub(value, line)
+        return line
+
+    unmatched = object()
+    pending = list(prepared)
+    output = []
+    produced = 0
+    index = 0
+    while index < len(pending):
+        number, raw = pending[index]
+        line = raw.strip()
+        result = unmatched
+        display = None
+        if line and not line.startswith("//"):
+            candidate = substitute(line)
+            open_pos = candidate.find("(")
+            if open_pos > 0:
+                display = candidate[:open_pos].strip()
+                handler = registered.get(candidate[:open_pos].upper())
+                if handler is not None:
+                    close_pos = candidate.rfind(")")
+                    args = candidate[open_pos + 1:close_pos] if close_pos > open_pos else ""
+                    try:
+                        result = handler(args, syntaxcheck)
+                    except ProgramError:
+                        raise
+                    except Exception as exc:
+                        raise ProgramError(
+                            f"Line {number}: custom AA directive {display} failed: {exc}") from exc
+                    if result is not None and not isinstance(result, str):
+                        raise ProgramError(
+                            f"Line {number}: custom AA directive {display} "
+                            "must return a string or nil.")
+                    if result is not None and len(result) > MAX_CUSTOM_RESULT_CHARS:
+                        raise ProgramError(
+                            f"Line {number}: custom AA directive {display} "
+                            "result exceeds its size bound.")
+        if result is unmatched:
+            output.append((number, raw))
+            index += 1
+            continue
+        if result is None or not result.strip():
+            pending.pop(index)  # nil/empty result deletes the line
+            continue
+        lines = re.split(r"\r\n|\r|\n", result)
+        if lines and lines[-1] == "":
+            lines.pop()  # a trailing newline creates no empty line
+        produced += len(lines)
+        if produced > MAX_CUSTOM_EXPANSION_LINES:
+            raise ProgramError("Custom AA directive expansion exceeds its line bound.")
+        pending[index:index + 1] = [(number, text) for text in lines]
+        # index now points at the first inserted line, re-processed below
+    return output
+
+
 def prepare_program(source: str, process_name: str | None = None, *, bitness: int = 64,
                     labels: dict | None = None, external_owned: frozenset[str] = frozenset(),
-                    external_owners: Mapping[str, int] | None = None) -> dict:
+                    external_owners: Mapping[str, int] | None = None,
+                    custom_commands: Mapping[str, Callable] | None = None,
+                    syntaxcheck: bool = False) -> dict:
     if type(bitness) is not int or bitness not in {32, 64}:
         raise ProgramError("Only 32/64-bit programs are supported.")
     if process_name is not None:
         _expression('"' + process_name + '"')
+    if type(syntaxcheck) is not bool:
+        raise ProgramError("syntaxcheck must be a boolean.")
     clean = _clean_source(source)
-    defines, define_lines = {}, set()
+    defines, define_lines, define_texts = {}, set(), {}
     for index, raw in enumerate(clean.split("\n")):
         stripped = raw.strip()
         if _CONDITIONAL_DIRECTIVES["define"].fullmatch(stripped) is None:
@@ -1015,6 +1127,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         if len(name) > 128:
             raise ProgramError(f"Line {index + 1}: define {name} exceeds its name bound.")
         value = match.group(2)
+        define_texts[key] = value
         sign = value[:1] if value[:1] in {"+", "-"} else ""
         body = value[len(sign):]
         if body.startswith("$"):
@@ -1036,6 +1149,14 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     # not apply to them.
     nested_invocation_present = any(parse_invocation(line) is not None
                                     for line in pruned.lines)
+    # RT-5 item C2: custom directives expand after nested-assembly inlining,
+    # and the two mechanisms do not compose (an inlined autoAssemble body
+    # would expand against the outer registry without line provenance), so a
+    # program carrying both is refused with the exact named reason before
+    # any expansion.  With no registered commands the check is a strict
+    # no-op and every existing plan shape is unchanged.
+    if custom_commands and nested_invocation_present:
+        raise ProgramError("Custom AA directives are not supported in nested-assembly sources")
     nested = None
     if nested_invocation_present:
         analysis = analyze_blocks(clean, defines, labels)
@@ -1057,6 +1178,14 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         nested_invocations = []
         nested_label_order = []
         external_labels = {}
+    # RT-5 item C2: runtime-registered custom AA directives are expanded
+    # here (after conditional pruning and nested-assembly inlining, before
+    # the section split) so every expansion line flows through the same
+    # fail-closed per-line parsing.  The pass is a strict no-op when no
+    # custom commands are registered, keeping every existing plan shape
+    # and byte count identical.
+    if custom_commands:
+        prepared = _expand_custom_commands(prepared, custom_commands, define_texts, syntaxcheck)
     sections = {"preamble": [], "enable": [], "disable": []}
     current = "preamble"
     seen = set()
@@ -1096,6 +1225,14 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
             # or data) is a valid named allocation-only init profile, but only
             # as a re-enabled program with a DISABLE phase; a one-shot may
             # never be allocation-only.
+            pass
+        elif syntaxcheck and custom_commands:
+            # RT-5 item C2 (CE syntaxcheck semantics): the corpus idiom
+            # ``if syntaxcheck then return end`` deletes every custom
+            # directive line in the syntaxcheck pass, so a script whose whole
+            # enable content is custom expansions is syntactically valid;
+            # content presence stays enforced by the live pass
+            # (syntaxcheck=False) and by validate_program regeneration.
             pass
         else:
             raise ProgramError("Enable section has no executable patch or data.")
@@ -1406,11 +1543,17 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     return program
 
 
-def validate_program(program: dict) -> None:
+def validate_program(program: dict, custom_commands: Mapping[str, Callable] | None = None,
+                     syntaxcheck: bool = False) -> None:
     if not isinstance(program, dict) or program.get("schema") != SCHEMA or not isinstance(program.get("source"), str):
         raise ProgramError("Invalid AA program schema.")
+    # RT-5 item C2: dynamic records are validated against the same runtime
+    # registry and the same syntaxcheck flag they were built with, so a
+    # deterministic callback reproduces the identical plan byte-for-byte;
+    # any divergence fails closed.
     regenerated = prepare_program(program["source"], program.get("process_name"), bitness=program.get("bitness"),
-                                  labels=program.get("external_labels"))
+                                  labels=program.get("external_labels"), custom_commands=custom_commands,
+                                  syntaxcheck=syntaxcheck)
     try:
         actual = json.dumps(program, sort_keys=True, separators=(",", ":"), allow_nan=False)
         expected = json.dumps(regenerated, sort_keys=True, separators=(",", ":"), allow_nan=False)
@@ -1483,8 +1626,10 @@ def _merge_placeholder_captures(existing: dict[str, str], fresh: dict[str, str])
         existing[name] = value
 
 
-def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None = None, *, phase: str = "enable", scan_results=None, disassembler=None, thread_model=None, protection_model=None, export_model=None, execute_side_effects: bool = True, on_scan=None, captured_placeholders=None) -> dict:
-    validate_program(program)
+def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None = None, *, phase: str = "enable", scan_results=None, disassembler=None, thread_model=None, protection_model=None, export_model=None, execute_side_effects: bool = True, on_scan=None, captured_placeholders=None,
+                      custom_commands: Mapping[str, Callable] | None = None,
+                      syntaxcheck: bool = False) -> dict:
+    validate_program(program, custom_commands, syntaxcheck)
     if phase not in {"enable", "disable"}:
         raise ProgramError("Invalid AA phase.")
     try:
@@ -2100,7 +2245,9 @@ def _dry_allocation_address(view, size, near, reference):
 
 def dry_link_program(program: dict, memory, symbols: Mapping[str, int] | None = None, *,
                      owned_data_ranges=None, owned_executable_data_ranges=None, assembler=None, disassembler=None,
-                     thread_model=None, protection_model=None, export_model=None) -> dict:
+                     thread_model=None, protection_model=None, export_model=None,
+                     custom_commands: Mapping[str, Callable] | None = None,
+                     syntaxcheck: bool = False) -> dict:
     """NASM-check both phases with synthetic allocations and no target writes.
 
     The returned schema is diagnostic and cannot be an installation receipt.
@@ -2111,7 +2258,7 @@ def dry_link_program(program: dict, memory, symbols: Mapping[str, int] | None = 
     for disable assertions/readmem, while all real memory is accessed read-only.
     No allocate, protect, write, flush, release or close API is exposed to linking.
     """
-    validate_program(program)
+    validate_program(program, custom_commands, syntaxcheck)
     if owned_data_ranges is not None and (not isinstance(owned_data_ranges, (list, tuple)) or len(owned_data_ranges) > 4096):
         raise ProgramError("Trusted data provenance must be a bounded range list.")
     if owned_executable_data_ranges is not None and (not isinstance(owned_executable_data_ranges, (list, tuple)) or len(owned_executable_data_ranges) > MAX_NODES):
@@ -2119,7 +2266,8 @@ def dry_link_program(program: dict, memory, symbols: Mapping[str, int] | None = 
     view = _DryReadView(memory, program["bitness"])
     preflight = preflight_program(program, view, symbols, disassembler=disassembler,
                                   thread_model=thread_model, protection_model=protection_model,
-                                  export_model=export_model, execute_side_effects=False)
+                                  export_model=export_model, execute_side_effects=False,
+                                  custom_commands=custom_commands, syntaxcheck=syntaxcheck)
     resolved = preflight["symbols"]
     for address in resolved.values():
         view.reserve(address, MAX_BLOCK_BYTES)
@@ -2159,7 +2307,8 @@ def dry_link_program(program: dict, memory, symbols: Mapping[str, int] | None = 
                           owned_executable_data_ranges=owned_executable_data_ranges,
                           disassembler=disassembler,
                           thread_model=thread_model, protection_model=protection_model,
-                          export_model=export_model, execute_side_effects=False)
+                          export_model=export_model, execute_side_effects=False,
+                          custom_commands=custom_commands, syntaxcheck=syntaxcheck)
     view._overlay = [(block["address"], bytes.fromhex(block["bytes"])) for block in enable["blocks"]]
     disable = link_program(program, view, enable["symbols"], allocations, phase="disable", assembler=assembler,
                            owned_data_ranges=owned_data_ranges,
@@ -2167,7 +2316,8 @@ def dry_link_program(program: dict, memory, symbols: Mapping[str, int] | None = 
                            disassembler=disassembler,
                            thread_model=thread_model, protection_model=protection_model,
                            export_model=export_model, execute_side_effects=False,
-                           captured_placeholders=enable["captured_placeholders"])
+                           captured_placeholders=enable["captured_placeholders"],
+                           custom_commands=custom_commands, syntaxcheck=syntaxcheck)
     expected = sorted((block["address"], block["original"]) for block in enable["blocks"] if not block["is_allocation"])
     restored = sorted((block["address"], block["bytes"]) for block in disable["blocks"] if not block["is_allocation"])
     if expected != restored:
@@ -2178,7 +2328,8 @@ def dry_link_program(program: dict, memory, symbols: Mapping[str, int] | None = 
             "diagnostics": ["Allocations use synthetic private addresses; successful branch/layout checking does not prove actual target placement, live scan outcomes or game compatibility."]}
 
 
-def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None, allocations: Mapping[str, dict] | None = None, *, phase: str = "enable", assembler=None, owned_data_ranges=None, owned_executable_data_ranges=None, scan_results=None, disassembler=None, thread_model=None, protection_model=None, export_model=None, execute_side_effects: bool = False, captured_placeholders=None, _allow_external_literals=False) -> dict:
+def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None, allocations: Mapping[str, dict] | None = None, *, phase: str = "enable", assembler=None, owned_data_ranges=None, owned_executable_data_ranges=None, scan_results=None, disassembler=None, thread_model=None, protection_model=None, export_model=None, execute_side_effects: bool = False, captured_placeholders=None, custom_commands: Mapping[str, Callable] | None = None,
+                    syntaxcheck: bool = False, _allow_external_literals=False) -> dict:
     """Resolve at final remote addresses, without mutation.
 
     owned_data_ranges is controller-only provenance for live, owned RW memory;
@@ -2194,7 +2345,8 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
     preflight = preflight_program(program, memory, symbols, phase=phase, scan_results=scan_results, disassembler=disassembler,
                                   thread_model=thread_model, protection_model=protection_model,
                                   export_model=export_model, execute_side_effects=execute_side_effects,
-                                  captured_placeholders=captured_placeholders)
+                                  captured_placeholders=captured_placeholders,
+                                  custom_commands=custom_commands, syntaxcheck=syntaxcheck)
     resolved = preflight["symbols"]
     # WP-57: bare s<N> substitution inputs.  The enable phase gets its
     # captures from the scans re-run by the preflight above; the disable

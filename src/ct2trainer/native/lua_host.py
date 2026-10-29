@@ -210,22 +210,118 @@ local function call(name, ...)
   checkpoint()
   return broker(name, ...)
 end
-local function proxy(kind, id)
+-- RT-5 item C2: record sub-tables.  CE's Child[i] / Offset[i] /
+-- OffsetText[i] are 0-based arrays (TMemoryRecordList / offsets[index]);
+-- an out-of-range read answers nil (the corpus guards with ~= nil), writes
+-- are refused by the engine contract.  ``proxy`` is forward-declared:
+-- the Child sub-table hands out record proxies that are defined below,
+-- and Lua closures capture the local in scope at definition time.
+local proxy
+local function record_children(id)
   return setmetatable({}, {
+    __index=function(_, index)
+      if type(index)~='number' or index<0 or index%1~=0 then return nil end
+      local child=call('record.child',id,index)
+      return child and proxy('record',child) or nil
+    end,
+    __newindex=function() error('MemoryRecord Child is read-only',2) end,
+    __metatable='CT2Trainer MemoryRecord children'
+  })
+end
+local function record_offsets(id, getname, setname)
+  return setmetatable({}, {
+    __index=function(_, index)
+      if type(index)~='number' or index<0 or index%1~=0 then return nil end
+      return call(getname,id,index)
+    end,
+    __newindex=function(_, index, value)
+      if type(index)~='number' or index<0 or index%1~=0 then
+        error('MemoryRecord offset index must be an integer',2)
+      end
+      return call(setname,id,index,value)
+    end,
+    __metatable='CT2Trainer MemoryRecord offsets'
+  })
+end
+local function record_dotted(id, prefix)
+  return setmetatable({}, {
+    __index=function(_, key) return call('record.get',id,prefix..'.'..key) end,
+    __newindex=function(_, key, value) return call('record.set',id,prefix..'.'..key,value) end,
+    __metatable='CT2Trainer MemoryRecord display field'
+  })
+end
+proxy = function(kind, id)
+  local object={}
+  -- RT-5 item C2: raw ID marker for the CE global-form functions
+  -- (memoryrecord_getID, memoryrecord_delete,
+  -- addresslist_getMemoryRecordByID): a proxy table crossing the broker
+  -- boundary degrades to its raw fields, so the marker (not the
+  -- metatable) is the recovery path.  It must be assigned before the
+  -- metatable is attached; afterwards every store routes through
+  -- record.set and the marker would be refused as a mutation.
+  object._ct2id=id
+  return setmetatable(object, {
     __index=function(_, key)
       if key=='destroy' then return function() return call('destroy',kind,id) end end
-      if kind=='record' then return call('record.get',id,key) end
+      if kind=='record' then
+        if key=='ID' then return id end
+        if key=='Parent' then
+          local parent=call('record.get',id,'Parent')
+          return parent and proxy('record',parent) or nil
+        end
+        if key=='Child' then return record_children(id) end
+        if key=='Offset' then return record_offsets(id,'record.offsetGet','record.offsetSet') end
+        if key=='OffsetText' then return record_offsets(id,'record.offsetTextGet','record.offsetTextSet') end
+        if key=='DropDownList' then return record_dotted(id,'DropDownList') end
+        if key=='Aob' then return record_dotted(id,'Aob') end
+        if key=='setDescription' or key=='setAddress' or key=='setType' or key=='setID' then
+          local property=({setDescription='Description',setAddress='Address',setType='Type',setID='ID'})[key]
+          return function(...)
+            return call('record.set',id,property,select(select('#',...),...))
+          end
+        end
+        if key=='delete' or key=='Delete' then
+          return function() return call('record.delete',id) end
+        end
+        if key=='removeFromParent' then
+          return function() return call('record.reparent',id,nil) end
+        end
+        if key=='appendToEntry' or key=='appendToParent' then
+          return function(parent)
+            if type(parent)~='table' then
+              error('appendToEntry requires a parent record',2)
+            end
+            return call('record.reparent',id,parent.ID)
+          end
+        end
+        return call('record.get',id,key)
+      end
       if kind=='addresslist' then
-        if key=='getMemoryRecordByID' or key=='getMemoryRecordByDescription' then
+        if type(key)=='number' and key>=0 and key%1==0 then
+          local identifier=call('addresslist.getMemoryRecord',key)
+          return identifier and proxy('record',identifier) or nil
+        end
+        if key=='SelectedRecord' then return call('addresslist.getSelectedRecord') end
+        if key=='setSelectedRecord' then
+          return function(record)
+            return call('addresslist.setSelectedRecord',rawget(record or {},'_ct2id'))
+          end
+        end
+        if key=='getSelectedRecord' then return function() return call('addresslist.getSelectedRecord') end end
+        if key=='getMemoryRecord' or key=='getMemoryRecordByID' or key=='getMemoryRecordByDescription' then
           return function(value)
             local identifier=call('addresslist.'..key,value)
             return identifier and proxy('record',identifier) or nil
           end
         end
+        if key=='createMemoryRecord' then
+          return function() return proxy('record',call('addresslist.createMemoryRecord')) end
+        end
         if key=='Count' then return call('addresslist.Count') end
         if key=='MemoryRecord' then
           return setmetatable({}, {__index=function(_, index)
-            return proxy('record',call('addresslist.at',index))
+            local identifier=call('addresslist.at',index)
+            return identifier and proxy('record',identifier) or nil
           end})
         end
       end
@@ -233,6 +329,25 @@ local function proxy(kind, id)
     end,
     __newindex=function(_, key, value)
       if kind~='record' then error('Read-only compatibility object',2) end
+      if key=='Parent' and type(value)=='table' then
+        -- RT-5 item C2: CE Parent takes a record object; the marker
+        -- (assigned before the metatable exists, so rawget sees it)
+        -- hands the engine the plain record ID.
+        local marker=rawget(value,'_ct2id')
+        if marker~=nil then value=marker end
+      end
+      if key=='OnActivate' or key=='OnDeactivate' then
+        -- RT-5 item C2: the journal stores a function token; the live Lua
+        -- function itself stays in this host's _ct2_dyn_fns registry.
+        local token=nil
+        if value~=nil then
+          if type(value)~='function' then
+            error('Dynamic record callback must be a function',2)
+          end
+          token=_ct2_register_dyn_fn(value)
+        end
+        return call('record.set',id,key,token)
+      end
       return call('record.set',id,key,value)
     end,
     __metatable='CT2Trainer compatibility object'
@@ -590,13 +705,34 @@ _G.ReadStringLocal=function(...) return call('readStringLocal',...) end
 function createTableFile(...) error('createTableFile is outside this profile',2) end
 function CreateTableFile(...) error('createTableFile is outside this profile',2) end
 -- RT-5 item C: process-info family (bounded single-target model).
--- getCEVersion: ROOT DECISION (documented clean-room deviation) — the
--- tables use it as a CE-version compatibility gate and the product
--- implements the CE 7.5 behavior surface, so the version query reports
--- the CE-equivalent version as the constant string '7.5' instead of the
--- own product version (CE 7.5 itself returns the number 7.5, LuaHandler
--- pushnumber; the string spelling is the pinned decision, tests pin it).
-function getCEVersion() return '7.5' end
+-- getCEVersion: ROOT DECISION (RT-5 item C2 supersession) — the corpus
+-- gates on the number (Borderlands3/Octopath2 'getCEVersion() < 7.2',
+-- DS2/HFW 'CEVersion ~= getCEVersion()') and on the string form
+-- (Resonance/SC 'string.match(getCEVersion(), ...)'; Lua string
+-- functions coerce numbers), so the pinned value is the number 7.5
+-- (CE 7.5 LuaHandler pushnumber parity); the item-C string pin is
+-- superseded and the tests pin the number.
+function getCEVersion() return 7.5 end
+-- RT-5 item C2: the CE global-form functions the corpus calls with the
+-- object argument first (Horizon: memoryrecord_getID / memoryrecord_delete
+-- / addresslist_getMemoryRecordByID).  The raw ID is recovered from the
+-- proxy marker; a non-proxy argument is a named refusal.
+function memoryrecord_getID(rec)
+  local id=rawget(rec,'_ct2id')
+  if id==nil then error('memoryrecord_getID requires a MemoryRecord',2) end
+  return call('record.get',id,'ID')
+end
+function memoryrecord_delete(rec)
+  local id=rawget(rec,'_ct2id')
+  if id==nil then error('memoryrecord_delete requires a MemoryRecord',2) end
+  return call('record.delete',id)
+end
+function addresslist_getMemoryRecordByID(addresslist,id)
+  local list=rawget(addresslist,'_ct2id')
+  if list==nil then error('addresslist_getMemoryRecordByID requires an AddressList',2) end
+  local identifier=call('addresslist.getMemoryRecordByID',id)
+  return identifier and proxy('record',identifier) or nil
+end
 -- getAutoAttachList: CE returns the (singleton) auto-attach list; here
 -- auto-attach has no effect in the single-target model, so the call
 -- returns an inert per-scope stringlist (fresh per host run, reset on
@@ -684,21 +820,40 @@ function writeBytes(address,...)
   return call('writeBytes',address,values)
 end
 function getAddressList() return proxy('addresslist',0) end
--- WP-50 (GC-E8): the built-in AddressList global: a read-only map from the
--- exact record description to that record's proxy.  A script-defined
--- AddressList table shadows the index in its own scope (ordinary Lua
--- assignment); element reads resolve through the description lookup and
--- element writes are refused by the index itself (the record proxy's
--- ``address`` setter carries the provider contract instead).
-local function addresslist_entry(name)
-  local identifier=call('addresslist.getMemoryRecordByDescription',name)
-  if identifier==nil then error('AddressList entry not found: '..tostring(name),2) end
-  return proxy('record',identifier)
-end
+-- The built-in AddressList global: a read-only map from a record
+-- description (case-insensitive, CE getRecordWithDescription semantics) or
+-- a 0-based addresslist index to that record's proxy; an absent record
+-- answers nil (CE getMemoryRecord semantics), never an error.  A
+-- script-defined AddressList table shadows the index in its own scope
+-- (ordinary Lua assignment); element writes are refused by the index
+-- itself (the record proxy's ``address`` setter carries the provider
+-- contract instead).
 AddressList=setmetatable({},{
-  __index=function(_,name)
-    if type(name)~='string' then error('AddressList keys are record descriptions',2) end
-    return addresslist_entry(name)
+  __index=function(_, name)
+    if name=='createMemoryRecord' then
+      return function() return proxy('record',call('addresslist.createMemoryRecord')) end
+    end
+    if name=='Count' then return call('addresslist.Count') end
+    if name=='MemoryRecord' then
+      return setmetatable({}, {__index=function(_, index)
+        local identifier=call('addresslist.getMemoryRecord',index)
+        return identifier and proxy('record',identifier) or nil
+      end})
+    end
+    if name=='SelectedRecord' then return nil end
+    if name=='getSelectedRecord' then return function() return nil end end
+    if name=='setSelectedRecord' then return function() end end
+    if name=='getMemoryRecord' or name=='getMemoryRecordByID' or name=='getMemoryRecordByDescription' then
+      return function(value)
+        local identifier=call('addresslist.'..name,value)
+        return identifier and proxy('record',identifier) or nil
+      end
+    end
+    if type(name)~='string' and not (type(name)=='number' and name>=0 and name%1==0) then
+      error('AddressList keys are record descriptions or indexes',2)
+    end
+    local identifier=call('addresslist.getMemoryRecord',name)
+    return identifier and proxy('record',identifier) or nil
   end,
   __newindex=function() error('AddressList is a read-only index',2) end,
   __metatable='CT2Trainer AddressList index'
@@ -891,6 +1046,68 @@ local function tick(milliseconds)
     end
   end
 end
+-- RT-5 item C2: per-host dynamic function registry.  The Python engine
+-- (TrainerEngine) stores opaque 'ct2fn:<n>' tokens in dynamic-record
+-- OnActivate/OnDeactivate slots and in the table-scope custom AA directive
+-- registry, and invokes them by running _ct2_fire_dyn_fn / _ct2_aa_command
+-- inside this host.  The live Lua closures stay in this table; the
+-- rebind in cancel_resources drops them all when the scope cancels, so a
+-- stale token from another scope or a previous attach resolves to a named
+-- miss instead of a dead closure.
+local _ct2_dyn_fns, _ct2_dyn_next = {}, 0
+function _ct2_register_dyn_fn(fn)
+  if type(fn) ~= 'function' then
+    error('Dynamic record callback must be a function', 2)
+  end
+  _ct2_dyn_next = _ct2_dyn_next + 1
+  local token = 'ct2fn:' .. tostring(_ct2_dyn_next)
+  _ct2_dyn_fns[token] = fn
+  return token
+end
+function _ct2_aa_command(token, args)
+  local fn = _ct2_dyn_fns[token]
+  if fn == nil then
+    error('Dynamic function registry entry is missing: ' .. tostring(token), 2)
+  end
+  local ok, result = rawpcall(fn, args, syntaxcheck)
+  if not ok then
+    error('AA command callback failed: ' .. tostring(result), 2)
+  end
+  if result ~= nil and type(result) ~= 'string' then
+    error('AA command callback must return a string or nil', 2)
+  end
+  return result
+end
+function _ct2_fire_dyn_fn(token, id, ante, current)
+  local fn = _ct2_dyn_fns[token]
+  if fn == nil then
+    return 'error: Dynamic function registry entry is missing: ' .. tostring(token)
+  end
+  local ok, result = rawpcall(fn, proxy('record', id), ante, current)
+  if not ok then
+    return 'error: ' .. tostring(result)
+  end
+  return 'ok'
+end
+function registerAutoAssemblerCommand(command, callback)
+  if type(command) ~= 'string' or command == '' then
+    error('AA command registration has invalid arguments.', 2)
+  end
+  local fn = callback
+  if type(fn) == 'string' then
+    fn = _G[fn]
+  end
+  if type(fn) ~= 'function' then
+    error('AA command registration has invalid arguments.', 2)
+  end
+  return call('registerAutoAssemblerCommand', command, _ct2_register_dyn_fn(fn))
+end
+function unregisterAutoAssemblerCommand(command)
+  if type(command) ~= 'string' or command == '' then
+    error('AA command unregistration has invalid arguments.', 2)
+  end
+  return call('unregisterAutoAssemblerCommand', command)
+end
 local function cancel_resources()
   for _,data in pairs(timers) do data.dead=true end
   timers={}
@@ -900,6 +1117,7 @@ local function cancel_resources()
   scan_count=0; current_record_id=nil; memrec=nil
   for _,data in pairs(stringlists) do data.items={} end
   stringlist_count=0; stringlists={}; _auto_attach_list=nil
+  _ct2_dyn_fns = {}; _ct2_dyn_next = 0
 end
 local function cancel()
   -- This may be entered recursively from a Python broker while a user chunk
@@ -994,6 +1212,14 @@ class _ReadOnlyBroker:
         # disassembly) — pure reads, safe under syntax checking.
         'getProcessIDFromProcessName', 'getProcessList', 'targetIs64Bit',
         'enumModules', 'disassemble',
+        # RT-5 item C2: dynamic-record lookups (journal reads only).  The
+        # journal-mutation names (createMemoryRecord, record.delete,
+        # record.reparent, record.offsetSet/offsetTextSet) are refused below
+        # with the MemoryRecord mutation reason instead.
+        'addresslist.getMemoryRecord', 'record.isDynamic', 'record.child',
+        'record.offsetGet', 'record.offsetTextGet',
+        # RT-5 item C2: selection queries are inert (nil / no-op) reads.
+        'addresslist.getSelectedRecord', 'addresslist.setSelectedRecord',
     }
 
     def __init__(self, parent: 'LuaHost', *, allow_assembler: bool = True):
@@ -1007,6 +1233,13 @@ class _ReadOnlyBroker:
             raise LuaHostError('Lua syntax checking was cancelled or became stale')
         if name in {'print', 'showMessage'}:
             return None
+        if name in {'addresslist.createMemoryRecord', 'record.set', 'record.delete',
+                    'record.reparent', 'record.offsetSet', 'record.offsetTextSet',
+                    'destroy'}:
+            # RT-5 item C2: dynamic-record journal mutations never run under
+            # syntax checking; the exact named refusal is the MemoryRecord
+            # mutation contract shared with the live record.set path.
+            raise LuaHostError('Syntax checking cannot mutate MemoryRecords')
         dry_assembler = (self.allow_assembler and name == 'autoAssemble' and
                          getattr(self.parent.broker, 'syntaxcheck_assembler', False) is True)
         if name not in self._READS and not dry_assembler:
@@ -1188,13 +1421,25 @@ class LuaHost:
         if not self._running:
             raise LuaHostError('Lua calls require an active execution slice')
         self._checkpoint()
-        if self._installing_helpers and name in {'registerSymbol', 'unregisterSymbol'}:
+        if self._installing_helpers and name in {'registerSymbol', 'unregisterSymbol',
+                                                 'registerAutoAssemblerCommand',
+                                                 'unregisterAutoAssemblerCommand',
+                                                 'record.set', 'record.delete',
+                                                 'record.reparent', 'record.offsetSet',
+                                                 'record.offsetTextSet',
+                                                 'addresslist.createMemoryRecord',
+                                                 'addresslist.setSelectedRecord'}:
             # WP-54 (a'): scheduler-free table-source replay — the table's
             # symbol registrations are inert in a record scope.  Ownership
             # belongs to the table scope (established by the table-scope
             # bootstrap before any record activation); replaying the
             # registration here would collide with it, so the call is a
             # silent no-op and the table globals still establish.
+            # RT-5 item C2: the same no-op covers the table source's
+            # journal/session mutations (record.set, createMemoryRecord,
+            # AA directive registration) - the live table-scope bootstrap
+            # already established the session state before any record
+            # activation, so the replay re-runs none of it.
             return None
         if (self._installing_helpers and name not in _ReadOnlyBroker._READS
                 and name not in {'print', 'showMessage'}):
@@ -1350,6 +1595,23 @@ class LuaHost:
             return self._disposable_check(lambda checker: checker.execute(source, record_id=record_id))
         checking = syntaxcheck or self._check_only
         return self._slice(self._run, source, checking, record_id, syntaxcheck=checking)
+
+    def execute_live_check(self, source: str, *, record_id: int | None = None) -> Any:
+        """One chunk on this host's live state with the check flag raised.
+
+        RT-5 item C2: the table-scope AA-command registry keeps its Lua
+        callbacks in this host's state, so the compile check pass must run
+        them here (a disposable check state cannot see them); the ``syntaxcheck``
+        bootstrap global is true for the run, so corpus callbacks guard their
+        side effects with ``if syntaxcheck then return end``.  Every broker
+        call from the chunk carries ``syntaxcheck=True``, so the downstream
+        contract still refuses every mutation exactly as under a disposable
+        check.
+        """
+        if not isinstance(source, str) or len(source.encode('utf-8')) > 1024 * 1024:
+            raise LuaHostError('Lua source exceeds the 1 MiB bound')
+        record_id = self._record_context(record_id)
+        return self._slice(self._run, source, True, record_id, syntaxcheck=True)
 
     def _record_context(self, record_id: int | None) -> int | None:
         if record_id is not None and (type(record_id) is not int or not 0 <= record_id <= 0x7FFFFFFFFFFFFFFF):
@@ -1893,23 +2155,110 @@ class EngineLuaBroker:
         if name == 'addresslist.Count':
             return len(e.entries)
         if name == 'addresslist.at':
+            # RT-5 item C2 (CE MemoryRecord[i] contract): an out-of-bounds
+            # index answers nil; the flat 0-based position walks the
+            # journal-prefixed entries order.
             index=arguments[0]
-            if type(index) is not int or not 0<=index<len(e.entries):
-                raise LuaHostError('MemoryRecord index is out of bounds')
-            return list(e.entries)[index]
+            ids=list(e.entries)
+            if type(index) is not int or isinstance(index, bool) or not 0<=index<len(ids):
+                return None
+            return ids[index]
         if name.startswith('addresslist.getMemoryRecordBy'):
             value=arguments[0]
-            matches=[i for i,entry in e.entries.items() if (i==value if name.endswith('ID') else entry['label']==value)]
+            if name.endswith('ID') and type(value) is str:
+                # CE getMemoryRecordByID coerces numeric strings (tointeger).
+                if re.fullmatch(r'[+-]?\d+', value) is None:
+                    raise LuaHostError('MemoryRecord ID must be an integer')
+                value=int(value)
+            if name.endswith('ID'):
+                matches=[i for i in e.entries if i==value]
+            else:
+                # CE getMemoryRecordByDescription is case-insensitive
+                # (getRecordWithDescription semantics; the same rule the
+                # addresslist.getMemoryRecord branch applies).
+                if type(value) is not str:
+                    return None
+                lowered=value.casefold()
+                matches=[i for i,entry in e.entries.items()
+                         if entry['label'].casefold()==lowered]
             if not matches:
                 return None
             if len(matches)!=1:
                 raise LuaHostError('MemoryRecord lookup is ambiguous')
             return matches[0]
+        if name == 'addresslist.getMemoryRecord':
+            # RT-5 item C2 (CE getMemoryRecord contract): a number is the
+            # flat 0-based addresslist position, a string the (casefolded)
+            # description; an absent record answers nil, never an error.
+            value=arguments[0]
+            ids=list(e.entries)
+            if type(value) is int and not isinstance(value, bool):
+                if 0 <= value < len(ids):
+                    return ids[value]
+                return None
+            if type(value) is str:
+                lowered=value.casefold()
+                for identifier in ids:
+                    if e.entries[identifier]['label'].casefold() == lowered:
+                        return identifier
+                return None
+            raise LuaHostError('MemoryRecord lookup requires an index or description')
+        if name in {'addresslist.setSelectedRecord', 'addresslist.getSelectedRecord'}:
+            # RT-5 item C2: CE selection state is UI (GoS/Octopath2 shapes);
+            # the clean-room trainer answers an inert no-op / nil.
+            return None
+        if name == 'record.isDynamic':
+            return arguments[0] in e.dynamic_records
+        if name == 'record.child':
+            return e.dynamic_record_child(arguments[0], arguments[1])
+        if name == 'record.offsetGet':
+            return e.dynamic_offset_get(arguments[0], arguments[1], text=False)
+        if name == 'record.offsetTextGet':
+            return e.dynamic_offset_get(arguments[0], arguments[1], text=True)
+        if name in {'record.delete', 'record.reparent'}:
+            if syntaxcheck:
+                raise LuaHostError('Syntax checking cannot mutate MemoryRecords')
+            if arguments[0] not in e.dynamic_records:
+                raise LuaHostError('MemoryRecord delete/reparent is only supported for runtime records')
+            if name == 'record.delete':
+                return e.dynamic_record_delete(arguments[0])
+            return e.dynamic_record_reparent(arguments[0], arguments[1])
+        if name == 'destroy':
+            # RT-5 item C2: the shared record proxy's destroy() (CE
+            # luaclass destroy method, corpus Horizon 'Child[0].destroy()'):
+            # for a record it is the record deletion itself.
+            kind, identifier = arguments
+            if kind != 'record':
+                raise LuaHostError('Unsupported destroy target: ' + str(kind))
+            if syntaxcheck:
+                raise LuaHostError('Syntax checking cannot mutate MemoryRecords')
+            if identifier not in e.dynamic_records:
+                raise LuaHostError('MemoryRecord delete/reparent is only supported for runtime records')
+            return e.dynamic_record_delete(identifier)
+        if name in {'record.offsetSet', 'record.offsetTextSet'}:
+            if syntaxcheck:
+                raise LuaHostError('Syntax checking cannot mutate MemoryRecords')
+            if arguments[0] not in e.dynamic_records:
+                raise LuaHostError('MemoryRecord offset mutation is only supported for runtime records')
+            return e.dynamic_offset_set(arguments[0], arguments[1], arguments[2],
+                                        text=name == 'record.offsetTextSet')
+        if name == 'addresslist.createMemoryRecord':
+            if syntaxcheck:
+                raise LuaHostError('Syntax checking cannot mutate MemoryRecords')
+            return e.dynamic_record_create()
+        if name in {'registerAutoAssemblerCommand', 'unregisterAutoAssemblerCommand'}:
+            raise LuaHostError('AA command registration is table-scope only')
         if name == 'record.get':
             identifier,key=arguments
-            entry=e.entries[identifier]
+            entry=e.entries.get(identifier)
+            if entry is None:
+                raise LuaHostError('MemoryRecord is not live: ' + str(identifier))
             if key in {'ID','id'}:
                 return identifier
+            if key in {'isDynamic','isdynamic'}:
+                # RT-5 item C2: CE MemoryRecord:isDynamic() - true for the
+                # runtime journal, false for plan records.
+                return identifier in e.dynamic_records
             if key in {'Description','description'}:
                 return entry['label']
             if key in {'Address','address'}:
@@ -1920,6 +2269,8 @@ class EngineLuaBroker:
                     return dynamic
                 return entry.get('source_address',entry.get('address',''))
             if key=='Type':
+                if entry.get('dynamic'):
+                    return entry['variable_type']
                 if entry['kind']=='script': return 11
                 values={'Byte':0,'2 Bytes':1,'4 Bytes':2,'8 Bytes':3,'Float':4,'Double':5,
                         'String':6,'Array of byte':8,'Binary':9,'Custom':13}
@@ -1927,6 +2278,8 @@ class EngineLuaBroker:
                 if kind not in values: raise LuaHostError('MemoryRecord has no admitted value-type enum')
                 return values[kind]
             if key=='Active':
+                if entry.get('dynamic'):
+                    return bool(entry.get('active',False))
                 self._confirm_patches()
                 if identifier in e.frozen:
                     addr,raw=e.frozen[identifier]
@@ -1935,13 +2288,78 @@ class EngineLuaBroker:
                     if not matched:
                         raise LuaHostError('Frozen MemoryRecord value changed before confirmation')
                 return identifier in e.applied or identifier in e.frozen
-            if key=='Value': return e.read_value(identifier)
+            if key=='Value':
+                if entry.get('dynamic'):
+                    return e.dynamic_value_read(identifier)
+                return e.read_value(identifier)
+            if key=='Script':
+                # RT-5 item C2: journal entries keep the runtime script
+                # text; plan records answer their compiled AA source
+                # (DeathStrandingDC reads it back on toggle).
+                if entry.get('dynamic'):
+                    return entry.get('script')
+                program=entry.get('program')
+                if isinstance(program,dict) and isinstance(program.get('source'),str):
+                    return program['source']
+                return None
             if key=='Count': return sum(x.get('parent_id')==identifier for x in e.entries.values())
+            if key in {'Parent','parent'}:
+                # RT-5 item C2: CE's MemoryRecord.Parent is the parent record
+                # (nil for top-level entries); the proxy answers the ID and
+                # rewraps it into a proxy on the Lua side.
+                return entry.get('parent_id')
+            if key in {'Index','index'}:
+                # RT-5 item C2: 0-based position among the record's
+                # same-parent siblings in entries order.
+                parent=entry.get('parent_id'); index=0
+                for other in e.entries.values():
+                    if other is entry: break
+                    if other.get('parent_id')==parent: index+=1
+                return index
+            if key in {'OffsetCount','offsetcount'}:
+                if entry.get('dynamic'):
+                    return entry.get('offset_count',0)
+                return len(entry.get('pointer_offsets') or [])
+            if key in {'OnActivate','onactivate','OnDeactivate','ondeactivate'}:
+                # RT-5 item C2: callback functions live in the registering
+                # host's function registry (the engine fires them); reads
+                # answer nil for both journal and plan records because a
+                # Lua function never crosses the broker boundary.
+                return None
+            from .engine import _DYNAMIC_INERT_KEYS
+            if key.casefold() in _DYNAMIC_INERT_KEYS:
+                # RT-5 item C2: display metadata (DropDownList text, Aob
+                # size, the flat drop-down flags, Color) - journal entries
+                # answer their first-class fields / inert map, plan records
+                # the session-stored value (record_display_set) else the
+                # compiled plan default.
+                return e.record_display_get(identifier, key)
             raise LuaHostError('Unsupported MemoryRecord property: '+str(key))
         if name == 'record.set':
+            if len(arguments) != 3:
+                raise LuaHostError('MemoryRecord set requires an identifier, key and value')
             identifier,key,value=arguments
+            if type(identifier) is not int or isinstance(identifier, bool):
+                raise LuaHostError('MemoryRecord set requires a record ID')
             if syntaxcheck:
                 raise LuaHostError('Syntax checking cannot mutate MemoryRecords')
+            if identifier in e.dynamic_records:
+                return e.dynamic_record_set(identifier,key,value,scope=scope)
+            if e.entries.get(identifier) is None:
+                raise LuaHostError('MemoryRecord is not live: ' + str(identifier))
+            from .engine import _PLAN_DISPLAY_KEYS
+            normalized=key.casefold() if type(key) is str else ''
+            if normalized in {'onactivate','ondeactivate'}:
+                # RT-5 item C2: plan-record OnActivate/OnDeactivate (CE
+                # MemoryRecord callback properties) store the function
+                # token; the engine fires it on the record's activation.
+                return e.record_callback_set(identifier,
+                                              'on_activate' if normalized=='onactivate' else 'on_deactivate',
+                                              value, scope=scope)
+            if normalized in _PLAN_DISPLAY_KEYS:
+                # RT-5 item C2: plan-record display mutations (CE UI
+                # metadata) are session-stored; the plan is untouched.
+                return e.record_display_set(identifier,key,value)
             if key=='Active' and type(value) is bool:
                 entry=e.entries[identifier]
                 return e.toggle(identifier,value) if entry['kind']=='script' else e.set_freeze(identifier,value)
@@ -2406,14 +2824,22 @@ class TableLuaBroker:
     """
 
     def __init__(self, engine: Any):
+        from .aa_program import AA_BUILTIN_DIRECTIVES
         from .lua_bootstrap import (MAX_TABLE_LUA_REASONS,
                                     TABLE_LUA_READ_ONLY_NAMES,
                                     table_lua_refusal_reason)
+        self.engine = engine
         self.inner = EngineLuaBroker(engine)
         self._reads = TABLE_LUA_READ_ONLY_NAMES
         self._refusal_reason = table_lua_refusal_reason
         self._max_reasons = MAX_TABLE_LUA_REASONS
         self.reasons: list[str] = []
+        # RT-5 item C2: per-table custom AA directive registry
+        # (uppercase directive name -> 'ct2fn:<n>' token).  Re-registration
+        # replaces the binding; the engine clears the registry when the
+        # table scope retires.
+        self.aa_commands: dict[str, str] = {}
+        self._aa_builtin_directives = frozenset(AA_BUILTIN_DIRECTIVES)
         self.owner = TableSymbolOwner(engine, self)
 
     @property
@@ -2423,12 +2849,78 @@ class TableLuaBroker:
     def invalidate(self) -> None:
         self.inner.invalidate()
 
+    def _refuse(self, reason: str) -> None:
+        """Record one named refusal (bounded) and answer nil fail-soft."""
+        if len(self.reasons) < self._max_reasons:
+            self.reasons.append(reason)
+        return None
+
+    def _journal_call(self, name: str, arguments: tuple, syntaxcheck: bool) -> Any:
+        """One fail-soft runtime-journal call through the wrapped dispatch.
+
+        The engine surface raises NativeRuntimeError with the exact named
+        refusal; the wrapper converts it to the WP-41 fail-soft answer
+        (recorded reason + nil) so one refused record never aborts the
+        table bootstrap.
+        """
+        from .engine import NativeRuntimeError
+        try:
+            return self.inner.call(name, arguments,
+                                   generation=self.inner.generation,
+                                   syntaxcheck=syntaxcheck, scope=None)
+        except (LuaHostError, NativeRuntimeError) as exc:
+            return self._refuse(str(exc))
+
+    def _aa_command_register(self, name: str, arguments: tuple) -> None:
+        """RT-5 item C2: table-scope custom AA directive registration.
+
+        The bootstrap globals validate and tokenize; the broker only ever
+        sees (directive, 'ct2fn:<n>' token).  Built-in directive names are
+        refused (the built-in keeps the line); every refusal is recorded
+        fail-soft and answered with nil.
+        """
+        if name == 'registerAutoAssemblerCommand':
+            if (len(arguments) != 2
+                    or type(arguments[0]) is not str or not arguments[0]
+                    or type(arguments[1]) is not str
+                    or not arguments[1].startswith('ct2fn:')
+                    or not arguments[1][6:].isdigit()):
+                raise LuaHostError('AA command registration has invalid arguments.')
+            directive = arguments[0].casefold()
+            if directive in self._aa_builtin_directives:
+                return self._refuse('AA directive name reserved: ' + arguments[0].upper())
+            self.aa_commands[arguments[0].upper()] = arguments[1]
+            return None
+        if (len(arguments) != 1 or type(arguments[0]) is not str or not arguments[0]):
+            raise LuaHostError('AA command unregistration has invalid arguments.')
+        self.aa_commands.pop(arguments[0].upper(), None)
+        return None
+
     def call(self, name: str, arguments: tuple, *, generation: int,
              syntaxcheck: bool, scope: int | None = None) -> Any:
         if name in {'registerSymbol', 'unregisterSymbol'}:
             # WP-54 (b): admitted in the table scope; owned by the table
             # scope, fail-soft per the WP-41 contract.
             return self.owner.call(name, arguments, generation=generation)
+        if name in {'registerAutoAssemblerCommand', 'unregisterAutoAssemblerCommand'}:
+            # RT-5 item C2: custom AA directive registration is table-scope
+            # only (the record scope keeps the exact named refusal); the
+            # outcome is fail-soft per the WP-41 contract.
+            return self._aa_command_register(name, arguments)
+        if name == 'record.set':
+            # RT-5 item C2: record sets route to the engine for both
+            # journal IDs (runtime record creation) and plan IDs (callback
+            # registration, display mutations, Active/Value/Address);
+            # syntax checking and every engine-level named refusal answer
+            # nil fail-soft with the exact reason recorded.
+            return self._journal_call(name, arguments, syntaxcheck)
+        if name in {'addresslist.createMemoryRecord', 'record.delete',
+                    'record.reparent', 'record.offsetSet', 'record.offsetTextSet',
+                    'destroy'}:
+            # RT-5 item C2: pure journal mutations, fail-soft per the WP-41
+            # contract (syntax checking refuses every mutation with the
+            # exact named reason).
+            return self._journal_call(name, arguments, syntaxcheck)
         if name in self._reads:
             # Table scope has no owning record; record-proxy address writes
             # are refused by the plan marker contract downstream.

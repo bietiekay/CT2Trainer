@@ -221,6 +221,61 @@ def terminate_live_session(owner_pid: int, owner_created: int | None = None,
 _INTEGER_TYPES = {"Byte": 1, "2 Bytes": 2, "4 Bytes": 4, "8 Bytes": 8}
 _FLOAT_TYPES = {"Float": "f", "Double": "d"}
 _OPS = {"scan", "define", "register", "unregister", "assert", "write"}
+# RT-5 item C2: the in-memory journal of runtime-created MemoryRecords
+# (createMemoryRecord, table-Lua scope) is bounded per session so a table
+# loop cannot grow unbounded host state; the journal is cleared on target
+# exit and close and is never persisted.
+MAX_DYNAMIC_RECORDS = 4096
+# Synthetic dynamic-record IDs start here: above every plan-record ID that
+# the plan validator and the state store admit (state store refuses IDs
+# >= 2**31), so a journal ID can never collide with a plan ID.
+_DYNAMIC_RECORD_ID_BASE = 2 ** 31
+# RT-5 item C2: numeric value types a runtime MemoryRecord can read/write
+# (CE vtByte..vtDouble ordinals) mapped to little-endian struct codes.
+_DYNAMIC_VALUE_CODES = {0: ("B", 1), 1: ("H", 2), 2: ("I", 4),
+                        3: ("Q", 8), 4: ("f", 4), 5: ("d", 8)}
+# RT-5 item C2: display-only record metadata the corpus sets on runtime
+# records (dropdown/Aob display fields).  Stored verbatim in the journal's
+# inert map; they never touch target memory.
+_DYNAMIC_INERT_KEYS = frozenset({
+    "dropdownlist.text", "aob.size", "dropdownreadonly",
+    "dropdowndescriptiononly", "displayasdropdownlistitem", "color",
+})
+# RT-5 item C2: display-mutation keys the corpus sets on plan records (CE
+# UI metadata - no target effect).  The session stores them verbatim in
+# record_display_meta for later reads; the compiled plan is untouched.
+# Journal records carry the same keys as first-class entry fields.
+_PLAN_DISPLAY_KEYS = frozenset({
+    "color", "options", "showashex", "dontsave", "collapsed",
+    "isgroupheader",
+}) | _DYNAMIC_INERT_KEYS
+# RT-5 item C2: function tokens registered into a host's _ct2_dyn_fns table.
+_DYNAMIC_FN_TOKEN_RE = re.compile(r"ct2fn:\d+\Z")
+
+
+def _lua_string_literal(text: str) -> str:
+    """Quote a string as a Lua 5.3 string literal (byte-wise UTF-8 escapes).
+
+    Printable ASCII passes through; everything else becomes a three-digit
+    octal escape per UTF-8 byte, so the literal survives any source encoding
+    the host loader applies.
+    """
+    out = ['"']
+    for byte in text.encode("utf-8"):
+        if byte in (0x22, 0x5C):
+            out.append("\\" + chr(byte))
+        elif byte == 0x0A:
+            out.append("\\n")
+        elif byte == 0x0D:
+            out.append("\\r")
+        elif byte == 0x09:
+            out.append("\\t")
+        elif 0x20 <= byte <= 0x7E:
+            out.append(chr(byte))
+        else:
+            out.append("\\%03o" % byte)
+    out.append('"')
+    return "".join(out)
 
 
 def _canonical(value: Any) -> bytes:
@@ -1446,6 +1501,25 @@ class TrainerEngine:
             # into its symbol-null target; read fresh by the target's
             # expression-profile children at every activation.
             self.dynamic_addresses: dict[int, int] = {}
+            # RT-5 item C2: engine-owned dynamic addresslist records created
+            # at runtime through the table-Lua createMemoryRecord surface.
+            # Session-scoped: journal entries live in self.entries (so the
+            # generic record surface sees them) but are never persisted -
+            # the synthetic IDs (>= 2**31) are refused by the state store,
+            # and the journal is cleared on target exit and close.
+            self.dynamic_records: dict[int, dict] = {}
+            self._dynamic_next_id = 0
+            # RT-5 item C2: plan-record OnActivate/OnDeactivate function
+            # tokens registered at runtime (CE MemoryRecord.OnActivate):
+            # record ID -> field -> ('ct2fn:<n>' token, scope); scope None
+            # is the table-Lua host, an int the owning record scope
+            # (lua_activations key).  Session-scoped: never part of the
+            # plan; cleared with the runtime journal on target exit/close.
+            self.record_callbacks: dict[int, dict[str, tuple]] = {}
+            # RT-5 item C2: plan-record display mutations (CE UI metadata)
+            # stored verbatim for later record.get reads; the plan is
+            # untouched and the map dies with the session.
+            self.record_display_meta: dict[int, dict[str, Any]] = {}
             self.memory: Any = None
             self.status = "Waiting for " + plan["process_name"]
             self.error = ""
@@ -1741,6 +1815,12 @@ class TrainerEngine:
         if scope is None:
             return
         host, broker = scope
+        # RT-5 item C2: the table-scope custom AA directive registry dies
+        # with the scope (CE registrations are session-scoped; no
+        # cross-table or cross-attach leakage).
+        aa_commands = getattr(broker, "aa_commands", None)
+        if isinstance(aa_commands, dict):
+            aa_commands.clear()
         broker.owner.release()
         broker.invalidate()
         host.cancel()
@@ -2232,6 +2312,9 @@ class TrainerEngine:
                     self.frozen.clear()
                     # WP-50 (GC-E8): no live base survives the target exit.
                     self.dynamic_addresses.clear()
+                    # RT-5 item C2: no runtime journal survives the target exit
+                    # (hook/symbol cleanup above already ran for live records).
+                    self._clear_dynamic_records()
                     self._hotkey_sync()
                     self.status = "Target ended; waiting for " + self.plan["process_name"]
                     return self.status
@@ -2685,6 +2768,11 @@ class TrainerEngine:
         try:
             self._guard()
             self._check_patches()
+            # RT-5 item C2: journal IDs are synthetic session state (>= 2**31,
+            # refused by the state store); they can never be saved wishes.
+            # The journal enable paths pass persist=False, so this filter is
+            # belt-and-braces only.
+            desired = {i for i in desired if i not in self.dynamic_records}
             self.store.save(desired)
             self.desired = set(desired)
             self.debug_log.log("state-save", desired=sorted(desired))
@@ -2806,17 +2894,20 @@ class TrainerEngine:
         """Activation dispatch shared by the sync and async enable paths."""
         if entry.get("activation_sets") is not None:
             self._apply_activation_set(entry, True, persist)
-            return
-        if 'lua_program' in entry:
+        elif 'lua_program' in entry:
             self._enable_lua_program(entry, persist)
-            return
-        if 'global_program' in entry:
+        elif 'global_program' in entry:
             self._enable_global_program(entry,persist)
-            return
-        if 'program' in entry:
+        elif 'program' in entry:
             self._enable_program(entry, persist)
-            return
-        self._enable_byte_patch(entry, persist, one_shot=False)
+        else:
+            self._enable_byte_patch(entry, persist, one_shot=False)
+        # RT-5 item C2: plan-record OnActivate (CE MemoryRecord.OnActivate)
+        # fires once the effect is fully applied.  Journal records fire
+        # their own callbacks from dynamic_record_active; the 'dynamic'
+        # marker excludes them here, so no double fire.
+        if not entry.get("dynamic"):
+            self._fire_plan_record_callback(entry["id"], "on_activate", False, True)
 
     def _owned_symbols(self, identifier: int, registered: set[str]) -> set[str]:
         """RT-4.1 keep-first ownership for one entry's registration.
@@ -2907,9 +2998,11 @@ class TrainerEngine:
                 self._abandon_after_failure(manager, exc)
             raise NativeRuntimeError(str(exc)) from exc
 
-    def _enable_program(self, entry: dict, persist: bool) -> None:
+    def _enable_program(self, entry: dict, persist: bool,
+                        custom_commands: dict | None = None) -> None:
         manager, linked, live = self._install_program(entry['program'], entry['id'],
-                                                      api_exports=entry.get("api_exports"))
+                                                      api_exports=entry.get("api_exports"),
+                                                      custom_commands=custom_commands)
         self.hooks[entry['id']] = manager
         self.applied[entry['id']] = [_Patch(b['address'], bytes.fromhex(b['original']), bytes.fromhex(b['bytes'])) for b in live]
         self.local_symbols[entry['id']] = linked['symbols']
@@ -3276,6 +3369,572 @@ class TrainerEngine:
                                                identifier in self.desired)
             except ActivationPolicyError:
                 continue
+
+    # ------------------------------------------------- RT-5 item C2: runtime
+    # dynamic addresslist records (createMemoryRecord, table-Lua scope).
+    #
+    # Journal entries are FRESH dicts that live in self.entries only, so the
+    # generic record surface (addresslist.Count / .at / record.get) sees
+    # them; they are never part of the compiled plan, never persisted (the
+    # state store refuses the synthetic IDs) and the whole journal is
+    # cleared on target exit and close.  Script records run through the
+    # ordinary AA publication path with persist=False; value and heading
+    # records are display-only journal state (bounded deviation from CE,
+    # which publishes the last UI-edited value on toggle; the clean-room
+    # trainer has no value UI for runtime records).
+
+    def _clear_dynamic_records(self) -> None:
+        """Drop the session journal (target exit, close, re-attach)."""
+        for identifier in list(self.dynamic_records):
+            self.entries.pop(identifier, None)
+        self.dynamic_records.clear()
+        self._dynamic_next_id = 0
+        # RT-5 item C2: the runtime-registered plan-record callbacks and
+        # display mutations die with the session too (their registering
+        # scopes retire with the target).
+        self.record_callbacks.clear()
+        self.record_display_meta.clear()
+
+    def _dynamic_record_kind(self, entry: dict) -> str:
+        """Re-derive the journal kind after a Type/Script/marker change."""
+        if entry["is_group_header"]:
+            return "heading"
+        if entry["variable_type"] == 11:
+            return "script"
+        return "value"
+
+    def dynamic_record_create(self) -> int:
+        """createMemoryRecord: append one vtDword journal entry, return ID."""
+        self._guard()
+        self._check_patches()
+        if len(self.dynamic_records) >= MAX_DYNAMIC_RECORDS:
+            raise NativeRuntimeError("Dynamic record journal is at its bound")
+        self._dynamic_next_id += 1
+        identifier = _DYNAMIC_RECORD_ID_BASE + self._dynamic_next_id
+        entry = {
+            "id": identifier,
+            "label": "",
+            "kind": "value",
+            "selected": True,
+            "supported": True,
+            "parent_id": None,
+            "variable_type": 2,
+            "address": 0,
+            "script": None,
+            "show_as_hex": False,
+            "show_as_signed": False,
+            "dont_save": False,
+            "collapsed": False,
+            "is_group_header": False,
+            "options": "",
+            "offset_count": 0,
+            "offsets": {},
+            "offset_texts": {},
+            "inert": {},
+            "on_activate": None,
+            "on_deactivate": None,
+            "enable": [],
+            "disable": [],
+            "provides": [],
+            "requires": [],
+            "dynamic": True,
+        }
+        self.entries[identifier] = entry
+        self.dynamic_records[identifier] = entry
+        self.debug_log.log("dynamic-record-create", identifier=identifier)
+        return identifier
+
+    def dynamic_record_set(self, identifier: int, key: Any, value: Any, *,
+                           scope: int | None = None) -> Any:
+        """record.set on a journal entry (CE MemoryRecord property contract)."""
+        self._guard()
+        self._check_patches()
+        if identifier not in self.dynamic_records:
+            raise NativeRuntimeError("Dynamic record is not live: " + str(identifier))
+        entry = self.entries[identifier]
+        if type(key) is not str or not key:
+            raise NativeRuntimeError("Unsupported MemoryRecord mutation: " + str(key))
+        normalized = key.casefold()
+        if normalized == "description":
+            if type(value) is not str:
+                raise NativeRuntimeError("Dynamic record Description requires text")
+            entry["label"] = value
+            return None
+        if normalized == "type":
+            if type(value) is not int or isinstance(value, bool) or not 0 <= value <= 15:
+                raise NativeRuntimeError("Dynamic record Type requires an integer 0..15")
+            entry["variable_type"] = value
+            entry["kind"] = self._dynamic_record_kind(entry)
+            return None
+        if normalized == "address":
+            if type(value) is int and not isinstance(value, bool):
+                if value < 0:
+                    raise NativeRuntimeError(
+                        "Dynamic record Address must be an integer in address range.")
+                try:
+                    self.memory._range(value, 1)
+                except ValueError:
+                    raise NativeRuntimeError(
+                        "Dynamic record Address must be an integer in address range.")
+                entry["address"] = value
+            elif type(value) is str and value.strip():
+                # Unresolvable expression text (corpus '+%X' shape) is stored
+                # verbatim and re-resolved at read/write time.
+                from .address_expression import (AddressExpressionError,
+                                                 resolve_expression)
+                try:
+                    resolved = resolve_expression(value, self.memory, self.symbols,
+                                                  process_name=self.plan["process_name"],
+                                                  pointer_size=self.memory.pointer_size)
+                except AddressExpressionError:
+                    entry["address"] = value
+                else:
+                    try:
+                        self.memory._range(resolved, 1)
+                    except ValueError:
+                        raise NativeRuntimeError(
+                            "Dynamic record Address must be an integer in address range.")
+                    entry["address"] = resolved
+            else:
+                raise NativeRuntimeError(
+                    "Dynamic record Address must be an integer in address range.")
+            return None
+        if normalized == "script":
+            if type(value) is not str or not value:
+                raise NativeRuntimeError("Dynamic record Script requires non-empty text")
+            entry["script"] = value
+            entry["variable_type"] = 11
+            entry["kind"] = "script"
+            return None
+        if normalized in {"showashex", "dontsave", "collapsed", "isgroupheader"}:
+            if type(value) is not bool:
+                raise NativeRuntimeError("Dynamic record " + key + " requires a boolean")
+            if normalized == "showashex":
+                entry["show_as_hex"] = value
+            elif normalized == "dontsave":
+                entry["dont_save"] = value
+            elif normalized == "collapsed":
+                entry["collapsed"] = value
+            else:
+                entry["is_group_header"] = value
+                entry["kind"] = self._dynamic_record_kind(entry)
+            return None
+        if normalized == "options":
+            if type(value) is not str:
+                raise NativeRuntimeError("Dynamic record Options requires text")
+            entry["options"] = value
+            return None
+        if normalized == "parent":
+            return self.dynamic_record_reparent(identifier, value)
+        if normalized == "active":
+            if type(value) is not bool:
+                raise NativeRuntimeError("Dynamic record Active requires a boolean")
+            return self.dynamic_record_active(identifier, value, scope=scope)
+        if normalized == "offsetcount":
+            if type(value) is not int or isinstance(value, bool) or not 0 <= value <= 1024:
+                raise NativeRuntimeError(
+                    "Dynamic record OffsetCount requires an integer 0..1024")
+            entry["offset_count"] = value
+            for index in [i for i in entry["offsets"] if i >= value]:
+                del entry["offsets"][index]
+            for index in [i for i in entry["offset_texts"] if i >= value]:
+                del entry["offset_texts"][index]
+            return None
+        if normalized in {"onactivate", "ondeactivate"}:
+            field = "on_activate" if normalized == "onactivate" else "on_deactivate"
+            return self._dynamic_callback_set(entry, field, value, scope)
+        if normalized == "id":
+            raise NativeRuntimeError("Dynamic record ID is engine-owned.")
+        if normalized == "index":
+            raise NativeRuntimeError("Unsupported MemoryRecord mutation: Index")
+        if normalized == "value":
+            return self.dynamic_value_write(identifier, value)
+        if normalized in _DYNAMIC_INERT_KEYS:
+            entry["inert"][normalized] = value
+            return None
+        raise NativeRuntimeError("Unsupported MemoryRecord mutation: " + str(key))
+
+    def dynamic_record_active(self, identifier: int, active: bool, *,
+                              scope: int | None = None) -> None:
+        """Active on/off for a journal entry (the corpus enable switch).
+
+        Script entries run the ordinary AA publication path (persist=False);
+        value/heading entries flip the journal flag only.  The OnActivate /
+        OnDeactivate callbacks fire on the real transition only.
+        """
+        self._guard()
+        self._check_patches()
+        if identifier not in self.dynamic_records:
+            raise NativeRuntimeError("Dynamic record is not live: " + str(identifier))
+        entry = self.entries[identifier]
+        if bool(entry.get("active", False)) == active:
+            return
+        if active:
+            if entry["kind"] == "script":
+                if identifier not in self.applied:
+                    registry = self._aa_command_registry()
+                    bitness = self.memory.pointer_size * 8
+                    from .aa_program import ProgramError, prepare_program
+                    try:
+                        prepare_program(entry["script"], self.plan["process_name"],
+                                        bitness=bitness, custom_commands=registry,
+                                        syntaxcheck=True)
+                        program = prepare_program(entry["script"], self.plan["process_name"],
+                                                  bitness=bitness, custom_commands=registry,
+                                                  syntaxcheck=False)
+                    except ProgramError as exc:
+                        raise NativeRuntimeError(
+                            "Dynamic AA record script refused: " + str(exc)) from exc
+                    entry["program"] = program
+                    try:
+                        self._enable_program(entry, persist=False,
+                                             custom_commands=registry)
+                    except Exception:
+                        entry.pop("program", None)
+                        raise
+            entry["active"] = True
+            self._fire_dynamic_callback(entry, "on_activate", False, True)
+        else:
+            self._fire_dynamic_callback(entry, "on_deactivate", True, False)
+            if identifier in self.applied:
+                self._disable(entry, persist=False, run_lua_disable=False)
+            entry["active"] = False
+
+    def dynamic_record_delete(self, identifier: int) -> None:
+        self._guard()
+        self._check_patches()
+        if identifier not in self.dynamic_records:
+            raise NativeRuntimeError("Dynamic record is not live: " + str(identifier))
+        entry = self.entries[identifier]
+        # RT-5 item C2 (CE delete contract, brief #5): deleting an active
+        # record runs the disable phase first, so the AA restore / symbol
+        # release happens before the journal row drops.  The delete itself
+        # does not fire the OnDeactivate callback (CE delete is not a
+        # deactivate); the journal callback fires from dynamic_record_active
+        # only.
+        if identifier in self.applied or identifier in self.frozen:
+            self._disable(entry, persist=False, run_lua_disable=False)
+        grandparent = entry["parent_id"]
+        for other in self.entries.values():
+            if other.get("parent_id") == identifier:
+                other["parent_id"] = grandparent
+        del self.entries[identifier]
+        del self.dynamic_records[identifier]
+        self.debug_log.log("dynamic-record-delete", identifier=identifier)
+
+    def dynamic_record_reparent(self, identifier: int, new_parent: Any) -> None:
+        self._guard()
+        self._check_patches()
+        if identifier not in self.dynamic_records:
+            raise NativeRuntimeError("Dynamic record is not live: " + str(identifier))
+        if new_parent is None:
+            self.entries[identifier]["parent_id"] = None
+            return
+        if type(new_parent) is not int or isinstance(new_parent, bool):
+            raise NativeRuntimeError("Dynamic record Parent requires a record ID")
+        if new_parent == identifier or new_parent not in self.entries:
+            raise NativeRuntimeError(
+                "Dynamic record Parent is not a live record: " + str(new_parent))
+        # Bounded ancestor walk: the new parent may not descend from the
+        # record being moved (a cycle would break the sibling walk).
+        ancestor = self.entries[new_parent].get("parent_id")
+        seen = {identifier}
+        while ancestor is not None:
+            if ancestor in seen:
+                raise NativeRuntimeError("Dynamic record Parent would create a cycle")
+            seen.add(ancestor)
+            target = self.entries.get(ancestor)
+            if target is None:
+                break
+            ancestor = target.get("parent_id")
+        self.entries[identifier]["parent_id"] = new_parent
+
+    def dynamic_record_child(self, identifier: int, index: Any) -> int | None:
+        """Child[i] (CE array semantics, 0-based) over the live entries.
+
+        An out-of-range or negative index answers nil (CE parity: the
+        corpus guards lookups with 'if rec.Child[i] ~= nil'); the
+        'MemoryRecord index is out of bounds' refusal stays bound to
+        offset writes.
+        """
+        if identifier not in self.entries:
+            raise NativeRuntimeError("MemoryRecord is not live: " + str(identifier))
+        if type(index) is not int or isinstance(index, bool) or index < 0:
+            return None
+        children = [item["id"] for item in self.entries.values()
+                    if item.get("parent_id") == identifier]
+        if index >= len(children):
+            return None
+        return children[index]
+
+    def dynamic_offset_get(self, identifier: int, index: Any, *,
+                           text: bool = False) -> Any:
+        """Offset[i] / OffsetText[i] read: journal dicts for runtime records,
+        the plan pointer_offsets for plan records (out of range answers nil)."""
+        entry = self.entries.get(identifier)
+        if entry is None:
+            raise NativeRuntimeError("MemoryRecord is not live: " + str(identifier))
+        if type(index) is not int or isinstance(index, bool) or index < 0:
+            raise NativeRuntimeError("MemoryRecord index is out of bounds")
+        if identifier in self.dynamic_records:
+            store = entry["offset_texts"] if text else entry["offsets"]
+            return store.get(index)
+        offsets = entry.get("pointer_offsets") or []
+        if index >= len(offsets):
+            return None
+        value = offsets[index]
+        if text and type(value) is int:
+            return format(value, "X")
+        return value
+
+    def dynamic_offset_set(self, identifier: int, index: Any, value: Any, *,
+                           text: bool = False) -> None:
+        self._guard()
+        self._check_patches()
+        if identifier not in self.dynamic_records:
+            raise NativeRuntimeError(
+                "MemoryRecord offset mutation is only supported for runtime records")
+        entry = self.entries[identifier]
+        if type(index) is not int or isinstance(index, bool) or index < 0:
+            raise NativeRuntimeError("MemoryRecord index is out of bounds")
+        if index >= entry["offset_count"]:
+            raise NativeRuntimeError("MemoryRecord index is out of bounds")
+        if text:
+            if type(value) is not str:
+                raise NativeRuntimeError("Dynamic record OffsetText requires text")
+            entry["offset_texts"][index] = value
+        else:
+            if type(value) is not int or isinstance(value, bool):
+                raise NativeRuntimeError("Dynamic record Offset requires an integer")
+            entry["offsets"][index] = value
+        return None
+
+    def _dynamic_value_address(self, entry: dict, size: int) -> int:
+        raw = entry.get("address")
+        if type(raw) is int:
+            try:
+                self.memory._range(raw, size)
+            except ValueError:
+                raise NativeRuntimeError(
+                    "Dynamic record address is outside the target range.")
+            return raw
+        if type(raw) is str and raw.strip():
+            from .address_expression import (AddressExpressionError,
+                                             resolve_expression)
+            try:
+                resolved = resolve_expression(raw, self.memory, self.symbols,
+                                              process_name=self.plan["process_name"],
+                                              pointer_size=self.memory.pointer_size)
+            except AddressExpressionError as exc:
+                raise NativeRuntimeError(
+                    "Dynamic record address does not resolve: " + raw) from exc
+            try:
+                self.memory._range(resolved, size)
+            except ValueError:
+                raise NativeRuntimeError(
+                    "Dynamic record address is outside the target range.")
+            return resolved
+        raise NativeRuntimeError("Dynamic record address does not resolve: " + str(raw))
+
+    def dynamic_value_read(self, identifier: int) -> Any:
+        entry = self.entries.get(identifier)
+        if entry is None or identifier not in self.dynamic_records:
+            raise NativeRuntimeError("MemoryRecord is not live: " + str(identifier))
+        code = _DYNAMIC_VALUE_CODES.get(entry["variable_type"])
+        if code is None:
+            raise NativeRuntimeError(
+                "Dynamic record Value requires a numeric value type 0..5")
+        self._guard()
+        self._check_patches()
+        address = self._dynamic_value_address(entry, code[1])
+        return struct.unpack("<" + code[0], self.memory.read(address, code[1]))[0]
+
+    def dynamic_value_write(self, identifier: int, value: Any) -> None:
+        entry = self.entries.get(identifier)
+        if entry is None or identifier not in self.dynamic_records:
+            raise NativeRuntimeError("MemoryRecord is not live: " + str(identifier))
+        code = _DYNAMIC_VALUE_CODES.get(entry["variable_type"])
+        if code is None:
+            raise NativeRuntimeError(
+                "Dynamic record Value requires a numeric value type 0..5")
+        size = code[1]
+        if code[0] in "BHIQ":
+            if type(value) is not int or not 0 <= value <= (1 << (8 * size)) - 1:
+                raise NativeRuntimeError(
+                    "Dynamic record Value requires an integer in range")
+        else:
+            if isinstance(value, bool) or type(value) not in (int, float):
+                raise NativeRuntimeError(
+                    "Dynamic record Value requires a numeric value")
+        self._guard()
+        self._check_patches()
+        address = self._dynamic_value_address(entry, size)
+        packed = struct.pack("<" + code[0], value)
+        self._write_transaction(
+            [_Patch(address, self.memory.read(address, size), packed)])
+
+    def _dynamic_callback_set(self, entry: dict, field: str, value: Any,
+                              scope: int | None) -> None:
+        if value is None:
+            entry[field] = None
+            return None
+        if type(value) is not str or _DYNAMIC_FN_TOKEN_RE.fullmatch(value) is None:
+            raise NativeRuntimeError(
+                "Dynamic record callback must be a registered function token")
+        if scope is None:
+            if self.table_lua_scope is None:
+                raise NativeRuntimeError("Dynamic record callback scope has retired")
+        elif scope not in self.lua_activations:
+            raise NativeRuntimeError("Dynamic record callback scope has retired")
+        entry[field] = (value, scope)
+        return None
+
+    def _fire_callback(self, callback, identifier: int, field: str, ante: bool,
+                       current: bool) -> None:
+        """One OnActivate/OnDeactivate callback, contained: a dead or
+        cancelled scope logs a stale event and never kills the session."""
+        if callback is None:
+            return
+        token, scope = callback
+        host = None
+        if scope is None:
+            if self.table_lua_scope is not None:
+                host = self.table_lua_scope[0]
+        else:
+            activation = self.lua_activations.get(scope)
+            if activation is not None:
+                host = activation.host
+        if host is None or getattr(host, "cancelled", False):
+            self.debug_log.log("dynamic-callback-stale",
+                               identifier=identifier, key=field)
+            return
+        source = ("return _ct2_fire_dyn_fn(" + _lua_string_literal(token)
+                  + ", " + str(identifier) + ", " + ("true" if ante else "false")
+                  + ", " + ("true" if current else "false") + ")")
+        try:
+            result = host.execute(source)
+        except Exception:
+            self.debug_log.log("dynamic-callback-stale",
+                               identifier=identifier, key=field)
+            return
+        if isinstance(result, str) and result.startswith("error: "):
+            self.debug_log.log("dynamic-callback-error",
+                               identifier=identifier, key=field, error=result)
+
+    def _fire_dynamic_callback(self, entry: dict, field: str, ante: bool,
+                               current: bool) -> None:
+        """Journal-record OnActivate/OnDeactivate (dynamic_record_active)."""
+        self._fire_callback(entry.get(field), entry["id"], field, ante, current)
+
+    def _fire_plan_record_callback(self, identifier: int, field: str,
+                                   ante: bool, current: bool) -> None:
+        """Plan-record OnActivate/OnDeactivate (session-registered tokens)."""
+        self._fire_callback(self.record_callbacks.get(identifier, {}).get(field),
+                            identifier, field, ante, current)
+
+    def _aa_command_registry(self) -> dict[str, Any]:
+        """The table-scope custom AA directive registry as callables, or {}."""
+        scope = self.table_lua_scope
+        if scope is None:
+            return {}
+        host, broker = scope
+        commands = getattr(broker, "aa_commands", None)
+        if not isinstance(commands, dict) or not commands:
+            return {}
+        return {name: self._aa_command_callable(token, host)
+                for name, token in commands.items()}
+
+    @staticmethod
+    def _aa_command_callable(token: str, host: Any) -> Callable:
+        def handler(args: str, syntaxcheck: bool) -> Any:
+            source = ("return _ct2_aa_command(" + _lua_string_literal(token)
+                      + ", " + _lua_string_literal(args) + ")")
+            if syntaxcheck:
+                return host.execute_live_check(source)
+            return host.execute(source)
+        return handler
+
+    def record_callback_set(self, identifier: int, field: str, value: Any,
+                            scope: int | None = None) -> None:
+        """Store a plan-record OnActivate/OnDeactivate function token.
+
+        ``scope`` is None for the table-Lua host, an int for the owning
+        record scope (resolved against ``lua_activations`` at fire time).
+        ``value is None`` clears the callback.
+        """
+        self._guard()
+        if field not in ("on_activate", "on_deactivate"):
+            raise NativeRuntimeError(
+                "Unsupported MemoryRecord callback field: " + str(field))
+        if identifier in self.dynamic_records:
+            raise NativeRuntimeError(
+                "Dynamic record callbacks are set through the record surface")
+        entry = self.entries.get(identifier)
+        if entry is None:
+            raise NativeRuntimeError("MemoryRecord is not live: " + str(identifier))
+        if value is None:
+            self.record_callbacks.get(identifier, {}).pop(field, None)
+            return None
+        if type(value) is not str or _DYNAMIC_FN_TOKEN_RE.fullmatch(value) is None:
+            raise NativeRuntimeError(
+                "MemoryRecord callback must be a registered function token")
+        if scope is None:
+            if self.table_lua_scope is None:
+                raise NativeRuntimeError("MemoryRecord callback scope has retired")
+        elif scope not in self.lua_activations:
+            raise NativeRuntimeError("MemoryRecord callback scope has retired")
+        self.record_callbacks.setdefault(identifier, {})[field] = (value, scope)
+        return None
+
+    def record_display_set(self, identifier: int, key: str, value: Any) -> None:
+        """Store a plan-record display mutation (CE UI metadata) verbatim.
+
+        Plan records are compiled at plan time; these keys (Color, Options,
+        ShowAsHex, DontSave, Collapsed, isGroupHeader and the dotted
+        DropDownList/Aob display fields) mutate no target state, so the
+        session records the value for later reads without touching the plan.
+        """
+        self._guard()
+        normalized = key.casefold() if type(key) is str else ""
+        if normalized not in _PLAN_DISPLAY_KEYS:
+            raise NativeRuntimeError("Unsupported MemoryRecord mutation: " + str(key))
+        if identifier in self.dynamic_records:
+            raise NativeRuntimeError(
+                "Dynamic record display keys are set through the record surface")
+        if identifier not in self.entries:
+            raise NativeRuntimeError("MemoryRecord is not live: " + str(identifier))
+        self.record_display_meta.setdefault(identifier, {})[normalized] = value
+        return None
+
+    def record_display_get(self, identifier: int, key: str) -> Any:
+        """Read back a record display field (session value, else default)."""
+        self._guard()
+        normalized = key.casefold() if type(key) is str else ""
+        if normalized not in _PLAN_DISPLAY_KEYS:
+            raise NativeRuntimeError("Unsupported MemoryRecord property: " + str(key))
+        entry = self.entries.get(identifier)
+        if entry is None:
+            raise NativeRuntimeError("MemoryRecord is not live: " + str(identifier))
+        if identifier in self.dynamic_records:
+            if normalized == "showashex":
+                return entry["show_as_hex"]
+            if normalized == "dontsave":
+                return entry["dont_save"]
+            if normalized == "collapsed":
+                return entry["collapsed"]
+            if normalized == "isgroupheader":
+                return entry["is_group_header"]
+            if normalized == "options":
+                return entry["options"]
+            return entry.get("inert", {}).get(normalized)
+        stored = self.record_display_meta.get(identifier, {}).get(normalized)
+        if stored is not None:
+            return stored
+        if normalized == "showashex":
+            return entry["show_as_hex"]
+        if normalized == "isgroupheader":
+            return entry["kind"] == "heading"
+        return None
 
     def _enable_parent(self, entry: dict, persist: bool = True) -> None:
         """Parent-heading ON through the parent-policy ActivationController.
@@ -3731,7 +4390,7 @@ class TrainerEngine:
         return ordinary, executable
 
     @restoration_entry
-    def _install_program(self, program: dict, owner: int | str, *, publication_guard=None,manager_factory=None,scan_memory=None,staged_restore=(),api_exports=None) -> tuple[Any, dict, list]:
+    def _install_program(self, program: dict, owner: int | str, *, publication_guard=None,manager_factory=None,scan_memory=None,staged_restore=(),api_exports=None,custom_commands=None) -> tuple[Any, dict, list]:
         """Shared owned AA publication path for records and Lua child receipts.
 
         staged_restore carries the concrete (address, size) pairs of staged
@@ -3747,6 +4406,12 @@ class TrainerEngine:
         (a live registered symbol of the same name always wins; an absent
         export fails closed with a named refusal before any target memory
         is touched).  None for non-record installs (Lua child receipts).
+
+        custom_commands is the RT-5 item C2 runtime registry of custom AA
+        directives (uppercase name -> callable) the program was prepared
+        with; it is forwarded so validate_program regenerates the identical
+        plan from the same registry.  None for every plan-record install,
+        which keeps the pre-C2 plan shape byte-identical.
         """
         from .aa_program import preflight_program, link_program
         from .hooks import HookManager, HookUncertain
@@ -3877,7 +4542,8 @@ class TrainerEngine:
                                       thread_model=thread_model,
                                       protection_model=protection_model,
                                       export_model=export_model,
-                                      on_scan=_preflight_scan_log)
+                                      on_scan=_preflight_scan_log,
+                                      custom_commands=custom_commands)
         requests = preflight['allocation_requests']
         sizes = [((r['size'] + 65535) // 65536) * 65536 for r in requests]
         if (self._hook_lifetime_count + len(sizes) > 128
@@ -3913,7 +4579,8 @@ class TrainerEngine:
                                   owned_executable_data_ranges=executable_data, scan_results=preflight['scan_results'],
                                   disassembler=disassembler, thread_model=thread_model,
                                   protection_model=protection_model, export_model=export_model,
-                                  execute_side_effects=False, _allow_external_literals=True)
+                                  execute_side_effects=False, _allow_external_literals=True,
+                                  custom_commands=custom_commands)
             # WP-57: hold the scan-time placeholder captures for the enable
             # lifetime (journal persistence + disable-phase restore input).
             captures_by_entry = getattr(self, 'placeholder_captures', None)
@@ -3947,7 +4614,8 @@ class TrainerEngine:
                                          owned_executable_data_ranges=executable_data, disassembler=disassembler,
                                          thread_model=thread_model, protection_model=protection_model,
                                          export_model=export_model, execute_side_effects=True,
-                                         captured_placeholders=linked['captured_placeholders'])
+                                         captured_placeholders=linked['captured_placeholders'],
+                                         custom_commands=custom_commands)
                     restored=sorted((b['address'],bytes.fromhex(b['bytes'])) for b in inverse['blocks'] if not b['is_allocation'])
                     expected=sorted((b['address'],bytes.fromhex(b['original'])) for b in live)
                     if restored!=expected:
@@ -3965,7 +4633,8 @@ class TrainerEngine:
                                          owned_executable_data_ranges=executable_data, disassembler=disassembler,
                                          thread_model=thread_model, protection_model=protection_model,
                                          export_model=export_model, execute_side_effects=True,
-                                         captured_placeholders=linked['captured_placeholders'])
+                                         captured_placeholders=linked['captured_placeholders'],
+                                         custom_commands=custom_commands)
                     restored=sorted((b['address'],bytes.fromhex(b['bytes'])) for b in inverse['blocks'] if not b['is_allocation'])
                     expected=sorted((b['address'],bytes.fromhex(b['original'])) for b in live)
                     if staged_restore:
@@ -4064,6 +4733,14 @@ class TrainerEngine:
         consumers = self._owner_consumers(identifier)
         if consumers:
             raise NativeRuntimeError('Disable dynamic symbol consumers first: ' + ', '.join(consumers))
+        # RT-5 item C2: plan-record OnDeactivate (CE MemoryRecord.OnDeactivate)
+        # fires once the record is confirmed live-disabling: after the
+        # dependent/consumer gates and before the record Lua scope (if any)
+        # closes, so the callback can still resolve this record's symbols.
+        # Journal records fire their own callbacks from
+        # dynamic_record_active/delete; their IDs are absent from
+        # record_callbacks, so this is a no-op for them.
+        self._fire_plan_record_callback(identifier, "on_deactivate", True, False)
         if identifier in self.lua_activations:
             scope = self.lua_activations[identifier]
             if run_lua_disable:
@@ -5251,6 +5928,10 @@ class TrainerEngine:
             # WP-50 (GC-E8): the live-base registry dies with the session;
             # provider deactivation already retired per-provider targets.
             self.dynamic_addresses.clear()
+            # RT-5 item C2: the runtime journal dies with the session; any
+            # still-active dynamic record was restored above through the
+            # ordinary disable pass (applied map) before this point.
+            self._clear_dynamic_records()
             if self.one_shot is not None:
                 self.one_shot.detach()
                 self._persist_one_shot_markers()
