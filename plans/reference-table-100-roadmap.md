@@ -644,6 +644,60 @@ static plan-level and the APIs are pure runtime host reads.
 `runtime_unverified` remains: the API answers are untested on a live
 target.
 
+Update (2026-10-29, RT-5 item C2): dynamic addresslist records + custom
+AA directives landed (lane `native-rt5-c2`, commit `dbfdcc2`, merged to
+`main` as `dde9f04`): `createMemoryRecord` (AddressList /
+`getAddressList()` / the built-in AddressList index) creates engine-owned
+session journal entries with synthetic IDs >= 2**31 — never persisted
+(the state store refuses them), cleared on target exit and close,
+bounded at 4096; the record surface implements the CE MemoryRecord
+runtime contract the corpus uses (Description/Type/Address incl.
+verbatim expression text re-resolved at read/write, Script, Parent with
+self-parent/cycle refusal and grandchild promotion on delete, Child[i]
+0-based with out-of-range nil, Offset[i]/OffsetText[i] bounded writes,
+Count/Index/OffsetCount/isDynamic, Value read/write vtByte..vtDouble,
+inert display keys); journal OnActivate/OnDeactivate are 'ct2fn:<n>'
+function tokens fired on the real Active transition from the owning
+host (stale-scope and callback-failure containment); plan records gain
+session-stored OnActivate/OnDeactivate (fired from the shared
+enable/disable dispatch) and session-stored display mutations (plan
+untouched); getCEVersion now answers the number 7.5 (CE 7.5 LuaHandler
+pushnumber parity — supersedes the item-C string pin; the corpus gates
+numerically and the string usages coerce through Lua); addresslist
+lookups gain getMemoryRecord (integer = flat 0-based position, string =
+casefolded description per CE getRecordWithDescription semantics, absent
+answers nil), getMemoryRecordByID numeric-string coercion, casefolded
+getMemoryRecordByDescription, Count/MemoryRecord[i] out-of-bounds nil,
+inert selection no-ops; registerAutoAssemblerCommand/
+unregisterAutoAssemblerCommand register table-scope custom AA directives
+(built-in names refused, re-registration replaces, registry dies with
+the table scope, record-scope registration refused named, expansion in
+prepare_program after nested-assembly inlining with {$define}
+substitution, bounded results 1 MiB / 4096 lines, nested reprocessing,
+strict no-op without a registry, validate/preflight/dry_link/link
+revalidated against the same registry, syntaxcheck pass honors the
+corpus 'if syntaxcheck then return end' guard idiom). Tests: new
+`tests/test_native_rt5_dynamic_records.py` +27 (journal happy path +
+plan byte-identity, AddressList/getAddressList forms, Child/Offset
+0-based + Delete/destroy/removeFromParent, value read/write, refusal
+matrices, GoW OnActivate/OnDeactivate shapes + failure containment,
+vtAutoAssembler enable/disable + bad-script refusal, custom directive
+end-to-end + replace/unregister + reserved names + invalid args +
+registry dies with scope, syntaxcheck refusals, _expand_custom_commands
+unit + prepare_program revalidation, journal lifecycle) plus pin updates
+in `test_native_rt5_process_info.py` (getCEVersion number, out-of-scope
+list moved to C2), `test_native_lua.py` (record.set helper-install
+no-op), `test_native_rt5_no_effect_register.py` (getMemoryRecord now
+supported, refusal pin superseded), `test_native_table_lua_bootstrap.py`
+(record.set records the engine named refusal), `test_native_aa_literals.py`
+(prepare_program signature). Full main suite after the merge
+**3,817 OK / 25 expected skips** (baseline 3,790). Catalog remeasure
+(run `blocked-catalog-rt5c2-main`): **zero delta** vs
+`blocked-catalog-rt5c-main` (151/151 load, 117,634 total, 116,581
+supported (60,161 staged), 1,053 blocked, 0 compile errors, 0 newly
+blocked, 0 reason-changed). `runtime_unverified` remains: journal record
+effects and custom-directive expansion are untested on a live target.
+
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
 **Scope and method.** Full clean-room attribution of every blocked row in

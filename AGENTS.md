@@ -40,10 +40,19 @@ integerToUserData, targetIs64Bit, enumModules, disassemble,
 stringlist_add, getCEVersion pinned '7.5' — item-A-style allowlist
 wiring, +23 tests) landed on `main` 2026-10-28 (commit `0167825`,
 full main suite 3,790 OK / 25 expected skips, zero catalog delta
-`blocked-catalog-rt5c-main`). The RT-5 API/construct inventory is
+`blocked-catalog-rt5c-main`). RT-5 item C2 (dynamic addresslist records
++ custom AA directives: createMemoryRecord session journal with
+synthetic IDs >= 2**31 never persisted, CE MemoryRecord runtime surface
+incl. Parent/Child/Offset/Value vtByte..vtDouble, journal + plan-record
+OnActivate/OnDeactivate callbacks, getCEVersion number 7.5 superseding
+the item-C string pin, addresslist getMemoryRecord/Count/
+MemoryRecord[i] lookups, registerAutoAssemblerCommand custom directives
+table-scope with built-in names refused, +27 tests) landed on `main`
+2026-10-29 (merge `dde9f04`, full main suite 3,817 OK / 25 expected
+skips, zero catalog delta `blocked-catalog-rt5c2-main`). The RT-5 API/construct inventory is
 documented in `documentation/rt5-api-inventory.md`. The
-latest original-table catalog (run `blocked-catalog-rt5c-main`,
-2026-10-28, zero delta vs `blocked-catalog-rt5a-main`) has 1,053 blocked
+latest original-table catalog (run `blocked-catalog-rt5c2-main`,
+2026-10-29, zero delta vs `blocked-catalog-rt5c-main`) has 1,053 blocked
 of 117,634 plan entries, 60,161 staged entries and zero load errors
 (previous: 1,351 after RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6,
 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3;

@@ -387,7 +387,7 @@ the goal unless a scope decision is recorded.
 | `findTableFile` | 8 (5) | embedded-file loader; required by table Lua in Octopath2, P5Strikers x2, RiftApart, Cronos (icon), Borderlands3 (sound) |
 | `getProcessIDFromProcessName` | 15 (9) | bounded single-target lookup candidate |
 | `getAutoAttachList` | 7 (7) | auto-attach registration; inert stringlist candidate (single-target model) |
-| `getCEVersion` | 6 (4) | table version gates; decision needed (report CT2Trainer version vs refuse) |
+| `getCEVersion` | 6 (4) | table version gates; hosted (item C string '7.5', superseded by item C2 number 7.5) |
 | `getProcessList` | 6 (2) | used by `onOpenProcess` hook (Resonance, SC2) |
 | `registerCustomTypeAutoAssembler` | 6 (2) | re2 custom types; AP-08.7 gate (O11, 6 rows) |
 | `getSettings` | 6 (2) | CE settings query; bounded no-op candidate |
@@ -395,7 +395,7 @@ the goal unless a scope decision is recorded.
 | `integerToUserData` | 4 (2) | pointer/int conversion helper |
 | `disassemble` | 2 (2) | `iced_disassembler.py` exists internally; bounded exposure candidate |
 | `readStringLocal` | 2 (2) | string read with codepage semantics; string model exists |
-| `registerAutoAssemblerCommand` | 2 (2) | P5Strikers custom AA commands; custom-directive path needed |
+| `registerAutoAssemblerCommand` | 2 (2) | P5Strikers custom AA commands; **custom-directive path landed (item C2)** |
 | `targetIs64Bit` | 2 (2) | architecture query; host knows target arch |
 | `enumModules` | 4 (2) | bounded single-module answer candidate |
 
@@ -432,11 +432,14 @@ UI-only (no-effect): `hide`/`Hide`, `show`/`Show`, `loadFromStream`/
 `getCanvas`, `setBevelOuter`, `addElement`, `addToGlobalStructureList`,
 `removeFromGlobalStructureList`, `getElementByOffset`,
 `getReferencedStrings`, `setOnlyOneResult`, `getOnlyResult`,
-`disableAllWithoutExecute`, `getMemoryRecord`, `Destroy`,
+`disableAllWithoutExecute`, `Destroy`,
 `loadFromFile`/`saveToFile` (stringlist file access refused as outside
 the profile, `lua_host.py:424`).
-Gap: `createMemoryRecord` (2/2) — dynamic record creation, not
-supported by the addresslist proxy.
+**Closed by item C2 (2026-10-29):** `createMemoryRecord` (2/2) —
+dynamic record creation is now supported by the addresslist proxy
+(session journal, synthetic IDs >= 2**31, never persisted);
+`getMemoryRecord` is the supported lookup (integer = flat 0-based
+position, string = casefolded description, absent answers nil).
 
 ### 7.4 Table event callbacks
 
@@ -468,7 +471,9 @@ host provides its own, `lua_host.py:650`), `redirectPrint`
   trine2_32bit 13, YLILWin64 pair 11+11, TheCallistoProtocol 7, …).
 - C. Process-info API family (14 names, section 7.2 game-facing list)
   incl. `getOpenedProcessID` alias, `stringlist_add`,
-  `createMemoryRecord`.
+  `createMemoryRecord`. **Done 2026-10-28 (item C, lane
+  `native-rt5-c`) + 2026-10-29 (item C2, lane `native-rt5-c2`:
+  createMemoryRecord session journal + custom AA directives).**
 - D. Callback dispatch `onOpenProcess`/`onTableLoad` — 2 FearlessRev
   tables, `myGame` chain.
 - E. `messageDialog` decision — 31 tables, 69 calls; currently named
@@ -501,6 +506,13 @@ Ordered after the RT-4 lanes land (RT-4.6 219 rows, then RT-4.2
    getProcessIDFromProcessName, getProcessList, getAutoAttachList,
    getOpenedProcessID, getSettings, integerToUserData, targetIs64Bit,
    enumModules, disassemble, stringlist_add, getCEVersion pinned '7.5').
+    Item C2 (dynamic addresslist records + custom AA directives)
+    **done 2026-10-29** (lane `native-rt5-c2`, commit `dbfdcc2`):
+    createMemoryRecord session journal + CE MemoryRecord runtime
+    surface, journal + plan-record OnActivate/OnDeactivate callbacks,
+    getCEVersion number 7.5 (item-C string pin superseded), addresslist
+    getMemoryRecord lookups, registerAutoAssemblerCommand/
+    unregisterAutoAssemblerCommand table-scope custom directives.
 3. Item D — `onOpenProcess`/`onTableLoad` dispatch for the 2
    FearlessRev tables.
 4. Item B — code-patch plan path for `CheatCodes` (or recorded

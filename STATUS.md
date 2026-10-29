@@ -1,6 +1,6 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-28. **Latest verified release:** 0.18, build
+**Updated:** 2026-10-29. **Latest verified release:** 0.18, build
 `native-20261028T131208Z-55922918` (built from `main` at `70c5a61`,
 2026-10-28): the trainer UI row-details window - right-click /
 long-press on a row now offers "Row details" leading the context menu,
@@ -48,8 +48,19 @@ getProcessList, getAutoAttachList, getOpenedProcessID, getSettings,
 integerToUserData, targetIs64Bit, enumModules, disassemble,
 stringlist_add, getCEVersion pinned '7.5'), item-A-style allowlist
 wiring, +23 tests; zero catalog delta (`blocked-catalog-rt5c-main`), full
-main suite 3,790 OK / 25 expected skips. RT-4 is complete; RT-5 items A
-and C are the first implementation items landed. The 0.17 in-build suite:
+main suite 3,790 OK / 25 expected skips; plus the RT-5 item C2 dynamic
+addresslist records + custom AA directives (2026-10-29, merge
+`dde9f04`): createMemoryRecord session journal (IDs >= 2**31, never
+persisted, cleared on target exit), CE MemoryRecord runtime surface
+(Description/Type/Address/Script/Parent/Child/Offset/OffsetText/Value
+vtByte..vtDouble), journal + plan OnActivate/OnDeactivate callbacks,
+getCEVersion number 7.5 (item-C string pin superseded), addresslist
+getMemoryRecord/Count/MemoryRecord[i] lookups,
+registerAutoAssemblerCommand custom AA directives (table scope, built-in
+names refused), `tests/test_native_rt5_dynamic_records.py` +27; zero
+catalog delta (`blocked-catalog-rt5c2-main`), full main suite 3,817 OK /
+25 expected skips. RT-4 is complete; RT-5 items A, C and C2 are the
+first implementation items landed. The 0.17 in-build suite:
 3,692 OK / 25 expected skips, `ce_inputs: []`.
 Superseded: 0.16.4, build
 `native-20261024T003853Z-a8cf04fc` (built from `main` at `988ff8e`,
