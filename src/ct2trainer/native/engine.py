@@ -1851,6 +1851,58 @@ class TrainerEngine:
         for symbol, address in (self.plan.get("user_symbols") or {}).items():
             self.symbols[symbol.casefold()] = address
 
+    def _dispatch_table_callbacks(self) -> None:
+        """RT-5 item D: fire the table's onOpenProcess/onTableLoad callbacks.
+
+        Runs only on a clean table-Lua bootstrap, on the table-scope host,
+        in the CE sequence: onOpenProcess with the attached target PID,
+        then onTableLoad with the Lua literal false.  Each callback is
+        invoked through one pcall-wrapped chunk with the argument
+        injected as a literal (the PID as an int, false for
+        onTableLoad), so a throwing callback is contained, logged as
+        ``table-callback-error`` and cannot touch ``plan["table_lua"]``
+        (the clean bootstrap stays clean for the dependent record
+        scripts).  A missing or non-function callback is ``absent``: no
+        dispatch and no event.  Fail-soft: a Python-level host failure
+        logs the same ``table-callback-error`` event and the attach
+        continues unblocked.  Bounded deviation vs CE: the
+        once-per-attach bootstrap has no before-load phase, so
+        onTableLoad only ever sees false.
+        """
+        scope = self.table_lua_scope
+        if scope is None or self.memory is None:
+            return
+        pid = self.memory.pid
+        if type(pid) is not int or pid <= 0:
+            return
+        host = scope[0]
+        for name, argument in (('onOpenProcess', str(pid)),
+                               ('onTableLoad', 'false')):
+            chunk = ("local function ct2_dispatch()\n"
+                     "local fn = rawget(_G, '" + name + "')\n"
+                     "if type(fn) ~= 'function' then return 'absent' end\n"
+                     "local ok, err = pcall(fn, " + argument + ")\n"
+                     "if not ok then return 'error: ' .. tostring(err) end\n"
+                     "return 'ok'\n"
+                     "end\n"
+                     "return ct2_dispatch()")
+            try:
+                result = host.execute(chunk)
+            except Exception as exc:  # fail-soft: log, never block the attach
+                self.debug_log.log('table-callback-error', callback=name,
+                                   error=str(exc))
+                continue
+            if type(result) is not str:
+                # The dispatch chunk returns only the three tagged
+                # strings; anything else is not a callback outcome.
+                continue
+            if result == 'ok':
+                self.debug_log.log('table-callback', callback=name)
+            elif result.startswith('error: '):
+                self.debug_log.log('table-callback-error', callback=name,
+                                   error=result[len('error: '):])
+            # 'absent' (missing or not a function) produces no event.
+
     def _run_table_lua_bootstrap(self) -> None:
         """WP-41: execute the table Lua exactly once per confirmed attach.
 
@@ -1863,6 +1915,18 @@ class TrainerEngine:
         table's lifetime, a refused or failed run destroys it and marks
         the activation as not executed.  Fail-soft: the outcome never
         blocks the attach.
+
+        RT-5 item D: after a clean run the table's ``onOpenProcess`` and
+        ``onTableLoad`` callbacks are dispatched on the table-scope host
+        in CE order (onOpenProcess with the attached PID, then
+        onTableLoad with the literal false).  Each callback runs inside
+        one pcall-wrapped chunk; a throwing callback is contained and
+        logged as ``table-callback-error`` without touching this plan
+        metadata, and a missing or non-function callback produces no
+        event.  Bounded deviation vs CE: the once-per-attach bootstrap
+        has no before-load phase, so onTableLoad only ever sees false;
+        the dispatch runs only when the bootstrap itself was clean
+        (refused or failed runs retire the scope and skip it).
         """
         from .lua_bootstrap import (MAX_TABLE_LUA_REASONS,
                                     TABLE_LUA_TOP_LEVEL_FAILURE,
@@ -1915,6 +1979,9 @@ class TrainerEngine:
         if meta['executed']:
             self.debug_log.log('table-lua-executed',
                                record_scripts_inactive=meta['record_scripts_inactive'])
+            # RT-5 item D: the table's onOpenProcess/onTableLoad callbacks
+            # dispatch only after a clean bootstrap (see the method).
+            self._dispatch_table_callbacks()
         else:
             self.debug_log.log('table-lua-refused', error=failure,
                                reasons=reasons,
