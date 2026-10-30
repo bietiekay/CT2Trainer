@@ -2,6 +2,60 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.20 (2026-10-30)
+
+Feature release: the Master Trainer — one long-lived trainer window that
+indexes a folder of `.ct` tables (sub-folders included) and auto-loads
+the matching table when a bound game process appears, handoff into the
+exact standalone trainer UI, and per-table on/off persistence on top of
+the existing engine state store. All waiting-mode logic is a pure,
+UI-free orchestrator; the trainer mode is the unchanged `TrainerWindow`
+on the same Tk root.
+
+- New `ct2trainer.native.master_trainer` package (`CONCEPT.md` +
+  `ROADMAP.md` in-package):
+  - `table_index.py` — incremental folder index: only a directory
+    listing is done per reconcile; an entry is re-read only when its
+    `(size, mtime_ns)` fingerprint changed; a content-identical
+    (sha256-equal) refresh keeps the derived process names without
+    re-parsing; removed paths drop; unreadable tables stay visible with
+    a named error and bind no process. Canonical JSON persistence with a
+    sha256 checksum (foreign schema/root and tampered checksums are
+    refused); the index lives in the state home, never in the table
+    folder.
+  - `process_watch.py` — read-only process snapshots: Toolhelp32 on
+    Windows, `/proc/<pid>/exe` on Linux/SteamOS (Proton-compatible);
+    pure, deterministic matcher (ordinal case-insensitive for ASCII,
+    casefold otherwise).
+  - `orchestrator.py` — waiting → choosing → loading → active state
+    machine: unique-match auto-load, multi-table picker contract,
+    deterministic first-casefold-name / lowest-PID rule, fail-closed
+    loop guard (failed and deferred exact (name, PID) pairs; PID-gone
+    re-arm; explicit retry), open-choice stability.
+  - `master_ui.py` — waiting view (folder, index Treeview, status line,
+    Rescan / Change folder / Retry load), modal table picker with
+    "Not now" deferral, and the trainer handoff with the same
+    startup-recovery flow as the standalone trainer.
+- `TrainerWindow` gained an optional `master_back` callback: one extra
+  "⬅ Master" header button that closes the engine cleanly and returns
+  to the waiting view in the same window; `None` keeps the standalone
+  trainer byte-identical.
+- New `ct2trainer native master [FOLDER]` CLI subcommand
+  (`--state-dir`, `--debug-log`, `--poll-ms`); directory picker when
+  the folder argument is omitted.
+- Build allowlist: the `master_trainer` subpackage (code + in-package
+  docs) and the user-provided `Master_Trainer.ico` / `Master_Trainer.png`
+  ship in the source ZIP; `window_icon_path("master")` resolves the
+  master window icon.
+- Tests: `tests/test_native_master_index.py` (18),
+  `tests/test_native_master_process_watch.py`,
+  `tests/test_native_master_orchestrator.py`,
+  `tests/test_native_master_ui.py`.
+
+Queued (roadmap MT-6/7/8): the `settings_model.py` sidecar wiring, the
+SteamOS/CheatDeck attach route, and the frozen
+`CT2Trainer-Master.exe` entry point.
+
 ## 0.19 (2026-10-30)
 
 Field-fix release after the 0.18 field tests (Sinking City 2, South of

@@ -139,9 +139,15 @@ def source_files():
     for native_component in ('clock','target_broker'):
         files += [p for p in (ROOT/'src/ct2trainer/native'/native_component).glob('*')
                   if p.is_file() and p.suffix in {'.c','.h','.py'}]
+    # Master Trainer subpackage (MT-1..MT-5): code plus the in-package
+    # concept doc and roadmap that ship with the source ZIP.
+    files += [p for p in (ROOT/'src/ct2trainer/native/master_trainer').glob('*')
+              if p.is_file() and p.suffix in {'.py','.md'}]
     files += [ROOT / 'src/ct2trainer' / n for n in ('__init__.py','table.py','local_processes.py','capability.py')]
-    # Generated converter/trainer icons, see tools/create_icons.py.
-    files += [ROOT / 'src/ct2trainer' / 'assets' / n for n in ('ct2trainer-converter.ico', 'ct2trainer-trainer.ico')]
+    # Generated converter/trainer icons (tools/create_icons.py) plus the
+    # user-provided Master Trainer icon (MT-5).
+    files += [ROOT / 'src/ct2trainer' / 'assets' / n for n in ('ct2trainer-converter.ico', 'ct2trainer-trainer.ico',
+                                                              'Master_Trainer.ico', 'Master_Trainer.png')]
     files += list((ROOT / 'tools').glob('native_*.py'))
     files += [ROOT / 'scripts/Build-Native.ps1', ROOT / 'tests/windows/native_probe.py']
     files += list((ROOT / 'tests').glob('test_native_*.py'))
