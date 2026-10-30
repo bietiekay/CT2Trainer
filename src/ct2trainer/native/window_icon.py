@@ -12,7 +12,8 @@ _ASSETS = Path(__file__).resolve().parents[1] / "assets"
 
 
 def window_icon_path(kind: str) -> Path:
-    """One exact legacy icon: 'converter' or 'trainer'."""
+    """One exact shipped icon: 'converter' (the CT2Trainer tool) or
+    'trainer' (the standalone trainer .exe the tool generates)."""
     if kind not in ("converter", "trainer"):
         raise ValueError("Unknown window icon: " + kind)
     name = "ct2trainer-" + kind + ".ico"

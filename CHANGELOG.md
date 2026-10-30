@@ -2,6 +2,36 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.20 (2026-10-30)
+
+New branding icons (user-provided artwork, 1024x1024 masters):
+
+- The CT2Trainer tool icon (the "Generator" artwork) now ships as
+  `src/ct2trainer/assets/ct2trainer-converter.ico` (plus its 1024x1024
+  reference PNG). It is embedded in the frozen `CT2Trainer-Converter.exe`
+  via PyInstaller and set on the converter window at runtime
+  (`window_icon_path("converter")`).
+- The standalone trainer icon now ships as
+  `src/ct2trainer/assets/ct2trainer-trainer.ico` (plus its 1024x1024
+  reference PNG). It is embedded in the `CT2Trainer-Template` stub, so
+  every trainer .exe the converter generates carries it, and set on the
+  trainer window at runtime (`window_icon_path("trainer")`).
+- `tools/create_icons.py` no longer draws the old placeholder artwork: it
+  now rebuilds the multi-size ICO files (16-256 px, 32 bpp) from the
+  committed PNG masters, so a rebuild can never silently replace the
+  shipped icons.
+- New `tests/test_native_icons.py` (+4 tests) pins the committed icon
+  contract: both ICOs carry the full 16/24/32/48/64/128/256 px 32-bpp set
+  with intact image blobs, both PNG masters are 1024x1024, and
+  `window_icon_path("converter"|"trainer")` resolves to the committed
+  assets (unknown kinds are refused).
+
+Suite: 3,854 tests, all green except the 3 pre-existing
+path-dependent baseline-reproducibility tests (their committed
+byte-identical baselines were generated under a different absolute repo
+path; they fail identically on a clean main run in this worktree).
+Catalog unchanged. Asset-only change: no trainer behavior change.
+
 ## 0.19 (2026-10-30)
 
 Field-fix release after the 0.18 field tests (Sinking City 2, South of
