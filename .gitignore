@@ -14,3 +14,6 @@ tests/windows/fixture_target/*.pdb
 tools/agent_load.py
 side/
 reference-assessment/
+
+# local parallel-lane worktrees (root merge coordinator)
+.worktrees/
