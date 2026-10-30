@@ -1,6 +1,25 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-29. **Latest verified release:** 0.18, build
+**Updated:** 2026-10-30. **Latest verified release:** 0.19, build
+`native-20261030T121918Z-c72dbb38` (built from `main` at `fbe626f`,
+2026-10-30): the 0.19 field-fix cycle - hotkey-bridge Windows AV fix
+(HWND_MESSAGE corrected to -3; explicit Win32 argtypes/restype on all
+bridge prototypes; RegisterHotKeyW/UnregisterHotKeyW guarded for
+stripped user32 builds; +1 real-seam regression test), value-read
+observability (`read_value` logs `value-read-failed` per identifier
+per cause, dedup, re-raise), the new `describe` CLI subcommand (raw
+source + plain-language assessment + concrete trainer actions per
+record, +13 tests), and full staged-options support for the South of
+Midnight table (plan-level staging, engine gates and the two-level
+parent cascade proven correct by new tests; UI gaps closed:
+staged-pending value rows now refuse immediately in the status line
+with the engine's named provider refusal, and `moAlwaysHideChildren`
+passes through as the `hidden_children` plan marker with row-model
+subtree suppression - the flagged parent row stays the interface);
++24 tests, suite 3,850 OK / 26 expected skips, zero catalog delta vs
+`blocked-catalog-rt5d-main` (151/117,634/60,161/1,053/0 load errors),
+`ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+Superseded 0.18, build
 `native-20261028T131208Z-55922918` (built from `main` at `70c5a61`,
 2026-10-28): the trainer UI row-details window - right-click /
 long-press on a row now offers "Row details" leading the context menu,
@@ -136,16 +155,16 @@ defines the work and completion gates.
 
 | Area | Achieved | Still needed |
 | --- | --- | --- |
-| Independently built product | 0.16.4 source and Windows portable ZIPs passed the offline build with **3,479 tests OK, 25 expected skips**, and `ce_inputs: []`. | Keep the clean-room build and release checks green after each change. |
+| Independently built product | The 0.19 source and Windows portable ZIPs passed the offline build (build `native-20261030T121918Z-c72dbb38`) with **3,850 tests OK, 26 expected skips**, and `ce_inputs: []`. | Keep the clean-room build and release checks green after each change. |
 | Synthetic feature coverage | **42/42** declared feature classes and **7,475/7,475** action weight covered across **30 synthetic tables**. | This metric does not establish support for every original table or a real game effect. Add synthetic cases when a new behavior is found. |
-| Original reference tables | All **151/151** table paths load after the RT-3 legacy-binary CT loader (2026-10-23). Local static catalog (RT-4.3 remeasure, run `blocked-catalog-rt43-main`, 2026-10-26, frozen manifest `gap_inventory/reference-manifest.json`) classifies **116,283 supported**, including **59,868 staged**, out of **117,634 plan entries**. | **1,351 entries are blocked** (was 2,698 before RT-4.1, 1,858 after RT-4.1/RT-3, 1,807 after RT-4.4, 1,778 after RT-4.6, 1,743 after RT-4.5; RT-4.3 cleared 392 rows — O1 relative-address skip-fold 195, O3 pointer-offset expression slots 51, O4/O27 atoms 38, O9 runtime-base staging 8, O13 indirect data 5, O10 direct 5 plus 90 dependent provider-lookup rows — with zero newly blocked rows and 12 reason-only changes). Staged entries still need their runtime conditions proved. |
+| Original reference tables | All **151/151** table paths load after the RT-3 legacy-binary CT loader (2026-10-23). Local static catalog (0.19 field-fix cycle remeasure, run `blocked-catalog-019-field`, 2026-10-30, frozen manifest `gap_inventory/reference-manifest.json`) classifies **116,581 supported**, including **60,161 staged**, out of **117,634 plan entries**. | **1,053 entries are blocked** (was 1,351 after RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6, 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3 and 2,698 before RT-4.1; RT-4.2 cleared the last 298 rows - R4 Lua-runtime symbol providers re-staged, R7 GetAsyncKeyState bare calls, keep-first scope fallback; zero newly blocked). The 0.19 field-fix cycle changed no catalog row (no corpus table uses `moAlwaysHideChildren`). Staged entries still need their runtime conditions proved. |
 | Observed game effects | Owned fixtures and selected runtime chains have tests. | The AP-11 campaign has **0 of 6,143** game effects confirmed. Original-table behavior must be checked against pinned game builds or explicitly equivalent owned targets. |
-| Final platforms | The 0.9.0-rc2 portable converter and a generated trainer were user-tested without CE or Python; later fixture tests cover many runtime paths. The 0.16 re-cut was field-tested 2026-10-21 (new WP-58 UI confirmed good; one cheat = table/build mismatch, no fix; the state-lock orphan after a blocked close was fixed in code the same day, see the ledger). The Sinking City 2 table-load warnings were made accurate in 0.16.1 (2026-10-21): table-version reference 45 → 46 field-verified, `{$LUA}`/`ShellExecute` wording now states the supported native behavior — the table itself loaded fine (see the ledger). The 0.16.1 field test (2026-10-21, Sinking City 2) exposed a startup block behind a stale `state.lock`: WP-57 hook journals with `captured_placeholders` failed the recovery schema; fixed on `main` 2026-10-22 (0.16.2, built as `native-20261022T160328Z-0423fb21` — see the ledger). The 0.16.2 field test (2026-10-22, Sinking City 2) exposed the next activation failure: the startup brick from the still-missing journal field `value_data_ranges` plus a module-snapshot retry aimed at the wrong Win32 code (mislabeled 24 instead of 1116) without backoff while the game was still loading DLLs (field log: Win32 error 24 nine ms after attach); both root causes fixed on `main` 2026-10-23, shipped as 0.16.3 (see the ledger). | The 0.16 re-cut has no recorded full clean-machine acceptance. Clean Windows and real Steam Deck/Proton/touch acceptance remain open. `runtime_unverified` stays set. |
+| Final platforms | The 0.9.0-rc2 portable converter and a generated trainer were user-tested without CE or Python; later fixture tests cover many runtime paths. The 0.16 re-cut was field-tested 2026-10-21 (new WP-58 UI confirmed good; one cheat = table/build mismatch, no fix; the state-lock orphan after a blocked close was fixed in code the same day, see the ledger). The Sinking City 2 table-load warnings were made accurate in 0.16.1 (2026-10-21): table-version reference 45 → 46 field-verified, `{$LUA}`/`ShellExecute` wording now states the supported native behavior — the table itself loaded fine (see the ledger). The 0.16.1 field test (2026-10-21, Sinking City 2) exposed a startup block behind a stale `state.lock`: WP-57 hook journals with `captured_placeholders` failed the recovery schema; fixed on `main` 2026-10-22 (0.16.2, built as `native-20261022T160328Z-0423fb21` — see the ledger). The 0.16.2 field test (2026-10-22, Sinking City 2) exposed the next activation failure: the startup brick from the still-missing journal field `value_data_ranges` plus a module-snapshot retry aimed at the wrong Win32 code (mislabeled 24 instead of 1116) without backoff while the game was still loading DLLs (field log: Win32 error 24 nine ms after attach); both root causes fixed on `main` 2026-10-23, shipped as 0.16.3 (see the ledger). The 0.18 field tests (2026-10-28/29, Sinking City 2 and South of Midnight) exposed two more issues: access violations in the real Win32 hotkey-bridge seam (the windowed trainer process crashed) and staged pointer-chain value reads failing silently (blank "unavailable" without a log trace); the South of Midnight table exposed the staged-options UI gaps (staged-pending value rows still opened the inline editor, `moAlwaysHideChildren` not implemented); both fixed in 0.19 (2026-10-30, see the ledger). | The 0.16 re-cut has no recorded full clean-machine acceptance. Clean Windows and real Steam Deck/Proton/touch acceptance remain open. `runtime_unverified` stays set. |
 
 **The 42/42 result is real, but it measures the synthetic feature matrix.**
-The 1,351 blocked entries (after the RT-4.3 remeasure, was 1,743 after
-RT-4.5, 1,778 after RT-4.6, 1,807 after RT-4.4, 1,858 after
-RT-4.1/RT-3 and 2,698 at the Wave-4 baseline), staged
+The 1,053 blocked entries (after the RT-4.2 remeasure, was 1,351 after
+RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6, 1,807 after RT-4.4,
+1,858 after RT-4.1/RT-3 and 2,698 at the Wave-4 baseline), staged
 runtime behavior, and absent game-effect evidence are why the overall
 100% reference-table goal is still open.
 "Supported" in the static catalog means plan admission, not confirmed
@@ -199,8 +218,18 @@ regenerated under the pinned run id
    (createThread/threadWait gate decision, option 2 — gate stays, no
    thread backend this milestone) and RT-5 item F (no-effect register
    ratification, `tests/test_native_rt5_no_effect_register.py` +22)
-   both landed 2026-10-26, tests-only, zero catalog movement.
-   Remaining: the RT-5 implementation items A-E.
+   both landed 2026-10-26, tests-only, zero catalog movement. RT-5
+   item A (embedded `<Files>` extraction), item C (bounded
+   process-info Lua API family), item C2 (dynamic addresslist records +
+   custom AA directives) and item D (onOpenProcess/onTableLoad
+   callback dispatch) landed 2026-10-28/29 (merges `479977c`,
+   `0167825`, `dde9f04`, `9294bb8`; zero catalog delta at each step).
+   The 0.19 field-fix cycle (2026-10-30, merge `fbe626f`) added the
+   hotkey-bridge AV fix, value-read observability, the `describe` CLI
+   and full South of Midnight staged-options support on top.
+   Remaining: the RT-5 implementation items B (CheatCodes
+   code-patch plan path or recorded scope decision) and E
+   (`messageDialog` no-op-with-review vs refusal decision).
 4. **Trainer UI feature (user request, done 2026-10-24):** the
    `Scripts` filter view (every script record, blocked/unselected
    included with their reason; headings and values hidden) and the row

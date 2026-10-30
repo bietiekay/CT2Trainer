@@ -49,13 +49,12 @@ the item-C string pin, addresslist getMemoryRecord/Count/
 MemoryRecord[i] lookups, registerAutoAssemblerCommand custom directives
 table-scope with built-in names refused, +27 tests) landed on `main`
 2026-10-29 (merge `dde9f04`, full main suite 3,817 OK / 25 expected
-skips, zero catalog delta `blocked-catalog-rt5c2-main`). RT-5 item D (onOpenProcess/onTableLoad callback dispatch: CE-sequence table-scope dispatch after a clean table-Lua bootstrap - onOpenProcess with the attached target PID, onTableLoad with the Lua literal false, documented bounded deviation: no before-load phase; pcall-wrapped dispatch chunks with literal argument injection, 'absent'/'ok'/'error: <msg>' -> no event / table-callback / table-callback-error, throwing-callback containment with plan byte-identity, idempotent per confirmed attach with re-attach re-fire, +9 tests) landed on `main` 2026-10-29 (merge `9294bb8`, full main suite 3,826 OK / 25 expected skips, zero catalog delta `blocked-catalog-rt5d-main`). The RT-5 API/construct inventory is
+skips, zero catalog delta `blocked-catalog-rt5c2-main`). RT-5 item D (onOpenProcess/onTableLoad callback dispatch: CE-sequence table-scope dispatch after a clean table-Lua bootstrap - onOpenProcess with the attached target PID, onTableLoad with the Lua literal false, documented bounded deviation: no before-load phase; pcall-wrapped dispatch chunks with literal argument injection, 'absent'/'ok'/'error: <msg>' -> no event / table-callback / table-callback-error, throwing-callback containment with plan byte-identity, idempotent per confirmed attach with re-attach re-fire, +9 tests) landed on `main` 2026-10-29 (merge `9294bb8`, full main suite 3,826 OK / 25 expected skips, zero catalog delta `blocked-catalog-rt5d-main`). The 0.19 field-fix cycle (2026-10-30, branch `native-0.19-field-fix`, merge `fbe626f`) shipped the Sinking City 2 hotkey-bridge Windows AV fix (HWND_MESSAGE corrected to -3, explicit Win32 argtypes/restype, guarded hotkey registration, +1 real-seam regression test), value-read observability (`read_value` logs `value-read-failed` per identifier per cause, dedup, re-raise), the new `describe` CLI subcommand (+13 tests), and full staged-options support for the South of Midnight table (two-level cascade proof +2 tests, staged-pending tap guard, moAlwaysHideChildren pass-through `hidden_children` marker + row-model subtree suppression, +8 UI tests); full main suite 3,850 OK / 26 expected skips, zero catalog delta `blocked-catalog-019-field`. The RT-5 API/construct inventory is
 documented in `documentation/rt5-api-inventory.md`. The
-latest original-table catalog (run `blocked-catalog-rt5d-main`,
-2026-10-29, zero delta vs `blocked-catalog-rt5c2-main`) has 1,053 blocked
+latest original-table catalog (run `blocked-catalog-019-field`,
+2026-10-30, zero delta vs `blocked-catalog-rt5d-main`) has 1,053 blocked
 of 117,634 plan entries, 60,161 staged entries and zero load errors
-(previous: 1,351 after RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6,
-1,807 after RT-4.4, 1,858 after RT-4.1/RT-3;
+(previous: 1,053 after RT-5 item D, 1,351 after RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6, 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3;
 original baseline: 2,698 blocked, 58,950 staged). The 42/42 feature
 matrix measures only the 30 pinned synthetic cases; AP-11 has 0/6,143
 confirmed game effects. Read
@@ -73,13 +72,19 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-28, 0.18 released (build
-`native-20261028T131208Z-55922918` cut from `main` @ `70c5a61` - the
-trainer UI row-details window: right-click / long-press on a row offers
-"Row details" leading the context menu - one read-only window with the raw
-script source, the plain-language assessment and the concrete actions the
-trainer performs per entry; +22 tests, in-build suite 3,767 OK / 25
-expected skips, `ce_inputs: []`); previous 0.17
+**CT2Trainer (status 2026-10-30, 0.19 released (build
+`native-20261030T121918Z-c72dbb38` cut from `main` @ `fbe626f` - the 0.19
+field-fix cycle: Sinking City 2 hotkey-bridge Windows AV fix (HWND_MESSAGE
+corrected to -3, explicit Win32 argtypes/restype, guarded hotkey
+registration, real-seam regression test), value-read observability
+(`value-read-failed` log event per identifier per cause), the `describe`
+CLI subcommand, and full staged-options support for the South of Midnight
+table (two-level cascade proof, staged-pending tap guard,
+moAlwaysHideChildren pass-through + row-model subtree suppression); +24
+tests, in-build suite 3,850 OK / 26 expected skips, `ce_inputs: []`);
+previous 0.18
+`native-20261028T131208Z-55922918` @ `70c5a61` - the trainer UI row-details
+window; previous 0.17
 `native-20261027T094839Z-ec6c6f55` @ `ee41630`;
 previous 0.16.4 `native-20261024T003853Z-a8cf04fc` @ `988ff8e`,
 previous 0.16.3 `native-20261023T065015Z-afbc3eba` @ `6a5ba63`, previous
@@ -215,7 +220,36 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261028T131208Z-55922918` (0.18,
+**Latest verified build:** `native-20261030T121918Z-c72dbb38` (0.19,
+cut from `main` @ `fbe626f`; in-build suite 3850 OK / 26 expected
+skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; source ZIP `CT2Trainer-0.19-source.zip` sha256
+`3eaa6a987e820477955fe84e77ed089527e3199705b81409fad8b1139aab258d`
+(13,243,532 bytes), portable ZIP
+`CT2Trainer-0.19-windows-portable.zip` sha256
+`a440051c0d10eb434cb0bf76799092729fe5a54b06fdc38a13ede84b4a4ae4c4`
+(28,800,949 bytes)).
+0.19 ships the field-fix cycle from the 0.18 field tests: the
+Sinking City 2 hotkey-bridge Windows AV fix (HWND_MESSAGE corrected
+to -3, explicit Win32 argtypes/restype on all bridge prototypes,
+guarded RegisterHotKeyW/UnregisterHotKeyW for stripped user32
+builds, `run_trainer` hotkey-bridge-started/-failed events,
+`tests/test_native_os_hotkeys.py` +1 real-seam regression test),
+value-read observability (`read_value` logs `value-read-failed` per
+identifier per cause, dedup, re-raise), the new `describe` CLI
+subcommand (`ct2trainer native describe`, +13 tests in
+`tests/test_native_describe.py`), and full staged-options support for
+the South of Midnight table (plan-level staging, engine gates and the
+two-level parent cascade proven by `tests/test_native_staged_cascade.py`
++2; UI gaps closed - staged-pending tap guard routing the tap through
+`engine.read_value` so the named staged refusal lands in the status
+line, and `moAlwaysHideChildren` pass-through as the `hidden_children`
+plan marker with row-model subtree suppression keeping the flagged
+parent row; `tests/test_native_staged_options_ui.py` +8) on top of
+the 0.18 content. Catalog remeasure `blocked-catalog-019-field`:
+zero delta vs `blocked-catalog-rt5d-main` (1,053 blocked of 117,634,
+60,161 staged, 0 load errors). Superseded 0.18 build:
+`native-20261028T131208Z-55922918` (0.18,
 cut from `main` @ `70c5a61`; in-build suite 3767 OK / 25 regular
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
 gate; source ZIP `CT2Trainer-0.18-source.zip` sha256

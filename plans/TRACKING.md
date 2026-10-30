@@ -52,9 +52,11 @@ game-facing action.
   parity.
 - Local original reference catalog: 151 paths, 143 distinct hashes, all
   151 load, 116,581 supported (60,161 staged) and 1,053 blocked of
-  117,634 plan entries; zero load errors (RT-5 item D remeasure,
-  2026-10-29, run `blocked-catalog-rt5d-main`, frozen manifest
+  117,634 plan entries; zero load errors (0.19 field-fix cycle remeasure,
+  2026-10-30, run `blocked-catalog-019-field`, frozen manifest
   `gap_inventory/reference-manifest.json`; zero delta vs
+  `blocked-catalog-rt5d-main`; previous RT-5 item D remeasure
+  2026-10-29, run `blocked-catalog-rt5d-main`; zero delta vs
   `blocked-catalog-rt5c2-main`; previous RT-5 item C2 remeasure
   2026-10-29 run `blocked-catalog-rt5c2-main`: zero delta vs
   `blocked-catalog-rt5c-main`; previous RT-5 item C remeasure 2026-10-28
@@ -107,7 +109,15 @@ game-facing action.
   reason-changed rows (UI-only change, zero catalog effect).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
-- Latest verified release: 0.18, build
+- Latest verified release: 0.19, build
+  `native-20261030T121918Z-c72dbb38` (cut from `main` @ `fbe626f`),
+  in-build suite 3,850 OK / 26 expected skips, `ce_inputs: []`;
+  ships the 0.19 field-fix cycle (Sinking City 2 hotkey-bridge AV fix,
+  value-read observability, `describe` CLI, South of Midnight
+  staged-options support with two-level cascade proof, tap guard and
+  moAlwaysHideChildren row suppression; +24 tests) on top of the 0.18
+  content; catalog remeasure `blocked-catalog-019-field` zero delta vs
+  `blocked-catalog-rt5d-main`; superseded 0.18
   `native-20261028T131208Z-55922918` (cut from `main` @ `70c5a61`),
   in-build suite 3,767 OK / 25 expected skips, `ce_inputs: []`;
   ships the trainer UI row-details window on top of the 0.17 content;
