@@ -1847,6 +1847,13 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                                  "active": hk.active} for hk in source.hotkeys]
         entries.append(entry)
         try:
+            # CE display parity (field fix 2026-10-30, South of Midnight):
+            # moAlwaysHideChildren marks the flagged entry's whole subtree
+            # as non-renderable in the trainer UI; the parent row stays the
+            # interface and engine-side activation/cascade is unaffected.
+            # Additive marker, set only for records that carry children.
+            if source.has_children and "moAlwaysHideChildren" in source.options:
+                entry["hidden_children"] = True
             if source.is_group_header:
                 entry["reason"] = "Navigation heading; CE group activation is not executed."
                 if source.has_children and any(option in source.options for option in

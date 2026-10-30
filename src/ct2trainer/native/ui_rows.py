@@ -426,6 +426,18 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
         if not isinstance(entry, dict):
             raise RowModelError("plan entries must be dicts")
         children_of.setdefault(entry.get("parent_id"), []).append(entry["id"])
+    # CE display parity (field fix 2026-10-30, South of Midnight): entries
+    # flagged moAlwaysHideChildren never render as rows; their whole subtree
+    # is suppressed in every view. Presentation only - the engine keeps
+    # activating them through the parent cascade.
+    hidden: set = set()
+    for entry in entries.values():
+        if entry.get("hidden_children") is True:
+            subtree = _subtree_ids(children_of, entry["id"])
+            subtree.discard(entry["id"])
+            hidden.update(subtree)
+    if hidden:
+        visible -= hidden
 
     rows: list[Row] = []
     y = 0

@@ -276,7 +276,12 @@ def _real_seam():
     user32 = ctypes.WinDLL("user32", use_last_error=True)
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
-    HWND_MESSAGE = ctypes.c_void_p(-1)
+    # HWND_MESSAGE = ((HWND)-3): a message-only window receives only
+    # posted messages and is invisible to EnumWindows.  The previous
+    # value c_void_p(-1) was HWND_BOTTOM (Z-order hint), which made the
+    # window a regular top-level window and caused CreateWindowExW to
+    # fail (error 1400) in the frozen environment.
+    HWND_MESSAGE = ctypes.c_void_p(-3)
     WM_HOTKEY = 0x0312
     WM_BRIDGE_QUIT = 0x8001  # WM_APP + 1
     CS_HREDRAW = 0x0002
@@ -301,6 +306,49 @@ def _real_seam():
             ("lpszClassName", wintypes.LPCWSTR),
             ("hIconSm", wintypes.HICON),
         ]
+
+    # Declare Win32 prototypes up front so that 64-bit pointer sizes are
+    # passed correctly.  Without explicit argtypes/restype, ctypes
+    # defaults to c_int (32-bit) for both arguments and return values,
+    # which truncates HINSTANCE/HWND on x64 and causes access
+    # violations inside RegisterClassExW / CreateWindowExW / DefWindowProcW.
+    kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+    kernel32.GetModuleHandleW.restype = wintypes.HINSTANCE
+    user32.RegisterClassExW.argtypes = [ctypes.POINTER(WNDCLASSEXW)]
+    user32.RegisterClassExW.restype = wintypes.ATOM
+    user32.CreateWindowExW.argtypes = [
+        wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
+        wintypes.INT, wintypes.INT, wintypes.INT, wintypes.INT,
+        wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID]
+    user32.CreateWindowExW.restype = wintypes.HWND
+    user32.DefWindowProcW.argtypes = [
+        wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user32.DefWindowProcW.restype = wintypes.LPARAM
+    user32.GetMessageW.argtypes = [
+        ctypes.POINTER(wintypes.MSG), wintypes.HWND,
+        wintypes.UINT, wintypes.UINT]
+    user32.GetMessageW.restype = wintypes.BOOL
+    user32.DispatchMessageW.argtypes = [ctypes.POINTER(wintypes.MSG)]
+    user32.DispatchMessageW.restype = wintypes.LPARAM
+    user32.PostQuitMessage.argtypes = [ctypes.c_uint]
+    user32.PostMessageW.argtypes = [
+        wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    user32.PostMessageW.restype = wintypes.BOOL
+    user32.DestroyWindow.argtypes = [wintypes.HWND]
+    user32.DestroyWindow.restype = wintypes.BOOL
+    # RegisterHotKeyW / UnregisterHotKeyW may be absent in stripped or
+    # minimal user32 builds (e.g. some embedded Python distributions);
+    # guard so the seam can still be constructed for the window lifecycle
+    # even when hotkey registration is unavailable.
+    try:
+        user32.RegisterHotKeyW.argtypes = [
+            wintypes.HWND, ctypes.c_int, wintypes.UINT, wintypes.UINT]
+        user32.RegisterHotKeyW.restype = wintypes.BOOL
+        user32.UnregisterHotKeyW.argtypes = [wintypes.HWND, ctypes.c_int]
+        user32.UnregisterHotKeyW.restype = wintypes.BOOL
+        _hotkey_api_available = True
+    except AttributeError:
+        _hotkey_api_available = False
 
     state = {"handler": None, "hwnd": 0, "thread": None, "proc": None}
 
@@ -330,11 +378,6 @@ def _real_seam():
                 raise HotkeyBridgeError(
                     "could not register the hotkey bridge window class: "
                     f"Win32 error {ctypes.get_last_error()}")
-            user32.CreateWindowExW.restype = wintypes.HWND
-            user32.CreateWindowExW.argtypes = [
-                wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
-                wintypes.INT, wintypes.INT, wintypes.INT, wintypes.INT,
-                wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID]
             hwnd = user32.CreateWindowExW(
                 0, "CT2TrainerNativeHotkeyBridge", "CT2Trainer Hotkey Bridge",
                 0, 0, 0, 0, 0, HWND_MESSAGE, None, hinstance, None)
@@ -346,7 +389,6 @@ def _real_seam():
 
             def loop():
                 message = wintypes.MSG()
-                user32.GetMessageW.restype = ctypes.c_longlong
                 while True:
                     result = user32.GetMessageW(ctypes.byref(message), None, 0, 0)
                     if result in (0, -1):
@@ -359,15 +401,10 @@ def _real_seam():
             return state["hwnd"]
 
         def register_hotkey(self, hotkey_id: int, mods: int, vk: int) -> bool:
-            user32.RegisterHotKeyW.argtypes = [
-                wintypes.HWND, ctypes.c_int, wintypes.UINT, wintypes.UINT]
-            user32.RegisterHotKeyW.restype = wintypes.BOOL
             return bool(user32.RegisterHotKeyW(
                 wintypes.HWND(state["hwnd"]), hotkey_id, mods, vk))
 
         def unregister_hotkey(self, hotkey_id: int) -> bool:
-            user32.UnregisterHotKeyW.argtypes = [wintypes.HWND, ctypes.c_int]
-            user32.UnregisterHotKeyW.restype = wintypes.BOOL
             return bool(user32.UnregisterHotKeyW(wintypes.HWND(state["hwnd"]),
                                                  hotkey_id))
 
@@ -375,8 +412,6 @@ def _real_seam():
             return ctypes.get_last_error()
 
         def destroy(self) -> None:
-            user32.PostMessageW.argtypes = [
-                wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
             user32.PostMessageW(wintypes.HWND(state["hwnd"]),
                                WM_BRIDGE_QUIT, 0, 0)
             thread = state["thread"]

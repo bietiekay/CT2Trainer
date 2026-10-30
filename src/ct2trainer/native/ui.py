@@ -729,7 +729,7 @@ class TrainerWindow:
             elif row.info_hit is not None and row.info_hit.contains(x, y):
                 self.info(entry)
             else:
-                self._toggle_value_editor(row.entry_id)
+                self._open_value_editor(row.entry_id)
         else:  # info row: no actions, only details
             self.info(entry)
 
@@ -784,6 +784,23 @@ class TrainerWindow:
         else:
             self.expanded_values = self.expanded_values | {identifier}
         self.render()
+
+    def _open_value_editor(self, identifier):
+        """Open (or close) the inline value editor with a staged guard.
+
+        Field fix 2026-10-30 (South of Midnight, staged options): a
+        staged-pending value refuses the editor client-side.  The engine
+        would name the missing provider at read or write time, but the tap
+        surfaces that refusal immediately instead of letting the user type
+        into an editor that cannot apply.  Live or non-staged values open
+        the editor exactly as before.
+        """
+        entry = self.engine.entries.get(identifier)
+        if (entry is not None
+                and staged_card_state(entry, self.engine.applied) == STAGED_PENDING):
+            self.action(lambda: self.engine.read_value(identifier))
+            return
+        self._toggle_value_editor(identifier)
 
     def _apply_value(self, identifier):
         self.engine.set_value(identifier, self.drafts[identifier].get())
@@ -1159,8 +1176,13 @@ def run_trainer(plan: dict | str | Path) -> int:
     try:
         from .hotkey_bridge import HotkeyBridgeError, create_hotkey_bridge
         engine.hotkey_bridge = create_hotkey_bridge()
+        engine.debug_log.log(
+            "hotkey-bridge-started",
+            hwnd=getattr(engine.hotkey_bridge, "_hwnd", 0),
+        )
     except HotkeyBridgeError as exc:
         print("CT2Trainer: " + str(exc), file=sys.stderr)
+        engine.debug_log.error("hotkey-bridge-failed", exc)
     TrainerWindow(root, engine)
     root.deiconify()
     root.mainloop()

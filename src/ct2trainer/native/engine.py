@@ -5357,10 +5357,47 @@ class TrainerEngine:
     def read_value(self, identifier: int) -> str:
         entry = self._entry(identifier, "value")
         self._guard()
-        self._require_staged_live(entry)
-        # Reading does not activate providers or persist a new wish.
-        address = self._value_address(entry)
-        return format_value(entry, self.memory.read(address, self._value_size(entry)))
+        # Field observability (2026-10-30, Sinking City 2): value reads
+        # used to fail silently, so a broken staged-pointer chain (e.g. a
+        # pointer whose base symbol has no live value yet) surfaced only
+        # as a blank "unavailable" with no trace.  Record every failure so
+        # the cause is diagnosable from the log, then re-raise so callers
+        # (the UI tick) still surface the refusal as "unavailable".
+        try:
+            self._require_staged_live(entry)
+            # Reading does not activate providers or persist a new wish.
+            address = self._value_address(entry)
+            value = format_value(
+                entry, self.memory.read(address, self._value_size(entry)))
+        except Exception as exc:
+            self._log_value_read_failure(identifier, entry, exc)
+            raise
+        failures = getattr(self, "_value_read_failures", None)
+        if failures is not None:
+            failures.pop(identifier, None)
+        return value
+
+    def _log_value_read_failure(self, identifier: int, entry: dict,
+                                exc: Exception) -> None:
+        """Log a value-read failure once per record per distinct cause.
+
+        The UI tick retries every visible value row on every poll, so a
+        persistently failing read (e.g. a staged provider that is not
+        live yet) must not flood the log: each distinct (exception type,
+        message) pair is reported once per identifier until the read
+        succeeds or the cause changes (same dedup policy as the
+        attach-stage failure log).
+        """
+        key = (type(exc).__name__, str(exc))
+        failures = getattr(self, "_value_read_failures", None)
+        if failures is None:
+            failures = self._value_read_failures = {}
+        if failures.get(identifier) == key:
+            return
+        failures[identifier] = key
+        self.debug_log.error("value-read-failed", exc,
+                             identifier=identifier,
+                             label=entry.get("label", ""))
 
     # ----------------------------------------------------------- WP-40: record hotkeys
     #
