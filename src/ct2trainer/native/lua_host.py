@@ -2447,18 +2447,19 @@ class EngineLuaBroker:
             if len(arguments) > 4:
                 raise LuaHostError('messageDialog takes at most four arguments')
             for arg in arguments:
-                if type(arg) not in (str, int, float):
-                    raise LuaHostError('messageDialog arguments must be text or numbers')
+                if arg is not None and type(arg) not in (str, int, float):
+                    raise LuaHostError(
+                        'messageDialog arguments must be text, numbers or nil')
             title = ''
             message = ''
             if len(arguments) >= 2 and type(arguments[1]) is str:
-                title = str(arguments[0])
+                title = '' if arguments[0] is None else str(arguments[0])
                 message = arguments[1]
             elif arguments:
-                message = str(arguments[0])
+                message = '' if arguments[0] is None else str(arguments[0])
             if len(message) > 10000:
                 raise LuaHostError('messageDialog message exceeds its bound')
-            if message:
+            if title or message:
                 e.debug_log.log('message-dialog', title=title[:500],
                                 message=message[:1000],
                                 argument_count=len(arguments))

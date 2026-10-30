@@ -10,8 +10,9 @@ but three plan warnings read like failures.  0.16.1 makes them accurate:
 * the {$LUA} warning states that the embedded Lua runs in the
   trainer's built-in Lua runtime (a supported path);
 * the external-action warning is split per API: ShellExecute is the
-  safe no-op the native trainer performs (WP-56), messageDialog is not
-  implemented and keeps a real review flag.
+  safe no-op the native trainer performs (WP-56); messageDialog became a
+  safe logged no-op in the 0.20 cycle (RT-5 item E) and keeps a review
+  flag.
 
 Pure analysis: synthetic tables only, no CE inputs, no process access.
 """
@@ -30,9 +31,9 @@ LUA_WARNING_OLD = "At least one Auto Assembler script contains {$LUA}."
 SHELL_WARNING = ("At least one script calls ShellExecute; the native trainer "
                  "runs it as a safe no-op (no external program or URL is "
                  "launched).")
-MSGDLG_WARNING = ("At least one script calls messageDialog, which the native "
-                  "Lua runtime does not implement; affected records fail at "
-                  "activation with a named refusal.")
+MSGDLG_WARNING = ("At least one script calls messageDialog; the native "
+                  "trainer does not show a dialog - the call is logged as "
+                  "a review event and returns 0 (mbOK) as a safe no-op.")
 LEGACY_REVIEW_WARNING = ("At least one script invokes a dialog or external "
                          "action and needs review.")
 
