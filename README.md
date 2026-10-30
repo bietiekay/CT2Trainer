@@ -180,7 +180,7 @@ source CLI offers explicit `assess-recovery` / `recover` steps (see
 | --- | --- |
 | `src/ct2trainer/native/` | independent converter/trainer implementation |
 | `src/ct2trainer/` | shared base modules (table parsing, capabilities, process detection) |
-| `tools/` | build helper (`native_build.py`), corpus denominator tooling, icon generator |
+| `tools/` | build helper (`native_build.py`), corpus denominator tooling, icon rebuild tool (`create_icons.py`) |
 | `scripts/Build-Native.ps1` | the single build entry point |
 | `tests/` | native test suite, Windows fixture targets, Proton/Steam Deck protocol |
 | `TableReferences/` | synthetic clean-room corpus (30 pinned case tables) |

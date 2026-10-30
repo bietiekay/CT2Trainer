@@ -129,7 +129,11 @@ from the same committed artifacts).
   `tools/native_*.py`, `scripts/Build-Native.ps1`, the native tests and
   fixture sources, the byte-pinned MIT/BSD inputs under
   `dependencies/native/` (plus the selected Mono API source inputs), and
-  the converter/trainer icons.
+  the converter/trainer ICOs (derived from the committed user-artwork
+  1024x1024 PNG masters, which stay local-only reference files outside
+  the allowlist; `tools/create_icons.py` rebuilds the ICOs from the
+  masters locally and is excluded from the allowlist like all
+  non-`native_*` tooling).
 - **In-build CE-content scan:** both frozen EXEs are audited by payload
   inventory; forbidden tokens (CE module/payload names, legacy runtime and
   bundle names) in archive entries or module names fail the build, and the

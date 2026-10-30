@@ -19,7 +19,9 @@ _ICON_NAMES = {
 
 
 def window_icon_path(kind: str) -> Path:
-    """One exact product icon: 'converter', 'trainer' or 'master'."""
+    """One exact shipped icon: 'converter' (the CT2Trainer tool),
+    'trainer' (the standalone trainer .exe the tool generates) or
+    'master' (the Master Trainer window)."""
     if kind not in _ICON_NAMES:
         raise ValueError("Unknown window icon: " + kind)
     name = _ICON_NAMES[kind]
