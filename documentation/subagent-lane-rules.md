@@ -1,21 +1,101 @@
-# Subagent Lane Rules
+# Subagent Lane Rules (Parallel Implementation + Merge Coordinator)
 
-Status: 2026-10-20. The active objective is 100% trainer/cheat handling
-for the local reference tables; see
+Status: 2026-10-30. The active objective is 100% trainer/cheat handling for
+the 151 local reference-table paths through the independent clean-room
+implementation; see
 [`plans/reference-table-100-roadmap.md`](../plans/reference-table-100-roadmap.md).
-The old AP/WP plans are historical. A new lane starts only after root
-assigns a bounded package with a current baseline, independently authored
-synthetic case, file ownership and acceptance checks. Session-specific
-user launch instructions take precedence over the standing load check in
-`AGENTS.md`.
+The old AP/WP plans remain design records, not the current goal queue. This
+document configures the standing parallel-implementation mechanism used by
+the root agent (merge coordinator) and the subagent lanes it spawns. A new
+lane starts only after root assigns a bounded package with a current
+baseline, an independently authored synthetic case, file ownership and
+acceptance checks. Session-specific user launch instructions take precedence
+over the standing load check in `AGENTS.md`.
 
-Operational contract for implementation lanes spawned by the root agent on
-the current milestone. Each lane owns exactly ONE work package
-(feature wiring + tests) in its own git worktree and branch. The root agent
-performs all integration, matrix flips, artifact regeneration, doc updates
-and pushes.
+## 1. Roles and work modes
 
-## 1. Read first (in your worktree)
+Every session is in exactly one of two work modes.
+
+### 1.1 Root / merge-coordinator mode (owns `main`)
+
+The root agent is the single integration point. It owns:
+
+- `main` and the milestone working branch (`native-<version>-<topic>`):
+  branch creation, merging lane branches (normal merge, never force), and
+  pushing to both remotes (origin ssh + github) with `git ls-remote`
+  verification on each.
+- All root docs: `STATUS.md`, `plans/TRACKING.md`,
+  `plans/reference-table-100-roadmap.md`,
+  `documentation/native-progress.md`, `AGENTS.md` — updated in the same
+  change as the content they describe (roadmap status + measured catalog
+  delta, release record, superseded-build chain).
+- Catalog remeasurements (run id `blocked-catalog-<topic>`), the
+  feature-matrix state, and the zero-unexplained-regression rule (§11).
+- Version bumps (root `VERSION` + `src/ct2trainer/__init__.py`
+  `__version__` + `CHANGELOG.md` in the same change as a build cut) and all
+  builds exclusively through `scripts/Build-Native.ps1`, with build
+  evidence in `build/runs/<id>/` (`ce_inputs: []` verified, suite result
+  and ZIP hashes recorded).
+- Field-test follow-ups (Windows clean-machine protocol, real Steam Deck
+  under Proton with touch operation), which stay root/user work and are
+  recorded in the docs before any status raise.
+
+While lanes run in parallel, root keeps advancing root-owned work
+(finishing in-progress packages, doc updates, load checks, lane review) —
+it never idles waiting for lanes.
+
+### 1.2 Lane mode (subagent sessions)
+
+Each lane owns exactly ONE bounded work package (feature wiring + tests, or
+an explicitly assigned analysis deliverable) in its own git worktree and
+branch:
+
+- The work package assignment carries: the package goal with the current
+  baseline, the leading table/corpus shape to inspect, the independently
+  authored synthetic case, the file ownership map (§2) and the acceptance
+  checks.
+- A lane does not merge, does not push, does not work on `main` or any
+  other branch than its own lane branch, and never touches another
+  lane's worktree or branch.
+- Root docs are read-only for lanes: they report measured numbers, deltas
+  and test counts instead of editing docs (§10 report, §11 root
+  procedure).
+
+### 1.3 Launch rule (load gate)
+
+Before every new lane launch, root checks the model-server load with
+`tools/agent_load.py` (sglang metrics endpoint; exit 0 = at least one lane
+may launch, exit 1 = defer). Launch new agents only when the request queue
+is empty, the free KV span is substantial and the abort counter is flat.
+Parallelize lanes up to the actual capacity of the server so the available
+resources are used optimally; never blindly launch into a saturated server.
+A launch that fails or is saturated is reported to the user, not retried
+blindly.
+
+## 2. Parallelization and file ownership
+
+Parallel lanes are safe only when their file footprints are disjoint or
+conflict-free by review. Root assigns the ownership map per campaign:
+
+- Which files each lane owns, and which areas stay root-owned.
+  Example for the 0.20 RT-5 B/E cycle: lane B (code patch) owns
+  `src/ct2trainer/native/compiler.py`, `src/ct2trainer/native/engine.py`,
+  `src/ct2trainer/native/ui_rows.py`, the CheatCodes parsing area of
+  `src/ct2trainer/table.py` and its own new test files; root (item E) owns
+  `src/ct2trainer/native/lua_host.py`, the external-action warning area of
+  `src/ct2trainer/table.py` and the item-E test files.
+- A lane may touch a shared file only inside its owned area, with the
+  minimal hunks required; every shared-file touch is listed in the report
+  ("Integration notes") so root can review for conflicts.
+- If two lanes need the same file area, root assigns it to one lane and the
+  other waits or works around it. Lanes never resolve each other's
+  conflicts.
+- Test files: each lane gets its own dedicated test file(s) for its
+  feature. Shared pin files (existing tests that pin a behavior the lane
+  replaces) are updated by the implementing lane, and every such update is
+  listed in the report.
+
+## 3. Read first (in your worktree)
 
 1. `AGENTS.md` — project boundaries (Native edition: no CE implementation
    inputs or binaries; public API/format contracts may be derived).
@@ -23,9 +103,9 @@ and pushes.
    active package and completion gates. Read historical AP/WP plans only
    for relevant design detail.
 3. `documentation/native-progress.md` — current state and open list.
-4. This file — workspace, test and reporting contracts.
+4. This file — roles, ownership, workspace, test and reporting contracts.
 
-## 2. Absolute prohibitions (NEVER)
+## 4. Absolute prohibitions (NEVER)
 
 - No copying or deriving CE implementation code. The Cheat Engine 7.5
   source tree at `C:\Users\xboxl\code\cheat-engine-7.5` is a
@@ -36,7 +116,9 @@ and pushes.
 - No writes to `TableReferences/` (strictly read-only corpus input).
   The synthetic corpus is fully committed; a file missing from your
   worktree means a stale checkout — sync from the main checkout first,
-  and stay read-only.
+  and stay read-only. The local original reference tables under
+  `C:\Users\xboxl\code\reference-table-input-do-not-add-to-git` are
+  read-only inputs that never enter git or releases.
 - No modifications of root-owned files:
   `STATUS.md`, `tools/corpus_denominator/*`, `gap_inventory/*`,
   `tests/test_native_feature_matrix.py`,
@@ -57,7 +139,7 @@ and pushes.
   files, real Windows-only APIs or live targets, stop and report
   BLOCKED with evidence — the root agent decides.
 
-## 3. Workspace and tool paths
+## 5. Workspace and tool paths
 
 You work in your assigned worktree (given in your task). `.tools/` is
 gitignored and therefore ABSENT in every worktree — use the shared
@@ -80,7 +162,7 @@ worktree root.
 
 Set `workdir` to your worktree for every shell command.
 
-## 4. Test commands (PowerShell)
+## 6. Test commands (PowerShell)
 
 Focused (fast iteration):
 
@@ -100,10 +182,10 @@ $env:PYTHONIOENCODING = "utf-8"
 Get-Content $env:TEMP\lane-full.log | Select-String -CaseSensitive 'Ran \d+ tests|^OK|FAILED' | Select-Object -Last 3
 ```
 
-Baseline at the lane base commit: **2698 OK / 25 skips** (verified on
-`main` after the WP-17 integration; re-verify against your exact base
-commit before relying on it). Your final full suite must be that
-baseline plus your new tests, zero failures.
+Baseline at the lane base commit: **3,850 OK / 26 expected skips**
+(verified on `main` @ `7d42887`, the 0.19 field-fix cycle; re-verify
+against your exact base commit before relying on it). Your final full
+suite must be that baseline plus your new tests, zero failures.
 
 PowerShell pitfalls (learned the hard way):
 
@@ -123,7 +205,7 @@ PowerShell pitfalls (learned the hard way):
   (`python -c "print(repr(open(path,'rb').read()[i-40:i+200]))"`) if an
   edit reports no match.
 
-## 5. Coding conventions (house style)
+## 7. Coding conventions (house style)
 
 - Fail-closed: every refused input raises a NAMED exception (existing
   refusal classes where present; new named `ValueError` subclasses for a
@@ -144,7 +226,7 @@ PowerShell pitfalls (learned the hard way):
   the existing transaction paths (do not bypass `_install_program`,
   hook managers or the freeze/value runtime).
 
-## 6. Test conventions
+## 8. Test conventions
 
 - Dedicated positive test file: `tests/test_native_<snake_case_feature>.py`
   (e.g. `test_native_recursive_parent_value.py`). It must test the feature
@@ -172,7 +254,7 @@ PowerShell pitfalls (learned the hard way):
   the exact CT under `TableReferences/`, read-only).
 - No test may parse `plans/` or `documentation/`.
 
-### 6a. Pinned rejection tests for the behavior you are wiring
+### 8a. Pinned rejection tests for the behavior you are wiring
 
 If an existing test pins the exact fail-closed rejection that your wiring
 replaces (the active grammar refusing the very feature you implement, e.g. a
@@ -183,7 +265,7 @@ still-valid refusal sub-case (malformed input, undefined define, unbalanced
 blocks, ...) covered as refusals in your dedicated file or the same file.
 Rejection pins for OTHER features must remain byte-identical.
 
-## 7. Definition of "covered" (matrix convention)
+## 9. Definition of "covered" (matrix convention)
 
 A feature flips partial→covered only when:
 
@@ -195,16 +277,16 @@ Real in-game effect, real Windows process APIs, real game/Unity files and
 every AP-11 gate remain open by definition and are recorded in the
 matrix note by the root agent — never a lane deliverable.
 
-## 8. Definition of done (lane)
+## 10. Definition of done (lane)
 
 1. Focused suite for your modules: green.
 2. Full suite: green (baseline + your new tests, zero failures).
 3. Exactly ONE commit on your lane branch: implementation + tests only.
    Message: `Native <feature> wiring: <what was added, which modules,
    which behaviors, refusal cases, test counts, full suite result>`.
-4. Report filled in (section 9) in your final message.
+4. Report filled in (section 11) in your final message.
 
-## 9. Report format (final message, exact sections)
+## 11. Report format (final message, exact sections)
 
 ```
 LANE REPORT — <feature>
@@ -229,21 +311,49 @@ If BLOCKED: replace the report with `LANE BLOCKED — <feature>` plus the
 concrete blocker and the evidence you gathered; do not commit partial
 work.
 
-## 10. Root integration procedure (root agent only, not a lane task)
+## 12. Root merge-coordinator procedure (root agent only, not a lane task)
 
-After a lane commit is merged into the milestone working branch:
+After a lane reports DONE:
 
-1. Matrix flip in `tools/corpus_denominator/feature_matrix.py`
-   (partial → covered; update evidence, modules, note with the new open
-   gates).
-2. Regenerate both `gap_inventory/` artifacts atomically with ONE fresh
-   UTC run id (`lane-feature-matrix-<TS>Z` and
-   `lane-ap11-campaign-refresh-<TS>Z`), copy both into `gap_inventory/`,
-   update the pins in `tests/test_native_feature_matrix.py`.
-3. Commit matrix + artifacts + pins as one commit.
-4. Update Plan §8 rows and `documentation/native-progress.md`; commit docs
-   as a second commit.
-5. Run the full suite green, then push the milestone working branch,
-   merge it into `main` (normal merge, never force), and push `main` — so
-   both branches track the milestone continuously between cycle-end
-   releases (AGENTS.md workflow policy).
+1. Review the lane branch diff against its report (files, design
+   decisions, shared-file touches).
+2. Merge the lane branch into the milestone working branch (normal
+   merge, never force). Resolve any conflicts at root; a conflict
+   indicates an ownership-map error — tighten the map for the next
+   campaign.
+3. Run the canonical full suite (CT2TRAINER_NASM) on the merged branch.
+4. Remeasure the original-table catalog with the lane's expected delta as
+   the acceptance check: `total_entries` / `supported` changes must
+   match the lane report; **zero unexplained supported regressions** —
+   every newly blocked row needs a named, catalog-visible reason, and
+   every reason-only change is documented. Record the run under
+   `blocked-catalog-<topic>` with the baseline chain (previous run ids)
+   in the docs.
+5. Update root docs in the same change: roadmap status + measured delta,
+   `plans/TRACKING.md`, `documentation/native-progress.md`, `STATUS.md`,
+   `AGENTS.md`.
+6. If the change triggers a release: bump `VERSION` + `__version__` +
+   `CHANGELOG.md` in the same change as the build cut; build only via
+   `scripts/Build-Native.ps1`; verify `ce_inputs: []` and the in-build
+   suite; record the build (run id, ZIP hashes, suite result) in
+   `AGENTS.md` / `STATUS.md` with the superseded-build chain.
+7. Push the milestone branch and `main` to both remotes (origin ssh +
+   github) and verify each with `git ls-remote`.
+
+## 13. Work modes for validation and release (RT-6 / RT-7)
+
+- RT-6 (full original-table validation) splits into two modes:
+  - **Plan inspection (parallelizable):** root splits the 151 paths into
+    chunks (per game family or alphabetically) and assigns one chunk per
+    lane; each lane produces the per-path plan-inspection result plus an
+    honest skip record for every target it cannot access (pinned game
+    build not available, no live runtime observation possible).
+  - **Runtime observation (root/user field work):** targeted observations
+    against pinned game builds, the Windows clean-machine protocol and
+    the Deck/Proton/touch protocol. `runtime_unverified` stays set until
+    both pass; observations are recorded in the docs before any status
+    raise.
+- RT-7 (release gate) is single-threaded at root: rebuild only through
+  `scripts/Build-Native.ps1`; full suite and source/frozen parity;
+  `ce_inputs: []`; archive hashes and provenance; update tracker, ledger
+  and verification before declaring 100%.
