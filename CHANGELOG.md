@@ -2,6 +2,82 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.19 (2026-10-30)
+
+Field-fix release after the 0.18 field tests (Sinking City 2, South of
+Midnight) plus full staged-options support for the South of Midnight
+table:
+
+- Hotkey-bridge Windows crash fix (0.18 field report: the trainer
+  process crashed with access violations inside the real Win32
+  hotkey-bridge seam): the bridge window now uses the correct
+  `HWND_MESSAGE` value `-3` (previously `c_void_p(-1)`, i.e.
+  `HWND_BOTTOM`, which made `CreateWindowExW` fail with Win32 error
+  1400 in the frozen environment); all Win32 prototypes now declare
+  explicit `argtypes`/`restype` up front (previously undeclared calls
+  defaulted to 32-bit `c_int` arguments/return values, truncating
+  64-bit `HINSTANCE`/`HWND` pointers and causing AVs in
+  `RegisterClassExW` / `CreateWindowExW` / `DefWindowProcW`);
+  `RegisterHotKeyW` / `UnregisterHotKeyW` are guarded behind an
+  availability flag so stripped or minimal user32 builds (e.g. some
+  embedded Python distributions) can still construct the window
+  lifecycle without hotkey registration. `run_trainer` now logs
+  `hotkey-bridge-started` (with the bridge HWND) and
+  `hotkey-bridge-failed` debug events. Regression test
+  `tests/test_native_os_hotkeys.py` +1 (real-seam connect / register /
+  close lifecycle, Windows-only; reaching the asserts is the
+  regression signal since an AV would kill the runner).
+- Value-read observability (Sinking City 2 field finding: staged
+  pointer-chain value reads failed silently and surfaced only as a
+  blank "unavailable" with no trace): `TrainerEngine.read_value` now
+  records every failure as a `value-read-failed` debug-log event
+  carrying the exception, deduplicated per identifier per distinct
+  cause (the UI tick retries every visible value row on every poll, so
+  a persistently failing read must not flood the log), then re-raises
+  so callers still surface the refusal as "unavailable". The log entry
+  names the record label, so a broken pointer chain (e.g. a pointer
+  whose base symbol has no live value yet) is diagnosable from
+  `ct2trainer-debug.log` without target access.
+- New `describe` CLI subcommand: `ct2trainer native describe <table>`
+  prints, per record, the raw script source, the plain-language
+  assessment and the concrete actions the trainer performs for the
+  entry (reusing the 0.18 row-details builders from `ui_script_view`,
+  so CLI and UI stay in sync); flags `--process` (suggestion from the
+  CT when omitted), `--id <recordId>` (single record) and `--json`
+  (machine-readable output). `tests/test_native_describe.py` +13
+  tests.
+- Staged-options support (South of Midnight field report: "the staged
+  options are not correctly supported; no staging happens - the options
+  should become selectable only after the prerequisites are active"):
+  the plan-level staging, the engine gates (`_require_staged_live` on
+  value read / write / freeze) and the two-level parent cascade
+  (flagged master -> nested child provider -> staged values) were
+  proven correct by the new cascade test; the real gaps were in the
+  UI: (a) a staged-pending value row still opened the inline editor on
+  tap, letting the user type into an editor that could never apply -
+  now `TrainerWindow._open_value_editor` routes the tap through
+  `engine.read_value` so the engine's named staged refusal ("Staged
+  record 'X' requires active provider 'Y'") lands in the status line
+  immediately and the editor never expands; live or non-staged values
+  open the editor exactly as before; (b) `moAlwaysHideChildren` was
+  not implemented anywhere - the compiler now emits the optional
+  `hidden_children` plan marker for records carrying that option with
+  children, and the row model suppresses the flagged entry's whole
+  subtree (but not the flagged parent row itself) in every view,
+  presentation-only, engine-side cascade untouched. No corpus table
+  uses the flag, so the canonical plans stay byte-stable.
+  `tests/test_native_staged_cascade.py` +2 (SOM-shaped two-level
+  cascade: pending refusals -> master ON cascades to the child
+  provider -> both values read/write -> master OFF re-pends both) and
+  `tests/test_native_staged_options_ui.py` +8 (row-model suppression
+  with a no-flag control case plus the South-of-Midnight shape, and
+  the staged-pending tap guard: pending refuses + names the provider,
+  live and non-staged open the editor without touching the engine).
+
+Suite: 3,850 OK / 26 expected skips. Catalog: unchanged vs
+`blocked-catalog-rt5d-main` (151 tables, 117,634 entries, 60,161
+staged, 1,053 blocked, 0 load errors).
+
 ## 0.18 (2026-10-28)
 
 - Trainer UI row-details window: right-click / long-press on a row now

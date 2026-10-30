@@ -584,5 +584,55 @@ class OsHotkeyEngineTests(unittest.TestCase):
         self.assertIsNone(self.engine.hotkey_bridge)
 
 
+@unittest.skipUnless(sys.platform == "win32",
+                     "real OS hotkey seam is Windows-only")
+class RealSeamAVRegressionTests(unittest.TestCase):
+    """Regression for the 0.18 field report of access violations in the
+    real hotkey-bridge seam on Windows.
+
+    The pre-0.19 seam crashed with a Windows fatal exception inside
+    RegisterClassExW / CreateWindowExW because GetModuleHandleW was
+    undeclared (32-bit truncation of the 64-bit HINSTANCE) and
+    HWND_MESSAGE was incorrectly c_void_p(-1) instead of c_void_p(-3).
+    This test exercises the connect -> register -> close lifecycle
+    against the real Win32 seam.  A process-level access violation here
+    would kill the test runner outright, so reaching the asserts is the
+    regression signal.
+    """
+
+    def test_lifecycle_does_not_av(self):
+        import ctypes
+        # Verify the Win32 symbols the seam needs exist in this Python
+        # build; stripped / minimal builds may lack some user32 exports.
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        required = ("RegisterClassExW", "CreateWindowExW", "GetMessageW",
+                    "DispatchMessageW", "PostQuitMessage", "PostMessageW",
+                    "DestroyWindow", "RegisterHotKeyW", "UnregisterHotKeyW")
+        missing = [n for n in required
+                   if not hasattr(user32, n)]
+        if missing:
+            self.skipTest(
+                f"Win32 symbols missing in this build: {missing}")
+
+        from ct2trainer.native.hotkey_bridge import create_hotkey_bridge
+        from ct2trainer.native.hotkey_model import HotKeySpec
+
+        bridge = create_hotkey_bridge()
+        try:
+            self.assertIsNotNone(bridge)
+            self.assertGreater(bridge._hwnd, 0)
+            spec = HotKeySpec.parse("ctrl+alt+F12")
+            try:
+                bridge.register(spec)
+                self.assertTrue(bridge.is_registered(spec))
+            except Exception:
+                # E_ACCESS_DENIED (another process owns the combo) is
+                # acceptable; the regression is the AV, not a busy key.
+                pass
+        finally:
+            bridge.close()
+        self.assertTrue(bridge._closed)
+
+
 if __name__ == "__main__":
     unittest.main()

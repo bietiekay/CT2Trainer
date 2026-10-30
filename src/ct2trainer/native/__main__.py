@@ -34,6 +34,17 @@ def main(argv=None) -> int:
         if command == "build":
             sub.add_argument("--template", type=Path)
     commands.add_parser("gui")
+    desc = commands.add_parser(
+        "describe",
+        help="Print what each table record does (script source, assessment, actions)")
+    desc.add_argument("table", type=Path)
+    desc.add_argument("--process", required=False,
+                      help="Exact target EXE; when omitted, a single distinct .exe name "
+                           "found in the CT fills the field (suggestion, never proof)")
+    desc.add_argument("--id", type=int, dest="entry_id", default=None,
+                      help="Describe only this record ID (default: all records)")
+    desc.add_argument("--json", action="store_true",
+                      help="Emit JSON instead of plain text")
     il2cpp = commands.add_parser("il2cpp", help="Static IL2CPP PE/metadata analysis")
     il2cpp.add_argument("pe", type=Path, help="PE executable to analyze")
     il2cpp.add_argument("--metadata", type=Path, required=True,
@@ -50,7 +61,7 @@ def main(argv=None) -> int:
             recovery.add_argument('--archive-dir', type=Path, required=True)
     args = cli.parse_args(argv)
     try:
-        if args.command in ("inspect", "prepare", "build"):
+        if args.command in ("inspect", "prepare", "build", "describe"):
             from .process_detect import resolve_process
             args.process, process_source = resolve_process(args.process, args.table.read_bytes())
             if process_source == "ct-suggestion":
@@ -87,6 +98,17 @@ def main(argv=None) -> int:
                                          expected_table_sha256=plan['table_sha256'])
             print(json.dumps(asdict(result), indent=2, default=str))
             return 0 if result.completed else 2 if result.status == 'refused' else 3
+        if args.command == "describe":
+            from .compiler import compile_table
+            from .describe import describe_entries, render_describe
+            plan = compile_table(args.table, args.process)
+            ids = {args.entry_id} if args.entry_id is not None else None
+            results = describe_entries(plan, include_ids=ids)
+            if args.json:
+                print(json.dumps(results, indent=2, ensure_ascii=False))
+            else:
+                print(render_describe(results))
+            return 0
         from .compiler import compile_table, load_user_symbols
         user_symbols = (load_user_symbols(args.user_symbols)
                         if args.user_symbols is not None else None)
