@@ -1,15 +1,15 @@
 # CE 7.5 vs CT2Trainer — comparison and analysis
 
-> **Baseline note:** pre-0.20 (main @ `623021f`, 2026-10-30); final numbers
-> refreshed by the release cycle. The 0.20 release cycle (CheatCodes
-> code-patch plan path — RT-5 item B — and the `messageDialog` decision —
-> RT-5 item E) is in progress in parallel; the plan-entry total is
-> expected to move by roughly +175 entries once the code-patch plan path
-> lands (175 `CodeEntry` records across 22 tables per the RT-5 inventory
-> census), so the catalog totals in section 4 are marked *final numbers
-> pending the 0.20 catalog remeasure* where affected.
+> **Baseline note:** 0.21 cycle (main, 2026-10-31). Final numbers
+> refreshed by the release cycle: RT-5 item B (CheatCodes code-patch
+> plan path) added the 175 `CodeEntry` records of the 22 CheatCodes
+> tables as supported `code_patch` plan entries, and item E landed the
+> `messageDialog` safe no-op decision. Catalog remeasure
+> `blocked-catalog-020-rt5-be` (2026-10-31): 117,809 total, 116,756
+> supported, 60,161 staged, 1,053 blocked, 0 load errors — zero delta
+> apart from the +175 code-patch entries.
 
-Status: 2026-10-30, **draft** of the final CE 7.5 vs CT2Trainer
+Status: 2026-10-31, **final** CE 7.5 vs CT2Trainer
 comparison. Evidence sources: the repository's own tracking and
 inventory artifacts (cited inline), the CE 7.5 local source tree at
 `C:\Users\xboxl\code\cheat-engine-7.5` (read-only behavior reference;
@@ -48,15 +48,16 @@ required:
    compilation and synthetic fixtures alone do not prove the original
    game effect. Windows and Steam Deck acceptance are separate gates.
 
-**Measured end state (pre-0.20):**
+**Measured end state (0.21, after the RT-5 item B/E merges):**
 
 - Table load: **151/151 paths load, zero load errors** (legacy-binary
   `SuperMeatBoy.CT` loads since RT-3, 2026-10-23).
-- Static plan admission: **116,581 supported of 117,634 plan entries**
+- Static plan admission: **116,756 supported of 117,809 plan entries**
   (≈99.1%), of which **60,161 staged** behind runtime gates; **1,053
   blocked** with named, catalog-visible reasons (run
-  `blocked-catalog-019-field`, 2026-10-30 — final numbers pending the 0.20
-  catalog remeasure).
+  `blocked-catalog-020-rt5-be`, 2026-10-31 — the 0.21 remeasure; the
+  denominator grew by the 175 item B code-patch entries, blocked and
+  staged unchanged).
 - Synthetic feature matrix: **42/42 in-scope feature classes** covered,
   **7,475/7,475 action weight** (run `w4b4-case30-20261020081722Z`) — this
   measures the 30 pinned synthetic corpus tables only, not the original
@@ -470,17 +471,20 @@ unchanged across the chain:
 | RT-4.2 runtime provider model (RT-4 complete) | 2026-10-27 | `blocked-catalog-rt42-main` | **1,053** | 117,634 | 60,161 † | 151/151 |
 | RT-5 items A / C / C2 / D (zero delta at each step) | 2026-10-28/29 | `blocked-catalog-rt5a-main` / `-rt5c-main` / `-rt5c2-main` / `-rt5d-main` | 1,053 | 117,634 | 60,161 | 151/151 |
 | 0.19 field-fix cycle (zero delta vs item D) | 2026-10-30 | `blocked-catalog-019-field` | **1,053** | 117,634 | 60,161 | 151/151 |
+| 0.20/0.20.1 branding icons (zero delta vs 0.19 field) | 2026-10-30/31 | `blocked-catalog-020-icons` | 1,053 | 117,634 | 60,161 | 151/151 |
+| RT-5 item B code-patch path (item E zero delta, run `blocked-catalog-rt5e-iteme`) | 2026-10-31 | `blocked-catalog-020-rt5-be` | **1,053** | **117,809** | 60,161 | 151/151 |
 
 † The item-A remeasure (`blocked-catalog-rt5a-main`) records **zero
 delta** against the RT-4.2 state, including the 60,161 staged entries
 and 116,581 supported; every later run repeats the same zero-delta
-statement. *Final numbers pending the 0.20 catalog remeasure* (item B's
-code-patch plan path is expected to add ≈175 plan entries — the 175
-`CodeEntry` records of the RT-5 inventory census — to the denominator).
+statement. The item B remeasure (`blocked-catalog-020-rt5-be`) adds
+exactly the expected 175 plan entries — all supported `code_patch`
+records, zero newly blocked, zero reason changes — confirming the
+inventory census.
 
-**Current measured state** (run `blocked-catalog-019-field`,
-2026-10-30): **151/151 table paths load with zero load errors**;
-**117,634 plan entries**, of which **116,581 supported (≈99.1%)** —
+**Current measured state** (run `blocked-catalog-020-rt5-be`,
+2026-10-31): **151/151 table paths load with zero load errors**;
+**117,809 plan entries**, of which **116,756 supported (≈99.1%)** —
 including **60,161 staged** behind runtime gates — and **1,053 blocked**,
 each with a named, catalog-visible reason.
 
@@ -563,29 +567,34 @@ run `w4b4-case30-20261020081722Z`: `confirmed_game_effect_actions: 0`,
 excluded from the feature metric by definition; it is roadmap proof
 plane 3.
 
-### 4.5 Build and suite state (pre-0.20)
+### 4.5 Build and suite state (0.21)
 
-Latest verified build: **0.19**, `native-20261030T121918Z-c72dbb38`, cut
-from `main` @ `fbe626f` (2026-10-30): in-build suite **3,850 OK / 26
-expected skips**, `ce_inputs: []`, `runtime_unverified` deliberately
-kept per gate; source ZIP `CT2Trainer-0.19-source.zip` (13,243,532
-bytes), portable ZIP `CT2Trainer-0.19-windows-portable.zip`
-(28,800,949 bytes). 0.19 ships the field-fix cycle: Sinking City 2
-hotkey-bridge Windows AV fix, value-read observability, the `describe`
-CLI subcommand, and full South of Midnight staged-options support
-(+24 tests).
+Latest verified build: **0.20.1**,
+`native-20261031T104114Z-d64ae4c2`, cut from `main` @ `080128c`
+(2026-10-31): in-build suite **3,854 OK / 26 expected skips**,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per gate
+(source ZIP `CT2Trainer-0.20.1-source.zip` sha256 `d6ced6ee…`, portable
+ZIP `CT2Trainer-0.20.1-windows-portable.zip` sha256 `c8f022b1…`).
+Superseded 0.20 build `native-20261030T184820Z-b9d6dc07` (2026-10-30,
+branding icons, in-build 3,854/26, zero catalog delta
+`blocked-catalog-020-icons`). The 0.21 build from this content set (RT-5
+items B + E, this document) records its in-build suite and archive
+hashes in the release docs (`AGENTS.md`,
+`documentation/native-progress.md`).
 
 ## 5. Remaining gaps and documented bounded deviations
 
 Each entry below is a recorded scope decision with its rationale and
-evidence; none of them silently diverges from CE 7.5. Items marked
-"0.20" are the two open RT-5 decisions the release cycle is closing.
+evidence; none of them silently diverges from CE 7.5. The two RT-5
+decisions open at drafting (item B code-patch path, item E
+`messageDialog`) landed in the 0.21 cycle; item E is row 3 below, item
+B in inventory section 4.9 and §4.1 above.
 
 | # | Deviation / gap | CE 7.5 behavior | CT2Trainer behavior | Rationale and evidence |
 | --- | --- | --- | --- | --- |
 | 1 | **Single-target process model** | Multi-process: open/switch processes, auto-attach lists, per-process state | One pinned target per plan (exact EXE binding at compile time); item-C APIs answer only from the attached target; `openProcess` is a truthy no-op with identity verify; `getProcessList` single-entry map; `getAutoAttachList` inert per-scope singleton | Private own use, one table per game; a multi-process model would widen the API and security surface with no corpus demand. Evidence: roadmap clean-room boundary; item C update (commit `0167825`). |
 | 2 | **No before-load `onTableLoad` phase** | `onTableLoad(true)` before parsing (`OpenSave.pas:337`, verified this session) and `onTableLoad(false)` after (`:998`, verified) | Only the after-load dispatch fires (`onTableLoad(false)`), in CE sequence with `onOpenProcess` (`ProcessHandlerUnit.pas:193`, verified), after a clean table-Lua bootstrap | The once-per-attach bootstrap has no before-load phase; the corpus callbacks (Resonance, Sinking City 2) only use the after-load state. Evidence: item D (merge `9294bb8`); `tests/test_native_rt5_table_callbacks.py`. |
-| 3 | **`messageDialog` decision — 0.20** | User-facing dialog (69 calls, 31 tables) | Named refusal + load-time review warning today; the decision (safe no-op with review flag vs. refusal) lands in the 0.20 cycle | Purely UI presentation; a safe no-op preserves table flow for informational dialogs, a refusal breaks table Lua that continues after the call. Evidence: inventory §7.2 item E; 0.20 cycle scope. **Final decision pending.** |
+| 3 | **`messageDialog` — safe logged no-op (item E, 0.21)** | User-facing dialog (69 calls, 31 tables) | Safe logged no-op returning 0 (mbOK, truthy in Lua): CE 7.5 argument shapes (message / title+message / dialogtype / buttons), nil argument tolerance (corpus table Lua passes undefined button constants as nil), `message-dialog` debug event, both spellings, record + table scope | Purely UI presentation; the safe no-op preserves table flow for informational dialogs, while a refusal would break table Lua that continues after the call. Evidence: item E (merge `b8bb4ee`; `tests/test_native_rt5_message_dialog.py` +22); zero catalog delta (`blocked-catalog-rt5e-iteme`). |
 | 4 | **`shellExecute` safe no-op** | Executes an external command/URL (31 tables) | Safe no-op + table-load warning split per API (WP-56) | External process launch is outside the trainer contract and a safety risk in a game-process context; no corpus table depends on the launch result for a game-facing action. Evidence: WP-56 (0.16 content); 0.16.1 accurate-warning fix. |
 | 5 | **`createThread`/`threadWait` capability gate** | AA thread directives spawn target threads | Five-stage fail-closed gate (tokenizer → one-shot grammar → staged-runtime gate → converter composite reason → engine `NativeRuntimeError` with zero allocation/symbol/write side effects); no thread backend ships this milestone | Item-G option (2): a bounded owned-thread backend requires a root design review first (thread lifecycle, debug-event ownership, join semantics, exact disable teardown, journal receipt). Evidence: item G (merge `2de9c0e`); `tests/test_native_rt5_thread_gate.py` +17; census 2 O22 rows + 77 usages in 18 tables. |
 | 6 | **`Structures` sections not interpreted** | 16 tables define 1,067 structures / 25,531 elements; CE renders structure forms | "Table-level sections not interpreted: Structures" warning; plan-inert (byte-exact differential vs a construct-free control) | No corpus record references the structures (none of the 16 tables has a `CheatEntry` with a `<CustomType>` child) — unreferenced editor metadata here; if a future table references them, structure runtime support becomes an implementation item. Evidence: inventory §4.8; item F register pin. **`Forms` (10 tables) is the same decision class** — outside scope, table Lua runs against the WP-56 inert proxies. |
@@ -601,16 +610,18 @@ evidence; none of them silently diverges from CE 7.5. Items marked
 | 16 | **`runtime_unverified`** | N/A | Both final acceptance gates still open: the Windows clean-machine protocol and the real Steam Deck under Proton with touch operation | 0.9.0-rc2 was the only user-tested baseline (machine without CE or Python); later field tests (Sinking City 2, South of Midnight) ran on a machine with the toolchain present. `runtime_unverified` stays set until both RT-6 protocols pass with recorded build hashes. Evidence: `native-verification.md` §1; STATUS.md final-platforms row. |
 | 17 | **AP-11 effects unconfirmed** | N/A | 0 of 6,143 observed game effects | Proof plane 3 (observed effect) is separate from static admission by design; RT-6 runtime observation is the verification path. Evidence: `gap_inventory/gap-report.json` denominator; roadmap RT-6. |
 
-**Open (in flight, not yet deviations):** RT-5 item B — the
-`CheatCodes` code-patch plan path (22 tables / 175 entries; the section
-is currently a named warning "Table-level sections not interpreted:
-CheatCodes"; final numbers pending the 0.20 catalog remeasure) — and
-item E (`messageDialog`, row 3 above). Both are the 0.20 release cycle,
-running in parallel with this document.
+**Closed during drafting:** RT-5 item B — the `CheatCodes` code-patch
+plan path (22 tables / 175 entries; the section was the named warning
+"Table-level sections not interpreted: CheatCodes") landed in the 0.21
+cycle with exactly +175 supported plan entries and zero newly blocked
+rows (run `blocked-catalog-020-rt5-be`) — and item E
+(`messageDialog`, row 3 above), a zero-catalog-delta runtime host
+behavior. RT-5 is complete; the remaining work is RT-6 validation and
+the RT-7 release gate.
 
 ## 6. Conclusion
 
-**What the evidence proves (pre-0.20):**
+**What the evidence proves (0.21, after the RT-5 item B/E merges):**
 
 - The product is a genuine clean-room implementation: every build passes
   the offline build with `ce_inputs: []`, and the CE 7.5 tree was used
@@ -619,12 +630,14 @@ running in parallel with this document.
 - **All 151 reference-table paths load** — both the XML format and the
   CE 5.x-era legacy binary format (`SuperMeatBoy.CT` since RT-3) — with
   zero load errors and source identity preserved (manifest SHA-256s).
-- **Static plan admission covers 116,581 of 117,634 plan entries**
+- **Static plan admission covers 116,756 of 117,809 plan entries**
   (≈99.1%), every blocked entry carrying a named, catalog-visible
   reason; the baseline chain from 2,698 blocked to 1,053 was driven by
   six re-measured RT-4 packages with zero newly blocked rows at every
-  step and zero unexplained supported regressions, and the RT-5 items
-  A/C/C2/D added runtime host behavior at zero catalog delta each.
+  step and zero unexplained supported regressions, the RT-5 items
+  A/C/C2/D/E added runtime host behavior at zero catalog delta each,
+  and item B added exactly its 175 code-patch entries as supported
+  records with zero newly blocked rows.
 - The **42/42 in-scope feature matrix** (7,475/7,475 action weight)
   proves the declared feature set end-to-end on the 30 pinned synthetic
   tables with byte-exact engine-level evidence.
@@ -634,7 +647,7 @@ running in parallel with this document.
   `onOpenProcess` dispatch sequence, the dual-branch embedded-file
   codec) are each pinned to CE 7.5 file:line locations, and
   CT2Trainer's corresponding semantics are pinned by dedicated test
-  modules (3,850-test main suite as of the 0.19 build).
+  modules (3,902-test main suite as of the 0.21 content commit).
 
 **What remains open:**
 
@@ -643,21 +656,20 @@ running in parallel with this document.
    ownership, keep-first provider policy), and the deliberate
    capability gates (O11 custom types, O15 usemono, O22 threads); the
    exact per-reason composition is in the local-only catalog artifacts.
-2. **The 0.20 cycle** — item B (CheatCodes code-patch plan path,
-   ≈+175 plan entries) and item E (`messageDialog` safe no-op decision);
-   final catalog numbers pending the 0.20 remeasure.
-3. **Staged runtime proof** — 60,161 staged entries count toward the
+2. **Staged runtime proof** — 60,161 staged entries count toward the
    goal only after their runtime gates are exercised in live targets
    (RT-6).
-4. **AP-11 observed effects** — 0/6,143; the separate end goal.
-5. **Final platform acceptance** — Windows clean-machine and real Steam
+3. **AP-11 observed effects** — 0/6,143; the separate end goal (this
+   includes the 175 code-patch entries' real-game effect).
+4. **Final platform acceptance** — Windows clean-machine and real Steam
    Deck under Proton with touch, both still `runtime_unverified`.
 
 **Verification path to closing the 100% objective** (roadmap RT-6/RT-7):
 
-1. Land the 0.20 cycle (items B + E), remeasure the catalog under
-   `blocked-catalog-020-*`, and refresh this document's final numbers
-   (the release cycle owns that update).
+1. Cut the 0.21 build through `scripts/Build-Native.ps1` and record
+   its id, in-build suite and archive hashes in the tracking docs
+   (release cycle; the build record in §4.5 is completed by that
+   change).
 2. RT-6 plan inspection: split the 151 paths into chunks, one lane per
    chunk, each producing the per-path plan-inspection result plus an
    honest skip record for every target it cannot access (pinned game
@@ -680,7 +692,7 @@ plane is the remaining work.**
 
 ## 7. Sources and citations
 
-**Repository artifacts (worktree `lane-ce-analysis`, main @ `623021f`):**
+**Repository artifacts (main, 0.21 cycle, 2026-10-31):**
 
 - `STATUS.md` — measured end state, superseded-build chain, goal
   definition (2026-10-30).

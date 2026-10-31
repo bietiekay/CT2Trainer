@@ -2,6 +2,58 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.21 (2026-10-31)
+
+RT-5 complete — the final two implementation items of the RT-5
+inventory (every item A, B, C, C2, D, E, F, G now landed):
+
+- RT-5 item B — table-level `<CheatCodes>` code list as `code_patch`
+  plan records (lane `native-0.20-rt5-b`, merge `9ef4a74`):
+  fail-closed per-entry table parse (whole-byte hex byte-capture codec
+  with `<Byte>` child and text fallback, 4096-entry section bound,
+  per-entry named drop warnings; `GroupHeader` rows become supported
+  heading records — the corpus carries zero of them); compiler
+  `code_patch` projection with synthetic plan IDs at 2**32+ (above the
+  RT-5 C2 dynamic-record journal range 2**31+1..2**31+4096 — documented
+  deviation from the task's 2**31 base), CE code-list address forms
+  (`AddressString` verbatim / `ModuleName` + normalized offset /
+  absolute hex) with a compile-time static symbol-free expression gate
+  that blocks only the offending entry, `CheatCodes` added to the
+  interpreted-section whitelist (the load-time warning is gone), both
+  plan validators re-deriving the canonical shape with forged-entry
+  refusals; engine toggle lifecycle with named refusals
+  (`code-patch-already-active`, `code-patch-target-changed`,
+  `code-patch-restore-mismatch` + engine block), executable pages
+  routed through the verified coordinator hook journal, data pages
+  through the ordinary byte transaction, standard enabled-wish
+  persistence with re-attach re-enable and close-time restore (disable
+  restores the bytes captured at enable time — documented superset of
+  CE); UI switch rows with the `code` chip in Switches/On/Saved.
+  `tests/test_native_rt5_code_patch.py` +26. Catalog remeasure on main
+  (run `blocked-catalog-020-rt5-be`): 117,634 -> 117,809 total,
+  116,581 -> 116,756 supported (+175 — the full 22-table `CodeEntry`
+  census, zero GroupHeader rows), 1,053 blocked and 60,161 staged
+  unchanged, 0 load errors, zero newly blocked, zero reason changes.
+- RT-5 item E — `messageDialog` decision (branch
+  `native-0.20-rt5-be`, merge `b8bb4ee`): hosted as a safe logged
+  no-op returning 0 (mbOK, truthy in Lua) with the CE 7.5 argument
+  shapes (message / title+message / dialogtype / buttons) and nil
+  argument tolerance (corpus table Lua passes undefined button
+  constants as nil); debug-log event `message-dialog` (title + message
+  truncated, argument count); both spellings admitted in record scope
+  and table scope (`TABLE_LUA_READ_ONLY_NAMES`, 47 corpus table-Lua
+  call sites). `tests/test_native_rt5_message_dialog.py` +22 plus pin
+  updates. Zero catalog delta (run `blocked-catalog-rt5e-iteme`) —
+  runtime host behavior, static catalog unaffected.
+- New closing analysis `documentation/ce-vs-ct2trainer-analysis.md`
+  (CE 7.5 behavior vs the CT2Trainer implementation, measured end
+  state vs the 100% goal, the 17-row bounded-deviation register, the
+  RT-6/RT-7 verification path; file:line-verified CE 7.5 citations).
+
+Suite: 3,902 OK / 26 expected skips on `main` after the merges
+(canonical checkout, CT2TRAINER_NASM); the in-build suite result is
+recorded with the 0.21 build id in the release docs.
+
 ## 0.20.1 (2026-10-30)
 
 Release-content correction - re-cut of the 0.20 branding-icon build:

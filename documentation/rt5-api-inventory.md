@@ -91,10 +91,13 @@ re2_testicles 117, DeathStrandingDC (pair) 122/121, Witcher3 (pair)
 SOTTR 29, ctts 28.
 
 Items in this inventory that the catalog does **not** count (they are
-table-level constructs, not plan rows): the `CheatCodes` code-patch
-sections, embedded `.lua` files loaded by table Lua, the CE Lua API
-gap list (section 7), and the no-effect constructs (section 8).
-Those are the RT-5 implementation queue.
+table-level constructs, not plan rows): the embedded `.lua` files
+loaded by table Lua, the CE Lua API gap list (section 7), and the
+no-effect constructs (section 8). The `CheatCodes` code-patch sections
+entered the catalog with RT-5 item B (2026-10-31): the 175
+`CodeEntry` records of 22 tables are now `code_patch` plan rows
+(remeasure `blocked-catalog-020-rt5-be`: 117,634 -> 117,809 total,
++175 supported, zero newly blocked).
 
 ## 4. Table-level construct census (150 XML tables)
 
@@ -190,7 +193,7 @@ unreferenced editor metadata here; they surface as the
 game-facing effect. If a future table references them, structure
 runtime support becomes an implementation item.
 
-### 4.9 Code patches (`CheatCodes`) — gap, game-facing
+### 4.9 Code patches (`CheatCodes`) — supported (RT-5 item B, 0.21)
 
 22 tables carry a `<CheatCodes>` section with 175 `CodeEntry` records
 (175 `Before`/`Actual`/`After` byte sequences, 124 `AddressString`
@@ -198,9 +201,23 @@ module+offset targets, 51 `ModuleName`/`ModuleNameOffset`). Largest:
 SOTTR 41, Subnautica 37, Yakuza_Kiwami_Remastered 18, trine2_32bit 13,
 YLILWin64 (pair) 11+11, TheCallistoProtocol v1.2 7. CE presents these
 as standalone activatable code patches (verify-before/apply-actual/
-restore-after). CT2Trainer does not interpret the section
-("Table-level sections not interpreted: CheatCodes" warning) — **gap,
-RT-5 implementation item** (section 9, item B).
+restore-after). **Landed by item B (2026-10-31, lane
+`native-0.20-rt5-b`, commit `3f1cce3`, merge `9ef4a74`):** each
+`CodeEntry` becomes a supported `code_patch` plan record (synthetic
+IDs at 2**32+, `CheatCodes` moved to the interpreted-section
+whitelist so the load warning disappears), with the CE address forms
+(`AddressString` verbatim / `ModuleName`+offset / absolute hex), a
+compile-time static symbol-free expression gate, enable-time
+verification against the `<Before>` prefix (`code-patch-target-changed`
+named refusal, zero writes) and disable-time restore of the
+captured-at-enable original (`code-patch-restore-mismatch` refusal +
+engine block) — a documented superset of CE, which only ever applies
+the `Actual` bytes; `GroupHeader` rows become supported headings (0 in
+the corpus); executable pages route through the verified coordinator
+hook journal, data pages through the ordinary byte transaction.
+Catalog remeasure `blocked-catalog-020-rt5-be`: +175 supported, zero
+newly blocked. `tests/test_native_rt5_code_patch.py` +26. The
+real-game effect of the code patches remains AP-11 (unverified).
 
 ### 4.10 Integrity metadata — no-effect
 
@@ -400,8 +417,12 @@ the goal unless a scope decision is recorded.
 | `enumModules` | 4 (2) | bounded single-module answer candidate |
 
 **Purely visual UI (27) — scope decision: no-effect, refusal stays:**
-`messageDialog` (69/31 — user-facing dialog; `table.py:647` review
-warning at load; decision item E), `control_setVisible` (16/4),
+`messageDialog` (69/31 — user-facing dialog; **hosted as a safe logged
+no-op returning 0 (mbOK) by item E (2026-10-31, merge `b8bb4ee`)**: CE
+argument shapes, nil tolerance, `message-dialog` debug event, both
+spellings in record + table scope; the no-effect classification
+stands — presentation only, table flow preserved),
+`control_setVisible` (16/4),
 `wincontrol_getControl` (16/4), `getMemoryViewForm` (14/6),
 `getStructureCount` (14/2), `getStructure` (16/2), `createButton`
 (9/7), `createPanel` (8/2), `createForm` (7/7), `createFont` (5/5),
@@ -479,6 +500,11 @@ host provides its own, `lua_host.py:650`), `redirectPrint`
 - B. `CheatCodes`/`CodeEntry` code patches — 22 tables, 175 entries
   (SOTTR 41, Subnautica 37, Yakuza_Kiwami_Remastered 18,
   trine2_32bit 13, YLILWin64 pair 11+11, TheCallistoProtocol 7, …).
+  **Done 2026-10-31 (item B, lane `native-0.20-rt5-b`, commit
+  `3f1cce3`, merge `9ef4a74`): `code_patch` plan records at 2**32+
+  IDs, CE address forms, static compile gate, verified enable +
+  captured-original restore, +26 tests; catalog +175 supported,
+  zero newly blocked (`blocked-catalog-020-rt5-be`).**
 - C. Process-info API family (14 names, section 7.2 game-facing list)
   incl. `getOpenedProcessID` alias, `stringlist_add`,
   `createMemoryRecord`. **Done 2026-10-28 (item C, lane
@@ -489,8 +515,12 @@ host provides its own, `lua_host.py:650`), `redirectPrint`
   `native-rt5-d`): CE-sequence table-scope dispatch after a clean
   bootstrap, pcall-wrapped, `plan["table_lua"]` untouched;
   `table-callback` / `table-callback-error` debug events; +9 tests.**
-- E. `messageDialog` decision — 31 tables, 69 calls; currently named
-  refusal + load-time review warning.
+- E. `messageDialog` decision — 31 tables, 69 calls. **Done
+  2026-10-31 (item E, branch `native-0.20-rt5-be`, merge `b8bb4ee`):
+  decision = safe logged no-op returning 0 (mbOK) with CE argument
+  shapes and nil tolerance, `message-dialog` debug event, both
+  spellings in record + table scope; +22 tests; zero catalog delta
+  (`blocked-catalog-rt5e-iteme`).**
 
 **No-effect / out-of-scope (documented):**
 
@@ -506,10 +536,12 @@ host provides its own, `lua_host.py:650`), `redirectPrint`
 - Thread backend: `createThread`/`threadWait` AA directives (77/18
   tables) gated behind the O22 capability gate (2 catalog rows).
 
-## 9. Remaining RT-5 work (implementation queue)
+## 9. RT-5 implementation queue (complete 2026-10-31)
 
 Ordered after the RT-4 lanes land (RT-4.6 219 rows, then RT-4.2
-1,085 rows last):
+1,085 rows last). **All items A–G have landed** (dates per item
+below); the next roadmap work is RT-6 (validation) and RT-7 (release
+gate).
 
 1. Item A — embedded files + `findTableFile`/`readStringLocal`.
    **Done 2026-10-28** (lane `native-rt5-a`, merge `479977c`).
@@ -537,10 +569,13 @@ Ordered after the RT-4 lanes land (RT-4.6 219 rows, then RT-4.2
    re-fire, refused bootstraps skip the dispatch,
    `tests/test_native_rt5_table_callbacks.py` +9, zero catalog
    delta (`blocked-catalog-rt5d-main`).
-4. Item B — code-patch plan path for `CheatCodes` (or recorded
-   scope decision).
-5. Item E — `messageDialog` decision (no-op with review flag vs
-   refusal).
+4. Item B — code-patch plan path for `CheatCodes`. **Done
+   2026-10-31** (lane `native-0.20-rt5-b`, commit `3f1cce3`, merge
+   `9ef4a74`): the plan path landed in full instead of a scope
+   decision — see sections 4.9 and 8 item B.
+5. Item E — `messageDialog` decision. **Done 2026-10-31** (branch
+   `native-0.20-rt5-be`, merge `b8bb4ee`): decision = safe logged
+   no-op — see section 8 item E.
 6. Item F — ratify the no-effect register (section 8) with tests.
 7. Item G — `createThread`/`threadWait` backend decision (O22).
 

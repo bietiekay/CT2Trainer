@@ -77,7 +77,7 @@ the original reference corpus and raw catalogs local-only.
 | RT-2 | Root-cause map for every residual | Resolve all 2,698 blocked entries to an upstream cause or verified malformed authoring input. Follow provider cascades to their root; distinguish real missing semantics from false positives and duplicate provider policy. Record a testable contract, risk, and expected delta for each class. |
 | RT-3 | Load all table formats | Investigate the remaining legacy binary CT format with a clean-room parser or documented conversion path; preserve record identity and data. Table load reaches 151/151, subject to explicit evidence for genuinely unreadable inputs. — done 2026-10-23 (clean-room parser `src/ct2trainer/legacy_ct.py`; `SuperMeatBoy.CT` loads with all 10 records supported; run `blocked-catalog-rt3`). |
 | RT-4 | Close high-volume plan gaps | Execute the RT-2 root-cause-map packages in suggested order by expected delta over risk: RT-4.1 symbol provider fidelity (dupIgnore policy, dup labels, wildcard-cleanup scoping) 820 — done 2026-10-22 (remeasured 2,698 -> 1,858 blocked), RT-4.3 address expression & identifier dialect 452 — done 2026-10-26 (remeasured 1,743 -> 1,351 blocked), RT-4.4 value semantics 65, RT-4.5 AA directive & script coverage 57, RT-4.6 input legacy & authoring gaps 219, RT-4.2 runtime provider model 1,085 (last: its AA_HIDDEN portion clears progressively as root packages land) - done 2026-10-27 (remeasured 1,351 -> 1,053 blocked). The split sums to 2,698. Each package: leading-table inspection, an independently authored synthetic case, the class contract as a testable assertion, owned-target runtime tests where effects matter, full suite, catalog delta with zero unexplained supported regressions, and a remeasure. A reason count is not an independent feature count; remeasure after each fix. |
-| RT-5 | Runtime trainer parity | Inventory every used CE Lua/AA API and game-facing table-level construct, including dynamic records, callbacks, target threads, managed resolution, string hex view, and byte-width dropdown semantics. Implement each needed behavior with bounded contracts, teardown rules, and owned-target tests; classify purely visual UI as outside scope. |
+| RT-5 | Runtime trainer parity | Inventory every used CE Lua/AA API and game-facing table-level construct, including dynamic records, callbacks, target threads, managed resolution, string hex view, and byte-width dropdown semantics. Implement each needed behavior with bounded contracts, teardown rules, and owned-target tests; classify purely visual UI as outside scope. — done 2026-10-31 (all inventory items A, B, C, C2, D, E, F, G landed: F+G 2026-10-26, A+C 2026-10-28, C2+D 2026-10-29, B+E 2026-10-31; final catalog `blocked-catalog-020-rt5-be`: 1,053 blocked of 117,809 plan entries, 116,756 supported including the 175 code-patch entries, zero newly blocked at every step). |
 | RT-6 | Full original-table validation | For each path, produce a plan-inspection result and targeted runtime observations against a pinned game build where available. Record skipped or inaccessible targets honestly. Run the Windows clean-machine and Deck/Proton/touch protocols; keep `runtime_unverified` until both pass. |
 | RT-7 | Release gate | Rebuild only through `scripts/Build-Native.ps1`; full suite and source/frozen parity; `ce_inputs: []`; archive hashes and provenance; update tracker, ledger, and verification before declaring 100%. |
 
@@ -745,6 +745,88 @@ supported (60,161 staged), 1,053 blocked, 0 compile errors, 0 newly
 blocked, 0 reason-changed) — the dispatch is runtime host behavior
 and the catalog is static plan-level. `runtime_unverified` remains:
 the callback answers are untested on a live target.
+
+Update (2026-10-31, RT-5 item B): the table-level `<CheatCodes>`
+code-list plan path landed (lane `native-0.20-rt5-b`, commit
+`3f1cce3`, merged to `main` as `9ef4a74`): fail-closed per-entry
+parse — each `<CodeEntry>` with a non-hex or odd-length byte capture,
+an empty `<Actual>`, a missing `<Description>`, or no usable address
+is dropped with a named warning while the table still compiles; the
+section is bounded at `MAX_CODE_PATCH_ENTRIES = 4096` (an oversized
+section is ignored whole); `GroupHeader="1"` rows become supported
+`heading` records (the corpus carries zero of them; CE group
+activation is not executed). Byte-capture codec: `<Byte>`
+child-element sequences joined, whitespace-stripped element-text
+fallback, whole-byte (even-length) gate, lowercase normalization,
+empty = absent capture. Plan projection: kind `code_patch`, synthetic
+IDs at `CODE_PATCH_ID_BASE = 2**32` in table order — the RT-5 C2
+dynamic-record journal owns [2**31+1, 2**31+4096] as session-scoped
+IDs, so the two synthetic ID spaces can never collide (documented
+deviation from the task's 2**31 base); address composition mirrors
+the CE code-list forms (`AddressString` verbatim, else `ModuleName`
++ normalized offset, else absolute hex uppercased), with a
+compile-time static symbol-free expression gate
+(`parse_expression` + `advanced_expression_symbols`, zero symbol
+atoms) that blocks only the offending entry; `CheatCodes` is added
+to the interpreted-section whitelist, so the load-time warning
+disappears. Both plan validators re-derive the canonical shape
+byte-exactly and refuse forged entries (low ID, uppercase/odd-length
+hex, empty actual, oversized captures, symbol-carrying or unparseable
+address, address/source mismatch, foreign executable metadata).
+Engine lifecycle: enable verifies the live bytes against the
+nonempty `<Before>` prefix (`code-patch-target-changed` named
+refusal, zero writes), applies the `Actual` bytes — executable pages
+through the verified coordinator hook journal, data pages through
+the ordinary byte transaction — and journals `_Patch(address,
+original, actual)` per patch; disable restores the original captured
+at enable time (documented superset of CE, whose code list only ever
+applies the `Actual` bytes) and refuses with
+`code-patch-restore-mismatch` plus an engine block when the live
+bytes diverge from both the captured original and the actual;
+already-active entries are adopted with zero writes
+(`code-patch-already-active`); wishes join the standard enabled-wish
+store and re-enable after re-attach; close-time restore works through
+the same path; `code_patch` entries are skipped in `_check_patches`
+and render as switch rows with the `code` chip. Tests: new
+`tests/test_native_rt5_code_patch.py` +26 (focused 26 OK). Full main
+suite after the merge **3,880 OK / 26 expected skips** (baseline
+3,854). Catalog remeasure on `main` (run
+`blocked-catalog-020-rt5-be`, 2026-10-31): **117,634 -> 117,809
+total, 116,581 -> 116,756 supported (+175 — every `CodeEntry` of the
+22 tables now a supported `code_patch` record), 1,053 blocked
+unchanged, 60,161 staged unchanged, 0 load errors, zero newly
+blocked, zero reason changes** (per-table diff vs
+`blocked-catalog-020-icons`: exactly the 22 CheatCodes tables gain
++175 supported rows). `runtime_unverified` remains: the code
+patches' real-game effect is untested (AP-11 plane).
+
+Update (2026-10-31, RT-5 item E): the `messageDialog` decision
+landed on `main` (branch `native-0.20-rt5-be`, commit `a5d0a2f`,
+merged as `b8bb4ee`): the hosted `messageDialog` / `MessageDialog`
+is a **safe logged no-op** returning 0 (mbOK, truthy in Lua) with
+the CE 7.5 argument shapes (message / title+message / dialogtype /
+buttons); nil arguments are tolerated because corpus table Lua
+passes undefined button constants as nil (CE `lua_tostring` /
+`lua_tointeger` coercion); every call logs a `message-dialog`
+debug event (title + message truncated, argument count); both
+spellings are hosted in record scope and admitted in table scope
+(`TABLE_LUA_READ_ONLY_NAMES`, 47 corpus table-Lua call sites).
+Decision rationale: purely UI presentation — the safe no-op
+preserves table flow for informational dialogs while a refusal
+would break table Lua that continues after the call. Tests: new
+`tests/test_native_rt5_message_dialog.py` +22 plus pin updates (the
+SC2 table-load warning pin moves to the no-op behavior, the
+process-info guard keeps the catch-all named refusal on a synthetic
+name, the no-effect register docstrings note item E implemented).
+Full main suite after the merge **3,902 OK / 26 expected skips**
+(baseline 3,880). Catalog remeasure (run
+`blocked-catalog-rt5e-iteme`, on the branch): **zero delta**
+(151/151 load, 117,634 total, 116,581 supported (60,161 staged),
+1,053 blocked, 0 load errors) — the no-op is runtime host behavior
+and the catalog is static plan-level. With items B and E, **every
+RT-5 inventory item (A, B, C, C2, D, E, F, G) has landed — RT-5 is
+complete**; the next roadmap work is RT-6 (validation) and RT-7
+(release gate).
 
 ### RT-2 root-cause map (2,698 rows; lane final report 2026-10-21)
 
