@@ -290,9 +290,13 @@ class NamedApiRefusalHostTests(unittest.TestCase):
         self.host.cancel()
 
     def test_unknown_global_call_gets_the_named_refusal(self):
+        # RT-5 item E moved messageDialog out of the unknown set (it is now
+        # a safe no-op, pinned in tests/test_native_rt5_message_dialog.py);
+        # this test keeps the exact named-refusal contract on an arbitrary
+        # undefined CE global.
         with self.assertRaisesRegex(LuaHostError,
-                                    'Unsupported CE Lua API: messageDialog'):
-            self.host.execute('return messageDialog("x")')
+                                    'Unsupported CE Lua API: totallyUnknownCeApi'):
+            self.host.execute('return totallyUnknownCeApi("x")')
 
     def test_nil_field_and_local_calls_keep_the_raw_lua_text(self):
         # The mapping only rewrites nil *global* calls; a nil field or local

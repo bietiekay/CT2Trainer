@@ -78,6 +78,51 @@ SteamOS/CheatDeck attach route, and the frozen
 Suite: (filled after full-suite run on the merged branch). Catalog
 unchanged.
 
+## 0.20.1 (2026-10-30)
+
+Release-content correction - re-cut of the 0.20 branding-icon build:
+
+- The 0.20 changelog suite line now states the verified in-build
+  suite (3,854 OK / 26 expected skips, fully green at the canonical
+  path) instead of the worktree dev-suite observation, and cites
+  the catalog remeasure `blocked-catalog-020-icons` (zero delta vs
+  `blocked-catalog-019-field`).
+- No code or asset changes: the re-cut reproduces the 0.20 content
+  with the corrected release changelog.
+
+## 0.20 (2026-10-30)
+
+New branding icons (user-provided artwork, 1024x1024 masters):
+
+- The CT2Trainer tool icon (the "Generator" artwork) now ships as
+  `src/ct2trainer/assets/ct2trainer-converter.ico` (plus its 1024x1024
+  reference PNG). It is embedded in the frozen `CT2Trainer-Converter.exe`
+  via PyInstaller and set on the converter window at runtime
+  (`window_icon_path("converter")`).
+- The standalone trainer icon now ships as
+  `src/ct2trainer/assets/ct2trainer-trainer.ico` (plus its 1024x1024
+  reference PNG). It is embedded in the `CT2Trainer-Template` stub, so
+  every trainer .exe the converter generates carries it, and set on the
+  trainer window at runtime (`window_icon_path("trainer")`).
+- `tools/create_icons.py` no longer draws the old placeholder artwork: it
+  now rebuilds the multi-size ICO files (16-256 px, 32 bpp) from the
+  committed PNG masters, so a rebuild can never silently replace the
+  shipped icons.
+- New `tests/test_native_icons.py` (+4 tests) pins the committed icon
+  contract: both ICOs carry the full 16/24/32/48/64/128/256 px 32-bpp set
+  with intact image blobs, both PNG masters are 1024x1024, and
+  `window_icon_path("converter"|"trainer")` resolves to the committed
+  assets (unknown kinds are refused).
+
+Suite: 3,854 OK / 26 expected skips in the in-build run
+`native-20261030T184820Z-b9d6dc07` cut from the canonical path
+(the 3 path-dependent baseline-reproducibility tests pass there,
+their committed baselines embedding the canonical repo path).
+Catalog: remeasure `blocked-catalog-020-icons` (2026-10-30: 151
+tables, 117,634 entries, 60,161 staged, 1,053 blocked, 0 load
+errors) is zero-delta vs `blocked-catalog-019-field`. Asset-only
+change: no trainer behavior change.
+
 ## 0.19 (2026-10-30)
 
 Field-fix release after the 0.18 field tests (Sinking City 2, South of

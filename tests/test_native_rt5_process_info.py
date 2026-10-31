@@ -425,8 +425,12 @@ class ProcessInfoRuntimeTests(unittest.TestCase):
         # RT-5 item C2 moved the createMemoryRecord /
         # registerAutoAssemblerCommand record-scope cases to
         # tests/test_native_rt5_dynamic_records.py (they now have exact
-        # named refusals of their own); messageDialog (item E) stays here.
-        for source in ("messageDialog('x')",):
+        # named refusals of their own).  messageDialog (item E) is now a
+        # supported safe no-op pinned in
+        # tests/test_native_rt5_message_dialog.py, so this guard keeps
+        # the catch-all named refusal for an arbitrary undefined CE
+        # global in the engine record path.
+        for source in ("ceUnimplementedApi('x')",):
             with self.subTest(case=source):
                 engine = self.attach_lua(source)
                 with self.assertRaises(NativeRuntimeError):

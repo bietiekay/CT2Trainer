@@ -42,6 +42,12 @@ TABLE_LUA_READ_ONLY_NAMES = frozenset({
     'isKeyPressed', 'getXBox360ControllerState',
     'speedhack_getSpeed',
     'print',
+    # RT-5 item E: messageDialog is a safe, logged no-op (no dialog UI,
+    # debug-log event, returns mbOK=0) - admitted in the table scope like
+    # the other pure message surfaces; corpus table Lua branches on its
+    # result (auto-attach / dark-mode flows) and the no-confirmation
+    # default (0) is the documented bounded deviation.
+    'messageDialog',
     # RT-5 item A: embedded <Files> lookups (plan data) and string-stream
     # access (per-scope host state) never touch target memory, so the
     # table scope admits them exactly like the other read-class names.

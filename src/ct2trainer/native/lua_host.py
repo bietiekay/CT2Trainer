@@ -685,7 +685,7 @@ local functions={
   'getXBox360ControllerState','showMessage','print','executeCodeEx','fullAccess',
   'speedhack_setSpeed','speedhack_getSpeed','attachProcess','detachProcess',
   'LaunchMonoDataCollector','mono_enumDomains','mono_findMethod','mono_invoke_method',
-  'openProcess','shellExecute','readStringLocal',
+  'openProcess','shellExecute','messageDialog','readStringLocal',
   'getProcessIDFromProcessName','getProcessList','targetIs64Bit','enumModules',
   'disassemble'
 }
@@ -697,6 +697,7 @@ end
 -- flipped), so record scripts use either spelling.
 _G.OpenProcess=function(...) return call('openProcess',...) end
 _G.ShellExecute=function(...) return call('shellExecute',...) end
+_G.MessageDialog=function(...) return call('messageDialog',...) end
 _G.ReadStringLocal=function(...) return call('readStringLocal',...) end
 -- RT-5 item A: embedded table files are static plan data.  Creating new
 -- table files would mutate the persistent table, so the call is a named
@@ -1201,6 +1202,9 @@ class _ReadOnlyBroker:
         # WP-56: the record-Lua CE stubs are pure (identity check / no-op),
         # so they are safe to execute during syntax checking as well.
         'openProcess', 'shellExecute',
+        # RT-5 item E: messageDialog is a safe no-op (debug-log event,
+        # returns mbOK=0) — pure, safe under syntax checking.
+        'messageDialog',
         # RT-5 item A: embedded <Files> lookups and string-stream access
         # are plan data / per-scope host state, safe under syntax checking
         # (stream state is kept in a per-check-epoch registry).
@@ -2429,6 +2433,37 @@ class EngineLuaBroker:
             if len(arguments) == 0 or type(arguments[0]) is not str or not arguments[0]:
                 raise LuaHostError('shellExecute requires a non-empty command')
             return None
+        if name == 'messageDialog':
+            # RT-5 item E (CE 7.5 LuaHandler.pas:4031-4118): CE opens a native
+            # message box and returns the index of the pressed button (0 =
+            # mrOk).  The native trainer has no dialog UI: the call is a safe
+            # no-op that records the fields in the engine debug log and
+            # returns 0 (mbOK; truthy in Lua), so record scripts complete
+            # without side effects.  Argument shapes (CE parity, first arg
+            # decides the split): messageDialog(message) | (title, message)
+            # | (title, message, dialogtype) | (title, message, dialogtype,
+            # buttons); the dialogtype/button integers are ignored.  The
+            # 10,000-char bound matches the showMessage/print contract.
+            if len(arguments) > 4:
+                raise LuaHostError('messageDialog takes at most four arguments')
+            for arg in arguments:
+                if arg is not None and type(arg) not in (str, int, float):
+                    raise LuaHostError(
+                        'messageDialog arguments must be text, numbers or nil')
+            title = ''
+            message = ''
+            if len(arguments) >= 2 and type(arguments[1]) is str:
+                title = '' if arguments[0] is None else str(arguments[0])
+                message = arguments[1]
+            elif arguments:
+                message = '' if arguments[0] is None else str(arguments[0])
+            if len(message) > 10000:
+                raise LuaHostError('messageDialog message exceeds its bound')
+            if title or message:
+                e.debug_log.log('message-dialog', title=title[:500],
+                                message=message[:1000],
+                                argument_count=len(arguments))
+            return 0
         if name == 'findTableFile':
             # RT-5 item A (P5/Octopath table-Lua shape, RiftApart record
             # {$lua}): exact-name, case-sensitive lookup into the plan's

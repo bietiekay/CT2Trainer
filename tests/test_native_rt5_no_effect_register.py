@@ -17,14 +17,15 @@ proves, for an independently authored synthetic fixture:
 
 Families covered (register entry -> pinned code truth):
 
-- CE UI family (inventory section 7.2 "Purely visual UI" minus
-  ``messageDialog``, which is decision item E; 26 global APIs including
-  the uppercase ``GetAddressList`` and the legacy timer helpers
+- CE UI family (inventory section 7.2 "Purely visual UI"; 26 global APIs
+  including the uppercase ``GetAddressList`` and the legacy timer helpers
   ``timer_onTimer``/``timer_setEnabled``/``timer_setInterval``) plus
   ``playSound``: runtime named refusal ``Unsupported CE Lua API: <name>``
   at the Lua host (``lua_host.py``); a table Lua that calls them loads
   and the static plan is byte-for-byte unaffected apart from the two
-  generic table-Lua warnings.
+  generic table-Lua warnings.  (``messageDialog`` is the 27th name of
+  section 7.2; it is implemented as a safe logged no-op by RT-5 item E
+  and is pinned in tests/test_native_rt5_message_dialog.py instead.)
 - 18-object-method register entry (section 7.3): pinned per surface.  The
   WP-56 inert menu/form proxy accepts and discards
   hide/Hide/show/Show/getBitmap/setSize/SendToBack/draw/getCanvas/
@@ -75,17 +76,18 @@ Families covered (register entry -> pinned code truth):
 Word register wording normalized against the code (report-level):
 
 - Section 7.2's heading reads "Purely visual UI (27)"; the list holds
-  26 names after the ``messageDialog`` decision (item E) is carved out,
-  matching section 8's "26 global APIs".
+  26 names with the 27th, ``messageDialog``, implemented as a safe
+  no-op by RT-5 item E (no longer a refusal), matching section 8's
+  "26 global APIs".
 - Section 7.3's "18 object methods" lists 24 raw names (19
   casefold-unique); the per-surface pins above are the code truth.
 - ``playSound`` / the legacy timer helpers / uppercase
   ``GetAddressList`` are named both inside the 26-global sweep and as
   separate register items; each is pinned once, in the sweep.
 
-Excluded by lane contract: ``messageDialog`` (decision item E, parallel
-lane) and the O22 ``createThread``/``threadWait`` gate pins (item G,
-parallel lane).
+Excluded by lane contract: ``messageDialog`` (implemented by RT-5 item
+E, pinned in tests/test_native_rt5_message_dialog.py) and the O22
+``createThread``/``threadWait`` gate pins (item G, parallel lane).
 """
 from __future__ import annotations
 
