@@ -52,9 +52,11 @@ game-facing action.
   parity.
 - Local original reference catalog: 151 paths, 143 distinct hashes, all
   151 load, 116,581 supported (60,161 staged) and 1,053 blocked of
-  117,634 plan entries; zero load errors (0.19 field-fix cycle remeasure,
-  2026-10-30, run `blocked-catalog-019-field`, frozen manifest
+  117,634 plan entries; zero load errors (0.20 branding cycle remeasure,
+  2026-10-30, run `blocked-catalog-020-icons`, frozen manifest
   `gap_inventory/reference-manifest.json`; zero delta vs
+  `blocked-catalog-019-field`; previous 0.19 field-fix cycle remeasure
+  2026-10-30, run `blocked-catalog-019-field`; zero delta vs
   `blocked-catalog-rt5d-main`; previous RT-5 item D remeasure
   2026-10-29, run `blocked-catalog-rt5d-main`; zero delta vs
   `blocked-catalog-rt5c2-main`; previous RT-5 item C2 remeasure
@@ -109,8 +111,24 @@ game-facing action.
   reason-changed rows (UI-only change, zero catalog effect).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
-- Latest verified release: 0.19, build
-  `native-20261030T121918Z-c72dbb38` (cut from `main` @ `fbe626f`),
+- Latest verified release: 0.20.1, build
+  `native-20261031T104114Z-d64ae4c2` (cut from `main` @ `080128c`),
+  in-build suite 3,854 OK / 26 expected skips, `ce_inputs: []`;
+  the release-content re-cut of the 0.20 branding-icon release (0.20
+  changelog suite line corrected to the verified in-build numbers +
+  `blocked-catalog-020-icons` remeasure cited; no code or asset
+  changes); catalog remeasure `blocked-catalog-020-icons` zero delta vs
+  `blocked-catalog-019-field`. Superseded 0.20
+  `native-20261030T184820Z-b9d6dc07` (cut from `main` @ `6298803`),
+  in-build suite 3,854 OK / 26 expected skips, `ce_inputs: []`; ships the
+  user-provided branding icons (`CT2Trainer_Generator` on the tool EXE via
+  PyInstaller `--icon` + `window_icon_path("converter")`; `Standalone_Trainer`
+  embedded in the `CT2Trainer-Template` stub so every generated trainer
+  carries it via `window_icon_path("trainer")`; 1024x1024 PNG masters
+  committed, multi-size ICOs rebuilt, `tests/test_native_icons.py` +4);
+  the first 0.20 cut (`native-20261030T183527Z-8f2cb20a`) was cut from the
+  wrong branch (duplicate 0.19 ZIPs without icons) and deleted; superseded
+  0.19 `native-20261030T121918Z-c72dbb38` (cut from `main` @ `fbe626f`),
   in-build suite 3,850 OK / 26 expected skips, `ce_inputs: []`;
   ships the 0.19 field-fix cycle (Sinking City 2 hotkey-bridge AV fix,
   value-read observability, `describe` CLI, South of Midnight
