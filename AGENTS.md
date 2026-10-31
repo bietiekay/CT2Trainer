@@ -49,7 +49,7 @@ the item-C string pin, addresslist getMemoryRecord/Count/
 MemoryRecord[i] lookups, registerAutoAssemblerCommand custom directives
 table-scope with built-in names refused, +27 tests) landed on `main`
 2026-10-29 (merge `dde9f04`, full main suite 3,817 OK / 25 expected
-skips, zero catalog delta `blocked-catalog-rt5c2-main`). RT-5 item D (onOpenProcess/onTableLoad callback dispatch: CE-sequence table-scope dispatch after a clean table-Lua bootstrap - onOpenProcess with the attached target PID, onTableLoad with the Lua literal false, documented bounded deviation: no before-load phase; pcall-wrapped dispatch chunks with literal argument injection, 'absent'/'ok'/'error: <msg>' -> no event / table-callback / table-callback-error, throwing-callback containment with plan byte-identity, idempotent per confirmed attach with re-attach re-fire, +9 tests) landed on `main` 2026-10-29 (merge `9294bb8`, full main suite 3,826 OK / 25 expected skips, zero catalog delta `blocked-catalog-rt5d-main`). The 0.19 field-fix cycle (2026-10-30, branch `native-0.19-field-fix`, merge `fbe626f`) shipped the Sinking City 2 hotkey-bridge Windows AV fix (HWND_MESSAGE corrected to -3, explicit Win32 argtypes/restype, guarded hotkey registration, +1 real-seam regression test), value-read observability (`read_value` logs `value-read-failed` per identifier per cause, dedup, re-raise), the new `describe` CLI subcommand (+13 tests), and full staged-options support for the South of Midnight table (two-level cascade proof +2 tests, staged-pending tap guard, moAlwaysHideChildren pass-through `hidden_children` marker + row-model subtree suppression, +8 UI tests); full main suite 3,850 OK / 26 expected skips, zero catalog delta `blocked-catalog-019-field`. The 0.20/0.20.1 branding-icon releases (2026-10-30/31; branch `native-0.20-icons` merged at `6298803`, 0.20.1 re-cut commit `080128c`, build `native-20261031T104114Z-d64ae4c2`) shipped the user-provided `CT2Trainer_Generator` icon for the tool EXE and the `Standalone_Trainer` icon embedded in the template stub so every generated trainer carries it; in-build suite 3,854 OK / 26 expected skips, zero catalog delta `blocked-catalog-020-icons`. RT-5 item B (CheatCodes code-patch plan path: fail-closed per-entry parse, `code_patch` plan records with synthetic IDs at 2**32+, engine toggle lifecycle with named refusals, +26 tests) landed on `main` 2026-10-31 (merge `9ef4a74`, full main suite 3,880 OK / 26 expected skips) and RT-5 item E (messageDialog safe logged no-op with CE argument shapes, nil tolerance, `message-dialog` debug event, both spellings in record + table scope, +22 tests) landed on `main` 2026-10-31 (merge `b8bb4ee`, full main suite 3,902 OK / 26 expected skips) — with B and E every RT-5 inventory item (A, B, C, C2, D, E, F, G) has landed, RT-5 complete; the closing CE 7.5 vs CT2Trainer analysis landed 2026-10-31 (merge `322ae22`). The RT-5 API/construct inventory is
+skips, zero catalog delta `blocked-catalog-rt5c2-main`). RT-5 item D (onOpenProcess/onTableLoad callback dispatch: CE-sequence table-scope dispatch after a clean table-Lua bootstrap - onOpenProcess with the attached target PID, onTableLoad with the Lua literal false, documented bounded deviation: no before-load phase; pcall-wrapped dispatch chunks with literal argument injection, 'absent'/'ok'/'error: <msg>' -> no event / table-callback / table-callback-error, throwing-callback containment with plan byte-identity, idempotent per confirmed attach with re-attach re-fire, +9 tests) landed on `main` 2026-10-29 (merge `9294bb8`, full main suite 3,826 OK / 25 expected skips, zero catalog delta `blocked-catalog-rt5d-main`). The 0.19 field-fix cycle (2026-10-30, branch `native-0.19-field-fix`, merge `fbe626f`) shipped the Sinking City 2 hotkey-bridge Windows AV fix (HWND_MESSAGE corrected to -3, explicit Win32 argtypes/restype, guarded hotkey registration, +1 real-seam regression test), value-read observability (`read_value` logs `value-read-failed` per identifier per cause, dedup, re-raise), the new `describe` CLI subcommand (+13 tests), and full staged-options support for the South of Midnight table (two-level cascade proof +2 tests, staged-pending tap guard, moAlwaysHideChildren pass-through `hidden_children` marker + row-model subtree suppression, +8 UI tests); full main suite 3,850 OK / 26 expected skips, zero catalog delta `blocked-catalog-019-field`. The 0.20/0.20.1 branding-icon releases (2026-10-30/31; branch `native-0.20-icons` merged at `6298803`, 0.20.1 re-cut commit `080128c`, build `native-20261031T104114Z-d64ae4c2`) shipped the user-provided `CT2Trainer_Generator` icon for the tool EXE and the `Standalone_Trainer` icon embedded in the template stub so every generated trainer carries it; in-build suite 3,854 OK / 26 expected skips, zero catalog delta `blocked-catalog-020-icons`. RT-5 item B (CheatCodes code-patch plan path: fail-closed per-entry parse, `code_patch` plan records with synthetic IDs at 2**32+, engine toggle lifecycle with named refusals, +26 tests) landed on `main` 2026-10-31 (merge `9ef4a74`, full main suite 3,880 OK / 26 expected skips) and RT-5 item E (messageDialog safe logged no-op with CE argument shapes, nil tolerance, `message-dialog` debug event, both spellings in record + table scope, +22 tests) landed on `main` 2026-10-31 (merge `b8bb4ee`, full main suite 3,902 OK / 26 expected skips) — with B and E every RT-5 inventory item (A, B, C, C2, D, E, F, G) has landed, RT-5 complete; the closing CE 7.5 vs CT2Trainer analysis landed 2026-10-31 (merge `322ae22`). The 0.21 Master Trainer (the all-in-one "Forever Master Trainer" front end: incremental folder table index with per-table process mapping, cross-platform process watch, unique-match auto-load / multi-table picker, handoff into the exact standalone trainer UI, per-table on/off persistence on the engine state store; MT-1..MT-5, 141 tests, zero catalog effect) merged into `main` 2026-10-31 (merge `9a725a8`) and shipped in the 0.21 build (run `native-20261031T211046Z-14707e12`, in-build suite 4,044 OK / 30 expected skips, fully green at the canonical path). The RT-5 API/construct inventory is
 documented in `documentation/rt5-api-inventory.md`. The
 latest original-table catalog (run `blocked-catalog-020-rt5-be`,
 2026-10-31) has 1,053 blocked of 117,809 plan entries, 116,756 supported
@@ -76,15 +76,21 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-31, 0.21 content on `main` (RT-5 complete:
-item B CheatCodes code-patch plan path (merge `9ef4a74`, +26 tests,
-catalog `blocked-catalog-020-rt5-be`: 117,809 total / 116,756 supported /
+**CT2Trainer (status 2026-10-31, 0.21 released (build
+`native-20261031T211046Z-14707e12` cut from `main` @ `9a725a8` - the
+0.21 feature release: RT-5 complete (item B CheatCodes code-patch
+plan path (merge `9ef4a74`, +26 tests, catalog
+`blocked-catalog-020-rt5-be`: 117,809 total / 116,756 supported /
 1,053 blocked, +175 supported, zero newly blocked) + item E messageDialog
 safe logged no-op (merge `b8bb4ee`, +22 tests, zero catalog delta
-`blocked-catalog-rt5e-iteme`); full main suite 3,902 OK / 26 expected
-skips; the 0.21 build is cut from this content set); latest verified
-release 0.20.1 (build `native-20261031T104114Z-d64ae4c2` cut from
-`main` @ `080128c` - the 0.20.1 release-content re-cut of the 0.20
+`blocked-catalog-rt5e-iteme`)) plus the new Master Trainer (MT-1..MT-5
+feature set: incremental folder table index, cross-platform process
+watch, unique-match auto-load / multi-table picker, handoff into the
+exact standalone trainer UI, per-table on/off persistence, 141 tests,
+zero catalog effect); in-build suite 4,044 OK / 30 expected skips,
+`ce_inputs: []`; latest verified release 0.21); superseded 0.20.1
+(build `native-20261031T104114Z-d64ae4c2` cut from `main` @ `080128c`
+- the 0.20.1 release-content re-cut of the 0.20
 branding-icon release: 0.20 changelog suite line corrected to the
 verified in-build suite (3,854 OK / 26 expected skips, fully green at
 the canonical path) + catalog remeasure `blocked-catalog-020-icons`
@@ -242,10 +248,28 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261031T104114Z-d64ae4c2` (0.20.1,
-cut from `main` @ `080128c`; in-build suite 3854 OK / 26 expected
+**Latest verified build:** `native-20261031T211046Z-14707e12` (0.21,
+cut from `main` @ `9a725a8`; in-build suite 4,044 OK / 30 expected
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
-gate; source ZIP `CT2Trainer-0.20.1-source.zip` sha256
+gate; source ZIP `CT2Trainer-0.21-source.zip` sha256
+`9dacb4093cd8a7f0444fed9ed7ae9aed6f82c14132ee4f3197b1fb5747580a13`
+(14,231,850 bytes), portable ZIP
+`CT2Trainer-0.21-windows-portable.zip` sha256
+`0701d507701cb2952e1e35e1357bac4b459b38fe87e6811b6b272f2a2c3acaaa`
+(33,010,077 bytes)).
+0.21 ships RT-5 complete (item B CheatCodes code-patch plan path,
+item E messageDialog safe logged no-op; catalog remeasure
+`blocked-catalog-020-rt5-be`: 117,809 total / 116,756 supported /
+1,053 blocked, +175 supported, zero newly blocked) plus the new
+Master Trainer (MT-1..MT-5: incremental folder table index,
+cross-platform process watch, auto-load / picker, handoff into the
+exact standalone trainer UI, per-table on/off persistence; 141 tests,
+zero catalog effect); the source ZIP carries the `master_trainer`
+subpackage, the 4 master test files and the `Master_Trainer` icon
+assets. Superseded 0.20.1 build: `native-20261031T104114Z-d64ae4c2`
+(0.20.1, cut from `main` @ `080128c`; in-build suite 3854 OK / 26
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.20.1-source.zip` sha256
 `d6ced6ee91fbdd7f12ea4bd6dae92fe49ecf83691c01a867c11279b8f67fb335`
 (13,326,889 bytes), portable ZIP
 `CT2Trainer-0.20.1-windows-portable.zip` sha256
