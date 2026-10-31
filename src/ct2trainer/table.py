@@ -414,9 +414,11 @@ def _script_external_action_apis(script: str) -> tuple[str, ...]:
     """Named external-action APIs a record script invokes.
 
     ``shellExecute`` is implemented by the native trainer as a safe no-op
-    (WP-56); ``messageDialog`` is not implemented and fails activation
-    with a named refusal.  The split keeps the table-level warnings
-    accurate instead of one blanket "needs review" line.
+    (WP-56); ``messageDialog`` is a safe no-op as well (RT-5 item E) that
+    records the dialog fields in the debug log and returns 0 (mbOK), so
+    the record's script completes without side effects.  The split keeps
+    the table-level warnings accurate instead of one blanket "needs
+    review" line.
     """
     return tuple(sorted({_EXTERNAL_ACTION_API_NAMES[match.group(1).casefold()]
                          for match in re.finditer(
@@ -837,7 +839,7 @@ def _parse_xml_table(source: Path, data: bytes) -> Table:
         if "shellExecute" in apis:
             warnings.append("At least one script calls ShellExecute; the native trainer runs it as a safe no-op (no external program or URL is launched).")
         if "messageDialog" in apis:
-            warnings.append("At least one script calls messageDialog, which the native Lua runtime does not implement; affected records fail at activation with a named refusal.")
+            warnings.append("At least one script calls messageDialog; the native trainer does not show a dialog - the call is logged as a review event and returns 0 (mbOK) as a safe no-op.")
     for entry_id, names in duplicate_names.items():
         warnings.append(
             f"Duplicate CheatEntry ID: {entry_id} (kept first occurrence; "
