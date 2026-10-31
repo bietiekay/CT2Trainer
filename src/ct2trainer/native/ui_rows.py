@@ -205,8 +205,12 @@ class RowSnapshot:
     is "on" then, and keeps the badge while frozen), ``parent_active``
     the flagged group headings whose cascade the engine reports active
     (``engine.parent_query``), ``pulsing``/``confirmed`` the transient
-    reaction sets (300 ms pulse, 2 s "OK" chip) and ``disconnected`` the
-    pre-attach state (switch rows then carry the auto-on wish).
+    reaction sets (300 ms pulse, 2 s "OK" chip), ``disconnected`` the
+    pre-attach state (switch rows then carry the auto-on wish),
+    ``enable_failed`` the per-entry enable-direction failure text (the
+    "Try again" affordance) and ``rearm`` the bounded re-arm state dicts
+    (``attempts``/``max``/``last``/``exhausted``) that drive the
+    re-arming status sublabel.
     """
     applied: frozenset = field(default_factory=frozenset)
     desired: frozenset = field(default_factory=frozenset)
@@ -217,6 +221,8 @@ class RowSnapshot:
     pulsing: frozenset = field(default_factory=frozenset)
     confirmed: frozenset = field(default_factory=frozenset)
     disconnected: bool = False
+    enable_failed: dict = field(default_factory=dict)
+    rearm: dict = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         for name in ("applied", "desired", "frozen", "value_applied",
@@ -230,6 +236,43 @@ class RowSnapshot:
             raise RowModelError("snapshot errors must map entry ids to text")
         if type(self.disconnected) is not bool:
             raise RowModelError("snapshot disconnected must be a boolean")
+        if not isinstance(self.enable_failed, dict) or not all(
+                type(k) is int and isinstance(v, str)
+                for k, v in self.enable_failed.items()):
+            raise RowModelError(
+                "snapshot enable_failed must map entry ids to failure text")
+        if not isinstance(self.rearm, dict) or not all(
+                type(k) is int and isinstance(v, dict)
+                for k, v in self.rearm.items()):
+            raise RowModelError(
+                "snapshot rearm must map entry ids to re-arm state dicts")
+
+
+def rearm_sublabel(snapshot: RowSnapshot, entry_id: int) -> str:
+    """Re-arm / enable-failure status sublabel for one switch row.
+
+    Armed and not exhausted: ``re-arming n/max (last: X)``.  An
+    exhausted arm, or a plain (non re-arming) enable failure:
+    ``enable failed: X - Try again``.  Empty when the entry has no
+    pending re-arm and no recorded enable failure.
+    """
+    arm = snapshot.rearm.get(entry_id)
+    if arm is not None:
+        last = str(arm.get("last") or "ScanMiss")
+        if arm.get("exhausted"):
+            return "enable failed: " + last + " - Try again"
+        return ("re-arming " + str(arm.get("attempts", 0)) + "/"
+                + str(arm.get("max", 10)) + " (last: " + last + ")")
+    failure = snapshot.enable_failed.get(entry_id)
+    if failure is not None:
+        return "enable failed: " + str(failure) + " - Try again"
+    return ""
+
+
+def try_again_available(snapshot: RowSnapshot, entry_id: int) -> bool:
+    """The row-menu "Try again" item is enabled while the last enable
+    attempt failed for this entry or a re-arm is pending."""
+    return entry_id in snapshot.enable_failed or entry_id in snapshot.rearm
 
 
 @dataclass(frozen=True)
@@ -352,6 +395,11 @@ def _value_chip(entry: dict) -> str:
 
 
 def _switch_sublabel(entry: dict, state: str, snapshot: RowSnapshot) -> str:
+    # Bounded re-arm (0.21): the re-arm/enable-failure status takes
+    # precedence over every other sublabel (it is the actionable one).
+    rearm_text = rearm_sublabel(snapshot, entry["id"])
+    if rearm_text:
+        return rearm_text
     if state == STATE_BLOCKED:
         return entry.get("reason") or "Not included in this trainer"
     if state == STATE_STAGED:

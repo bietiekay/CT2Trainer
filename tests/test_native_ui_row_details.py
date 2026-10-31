@@ -266,7 +266,8 @@ def _window_stub(root, entry):
     window = TrainerWindow.__new__(TrainerWindow)
     window.root = root
     window.engine = types.SimpleNamespace(
-        entries={entry["id"]: entry}, applied=frozenset(), entry_errors={})
+        entries={entry["id"]: entry}, applied=frozenset(), entry_errors={},
+        enable_failures={}, rearm={})
     window._status_text = tk.StringVar(value="")
     return window
 
@@ -298,15 +299,22 @@ class RowDetailsWiringTests(unittest.TestCase):
 
     def test_menu_items_lead_with_row_details(self):
         window = _window_stub(self.root, _program_entry())
-        labels = [label for label, _ in
-                  window._context_menu_items(_program_entry())]
+        items = window._context_menu_items(_program_entry())
+        labels = [item[0] for item in items]
         self.assertEqual(labels, ["Row details", "Script preview",
                                   "Copy script text",
-                                  "What is happening here", "Details"])
+                                  "What is happening here", "Details",
+                                  "Try again"])
+        # Bounded re-arm (0.21): the stub engine carries no enable failure
+        # and no pending re-arm, so the "Try again" item exists but is
+        # disabled (3-tuple with menu state).
+        try_again = [item for item in items if item[0] == "Try again"][0]
+        self.assertEqual(len(try_again), 3)
+        self.assertEqual(try_again[2], "disabled")
 
     def test_menu_items_without_script_skip_preview_and_copy(self):
         window = _window_stub(self.root, _value_entry())
-        labels = [label for label, _ in
+        labels = [item[0] for item in
                   window._context_menu_items(_value_entry())]
         self.assertEqual(labels, ["Row details", "What is happening here",
                                   "Details"])
