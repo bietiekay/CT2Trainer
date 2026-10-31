@@ -45,6 +45,22 @@ from .memory import ScanMiss
 from .patterns import pattern_byte_length, placeholder_spans
 
 
+# Bounded automatic re-arm of failed enables (field case 2026-10-31,
+# Fallout 4 under Proton): while the game is still loading, the targeted
+# code is not present in readable committed memory, so the AOB scan fails
+# with ScanMiss and the entry stays failed until the user taps it again.
+# An enable that fails with ScanMiss arms the entry: the engine re-runs
+# the same full enable path every REARM_INTERVAL_SECONDS, up to
+# REARM_MAX_ATTEMPTS re-arm attempts per attach session.  The re-arm set
+# survives target exit -> re-attach within one trainer session; the
+# attempt budget resets on every confirmed (re-)attach, and a fresh game
+# process immediately gets a fresh budget.  Value-read failures and all
+# other named refusals are never armed (the plain-failed contract
+# stands).  Not user-configurable.
+REARM_INTERVAL_SECONDS = 30
+REARM_MAX_ATTEMPTS = 10
+
+
 class NativeRuntimeError(RuntimeError):
     """A failed action with a diagnostic suitable for the trainer UI."""
 
@@ -1591,6 +1607,22 @@ class TrainerEngine:
             self.status = "Waiting for " + plan["process_name"]
             self.error = ""
             self.entry_errors: dict[int, str] = {}
+            # Bounded automatic re-arm of ScanMiss enable failures (see the
+            # REARM_* module constants).  Session state only: it survives
+            # target exit and re-attach, and dies with the engine.  Each
+            # state dict: attempts (re-arm attempts used in this attach
+            # session), due (monotonic deadline of the next automatic
+            # attempt; None while exhausted), max, last (last outcome),
+            # exhausted.
+            self.rearm: dict[int, dict] = {}
+            # Enable-direction failures per entry (any failure kind), set
+            # by the toggle/restore/re-arm/try-again failure paths and
+            # cleared by the next successful enable or disable of that
+            # entry.  The UI "Try again" affordance is offered while this
+            # carries the id or the entry is re-arm pending.
+            self.enable_failures: dict[int, str] = {}
+            self._reattach_pending = False
+            self._last_reattach_failure = None
             self.blocked = False
             self.busy = False
             self.closed = False
@@ -2399,57 +2431,7 @@ class TrainerEngine:
                     self.debug_log.log("target-exited",
                                        pid=getattr(self.memory, "pid", None),
                                        process_name=self.plan["process_name"])
-                    # WP-54 (d): record scopes retire leaves-first as before;
-                    # the table scope retires after every record consumer,
-                    # releasing its symbols exactly once at that point.
-                    self._cancel_lua_sessions()
-                    for scope in self.lua_activations.values():
-                        scope.finish_after_exit()
-                    self.lua_activations.clear()
-                    self._retire_table_lua_scope()
-                    for manager in list(self.hooks.values()) + self.retired_hooks:
-                        manager.finish_after_exit()
-                    self.hooks.clear()
-                    self.retired_hooks.clear()
-                    if self.global_pool is not None:
-                        self.global_pool.finish_after_exit(remove_journal=True)
-                        self.global_pool=None
-                        self.global_leases.clear()
-                        self._global_aliases.clear()
-                    self._hook_lifetime_bytes = self._hook_lifetime_count = 0
-                    if self.one_shot is not None:
-                        self.one_shot.detach()
-                        self._persist_one_shot_markers()
-                    if self.async_policy is not None:
-                        # Confirmed target exit: no async effect can persist;
-                        # active flags drain, saved wishes survive in state.json.
-                        self.async_policy.detach()
-                    if self.parent_policy is not None:
-                        # Confirmed target exit: no cascade effect persists.
-                        self.parent_policy.detach()
-                    self._release_call_broker()
-                    self._release_debugger_session()
-                    self._release_managed_session(True)
-                    if self.clock is not None:
-                        # Confirmed target exit: no speed state survives the
-                        # session; the binding retires visibly (fence plus
-                        # lease close back to 1x) and is dropped.
-                        self.clock.finish()
-                        self.clock = None
-                    self.store.release_session()
-                    self.memory.close()
-                    self.memory = None
-                    self.applied.clear()
-                    self.local_symbols.clear()
-                    self.symbols.clear()
-                    self.registered_by.clear()
-                    self.frozen.clear()
-                    # WP-50 (GC-E8): no live base survives the target exit.
-                    self.dynamic_addresses.clear()
-                    # RT-5 item C2: no runtime journal survives the target exit
-                    # (hook/symbol cleanup above already ran for live records).
-                    self._clear_dynamic_records()
-                    self._hotkey_sync()
+                    self._detach_current_target()
                     self.status = "Target ended; waiting for " + self.plan["process_name"]
                     return self.status
                 require_target_architecture(self.plan, self.memory)
@@ -2487,18 +2469,21 @@ class TrainerEngine:
                 for spec in self._hotkey_drain():
                     self.dispatch_hotkey(spec)
                 self._hotkey_sync()
+                self._run_rearm()
                 return self.status
             try:
                 memory = self.memory_factory(self.plan["process_name"])
             except Exception as exc:
                 self._log_attach_failure("attach-attempt-failed", exc,
                                          process_name=self.plan["process_name"])
+                self._log_reattach_failure(str(exc))
                 self.error = str(exc)
                 self.status = "Waiting / hook into game unavailable: " + self.error
                 return self.status
             try:
                 if not memory.is_alive():
                     memory.close()
+                    self._log_reattach_failure("process not running")
                     return self.status
                 try:
                     require_target_architecture(self.plan, memory)
@@ -2507,6 +2492,7 @@ class TrainerEngine:
                     self._log_attach_failure("attach-architecture-refused", exc,
                                              process_name=self.plan["process_name"],
                                              pointer_size=getattr(memory, "pointer_size", None))
+                    self._log_reattach_failure(str(exc))
                     self.error = str(exc)
                     self.status = "Hook into game refused: " + self.error
                     return self.status
@@ -2514,6 +2500,7 @@ class TrainerEngine:
             except Exception as exc:
                 self._log_attach_failure("attach-session-claim-failed", exc,
                                          process_name=self.plan["process_name"])
+                self._log_reattach_failure(str(exc))
                 memory.close()
                 raise
             if self.call_broker_factory is not None:
@@ -2528,6 +2515,7 @@ class TrainerEngine:
                 except Exception as exc:
                     self._log_attach_failure("attach-call-broker-failed", exc,
                                              process_name=self.plan["process_name"])
+                    self._log_reattach_failure(str(exc))
                     self.store.release_session()
                     memory.close()
                     self.error = str(exc)
@@ -2552,6 +2540,23 @@ class TrainerEngine:
                                pointer_size=getattr(memory, "pointer_size", None),
                                creation_time=getattr(memory, "creation_time", None))
             self._last_attach_failure = None
+            if self._reattach_pending:
+                # The explicit re-attach action reached a confirmed attach:
+                # report it once and close the request bookkeeping.
+                self._reattach_pending = False
+                self._last_reattach_failure = None
+                self.debug_log.log("reattach-done", pid=memory.pid)
+            # Bounded re-arm: every confirmed (re-)attach resets the attempt
+            # budget (a fresh game process gets a fresh budget) and makes
+            # each armed entry immediately due, so the steady-state executor
+            # of the next poll tick retries a non-wish armed entry at once;
+            # a wish entry is restored by the restore loop below first, and
+            # its failure pushes the due time out by REARM_INTERVAL_SECONDS,
+            # so no entry is attempted twice on the same attach tick.
+            for _arm in self.rearm.values():
+                _arm["attempts"] = 0
+                _arm["due"] = time.monotonic()
+                _arm["exhausted"] = False
             # WP-54 (e): the confirmed target-exit path cleared the runtime
             # symbol table, so the table-level user-defined symbols are
             # reseeded on every confirmed attach — before any wish restore
@@ -2631,6 +2636,13 @@ class TrainerEngine:
                         self.debug_log.error("restore-failed", exc,
                                              identifier=identifier, label=entry["label"])
                         self.entry_errors[identifier] = str(exc)
+                        # Bounded re-arm: a wish restore that fails with
+                        # ScanMiss (game still loading) arms the entry; the
+                        # first restore of this attach session consumes no
+                        # attempt budget.  Non-ScanMiss failures keep the
+                        # plain-failed contract (any arm is dropped).
+                        self.enable_failures[identifier] = str(exc)
+                        self._apply_rearm_result(identifier, exc, fresh_attempt=False)
                         if self.blocked:
                             break
                         self.error = str(exc)
@@ -2655,6 +2667,290 @@ class TrainerEngine:
             self._block(exc)
         self._hotkey_sync()
         return self.status
+
+    def _detach_current_target(self) -> None:
+        """Detach the live target with the same teardown as a confirmed
+        target exit.  Shared by the target-exited poll branch and the
+        explicit re-attach action; the re-arm set and enable_failures
+        deliberately survive the detach (the attempt budget only resets
+        on the next confirmed attach).
+        """
+        # WP-54 (d): record scopes retire leaves-first as before;
+        # the table scope retires after every record consumer,
+        # releasing its symbols exactly once at that point.
+        self._cancel_lua_sessions()
+        for scope in self.lua_activations.values():
+            scope.finish_after_exit()
+        self.lua_activations.clear()
+        self._retire_table_lua_scope()
+        for manager in list(self.hooks.values()) + self.retired_hooks:
+            manager.finish_after_exit()
+        self.hooks.clear()
+        self.retired_hooks.clear()
+        if self.global_pool is not None:
+            self.global_pool.finish_after_exit(remove_journal=True)
+            self.global_pool=None
+            self.global_leases.clear()
+            self._global_aliases.clear()
+        self._hook_lifetime_bytes = self._hook_lifetime_count = 0
+        if self.one_shot is not None:
+            self.one_shot.detach()
+            self._persist_one_shot_markers()
+        if self.async_policy is not None:
+            # Confirmed target exit: no async effect can persist;
+            # active flags drain, saved wishes survive in state.json.
+            self.async_policy.detach()
+        if self.parent_policy is not None:
+            # Confirmed target exit: no cascade effect persists.
+            self.parent_policy.detach()
+        self._release_call_broker()
+        self._release_debugger_session()
+        self._release_managed_session(True)
+        if self.clock is not None:
+            # Confirmed target exit: no speed state survives the
+            # session; the binding retires visibly (fence plus
+            # lease close back to 1x) and is dropped.
+            self.clock.finish()
+            self.clock = None
+        self.store.release_session()
+        self.memory.close()
+        self.memory = None
+        self.applied.clear()
+        self.local_symbols.clear()
+        self.symbols.clear()
+        self.registered_by.clear()
+        self.frozen.clear()
+        # WP-50 (GC-E8): no live base survives the target exit.
+        self.dynamic_addresses.clear()
+        # RT-5 item C2: no runtime journal survives the target exit
+        # (hook/symbol cleanup above already ran for live records).
+        self._clear_dynamic_records()
+        self._hotkey_sync()
+
+    def _log_reattach_failure(self, reason: str) -> None:
+        """Log an attach failure against a pending re-attach request.
+
+        Deduped per request; the generic attach-failure events already
+        cover every cause, this event marks the failure as
+        reattach-related so the UI can show a single reason.
+        """
+        if not self._reattach_pending:
+            return
+        if self._last_reattach_failure == reason:
+            return
+        self._last_reattach_failure = reason
+        self.debug_log.log("reattach-failed", reason=reason)
+
+    def _run_rearm(self) -> None:
+        """Steady-state re-arm executor for armed ScanMiss entries.
+
+        Runs on every attached poll tick after the hotkey sync.  Each
+        armed entry whose due time has passed re-runs the same full
+        enable path as a manual toggle (dependencies first, then enable
+        with wish persistence).  A confirmed ON pops the arm; ScanMiss
+        keeps it armed on the REARM_INTERVAL_SECONDS cadence and
+        consumes one attempt; any other failure drops the arm
+        (plain-failed contract) and blocks the engine on
+        PatchConflict/StateError.
+        """
+        if self.closed or self.blocked or self.busy or self.memory is None:
+            return
+        for identifier in sorted(self.rearm):
+            entry = self.entries.get(identifier)
+            if entry is None:
+                self.rearm.pop(identifier, None)
+                continue
+            if identifier in self.applied:
+                # Already enabled since the failure (e.g. a manual
+                # toggle succeeded); the re-arm is moot.
+                self.rearm.pop(identifier, None)
+                self.enable_failures.pop(identifier, None)
+                self.entry_errors.pop(identifier, None)
+                continue
+            arm = self.rearm[identifier]
+            if arm["exhausted"] or arm["due"] is None:
+                continue
+            if time.monotonic() < arm["due"]:
+                continue
+            label = entry["label"]
+            attempt_no = arm["attempts"] + 1
+            try:
+                self._dependencies(entry, persist=False)
+                self._enable(entry, persist=True)
+            except Exception as exc:
+                self.entry_errors[identifier] = str(exc)
+                if isinstance(exc, ScanMiss):
+                    self.enable_failures[identifier] = str(exc)
+                    self.debug_log.log("rearm-attempt", identifier=identifier,
+                                       label=label, attempt=attempt_no,
+                                       max=arm["max"], result="ScanMiss")
+                    self._apply_rearm_result(identifier, exc, fresh_attempt=True)
+                else:
+                    self.debug_log.log("rearm-attempt", identifier=identifier,
+                                       label=label, attempt=attempt_no,
+                                       max=arm["max"],
+                                       result=type(exc).__name__)
+                    self.rearm.pop(identifier, None)
+                    if isinstance(exc, (PatchConflict, StateError)):
+                        self._block(exc)
+                        return
+                continue
+            self.rearm.pop(identifier, None)
+            self.enable_failures.pop(identifier, None)
+            self.entry_errors.pop(identifier, None)
+            self.status = f"{label}: re-armed and enabled (attempt {attempt_no})"
+            self.debug_log.log("rearm-attempt", identifier=identifier,
+                               label=label, attempt=attempt_no,
+                               max=arm["max"], result="ok")
+            self.debug_log.log("rearm-succeeded", identifier=identifier,
+                               label=label)
+
+    def _apply_rearm_result(self, identifier: int, exc: Exception,
+                            fresh_attempt: bool) -> None:
+        """Route one failed enable into the bounded re-arm bookkeeping.
+
+        Only a ScanMiss arms an entry (its pattern may still appear
+        while the game is loading); any other failure keeps the
+        plain-failed contract and drops a pending arm.  fresh_attempt=True
+        marks a budget-consuming attempt (re-arm executor, try-again);
+        fresh_attempt=False marks the first enable of this attach session
+        (manual toggle, wish restore), which arms without consuming the
+        attempt budget.  An exhausted arm is only reset by try_again()
+        or by the next confirmed attach.
+        """
+        entry = self.entries.get(identifier)
+        if entry is None:
+            return
+        if not isinstance(exc, ScanMiss):
+            self.rearm.pop(identifier, None)
+            return
+        arm = self.rearm.get(identifier)
+        if arm is None:
+            if identifier in self.applied:
+                return
+            now = time.monotonic()
+            self.rearm[identifier] = {
+                "attempts": 0,
+                "due": now + REARM_INTERVAL_SECONDS,
+                "max": REARM_MAX_ATTEMPTS,
+                "last": "ScanMiss",
+                "exhausted": False,
+            }
+            self.debug_log.log("rearm-scheduled", identifier=identifier,
+                               label=entry["label"], reason=str(exc))
+            return
+        if arm["exhausted"]:
+            # The budget is spent; only a manual try-again (or a fresh
+            # attach) may reset it, so the re-arm cadence stays bounded.
+            return
+        arm["last"] = "ScanMiss"
+        if fresh_attempt:
+            arm["attempts"] += 1
+            if arm["attempts"] >= arm["max"]:
+                arm["exhausted"] = True
+                arm["due"] = None
+                self.debug_log.log("rearm-exhausted", identifier=identifier,
+                                   label=entry["label"],
+                                   attempts=arm["attempts"])
+            else:
+                arm["due"] = time.monotonic() + REARM_INTERVAL_SECONDS
+        else:
+            # Re-armed by a first-enable failure; keep the automatic
+            # cadence without consuming an attempt.
+            arm["due"] = time.monotonic() + REARM_INTERVAL_SECONDS
+
+    def try_again(self, identifier: int) -> None:
+        """Immediately retry a failed enable (row menu "Try again").
+
+        Resets the entry's re-arm budget and runs the full enable path
+        once, regardless of the last failure kind.  Success persists the
+        wish like a manual toggle; ScanMiss keeps the arm on the normal
+        cadence; any other failure keeps the plain-failed contract.
+        """
+        entry = self._entry(identifier, self._action_kind(identifier))
+        self._guard()
+        if identifier in self.applied:
+            raise NativeRuntimeError(f"{entry['label']} is already enabled")
+        self.debug_log.log("try-again-requested", identifier=identifier,
+                           label=entry["label"])
+        self.busy = True
+        try:
+            self._check_patches()
+            arm = self.rearm.get(identifier)
+            was_armed = arm is not None
+            if arm is not None:
+                # Manual try-again resets the budget (the only budget
+                # reset besides a confirmed (re-)attach).
+                arm["attempts"] = 0
+                arm["exhausted"] = False
+                arm["due"] = None
+            try:
+                self._dependencies(entry, persist=False)
+                self._enable(entry, persist=True)
+            except Exception as exc:
+                self.entry_errors[identifier] = str(exc)
+                self.enable_failures[identifier] = str(exc)
+                if isinstance(exc, ScanMiss):
+                    self.debug_log.log("rearm-attempt", identifier=identifier,
+                                       label=entry["label"], attempt=1,
+                                       max=REARM_MAX_ATTEMPTS,
+                                       result="ScanMiss")
+                    self._apply_rearm_result(identifier, exc, fresh_attempt=True)
+                else:
+                    self.rearm.pop(identifier, None)
+                if isinstance(exc, (PatchConflict, StateError)):
+                    self._block(exc)
+                self.debug_log.error("try-again-failed", exc,
+                                     identifier=identifier,
+                                     label=entry["label"])
+                raise NativeRuntimeError(str(exc)) from exc
+            self.rearm.pop(identifier, None)
+            self.enable_failures.pop(identifier, None)
+            self.entry_errors.pop(identifier, None)
+            self.status = f"{entry['label']}: enabled and saved"
+            if was_armed:
+                self.debug_log.log("rearm-attempt", identifier=identifier,
+                                   label=entry["label"], attempt=1,
+                                   max=REARM_MAX_ATTEMPTS, result="ok")
+                self.debug_log.log("rearm-succeeded", identifier=identifier,
+                                   label=entry["label"])
+            self.debug_log.log("try-again-ok", identifier=identifier,
+                               label=entry["label"])
+            self._hotkey_sync()
+        finally:
+            self.busy = False
+
+    def reattach(self) -> None:
+        """Explicit re-attach action for the trainer UI.
+
+        Detaches the attached target with the same teardown as a
+        confirmed target exit and re-enters the normal waiting-for-
+        process attach cycle, so a fresh game process re-attaches with a
+        fresh re-arm budget.  The re-arm set itself survives the
+        detach; only the attempt budget resets on the confirmed
+        (re-)attach.  Refused while closed, blocked, or while another
+        action is in progress.
+        """
+        if self.closed:
+            raise NativeRuntimeError("Trainer is closed")
+        if self.blocked:
+            raise NativeRuntimeError(
+                "Re-attach is unavailable while the engine is blocked: " + self.error)
+        if self.busy:
+            raise NativeRuntimeError("Another trainer action is in progress")
+        self._reattach_pending = True
+        self._last_reattach_failure = None
+        self.debug_log.log("reattach-requested",
+                           process_name=self.plan["process_name"])
+        if self.memory is not None:
+            self.debug_log.log("reattach-detached",
+                               pid=getattr(self.memory, "pid", None),
+                               process_name=self.plan["process_name"])
+            self._detach_current_target()
+            self.status = "Re-attaching; waiting for " + self.plan["process_name"]
+        else:
+            # The target already exited; just re-arm the wait.
+            self.status = "Waiting for " + self.plan["process_name"]
 
     def _check_patches(self) -> None:
         if self.global_pool is not None:
@@ -5215,6 +5511,15 @@ class TrainerEngine:
             else:
                 self._disable(entry)
             self.entry_errors.pop(identifier, None)
+            self.enable_failures.pop(identifier, None)
+            if enabled:
+                if self.rearm.pop(identifier, None) is not None:
+                    self.debug_log.log("rearm-succeeded", identifier=identifier,
+                                       label=entry["label"])
+            else:
+                # Toggle OFF while armed disarms the entry silently; the
+                # plain disable contract is unchanged.
+                self.rearm.pop(identifier, None)
             if entry.get("one_shot"):
                 state = self.one_shot.query(identifier)
                 if enabled:
@@ -5234,6 +5539,12 @@ class TrainerEngine:
             self.debug_log.error("toggle-failed", exc, identifier=identifier,
                                  label=entry["label"], direction=enabled)
             self.entry_errors[identifier] = str(exc)
+            if enabled:
+                # Enable-direction failure: record it for the "Try again"
+                # affordance; arm the entry only on ScanMiss (the first
+                # enable of this attach session consumes no budget).
+                self.enable_failures[identifier] = str(exc)
+                self._apply_rearm_result(identifier, exc, fresh_attempt=False)
             if isinstance(exc, (PatchConflict, StateError)):
                 self._block(exc)
             raise NativeRuntimeError(str(exc)) from exc

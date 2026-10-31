@@ -49,7 +49,8 @@ from .ui_rows import (ACCENT_BAR_WIDTH, ACCENT_ERROR, ACCENT_OFF, ACCENT_ON,
                       LABEL_GAP_AFTER_PILL, PILL_GAP_AFTER_BAR, PILL_H, PILL_W,
                       ROW_HEIGHT_SECTION, SECTION_CHEVRON_W, SECTION_NAME_GAP,
                       STATE_BLOCKED, STATE_ON, STATE_STAGED, TEXT_DIM,
-                      RowSnapshot, build_rows, find_row, slice_pages)
+                      RowSnapshot, build_rows, find_row, slice_pages,
+                      try_again_available)
 from .ui_script_view import entry_assessment, row_details, script_preview
 
 
@@ -200,6 +201,12 @@ class TrainerWindow:
         self.conn_label.pack(side="right")
         self._button(self.header, "Status / help", self.show_status,
                      width=12).pack(side="right")
+        # Bounded re-arm (0.21): explicit re-attach action.  Detaches the
+        # current target through the engine teardown and re-enters the
+        # normal waiting attach cycle (fresh game process, fresh re-arm
+        # budget) without restarting the trainer.
+        self._button(self.header, "Re-attach", self.on_reattach,
+                     width=10).pack(side="right")
 
     def _chip(self, parent, name):
         return self._button(parent, name, lambda: self.set_view(name),
@@ -329,6 +336,9 @@ class TrainerWindow:
             pulsing=frozenset(self._pulsing),
             confirmed=frozenset(self._confirmed),
             disconnected=self.engine.memory is None,
+            enable_failed=dict(self.engine.enable_failures),
+            rearm={identifier: dict(state)
+                   for identifier, state in self.engine.rearm.items()},
         )
 
     # -- rendering -------------------------------------------------------------
@@ -614,14 +624,40 @@ class TrainerWindow:
         items.append(("What is happening here",
                       lambda: self.show_assessment(entry)))
         items.append(("Details", lambda: self.info(entry)))
+        # Bounded re-arm (0.21): "Try again" is offered for script/code rows
+        # whose last enable failed or that are pending a re-arm; the item is
+        # disabled when neither condition holds.  It is a 3-tuple carrying
+        # the menu state (2-tuples above stay unchanged).
+        if entry.get("kind") in ("script", "code_patch"):
+            rearm_snapshot = RowSnapshot(
+                enable_failed=dict(self.engine.enable_failures),
+                rearm={identifier: dict(state)
+                       for identifier, state in self.engine.rearm.items()})
+            available = try_again_available(rearm_snapshot, entry["id"])
+            items.append(("Try again",
+                          lambda: self._try_again(entry["id"]),
+                          "normal" if available else "disabled"))
         return items
+
+    def _try_again(self, identifier: int):
+        # Route through action() so failures land in the status line
+        # (touch-friendly, no modal).
+        self.action(lambda: self.engine.try_again(identifier))
+
+    def on_reattach(self):
+        # Top-level re-attach: engine teardown + waiting poll cycle.
+        self.action(lambda: self.engine.reattach())
 
     def _show_context_menu(self, entry, position):
         if position is None:
             return
         menu = tk.Menu(self.root, tearoff=0)
-        for label, command in self._context_menu_items(entry):
-            menu.add_command(label=label, command=command)
+        for item in self._context_menu_items(entry):
+            label, command = item[0], item[1]
+            # Bounded re-arm (0.21): "Try again" carries an explicit menu
+            # state; existing 2-tuples default to enabled.
+            state = item[2] if len(item) > 2 else "normal"
+            menu.add_command(label=label, command=command, state=state)
         try:
             menu.tk_popup(int(position[0]), int(position[1]))
         finally:
@@ -931,10 +967,16 @@ class TrainerWindow:
     # -- polling, banners, lifecycle --------------------------------------------
 
     def _signature(self):
+        # The re-arm state and enable failures are part of the signature so
+        # the row grid re-renders when an automatic re-arm attempt lands.
+        rearm_state = tuple(sorted(
+            (identifier, state.get("attempts"), state.get("exhausted"))
+            for identifier, state in self.engine.rearm.items()))
         return (self.engine.connected, self.engine.blocked,
                 tuple(sorted(self.engine.applied)), tuple(sorted(self.engine.desired)),
                 tuple(sorted(self.engine.frozen)), tuple(sorted(self.engine.entry_errors)),
-                self.engine.memory is None)
+                self.engine.memory is None,
+                tuple(sorted(self.engine.enable_failures)), rearm_state)
 
     def _update_banners(self):
         table_lua = self.engine.plan.get("table_lua")
