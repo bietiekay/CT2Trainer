@@ -10,13 +10,21 @@ import sys
 
 _ASSETS = Path(__file__).resolve().parents[1] / "assets"
 
+_ICON_NAMES = {
+    "converter": "ct2trainer-converter.ico",
+    "trainer": "ct2trainer-trainer.ico",
+    # MT-5 (Master Trainer): user-provided master icon (CONCEPT.md).
+    "master": "Master_Trainer.ico",
+}
+
 
 def window_icon_path(kind: str) -> Path:
-    """One exact shipped icon: 'converter' (the CT2Trainer tool) or
-    'trainer' (the standalone trainer .exe the tool generates)."""
-    if kind not in ("converter", "trainer"):
+    """One exact shipped icon: 'converter' (the CT2Trainer tool),
+    'trainer' (the standalone trainer .exe the tool generates) or
+    'master' (the Master Trainer window)."""
+    if kind not in _ICON_NAMES:
         raise ValueError("Unknown window icon: " + kind)
-    name = "ct2trainer-" + kind + ".ico"
+    name = _ICON_NAMES[kind]
     if not getattr(sys, "frozen", False):
         return _ASSETS / name
     base = Path(getattr(sys, "_MEIPASS", _ASSETS.parent))

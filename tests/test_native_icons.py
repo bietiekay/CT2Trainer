@@ -3,12 +3,13 @@ icons for the frozen EXEs.
 
 0.20 ships user-provided artwork (the "Generator" icon for the CT2Trainer
 tool, the "Standalone Trainer" icon for the generated trainer .exe) as the
-committed multi-size ICOs plus 1024x1024 PNG masters. This test pins the
-structure both consumers require: PyInstaller `--icon` (the frozen EXE
-resource) and `tk.iconbitmap` (the runtime window icon) both need the
-standard 16/24/32/48/64/128/256 px image set, 32 bpp; the PNG masters are
-the rebuild source for `tools/create_icons.py`. Pure stdlib parsing: the
-test needs no Pillow.
+committed multi-size ICOs plus 1024x1024 PNG masters; 0.21 adds the
+"Master Trainer" icon for the Master Trainer window (MT-5). This test
+pins the structure all consumers require: PyInstaller `--icon` (the
+frozen EXE resource) and `tk.iconbitmap` (the runtime window icon) both
+need the standard 16/24/32/48/64/128/256 px image set, 32 bpp; the PNG
+masters are the rebuild source for `tools/create_icons.py`. Pure stdlib
+parsing: the test needs no Pillow.
 """
 from __future__ import annotations
 
@@ -76,16 +77,23 @@ class CommittedIconContractTests(unittest.TestCase):
     def test_trainer_icon_contract(self):
         self._assert_ico_contract("ct2trainer-trainer", "ct2trainer-trainer")
 
+    def test_master_icon_contract(self):
+        # MT-5 (0.21): the user-provided Master Trainer icon ships with the
+        # same multi-size / 32-bpp / 1024-PNG-master structure.
+        self._assert_ico_contract("Master_Trainer", "Master_Trainer")
+
     def test_window_icon_paths_resolve_to_the_committed_assets(self):
-        for kind in ("converter", "trainer"):
+        for kind in ("converter", "trainer", "master"):
             path = window_icon_path(kind)
             self.assertTrue(path.is_file(), f"window icon for {kind} is missing")
             self.assertEqual(path.parent, ASSETS,
                              "window icon must come from the committed assets directory")
 
     def test_unknown_icon_kind_is_refused(self):
+        # "master" is a valid kind since MT-5 (0.21); only genuinely
+        # unknown kinds are refused.
         with self.assertRaises(ValueError):
-            window_icon_path("master")
+            window_icon_path("no-such-kind")
 
 
 if __name__ == "__main__":

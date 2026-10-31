@@ -117,6 +117,30 @@ game-facing action.
   reason-changed rows (UI-only change, zero catalog effect).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
+- 0.21 Master Trainer feature work (2026-10-31, branch
+  `native-0.20-master-trainer` @ `01c3d36`, merged `main` @ `322ae22`;
+  the 0.21 build is cut from the canonical path after the merge):
+  one long-lived trainer window that indexes a folder of `.ct` tables
+  (sub-folders included; incremental `(size, mtime_ns)` fingerprint
+  index, sha256-equal refresh keeps derived process names,
+  checksum-bound JSON in the state home, foreign schema/root and
+  tampered checksums refused) and waits for a bound game process
+  (Toolhelp32 on Windows, `/proc/<pid>/exe` on Linux/SteamOS); unique
+  match auto-loads, multi-table match opens the picker, trainer mode
+  is the unchanged `TrainerWindow` with an optional `master_back`
+  button; per-table on/off persistence rides the existing engine state
+  store; all waiting-mode logic is a pure, UI-free orchestrator
+  (fail-closed loop guard, open-choice stability); `ct2trainer native
+  master [FOLDER]` CLI; user-provided `Master_Trainer` icon set
+  (`window_icon_path("master")`). 141 new tests (index 18,
+  process-watch 35, orchestrator 42, UI 46) + the three-kind icon
+  contract; four source bugs found and fixed during test-lane
+  development (process-watch import depth, picker tuple-padding,
+  recovery-decline fail-closed, `set_folder` import). Full dev suite
+  on the merged branch: 4,011 OK / 30 expected skips of 4,044 (only
+  the 3 known worktree path-dependent baseline-reproducibility tests
+  fail; they pass at the canonical build path). Catalog: unchanged vs
+  `blocked-catalog-020-icons` (no plan-builder code touched).
 - Latest verified release: 0.20.1, build
   `native-20261031T104114Z-d64ae4c2` (cut from `main` @ `080128c`),
   in-build suite 3,854 OK / 26 expected skips, `ce_inputs: []`;

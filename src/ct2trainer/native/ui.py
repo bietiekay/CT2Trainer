@@ -28,6 +28,7 @@ from pathlib import Path
 import struct
 import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
+from typing import Callable
 
 from .engine import (TrainerEngine, NativeRuntimeError, parse_value, format_value,
                      StaleStateRecoverable, StaleArtifactsRecoverable,
@@ -111,8 +112,13 @@ POLL_MS = 250            # engine poll cadence (unchanged)
 class TrainerWindow:
     """Canvas renderer over the pure row model; forwards input to the engine."""
 
-    def __init__(self, root: tk.Tk, engine: TrainerEngine):
+    def __init__(self, root: tk.Tk, engine: TrainerEngine,
+                 master_back: Callable[[], None] | None = None):
         self.root, self.engine = root, engine
+        # MT-4 (Master Trainer): optional "back to the Master wait mode"
+        # callback.  None keeps the standalone trainer exactly as before
+        # (no extra header button); the Master Trainer passes its handler.
+        self.master_back = master_back
         self.view = "Switches"
         self.page = 0
         self.drafts = {i: tk.StringVar(value=str(entry.get("value_default") or entry.get("default_value") or ""))
@@ -179,6 +185,12 @@ class TrainerWindow:
                  font=("Segoe UI", 13, "bold"), anchor="w").pack(side="left", fill="x", expand=True)
         self._button(self.header, "Close", self.close,
                      bg=BG_CLOSE, activebackground=BG_CLOSE_ACTIVE).pack(side="right")
+        # MT-4 (Master Trainer): the extra "back to the Master" control only
+        # exists when the Master passed its callback; the standalone trainer
+        # header is byte-identical to before.
+        if self.master_back is not None:
+            self._button(self.header, "⬅ Master", self.master_back,
+                         width=10).pack(side="right", padx=(0, 8))
         repo_link(self.header, bg=BG_HEADER, fg=FG).pack(side="right")
         self.conn_dot = tk.Label(self.header, text="●", bg=BG_HEADER, fg=FG_DIM,
                                  font=("Segoe UI", 11))
@@ -332,6 +344,16 @@ class TrainerWindow:
                                    relief="raised")
 
     def render(self):
+        # MT-4 (Master Trainer): a pending pulse/confirm after-callback can
+        # outlive the trainer view when the Master destroys the trainer
+        # widgets and rebuilds the waiting view on the same root; a
+        # destroyed canvas is skipped instead of raising out of mainloop.
+        try:
+            canvas_alive = self.canvas.winfo_exists()
+        except tk.TclError:
+            return
+        if not canvas_alive:
+            return
         for widget in self._embedded:
             widget.destroy()
         self._embedded = []

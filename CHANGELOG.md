@@ -4,8 +4,13 @@ Single maintained changelog for CT2Trainer releases.
 
 ## 0.21 (2026-10-31)
 
-RT-5 complete — the final two implementation items of the RT-5
-inventory (every item A, B, C, C2, D, E, F, G now landed):
+RT-5 complete + Master Trainer — the final two implementation items of the RT-5
+inventory (every item A, B, C, C2, D, E, F, G now landed) plus the new
+all-in-one "Forever Master Trainer" front end (one long-lived trainer
+window that indexes a folder of `.ct` tables (sub-folders included) and
+auto-loads the matching table when a bound game process appears, handoff
+into the exact standalone trainer UI, and per-table on/off persistence on
+top of the existing engine state store):
 
 - RT-5 item B — table-level `<CheatCodes>` code list as `code_patch`
   plan records (lane `native-0.20-rt5-b`, merge `9ef4a74`):
@@ -50,9 +55,84 @@ inventory (every item A, B, C, C2, D, E, F, G now landed):
   state vs the 100% goal, the 17-row bounded-deviation register, the
   RT-6/RT-7 verification path; file:line-verified CE 7.5 citations).
 
-Suite: 3,902 OK / 26 expected skips on `main` after the merges
-(canonical checkout, CT2TRAINER_NASM); the in-build suite result is
-recorded with the 0.21 build id in the release docs.
+- New `ct2trainer.native.master_trainer` package (`CONCEPT.md` +
+  `ROADMAP.md` in-package):
+  - `table_index.py` — incremental folder index: only a directory
+    listing is done per reconcile; an entry is re-read only when its
+    `(size, mtime_ns)` fingerprint changed; a content-identical
+    (sha256-equal) refresh keeps the derived process names without
+    re-parsing; removed paths drop; unreadable tables stay visible with
+    a named error and bind no process. Canonical JSON persistence with a
+    sha256 checksum (foreign schema/root and tampered checksums are
+    refused); the index lives in the state home, never in the table
+    folder.
+  - `process_watch.py` — read-only process snapshots: Toolhelp32 on
+    Windows, `/proc/<pid>/exe` on Linux/SteamOS (Proton-compatible);
+    pure, deterministic matcher (ordinal case-insensitive for ASCII,
+    casefold otherwise).
+  - `orchestrator.py` — waiting → choosing → loading → active state
+    machine: unique-match auto-load, multi-table picker contract,
+    deterministic first-casefold-name / lowest-PID rule, fail-closed
+    loop guard (failed and deferred exact (name, PID) pairs; PID-gone
+    re-arm; explicit retry), open-choice stability.
+  - `master_ui.py` — waiting view (folder, index Treeview, status line,
+    Rescan / Change folder / Retry load), modal table picker with
+    "Not now" deferral, and the trainer handoff with the same
+    startup-recovery flow as the standalone trainer.
+- `TrainerWindow` gained an optional `master_back` callback: one extra
+  "⬅ Master" header button that closes the engine cleanly and returns
+  to the waiting view in the same window; `None` keeps the standalone
+  trainer byte-identical.
+- New `ct2trainer native master [FOLDER]` CLI subcommand
+  (`--state-dir`, `--debug-log`, `--poll-ms`); directory picker when
+  the folder argument is omitted.
+- Build allowlist: the `master_trainer` subpackage (code + in-package
+  docs) and the user-provided `Master_Trainer.ico` / `Master_Trainer.png`
+  ship in the source ZIP; `window_icon_path("master")` resolves the
+  master window icon.
+- Source fixes (found during test-lane development):
+  - `process_watch.py`: `from ..local_processes` → `from
+    ...local_processes` (the module lives at `ct2trainer.local_processes`,
+    not `ct2trainer.native.local_processes`; the Windows backend raised
+    `ModuleNotFoundError` on first tick).
+  - `master_ui.py` `_open_picker`: `pady=(12, 4)` / `pady=(4, 12)` moved
+    from Tk widget options to `.pack()` (tuple padding is only valid as a
+    pack/grid option, not a widget constructor argument; the picker
+    crashed with `TclError: bad screen distance` every time it opened).
+  - `master_ui.py` `_confirm_recovery`: a declined recovery prompt
+    (user says "No") now fails the load instead of returning `True`
+    (which re-prompted up to 4 times then stranded the orchestrator in
+    `STATE_LOADING`; the standalone trainer exits on decline).
+  - `master_ui.py` `_enter_trainer`: the non-convergence path
+    (`attempt > 4`) now calls `_fail_trainer_start` so the orchestrator
+    returns to `STATE_WAITING` and the loop guard arms, instead of
+    leaving the state machine stuck.
+  - `master_ui.py` `set_folder`: added `TableIndex` to the local import
+    (was missing, causing `NameError` on every "Change folder" click).
+- Tests: `tests/test_native_master_index.py` (18),
+  `tests/test_native_master_process_watch.py` (35),
+  `tests/test_native_master_orchestrator.py` (42),
+  `tests/test_native_master_ui.py` (46). 141 master-trainer tests total.
+
+Queued (roadmap MT-6/7/8): the `settings_model.py` sidecar wiring, the
+SteamOS/CheatDeck attach route, and the frozen
+`CT2Trainer-Master.exe` entry point.
+
+Suite: 3,902 OK / 26 expected skips on `main` after the RT-5 B/E merges
+(canonical checkout, CT2TRAINER_NASM); full dev suite on the merged
+branch `native-0.20-master-trainer`: 4,011 OK / 30 expected skips (4,044
+ran; the only 3 failures are the known worktree path-dependent
+baseline-reproducibility tests, which pass at the canonical build path);
+the in-build suite result is recorded with the 0.21 build id in the
+release docs. One additional fix landed with this cycle:
+`tests/test_native_icons.py` now pins the `Master_Trainer` icon contract
+and the three-kind `window_icon_path` resolution (the pre-MT-5
+unknown-kind refusal test used `"master"` as its probe value, which
+became a valid kind). Catalog: latest remeasure
+`blocked-catalog-020-rt5-be` (117,809 total, 116,756 supported incl. the
++175 code-patch rows, 1,053 blocked, 60,161 staged, 0 load errors); the
+Master Trainer feature itself has zero catalog effect (no plan-builder
+code touched).
 
 ## 0.20.1 (2026-10-30)
 
