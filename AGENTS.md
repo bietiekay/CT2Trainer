@@ -49,13 +49,17 @@ the item-C string pin, addresslist getMemoryRecord/Count/
 MemoryRecord[i] lookups, registerAutoAssemblerCommand custom directives
 table-scope with built-in names refused, +27 tests) landed on `main`
 2026-10-29 (merge `dde9f04`, full main suite 3,817 OK / 25 expected
-skips, zero catalog delta `blocked-catalog-rt5c2-main`). RT-5 item D (onOpenProcess/onTableLoad callback dispatch: CE-sequence table-scope dispatch after a clean table-Lua bootstrap - onOpenProcess with the attached target PID, onTableLoad with the Lua literal false, documented bounded deviation: no before-load phase; pcall-wrapped dispatch chunks with literal argument injection, 'absent'/'ok'/'error: <msg>' -> no event / table-callback / table-callback-error, throwing-callback containment with plan byte-identity, idempotent per confirmed attach with re-attach re-fire, +9 tests) landed on `main` 2026-10-29 (merge `9294bb8`, full main suite 3,826 OK / 25 expected skips, zero catalog delta `blocked-catalog-rt5d-main`). The 0.19 field-fix cycle (2026-10-30, branch `native-0.19-field-fix`, merge `fbe626f`) shipped the Sinking City 2 hotkey-bridge Windows AV fix (HWND_MESSAGE corrected to -3, explicit Win32 argtypes/restype, guarded hotkey registration, +1 real-seam regression test), value-read observability (`read_value` logs `value-read-failed` per identifier per cause, dedup, re-raise), the new `describe` CLI subcommand (+13 tests), and full staged-options support for the South of Midnight table (two-level cascade proof +2 tests, staged-pending tap guard, moAlwaysHideChildren pass-through `hidden_children` marker + row-model subtree suppression, +8 UI tests); full main suite 3,850 OK / 26 expected skips, zero catalog delta `blocked-catalog-019-field`. The 0.20/0.20.1 branding-icon releases (2026-10-30/31; branch `native-0.20-icons` merged at `6298803`, 0.20.1 re-cut commit `080128c`, build `native-20261031T104114Z-d64ae4c2`) shipped the user-provided `CT2Trainer_Generator` icon for the tool EXE and the `Standalone_Trainer` icon embedded in the template stub so every generated trainer carries it; in-build suite 3,854 OK / 26 expected skips, zero catalog delta `blocked-catalog-020-icons`. The RT-5 API/construct inventory is
+skips, zero catalog delta `blocked-catalog-rt5c2-main`). RT-5 item D (onOpenProcess/onTableLoad callback dispatch: CE-sequence table-scope dispatch after a clean table-Lua bootstrap - onOpenProcess with the attached target PID, onTableLoad with the Lua literal false, documented bounded deviation: no before-load phase; pcall-wrapped dispatch chunks with literal argument injection, 'absent'/'ok'/'error: <msg>' -> no event / table-callback / table-callback-error, throwing-callback containment with plan byte-identity, idempotent per confirmed attach with re-attach re-fire, +9 tests) landed on `main` 2026-10-29 (merge `9294bb8`, full main suite 3,826 OK / 25 expected skips, zero catalog delta `blocked-catalog-rt5d-main`). The 0.19 field-fix cycle (2026-10-30, branch `native-0.19-field-fix`, merge `fbe626f`) shipped the Sinking City 2 hotkey-bridge Windows AV fix (HWND_MESSAGE corrected to -3, explicit Win32 argtypes/restype, guarded hotkey registration, +1 real-seam regression test), value-read observability (`read_value` logs `value-read-failed` per identifier per cause, dedup, re-raise), the new `describe` CLI subcommand (+13 tests), and full staged-options support for the South of Midnight table (two-level cascade proof +2 tests, staged-pending tap guard, moAlwaysHideChildren pass-through `hidden_children` marker + row-model subtree suppression, +8 UI tests); full main suite 3,850 OK / 26 expected skips, zero catalog delta `blocked-catalog-019-field`. The 0.20/0.20.1 branding-icon releases (2026-10-30/31; branch `native-0.20-icons` merged at `6298803`, 0.20.1 re-cut commit `080128c`, build `native-20261031T104114Z-d64ae4c2`) shipped the user-provided `CT2Trainer_Generator` icon for the tool EXE and the `Standalone_Trainer` icon embedded in the template stub so every generated trainer carries it; in-build suite 3,854 OK / 26 expected skips, zero catalog delta `blocked-catalog-020-icons`. RT-5 item B (CheatCodes code-patch plan path: fail-closed per-entry parse, `code_patch` plan records with synthetic IDs at 2**32+, engine toggle lifecycle with named refusals, +26 tests) landed on `main` 2026-10-31 (merge `9ef4a74`, full main suite 3,880 OK / 26 expected skips) and RT-5 item E (messageDialog safe logged no-op with CE argument shapes, nil tolerance, `message-dialog` debug event, both spellings in record + table scope, +22 tests) landed on `main` 2026-10-31 (merge `b8bb4ee`, full main suite 3,902 OK / 26 expected skips) — with B and E every RT-5 inventory item (A, B, C, C2, D, E, F, G) has landed, RT-5 complete; the closing CE 7.5 vs CT2Trainer analysis landed 2026-10-31 (merge `322ae22`). The RT-5 API/construct inventory is
 documented in `documentation/rt5-api-inventory.md`. The
-latest original-table catalog (run `blocked-catalog-020-icons`,
-2026-10-30, zero delta vs `blocked-catalog-019-field`) has 1,053 blocked
-of 117,634 plan entries, 60,161 staged entries and zero load errors
-(previous: 1,053 after RT-5 item D, 1,351 after RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6, 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3;
-original baseline: 2,698 blocked, 58,950 staged). The 42/42 feature
+latest original-table catalog (run `blocked-catalog-020-rt5-be`,
+2026-10-31) has 1,053 blocked of 117,809 plan entries, 116,756 supported
+(60,161 staged) and zero load errors (+175 supported vs
+`blocked-catalog-020-icons` - the 175 `CodeEntry` records of the 22
+CheatCodes tables are now supported `code_patch` rows; zero newly
+blocked, zero reason changes; previous: 1,053 after RT-5 item D and the
+0.19/0.20/0.20.1 zero-delta cycles, 1,351 after RT-4.3, 1,743 after RT-4.5,
+1,778 after RT-4.6, 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3; original
+baseline: 2,698 blocked, 58,950 staged). The 42/42 feature
 matrix measures only the 30 pinned synthetic cases; AP-11 has 0/6,143
 confirmed game effects. Read
 [`plans/reference-table-100-roadmap.md`](plans/reference-table-100-roadmap.md)
@@ -72,13 +76,20 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-10-31, 0.20.1 released (build
-`native-20261031T104114Z-d64ae4c2` cut from `main` @ `080128c` - the
-0.20.1 release-content re-cut of the 0.20 branding-icon release: 0.20
-changelog suite line corrected to the verified in-build suite (3,854 OK /
-26 expected skips, fully green at the canonical path) + catalog remeasure
-`blocked-catalog-020-icons` (zero delta) cited; in-build suite 3,854 OK /
-26 expected skips, `ce_inputs: []`); previous 0.20
+**CT2Trainer (status 2026-10-31, 0.21 content on `main` (RT-5 complete:
+item B CheatCodes code-patch plan path (merge `9ef4a74`, +26 tests,
+catalog `blocked-catalog-020-rt5-be`: 117,809 total / 116,756 supported /
+1,053 blocked, +175 supported, zero newly blocked) + item E messageDialog
+safe logged no-op (merge `b8bb4ee`, +22 tests, zero catalog delta
+`blocked-catalog-rt5e-iteme`); full main suite 3,902 OK / 26 expected
+skips; the 0.21 build is cut from this content set); latest verified
+release 0.20.1 (build `native-20261031T104114Z-d64ae4c2` cut from
+`main` @ `080128c` - the 0.20.1 release-content re-cut of the 0.20
+branding-icon release: 0.20 changelog suite line corrected to the
+verified in-build suite (3,854 OK / 26 expected skips, fully green at
+the canonical path) + catalog remeasure `blocked-catalog-020-icons`
+(zero delta) cited; in-build suite 3,854 OK / 26 expected skips,
+`ce_inputs: []`); previous 0.20
 `native-20261030T184820Z-b9d6dc07` @ `6298803` - the branding icons
 (user-provided CT2Trainer_Generator icon set for the tool EXE,
 Standalone_Trainer icon set embedded in the template stub so every
