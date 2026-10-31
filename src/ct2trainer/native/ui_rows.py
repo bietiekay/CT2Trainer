@@ -279,8 +279,9 @@ def filter_entries(entries: dict, view: str, needle: str,
                    applied, desired) -> list:
     """Candidate entries for one view + search, in plan order.
 
-    Views: ``Switches`` (selected supported scripts), ``On`` (those among
-    them the engine has applied), ``Saved`` (those carrying a saved wish),
+    Views: ``Switches`` (selected supported scripts and table-level
+    code-list records), ``On`` (those among them the engine has
+    applied), ``Saved`` (those carrying a saved wish),
     ``Values`` (selected supported value records), ``Scripts`` (every
     script record — blocked or unselected ones included, headings and
     values hidden; the row model still renders the group sections around
@@ -302,14 +303,14 @@ def filter_entries(entries: dict, view: str, needle: str,
             raise RowModelError("plan entries need an id field")
         if not entry["selected"] and view not in ("All", "Scripts"):
             continue
-        if view == "Switches" and not (entry["supported"] and entry["kind"] == "script"):
+        if view == "Switches" and not (entry["supported"] and entry["kind"] in ("script", "code_patch")):
             continue
         if view == "Scripts" and entry["kind"] != "script":
             continue
-        if view == "On" and not (entry["supported"] and entry["kind"] == "script"
+        if view == "On" and not (entry["supported"] and entry["kind"] in ("script", "code_patch")
                                  and entry["id"] in applied):
             continue
-        if view == "Saved" and not (entry["supported"] and entry["kind"] == "script"
+        if view == "Saved" and not (entry["supported"] and entry["kind"] in ("script", "code_patch")
                                     and entry["id"] in desired):
             continue
         if view == "Values" and not (entry["supported"] and entry["kind"] == "value"):
@@ -341,6 +342,8 @@ def _switch_chip(entry: dict) -> str:
         return "one-shot"
     if entry.get("activation_sets") is not None:
         return "master"
+    if entry.get("kind") == "code_patch":
+        return "code"
     return ""
 
 
@@ -401,10 +404,11 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
 
     Plan order is the row order; group headings with children render as
     48 px section header rows (default expanded; a heading in
-    ``collapsed_sections`` hides its direct subtree), actionable scripts
-    and values render as switch/value rows, and everything else (blocked
-    or unselected records, placeholder headings without children) renders
-    as a dim 48 px info row with the exact reason as sublabel.  Value ids
+    ``collapsed_sections`` hides its direct subtree), actionable scripts,
+    table-level code-list records and values render as switch/value rows,
+    and everything else (blocked or unselected records, placeholder
+    headings without children) renders as a dim 48 px info row with the
+    exact reason as sublabel.  Value ids
     in ``expanded_values`` render at the 120 px editor height with their
     inline editor rectangles; ``values`` maps value ids to their current
     display text (the renderer feeds it from ``engine.read_value``).
@@ -593,7 +597,7 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
             else:
                 if identifier not in visible:
                     continue
-                actionable = (entry["kind"] in ("script", "value")
+                actionable = (entry["kind"] in ("script", "value", "code_patch")
                               and entry["selected"] and entry["supported"])
                 if actionable:
                     emit_record(entry, indent)

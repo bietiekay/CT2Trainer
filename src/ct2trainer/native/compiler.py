@@ -42,6 +42,24 @@ from .architecture import (ArchitectureError, plan_architecture, prepare_archite
 
 _PROFILE_VALUE_TYPES = {"Array of byte", "Binary", "String"}
 
+# RT-5 item B: synthetic plan IDs for table-level <CheatCodes> code-list
+# records, assigned in table order.  The range sits above the engine's
+# runtime dynamic-record journal range (2**31 .. 2**31 +
+# MAX_DYNAMIC_RECORDS - engine-owned, session-scoped, never persisted) so
+# the two synthetic ID spaces can never collide; unlike the journal IDs,
+# code-list IDs are plan records and persist through the ordinary wish
+# store.
+CODE_PATCH_ID_BASE = 2 ** 32
+
+_CODE_PATCH_REASON = (
+    "Native code-list patch: the table's Actual bytes are applied at enable; "
+    "disable restores the bytes captured at enable time (the table's "
+    "Before/After captures are creation-time metadata only; restoring the "
+    "captured original is a deliberate superset of CE, whose code list "
+    "only ever applies the Actual bytes).")
+_CODE_HEADER_REASON = (
+    "Code-list section header; CE group activation is not executed.")
+
 _ADDRESSLESS_PLACEHOLDER_REASON = (
     "Addressless value record is a non-actionable table placeholder.")
 
@@ -1807,7 +1825,12 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     title = title or f"{table.source.stem} — Native Trainer"
     if not isinstance(title, str) or len(title) > 512 or any(ord(ch) < 32 for ch in title):
         raise NativeCompileError("Trainer title must be printable text up to 512 characters.")
-    known_ids = {entry.id for entry in table.entries}
+    # RT-5 item B: the table-level code list is plan-synthesized; its
+    # records are selectable by their synthetic IDs exactly like ordinary
+    # record IDs, so both join the known-ID set used for the selection
+    # bound check.
+    code_ids = [CODE_PATCH_ID_BASE + i for i in range(len(table.code_entries))]
+    known_ids = {entry.id for entry in table.entries} | set(code_ids)
     if selected_ids is not None and (any(type(item) is not int for item in selected_ids)
                                      or not set(selected_ids) <= known_ids):
         raise NativeCompileError("Selection contains unknown or noninteger CT record IDs.")
@@ -2079,6 +2102,65 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
                 entry.pop("parent_activation", None)
             else:
                 _block(entry, str(exc))
+    # RT-5 item B: project the table-level <CheatCodes> code list into
+    # plan records with synthetic IDs (CODE_PATCH_ID_BASE and up, table
+    # order).  GroupHeader rows compile to supported headings with no
+    # activation effect (CE code-list group toggling is not executed).
+    # Every code record carries its static address expression plus the
+    # lowercase before/actual/after byte captures.  The address is
+    # composed from the source fields mirroring the CE code-list forms:
+    # AddressString verbatim, else ModuleName plus the normalized
+    # ModuleNameOffset, else the absolute <Address> as raw hex.  A
+    # composed expression that is not a static address (parse failure or
+    # any symbol atom) blocks that record only, with a named reason.
+    for index, code in enumerate(table.code_entries):
+        code_id = CODE_PATCH_ID_BASE + index
+        entry = {
+            "id": code_id,
+            "label": code.description,
+            "path": code.description,
+            "parent_id": None,
+            "source_kind": "code",
+            "kind": "heading" if code.group_header else "code_patch",
+            "supported": True,
+            "reason": _CODE_HEADER_REASON if code.group_header else _CODE_PATCH_REASON,
+            "selected": code_id in selected,
+            "address": "",
+            "source_address": "",
+            "pointer_offsets": [],
+            "variable_type": None,
+            "show_as_hex": False,
+            "show_as_signed": None,
+            "dropdown": {"choices": [], "read_only": False},
+            "requires": [],
+            "provides": [],
+            "dependency_ids": [],
+            "source_hotkey_count": 0,
+            "runtime_verified": False,
+        }
+        if not code.group_header:
+            if code.address_string:
+                expression = code.address_string
+            elif code.module_name:
+                offset = code.module_name_offset.removeprefix("$")
+                offset = offset.removeprefix("0x").removeprefix("0X")
+                expression = code.module_name + ("+" + offset if offset else "")
+            else:
+                expression = code.address.upper()
+            entry["address"] = expression
+            entry["source_address"] = expression
+            entry["before"] = code.before
+            entry["actual"] = code.actual
+            entry["after"] = code.after
+            try:
+                parse_expression(expression)
+                if advanced_expression_symbols(expression):
+                    raise AddressExpressionError(
+                        "code-list address must be static (no symbols)")
+            except AddressExpressionError as exc:
+                _block(entry, "Code-list address is not a static address "
+                       "expression: " + str(exc))
+        entries.append(entry)
     # WP-37: Lua-owned symbol handover contract.  A symbol is *externally
     # owned* when exactly one supported record provides it through a
     # handover-capable mechanism: (a) embedded record Lua that proves a
@@ -2343,9 +2425,10 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
     for section in table.sections:
         # RT-5 item A: <Files> is interpreted (embedded_files plan field,
         # decoded fail-closed at table load); it no longer counts as
-        # omitted.
+        # omitted.  RT-5 item B: <CheatCodes> is interpreted (code_patch
+        # plan records with synthetic IDs); it no longer counts as omitted.
         if section.name not in {"CheatEntries", "LuaScript", "UserdefinedSymbols",
-                                "Files"}:
+                                "Files", "CheatCodes"}:
             omitted.append(section.name)
     if omitted:
         warnings.append("Table-level sections not interpreted: " + ", ".join(sorted(set(omitted))) + ".")
@@ -2524,7 +2607,10 @@ def validate_plan(plan: dict) -> None:
         # binding) need the full ID map before the per-entry pass.
         by_id = {entry["id"]: entry for entry in entries}
         for entry in entries:
-            if entry.get("kind") not in {"script", "value", "heading", "blocked"} or type(entry.get("supported")) is not bool:
+            # RT-5 item B: code_patch is the table-level code-list record
+            # kind (supported code records only; rejected code records use
+            # the ordinary blocked kind).
+            if entry.get("kind") not in {"script", "value", "heading", "blocked", "code_patch"} or type(entry.get("supported")) is not bool:
                 raise NativeCompileError("Invalid native record kind or supported flag.")
             if (entry["kind"] == "blocked") != (entry["supported"] is False):
                 raise NativeCompileError("Blocked records must be unsupported.")
@@ -2638,6 +2724,68 @@ def validate_plan(plan: dict) -> None:
             if not entry["supported"]:
                 if not entry["reason"] or entry.get("enable") or entry.get("disable"):
                     raise NativeCompileError("Blocked record must have a reason and no executable operations.")
+                continue
+            if entry["kind"] == "code_patch":
+                # RT-5 item B: a table-level code-list record.  The whole
+                # shape re-derives statically: synthetic ID (2**32 and up,
+                # above the source-ID and dynamic-record ranges), a static
+                # address expression with no symbol atoms, lowercase
+                # before/actual/after hex captures with a nonempty bounded
+                # actual, and no executable metadata, dependencies or
+                # dropdown payload.  A forged or tampered record is refused
+                # by exactly one of these re-derivations.
+                if entry["id"] < CODE_PATCH_ID_BASE:
+                    raise NativeCompileError(
+                        "Code patch record IDs must be synthetic (2**32 and up).")
+                if (entry.get("before") is None or entry.get("actual") is None
+                        or entry.get("after") is None
+                        or not isinstance(entry["before"], str)
+                        or not isinstance(entry["actual"], str)
+                        or not isinstance(entry["after"], str)
+                        or re.fullmatch(r"(?:[0-9a-f]{2})*", entry["before"]) is None
+                        or re.fullmatch(r"(?:[0-9a-f]{2})*", entry["actual"]) is None
+                        or re.fullmatch(r"(?:[0-9a-f]{2})*", entry["after"]) is None):
+                    raise NativeCompileError(
+                        "Code patch before/actual/after must be lowercase whole-byte hex strings.")
+                if not entry["actual"]:
+                    raise NativeCompileError(
+                        "Code patch actual bytes must be nonempty.")
+                if (len(entry["actual"]) > 2 * MAX_PATCH_BYTES
+                        or len(entry["before"]) > 2 * MAX_PATCH_BYTES
+                        or len(entry["after"]) > 2 * MAX_PATCH_BYTES):
+                    raise NativeCompileError(
+                        "Code patch byte captures exceed the patch byte bound.")
+                if (not isinstance(entry.get("address"), str) or not entry["address"]
+                        or entry.get("source_address") != entry["address"]):
+                    raise NativeCompileError(
+                        "Code patch address must re-derive as a static expression.")
+                try:
+                    parse_expression(entry["address"])
+                except AddressExpressionError as exc:
+                    raise NativeCompileError(
+                        "Code patch address is not a valid static address expression.") from exc
+                if advanced_expression_symbols(entry["address"]):
+                    raise NativeCompileError(
+                        "Code patch address must be static (no symbols).")
+                if any(key in entry for key in ("enable", "disable", "program",
+                                               "lua_program", "global_program",
+                                               "value_profile", "address_provider",
+                                               "activation_sets", "one_shot",
+                                               "async", "staged", "api_exports",
+                                               "hotkeys")):
+                    raise NativeCompileError(
+                        "Code patch records carry no executable metadata.")
+                if (entry.get("parent_id") is not None
+                        or entry.get("pointer_offsets") != []
+                        or entry.get("variable_type") is not None
+                        or entry.get("show_as_hex") is not False
+                        or entry.get("show_as_signed") is not None
+                        or entry.get("dropdown") != {"choices": [], "read_only": False}
+                        or entry.get("requires") != []
+                        or entry.get("provides") != []
+                        or entry.get("dependency_ids") != []):
+                    raise NativeCompileError(
+                        "Code patch record shape deviates from the canonical form.")
                 continue
             if entry["kind"] == "script":
                 if 'global_program' in entry:

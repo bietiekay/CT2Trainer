@@ -46,6 +46,42 @@ HEX_DIGITS_BY_TYPE = {"Byte": 2, "2 Bytes": 4, "4 Bytes": 8, "8 Bytes": 16}
 # CE stores and displays the section.
 MAX_UDS_ENTRIES = 4096
 _UDS_ADDRESS = re.compile(r"^(?:0[xX]|\$)?[0-9A-Fa-f]{1,16}\Z")
+# RT-5 item B: bound for the table-level <CheatCodes> section (the CE 7.x
+# code list).  Like UDS, the section is interpreted fail-closed per entry;
+# an oversized section is ignored whole with a named warning.
+MAX_CODE_PATCH_ENTRIES = 4096
+
+
+def _code_hex_bytes(element: ET.Element | None) -> str | None:
+    """Extract one CodeEntry byte capture as lowercase hex digits.
+
+    CE 7.x stores each capture as a sequence of ``<Byte>`` child elements
+    (two hex digits each); when the element carries no such children its
+    own text content is used instead.  Whitespace (including line breaks)
+    is dropped and the remainder must be pure hexadecimal of whole-byte
+    length.  The empty string means the capture is absent (CE stores
+    missing captures as empty elements).  Returns None when the value is
+    not a whole-byte hex string.
+    """
+    if element is None:
+        return ""
+    byte_nodes = element.findall("Byte")
+    if byte_nodes:
+        parts: list[str] = []
+        for byte_node in byte_nodes:
+            text = (byte_node.text or "").strip()
+            if re.fullmatch(r"[0-9A-Fa-f]{1,2}", text) is None:
+                return None
+            parts.append(text)
+        value = "".join(parts).lower()
+    else:
+        text = "".join((element.text or "").split())
+        if text and re.fullmatch(r"[0-9A-Fa-f]+", text) is None:
+            return None
+        value = text.lower()
+    if len(value) % 2:
+        return None
+    return value
 
 
 class TableError(ValueError):
@@ -106,6 +142,37 @@ class EmbeddedFile:
     text: str
     sha256: str
     size: int
+
+
+@dataclass(frozen=True)
+class CodePatch:
+    """One accepted <CodeEntry> of the table-level <CheatCodes> section
+    (RT-5 item B).
+
+    Cheat Engine 7.x stores the table's code list as top-level
+    ``<CheatCodes><CodeEntry>`` records: each carries an address (an
+    ``AddressString``, a ``<ModuleName>``/``<ModuleNameOffset>`` pair, or an
+    absolute ``<Address>``) plus the creation-time ``Before``/``Actual``/
+    ``After`` byte captures.  The plan projects every accepted entry into a
+    toggleable ``code_patch`` record that applies the ``actual`` bytes at
+    enable and restores the bytes captured at enable time at disable (a
+    documented deliberate superset of CE, whose code list only ever applies
+    the Actual bytes).  ``group_header`` entries carry no address and no
+    bytes; they compile to supported heading records with no activation
+    effect (CE code-list group activation is not executed).  The byte
+    strings are normalized to lowercase hex at parse time; the raw address
+    fields stay verbatim for the compiler's address composition.
+    """
+
+    description: str
+    group_header: bool
+    module_name: str
+    module_name_offset: str
+    address_string: str
+    address: str
+    before: str
+    actual: str
+    after: str
 
 
 @dataclass(frozen=True)
@@ -239,6 +306,10 @@ class Table:
     # hash and size); the compiler projects them into the plan field
     # embedded_files, from which the engine rebuilds the runtime registry.
     embedded_files: tuple[EmbeddedFile, ...] = ()
+    # RT-5 item B: parsed <CheatCodes> code-list entries, in table order;
+    # the compiler projects them into code_patch plan records with synthetic
+    # IDs (2**32 and up, above the dynamic-record journal space).
+    code_entries: tuple[CodePatch, ...] = ()
 
     @property
     def counts(self) -> dict[str, int]:
@@ -298,6 +369,17 @@ class Table:
                 {"name": f.name, "encoding": f.encoding,
                  "sha256": f.sha256, "size": f.size}
                 for f in self.embedded_files
+            ],
+            # RT-5 item B: code-list summary (normalized byte strings and the
+            # raw address fields the compiler composes from); the plan carries
+            # the derived address expression per record.
+            "code_entries": [
+                {"description": c.description, "group_header": c.group_header,
+                 "module_name": c.module_name,
+                 "module_name_offset": c.module_name_offset,
+                 "address_string": c.address_string, "address": c.address,
+                 "before": c.before, "actual": c.actual, "after": c.after}
+                for c in self.code_entries
             ],
             "entries": [entry.to_dict() for entry in self.entries],
         }
@@ -814,6 +896,81 @@ def _parse_xml_table(source: Path, data: bytes) -> Table:
                     address=int(address_text.removeprefix("$").removeprefix("0x")
                                 .removeprefix("0X"), 16),
                 ))
+    # RT-5 item B: interpret the table-level <CheatCodes> section (the CE 7.x
+    # code list).  CE writes the tag (usually empty) into most tables, so an
+    # empty or absent section yields no entries and no warning.  Every entry
+    # is judged fail-closed: a rejected entry is dropped with a named
+    # per-entry warning and the remaining entries (and the table itself)
+    # still compile.  GroupHeader="1" entries carry no address or bytes;
+    # their Description is the only required content.
+    code_entries_list: list[CodePatch] = []
+    codes_section = root.find("CheatCodes")
+    if codes_section is not None:
+        code_nodes = codes_section.findall("CodeEntry")
+        if len(code_nodes) > MAX_CODE_PATCH_ENTRIES:
+            warnings.append(
+                f"CheatCodes section exceeds {MAX_CODE_PATCH_ENTRIES} "
+                f"entries; section ignored.")
+        else:
+            for index, node in enumerate(code_nodes, start=1):
+                description = (node.findtext("Description") or "").strip()
+                entry_name = description or f"CodeEntry {index}"
+                if node.attrib.get("GroupHeader") == "1":
+                    if not description:
+                        warnings.append(
+                            f"CheatCodes entry {index} ('{entry_name}'): group "
+                            f"header without a <Description>; entry ignored.")
+                        continue
+                    code_entries_list.append(CodePatch(
+                        description=description, group_header=True,
+                        module_name="", module_name_offset="",
+                        address_string="", address="",
+                        before="", actual="", after=""))
+                    continue
+                before = _code_hex_bytes(node.find("Before"))
+                actual = _code_hex_bytes(node.find("Actual"))
+                after = _code_hex_bytes(node.find("After"))
+                if before is None:
+                    warnings.append(
+                        f"CheatCodes entry {index} ('{entry_name}'): <Before> "
+                        f"is not a hex byte string; entry ignored.")
+                    continue
+                if actual is None:
+                    warnings.append(
+                        f"CheatCodes entry {index} ('{entry_name}'): <Actual> "
+                        f"is not a hex byte string; entry ignored.")
+                    continue
+                if after is None:
+                    warnings.append(
+                        f"CheatCodes entry {index} ('{entry_name}'): <After> "
+                        f"is not a hex byte string; entry ignored.")
+                    continue
+                if not description:
+                    warnings.append(
+                        f"CheatCodes entry {index} ('{entry_name}'): missing "
+                        f"<Description>; entry ignored.")
+                    continue
+                if not actual:
+                    warnings.append(
+                        f"CheatCodes entry {index} ('{entry_name}'): empty "
+                        f"<Actual>; entry ignored.")
+                    continue
+                module_name = (node.findtext("ModuleName") or "").strip()
+                module_offset = (node.findtext("ModuleNameOffset") or "").strip()
+                address_string = (node.findtext("AddressString") or "").strip()
+                address = (node.findtext("Address") or "").strip()
+                if not address_string and not module_name and not address:
+                    warnings.append(
+                        f"CheatCodes entry {index} ('{entry_name}'): no usable "
+                        f"address (<AddressString>, <ModuleName> and "
+                        f"<Address> are all empty); entry ignored.")
+                    continue
+                code_entries_list.append(CodePatch(
+                    description=description, group_header=False,
+                    module_name=module_name,
+                    module_name_offset=module_offset,
+                    address_string=address_string, address=address,
+                    before=before, actual=actual, after=after))
     sections = tuple(
         SectionSummary(
             name=element.tag,
@@ -842,4 +999,5 @@ def _parse_xml_table(source: Path, data: bytes) -> Table:
         warnings=tuple(warnings),
         user_defined_symbols=tuple(uds_symbols),
         embedded_files=embedded_files,
+        code_entries=tuple(code_entries_list),
     )

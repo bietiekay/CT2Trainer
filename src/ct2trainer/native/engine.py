@@ -316,7 +316,10 @@ def validate_plan(plan: dict) -> None:
         if not isinstance(entry, dict) or type(entry.get("id")) is not int or entry["id"] < 0 or entry["id"] in seen:
             raise NativeRuntimeError("Invalid or duplicate entry ID")
         seen.add(entry["id"])
-        if entry.get("kind") not in {"script", "value", "heading", "blocked"} or type(entry.get("supported")) is not bool:
+        # RT-5 item B: code_patch is the table-level code-list record kind
+        # (supported code records only; rejected code records use the
+        # ordinary blocked kind).
+        if entry.get("kind") not in {"script", "value", "heading", "blocked", "code_patch"} or type(entry.get("supported")) is not bool:
             raise NativeRuntimeError("Invalid native entry capability")
         if type(entry.get("selected")) is not bool:
             raise NativeRuntimeError("Invalid native selection flag")
@@ -627,6 +630,66 @@ def validate_plan(plan: dict) -> None:
                     entry.get("value_profile"))
                 if status == "refusal":
                     raise NativeRuntimeError("Dropdown values must be exact supported literals.")
+        elif entry["kind"] == "code_patch":
+            # RT-5 item B: mirror the compiler gate for the table-level
+            # code-list record.  The whole shape re-derives: synthetic ID
+            # (2**32 and up, above both the source-ID space and the
+            # engine's dynamic-record journal range), lowercase hex
+            # captures with a nonempty bounded actual, a static
+            # symbol-free address expression, and no executable metadata.
+            if entry["id"] < 2 ** 32:
+                raise NativeRuntimeError(
+                    "Code patch record IDs must be synthetic (2**32 and up)")
+            for key in ("before", "actual", "after"):
+                value = entry.get(key)
+                if (not isinstance(value, str)
+                        or re.fullmatch(r"(?:[0-9a-f]{2})*", value) is None):
+                    raise NativeRuntimeError(
+                        "Code patch before/actual/after must be lowercase whole-byte hex strings")
+            if not entry["actual"]:
+                raise NativeRuntimeError("Code patch actual bytes must be nonempty")
+            from .aa import MAX_PATCH_BYTES
+            if (len(entry["actual"]) > 2 * MAX_PATCH_BYTES
+                    or len(entry["before"]) > 2 * MAX_PATCH_BYTES
+                    or len(entry["after"]) > 2 * MAX_PATCH_BYTES):
+                raise NativeRuntimeError("Code patch byte captures must be bounded")
+            if (not isinstance(entry.get("address"), str) or not entry["address"]
+                    or entry.get("source_address") != entry["address"]):
+                raise NativeRuntimeError(
+                    "Code patch address must re-derive as a static expression")
+            # The same symbol detector the compiler gate uses (plan
+            # address dialect); aliased so the module-level AA dialect
+            # symbol helper is not shadowed for the rest of validate_plan.
+            from .address_expression import (AddressExpressionError,
+                                             expression_symbols as plan_symbols,
+                                             parse_expression)
+            try:
+                parse_expression(entry["address"])
+            except AddressExpressionError as exc:
+                raise NativeRuntimeError(
+                    "Code patch address is not a valid static address expression") from exc
+            if plan_symbols(entry["address"]):
+                raise NativeRuntimeError(
+                    "Code patch address must be static (no symbols)")
+            if any(key in entry for key in ("enable", "disable", "program",
+                                           "lua_program", "global_program",
+                                           "value_profile", "address_provider",
+                                           "activation_sets", "one_shot",
+                                           "async", "staged", "api_exports",
+                                           "hotkeys")):
+                raise NativeRuntimeError(
+                    "Code patch records carry no executable metadata")
+            if (entry.get("parent_id") is not None
+                    or entry.get("pointer_offsets") != []
+                    or entry.get("variable_type") is not None
+                    or entry.get("show_as_hex") is not False
+                    or entry.get("show_as_signed") is not None
+                    or entry.get("dropdown") != {"choices": [], "read_only": False}
+                    or entry.get("requires") != []
+                    or entry.get("provides") != []
+                    or entry.get("dependency_ids") != []):
+                raise NativeRuntimeError(
+                    "Code patch record shape deviates from the canonical form.")
     # WP-37: mirror the compiler gate — the external-ownership map is
     # optional on schema 2 and must name supported script providers that
     # actually carry the symbol before any runtime use.  (Reuses the WP-38
@@ -1436,15 +1499,19 @@ class TrainerEngine:
             state_dir = state_dir / "CT2Trainer" / "native" / plan["trainer_id"]
         directory = Path(state_dir)
         shared = Path(process_lock_dir) if process_lock_dir is not None else directory.parent / "_process_sessions"
-        # Wish-carrying records: script records on their own, plus every
+        # Wish-carrying records: script records on their own, every
         # supported group heading (WP-53: flagged headings own the cascade
         # wish at the parent-activation save boundary; plain headings own
-        # their own active state).  The state payload refuses any other ID
-        # on decode.
+        # their own active state), and every selected table-level code-list
+        # record (RT-5 item B: the code_patch synthetic IDs join the
+        # ordinary enabled-wish persistence so saved code patches re-enable
+        # after a re-attach).  The state payload refuses any other ID on
+        # decode.
         wish_ids = {i for i, e in self.entries.items()
                     if e["selected"] and e["supported"]
                     and (e["kind"] == "script"
-                         or e["kind"] == "heading")}
+                         or e["kind"] == "heading"
+                         or e["kind"] == "code_patch")}
         try:
             self.store = _StateStore(directory, plan, wish_ids, shared, process_probe)
         except Exception as exc:
@@ -2607,7 +2674,15 @@ class TrainerEngine:
                 manager.check_entries()
             except Exception as exc:
                 raise PatchConflict('An executable hook receipt changed: '+str(exc)) from exc
-        for patches in self.applied.values():
+        for identifier, patches in self.applied.items():
+            if self.entries.get(identifier, {}).get("kind") == "code_patch":
+                # RT-5 item B: code-list records are not declarative AA
+                # patches; their own enable/disable paths re-read the live
+                # bytes and apply the named refusal matrix (in particular
+                # the code-patch-restore-mismatch refusal on disable), and
+                # every code-patch write still passes the transaction's
+                # exact original-byte check.
+                continue
             for patch in patches:
                 if self.memory.read(patch.address, len(patch.changed)) != patch.changed:
                     raise PatchConflict(f"Active patch changed externally at 0x{patch.address:X}; it will not be overwritten")
@@ -2879,6 +2954,12 @@ class TrainerEngine:
             return
         self._guard()
         self._check_patches()
+        if entry["kind"] == "code_patch":
+            # RT-5 item B: a table-level code-list record runs its own
+            # bounded byte effect (capture original, publish Actual)
+            # instead of the declarative AA dispatch.
+            self._enable_code_patch(entry, persist)
+            return
         self._enable_dispatch(entry, persist)
         self._mirror_parent_state(identifier)
 
@@ -3064,6 +3145,171 @@ class TrainerEngine:
             elif manager.state not in {'enabled','retired','target-exited','abandoned'}:
                 self._abandon_after_failure(manager, exc)
             raise NativeRuntimeError(str(exc)) from exc
+
+    def _code_patch_address(self, entry: dict) -> int:
+        """Runtime address for a code-list record.
+
+        The plan address is a static, symbol-free expression (compile-
+        and plan-gated), so resolving it at toggle time against the live
+        module base is all that is needed - no provider dependencies.
+        """
+        from .address_expression import AddressExpressionError, resolve_expression
+        try:
+            return resolve_expression(entry["address"], self.memory, self.symbols,
+                                      process_name=self.plan["process_name"],
+                                      pointer_size=self.memory.pointer_size)
+        except AddressExpressionError as exc:
+            raise NativeRuntimeError(
+                "code-patch address no longer resolves: " + str(exc)) from exc
+
+    def _enable_code_patch(self, entry: dict, persist: bool) -> None:
+        """RT-5 item B: enable a table-level code-list record.
+
+        Clean-room CE code-list semantics with a documented superset:
+        the record publishes the table's <Actual> bytes at its static
+        address.  The original bytes are captured from the live target at
+        enable time and that capture - not the table's <Before> - is what
+        the disable path restores, so an externally modified target is
+        never "restored" to stale table bytes.  The table's <Before> is
+        used only as an enable-time freshness check: when it is nonempty
+        and the live bytes no longer match it, the enable is refused
+        with the named code-patch-target-changed outcome and nothing is
+        written.  When the live bytes already hold <Actual> (a previous
+        session or the game itself left them in place), the state is
+        adopted without any write.
+        """
+        identifier = entry["id"]
+        address = self._code_patch_address(entry)
+        actual = bytes.fromhex(entry["actual"])
+        before = bytes.fromhex(entry["before"]) if entry["before"] else b""
+        current = self.memory.read(address, len(actual))
+        if current == actual:
+            # Already live: adopt the state without touching the target.
+            # The captured original is the live bytes themselves, so the
+            # disable path restores exactly what it observed (a no-op at
+            # worst, never foreign bytes).
+            self.applied[identifier] = [_Patch(address, current, actual)]
+            self.debug_log.log("code-patch-already-active",
+                               identifier=identifier, label=entry["label"],
+                               address=hex(address))
+            if persist:
+                self._save(self.desired | {identifier})
+            return
+        if before and current[:len(before)] != before:
+            # Freshness check failed: the target no longer holds the bytes
+            # the table expected, so publishing <Actual> would clobber
+            # unknown state.  Named refusal, zero writes.
+            self.debug_log.log("code-patch-target-changed",
+                               identifier=identifier, label=entry["label"],
+                               address=hex(address),
+                               expected_prefix=before.hex(" "),
+                               found=current.hex(" "))
+            raise NativeRuntimeError(
+                "code-patch-target-changed: bytes at 0x%X no longer match the "
+                "table's Before capture; refusing to publish Actual bytes"
+                % address)
+        original = current
+        patch = _Patch(address, original, actual)
+        for existing in self.applied.values():
+            if any(patch.address < other.address + len(other.changed)
+                   and other.address < patch.address + len(patch.changed)
+                   for other in existing):
+                raise NativeRuntimeError("A code patch overlaps another enabled entry")
+        for address2, raw in self.frozen.items():
+            if patch.address < address2 + len(raw) and address2 < patch.address + len(patch.changed):
+                raise NativeRuntimeError("A code patch overlaps a frozen value; unfreeze that entry first")
+        for scope in self.lua_activations.values():
+            if scope.overlaps(patch.address, len(patch.changed)):
+                raise NativeRuntimeError("A code patch overlaps a Lua-owned mutation")
+        # Same write routing as a literal script patch: executable pages go
+        # through the verified coordinator/hook journal, data pages through
+        # the ordinary transaction.
+        if self._is_executable(address, len(actual)):
+            self._enable_literal_code(entry, [patch], {})
+        else:
+            self._write_transaction([patch])
+        self.applied[identifier] = [patch]
+        self.debug_log.log("code-patch-applied",
+                           identifier=identifier, label=entry["label"],
+                           address=hex(address),
+                           original=original.hex(" "),
+                           changed=actual.hex(" "))
+        if persist:
+            self._save(self.desired | {identifier})
+
+    def _disable_code_patch(self, entry: dict, persist: bool) -> None:
+        """RT-5 item B: deactivate a table-level code-list record.
+
+        Restores the original bytes captured at enable time (the
+        documented superset over CE, which would re-check the table's
+        <Before> at disable time).  Refusal matrix:
+
+        - never applied: no-op (nothing to restore); the wish is cleared
+          from the saved state if present;
+        - live bytes already hold the captured original: no write - the
+          target reverted itself;
+        - live bytes hold <Actual> (data path): the captured original is
+          written back through the ordinary transaction;
+        - executable path: the hook manager restores the captured
+          original under the verified thread-stop coordinator and
+          journals the receipt;
+        - anything else: named code-patch-restore-mismatch refusal with
+          zero writes and an engine block - foreign bytes are never
+          overwritten (the same fail-closed posture as every other
+          applied patch that changed externally).
+        """
+        identifier = entry["id"]
+        if identifier not in self.applied:
+            if persist and identifier in self.desired:
+                self._save(self.desired - {identifier})
+            return
+        self._guard()
+        patches = self.applied[identifier]
+        if identifier in self.hooks:
+            manager = self.hooks[identifier]
+            try:
+                manager.disable()
+            except Exception as exc:
+                if manager.uncertain or manager.state != 'enabled':
+                    self._block(StateError('Executable code-patch disable is uncertain: ' + str(exc)))
+                raise NativeRuntimeError(str(exc)) from exc
+            self.retired_hooks.append(manager)
+            del self.hooks[identifier]
+            self.debug_log.log("code-patch-restored",
+                               identifier=identifier, label=entry["label"],
+                               address=hex(patches[0].address),
+                               executable=True,
+                               restored=patches[0].original.hex(" "))
+        else:
+            patch = patches[0]
+            current = self.memory.read(patch.address, len(patch.changed))
+            if current == patch.original:
+                self.debug_log.log("code-patch-restored",
+                                   identifier=identifier, label=entry["label"],
+                                   address=hex(patch.address), no_write=True)
+            elif current == patch.changed:
+                self._write_transaction([_Patch(patch.address, current, patch.original)])
+                self.debug_log.log("code-patch-restored",
+                                   identifier=identifier, label=entry["label"],
+                                   address=hex(patch.address),
+                                   restored=patch.original.hex(" "))
+            else:
+                self.debug_log.error(
+                    "code-patch-restore-mismatch",
+                    NativeRuntimeError(
+                        "code-patch-restore-mismatch: bytes at 0x%X changed "
+                        "externally; refusing to overwrite foreign bytes"
+                        % patch.address),
+                    identifier=identifier, label=entry["label"],
+                    address=hex(patch.address),
+                    found=current.hex(" "))
+                raise PatchConflict(
+                    "code-patch-restore-mismatch: bytes at 0x%X changed "
+                    "externally; refusing to overwrite foreign bytes"
+                    % patch.address)
+        del self.applied[identifier]
+        if persist:
+            self._save(self.desired - {identifier})
 
     def _enable_program(self, entry: dict, persist: bool,
                         custom_commands: dict | None = None) -> None:
@@ -4754,6 +5000,12 @@ class TrainerEngine:
                 self._save(self.desired - {identifier})
             self._mirror_parent_state(identifier)
             return
+        if entry["kind"] == "code_patch":
+            # RT-5 item B: a table-level code-list record restores its
+            # captured original through its own bounded path, instead of
+            # the declarative AA disable.
+            self._disable_code_patch(entry, persist)
+            return
         if entry.get("async") is True and run_lua_disable:
             self._disable_async(entry, persist)
             return
@@ -4919,6 +5171,10 @@ class TrainerEngine:
         entry = self.entries.get(identifier)
         if isinstance(entry, dict) and entry.get("kind") == "heading":
             return "heading"
+        if isinstance(entry, dict) and entry.get("kind") == "code_patch":
+            # RT-5 item B: code-list records toggle through their own
+            # bounded byte effect, not the script/AA lifecycle.
+            return "code_patch"
         if isinstance(entry, dict) and (entry.get("parent_activation") is not None
                                         or entry.get("parent_mo_bind") is True):
             if entry.get("parent_activation") is not None and entry["kind"] == "script":
