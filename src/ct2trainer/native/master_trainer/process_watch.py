@@ -51,7 +51,7 @@ class WindowsProcessLister(ProcessLister):
     """Toolhelp32 snapshot via the main-branch local process module."""
 
     def list_processes(self) -> list[ProcessSnapshotEntry]:
-        from ..local_processes import list_local_processes
+        from ...local_processes import list_local_processes
         return [ProcessSnapshotEntry(p.pid, p.name)
                 for p in list_local_processes()]
 

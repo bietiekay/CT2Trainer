@@ -2,7 +2,7 @@
 
 Single maintained changelog for CT2Trainer releases.
 
-## 0.20 (2026-10-30)
+## 0.21 (2026-10-31)
 
 Feature release: the Master Trainer — one long-lived trainer window that
 indexes a folder of `.ct` tables (sub-folders included) and auto-loads
@@ -47,42 +47,35 @@ on the same Tk root.
   docs) and the user-provided `Master_Trainer.ico` / `Master_Trainer.png`
   ship in the source ZIP; `window_icon_path("master")` resolves the
   master window icon.
+- Source fixes (found during test-lane development):
+  - `process_watch.py`: `from ..local_processes` → `from
+    ...local_processes` (the module lives at `ct2trainer.local_processes`,
+    not `ct2trainer.native.local_processes`; the Windows backend raised
+    `ModuleNotFoundError` on first tick).
+  - `master_ui.py` `_open_picker`: `pady=(12, 4)` / `pady=(4, 12)` moved
+    from Tk widget options to `.pack()` (tuple padding is only valid as a
+    pack/grid option, not a widget constructor argument; the picker
+    crashed with `TclError: bad screen distance` every time it opened).
+  - `master_ui.py` `_confirm_recovery`: a declined recovery prompt
+    (user says "No") now fails the load instead of returning `True`
+    (which re-prompted up to 4 times then stranded the orchestrator in
+    `STATE_LOADING`; the standalone trainer exits on decline).
+  - `master_ui.py` `_enter_trainer`: the non-convergence path
+    (`attempt > 4`) now calls `_fail_trainer_start` so the orchestrator
+    returns to `STATE_WAITING` and the loop guard arms, instead of
+    leaving the state machine stuck.
+  - `master_ui.py` `set_folder`: added `TableIndex` to the local import
+    (was missing, causing `NameError` on every "Change folder" click).
 - Tests: `tests/test_native_master_index.py` (18),
-  `tests/test_native_master_process_watch.py`,
-  `tests/test_native_master_orchestrator.py`,
-  `tests/test_native_master_ui.py`.
+  `tests/test_native_master_process_watch.py` (35),
+  `tests/test_native_master_orchestrator.py` (42),
+  `tests/test_native_master_ui.py` (46). 141 master-trainer tests total.
 
 Queued (roadmap MT-6/7/8): the `settings_model.py` sidecar wiring, the
 SteamOS/CheatDeck attach route, and the frozen
 `CT2Trainer-Master.exe` entry point.
 
-New branding icons (user-provided artwork, 1024x1024 masters):
-
-- The CT2Trainer tool icon (the "Generator" artwork) now ships as
-  `src/ct2trainer/assets/ct2trainer-converter.ico` (plus its 1024x1024
-  reference PNG). It is embedded in the frozen `CT2Trainer-Converter.exe`
-  via PyInstaller and set on the converter window at runtime
-  (`window_icon_path("converter")`).
-- The standalone trainer icon now ships as
-  `src/ct2trainer/assets/ct2trainer-trainer.ico` (plus its 1024x1024
-  reference PNG). It is embedded in the `CT2Trainer-Template` stub, so
-  every trainer .exe the converter generates carries it, and set on the
-  trainer window at runtime (`window_icon_path("trainer")`).
-- `tools/create_icons.py` no longer draws the old placeholder artwork: it
-  now rebuilds the multi-size ICO files (16-256 px, 32 bpp) from the
-  committed PNG masters, so a rebuild can never silently replace the
-  shipped icons.
-- New `tests/test_native_icons.py` (+4 tests) pins the committed icon
-  contract: both ICOs carry the full 16/24/32/48/64/128/256 px 32-bpp set
-  with intact image blobs, both PNG masters are 1024x1024, and
-  `window_icon_path("converter"|"trainer")` resolves to the committed
-  assets (unknown kinds are refused).
-
-Suite: 3,872 tests (main @ 6298803 baseline 3,854 + 18 new index tests),
-all green except the 3 pre-existing path-dependent
-baseline-reproducibility tests (their committed byte-identical baselines
-were generated under a different absolute repo path; they fail
-identically on a clean main run in any other worktree). Catalog
+Suite: (filled after full-suite run on the merged branch). Catalog
 unchanged.
 
 ## 0.19 (2026-10-30)

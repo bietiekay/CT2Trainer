@@ -102,7 +102,7 @@ class MasterApp:
 
     def set_folder(self, folder) -> None:
         from pathlib import Path
-        from .table_index import reconcile, save_index
+        from .table_index import TableIndex, reconcile, save_index
         self.folder = str(Path(folder).expanduser().resolve())
         result = reconcile(self.folder, TableIndex(self.folder, {}))
         self.index = result.index
@@ -312,6 +312,13 @@ class MasterWindow:
                 messagebox.showerror("Trainer cannot start",
                                      "Startup recovery did not converge "
                                      "within four attempts.", parent=self.root)
+                # Fail-closed like every other startup failure: record the
+                # failure for the exact (name, PID) pair and return the
+                # orchestrator to the waiting state, or the next tick would
+                # refuse (the state machine only ticks while waiting) and
+                # the waiting loop would stay stuck on the error text.
+                self._fail_trainer_start(
+                    "startup recovery did not converge within four attempts")
                 return
             try:
                 engine = TrainerEngine(plan,
@@ -386,7 +393,11 @@ class MasterWindow:
                     messagebox.showerror("Recovery failed", detail,
                                          parent=self.root)
                     return False
-        return True
+        # A declined prompt fails the load (the standalone trainer exits
+        # with the untouched state preserved); returning True here would
+        # re-prompt on every loop iteration until the 4-attempt guard
+        # tripped.
+        return prompt
 
     def _fail_trainer_start(self, error: str):
         self.app.orchestrator.fail_load(error)
@@ -405,15 +416,15 @@ class MasterWindow:
         tk.Label(top, text=choice.process_name + " is running (PID "
                  + str(choice.snapshot_entries[0].pid) + ") and "
                  + str(len(choice.tables)) + " indexed tables bind to it:",
-                 anchor="w", padx=14, pady=(12, 4),
-                 font=("Segoe UI", 11)).pack(fill="x")
+                 anchor="w", padx=14,
+                 font=("Segoe UI", 11)).pack(fill="x", pady=(12, 4))
         for entry in choice.tables:
             tk.Radiobutton(top, text=entry.relative_path,
                            value=entry.relative_path, variable=selection,
                            anchor="w", padx=14, font=("Segoe UI", 11)
                            ).pack(fill="x")
-        buttons = tk.Frame(top, padx=14, pady=(4, 12))
-        buttons.pack(fill="x")
+        buttons = tk.Frame(top, padx=14)
+        buttons.pack(fill="x", pady=(4, 12))
         tk.Button(buttons, text="Load",
                   command=lambda: self._picker_chosen(selection.get()),
                   font=("Segoe UI", 12), width=10,
