@@ -75,8 +75,15 @@ Queued (roadmap MT-6/7/8): the `settings_model.py` sidecar wiring, the
 SteamOS/CheatDeck attach route, and the frozen
 `CT2Trainer-Master.exe` entry point.
 
-Suite: (filled after full-suite run on the merged branch). Catalog
-unchanged.
+Suite: full dev suite on the merged branch 4,011 OK / 30 expected
+skips (4,044 ran; the only 3 failures are the known worktree
+path-dependent baseline-reproducibility tests, which pass at the
+canonical build path). One additional fix landed with this cycle:
+`tests/test_native_icons.py` now pins the `Master_Trainer` icon contract
+and the three-kind `window_icon_path` resolution (the pre-MT-5
+unknown-kind refusal test used `"master"` as its probe value, which
+became a valid kind). Catalog: unchanged vs
+`blocked-catalog-020-icons`.
 
 ## 0.20.1 (2026-10-30)
 
