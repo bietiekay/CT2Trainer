@@ -123,8 +123,10 @@ Suite: 3,902 OK / 26 expected skips on `main` after the RT-5 B/E merges
 branch `native-0.20-master-trainer`: 4,011 OK / 30 expected skips (4,044
 ran; the only 3 failures are the known worktree path-dependent
 baseline-reproducibility tests, which pass at the canonical build path);
-the in-build suite result is recorded with the 0.21 build id in the
-release docs. One additional fix landed with this cycle:
+in-build suite on the 0.21 build (run
+`native-20261031T211046Z-14707e12`, cut from `main` @ `9a725a8`,
+2026-10-31): 4,044 OK / 30 expected skips, 0 failures - fully green at
+the canonical build path. One additional fix landed with this cycle:
 `tests/test_native_icons.py` now pins the `Master_Trainer` icon contract
 and the three-kind `window_icon_path` resolution (the pre-MT-5
 unknown-kind refusal test used `"master"` as its probe value, which

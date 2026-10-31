@@ -117,9 +117,10 @@ game-facing action.
   reason-changed rows (UI-only change, zero catalog effect).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
   remain open; `runtime_unverified` remains set.
-- 0.21 Master Trainer feature work (2026-10-31, branch
-  `native-0.20-master-trainer` @ `01c3d36`, merged `main` @ `322ae22`;
-  the 0.21 build is cut from the canonical path after the merge):
+- 0.21 Master Trainer (2026-10-31, branch
+  `native-0.20-master-trainer`, merged `main` @ `9a725a8`; released in
+  build `native-20261031T211046Z-14707e12` - in-build suite 4,044 OK
+  / 30 expected skips, fully green at the canonical path):
   one long-lived trainer window that indexes a folder of `.ct` tables
   (sub-folders included; incremental `(size, mtime_ns)` fingerprint
   index, sha256-equal refresh keeps derived process names,
@@ -137,11 +138,27 @@ game-facing action.
   contract; four source bugs found and fixed during test-lane
   development (process-watch import depth, picker tuple-padding,
   recovery-decline fail-closed, `set_folder` import). Full dev suite
-  on the merged branch: 4,011 OK / 30 expected skips of 4,044 (only
-  the 3 known worktree path-dependent baseline-reproducibility tests
-  fail; they pass at the canonical build path). Catalog: unchanged vs
-  `blocked-catalog-020-icons` (no plan-builder code touched).
-- Latest verified release: 0.20.1, build
+  on the 0.21 build: 4,044 OK / 30 expected skips, 0 failures -
+  fully green at the canonical build path (the dev-suite run had 3
+  known path-dependent baseline-reproducibility test failures that
+  pass at the canonical build path). Catalog: unchanged (no
+  plan-builder code touched; zero Master Trainer effect vs
+  `blocked-catalog-020-rt5-be`).
+- Latest verified release: 0.21, build
+  `native-20261031T211046Z-14707e12` (cut from `main` @ `9a725a8`),
+  in-build suite 4,044 OK / 30 expected skips, `ce_inputs: []`,
+  `runtime_unverified` deliberately kept per gate; the 0.21 feature
+  release - RT-5 complete (item B CheatCodes code-patch plan path +
+  item E messageDialog safe logged no-op; catalog remeasure
+  `blocked-catalog-020-rt5-be`: 117,809 total, 116,756 supported,
+  1,053 blocked, 60,161 staged, 0 load errors, zero newly blocked)
+  plus the Master Trainer (MT-1..MT-5, 141 tests, zero catalog
+  effect); source ZIP `CT2Trainer-0.21-source.zip` sha256
+  `9dacb4093cd8a7f0444fed9ed7ae9aed6f82c14132ee4f3197b1fb5747580a13`
+  (14,231,850 bytes), portable ZIP
+  `CT2Trainer-0.21-windows-portable.zip` sha256
+  `0701d507701cb2952e1e35e1357bac4b459b38fe87e6811b6b272f2a2c3acaaa`
+  (33,010,077 bytes). Superseded 0.20.1, build
   `native-20261031T104114Z-d64ae4c2` (cut from `main` @ `080128c`),
   in-build suite 3,854 OK / 26 expected skips, `ce_inputs: []`;
   the release-content re-cut of the 0.20 branding-icon release (0.20
