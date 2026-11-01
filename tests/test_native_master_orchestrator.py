@@ -30,6 +30,10 @@ from ct2trainer.native.master_trainer.process_watch import (
     ProcessLister,
     ProcessSnapshotEntry,
 )
+from ct2trainer.native.master_trainer.table_gate import (
+    CODE_TOO_LARGE,
+    TableLoadGateRefusal,
+)
 from ct2trainer.native.master_trainer.table_index import TableEntry, TableIndex
 
 
@@ -506,6 +510,93 @@ class LoadFailGuardTests(unittest.TestCase):
         self.assertEqual(result.plan, {"plan": "alpha.ct"})
         self.assertEqual(orch.state, STATE_LOADING)
         self.assertIsNotNone(orch._load_in_flight)
+
+
+class GateRefusingCompiler:
+    """A plan compiler whose load is refused by the MT-9 load gate: the
+    table was matched and the target process is running, but the file
+    itself fails the compatibility/size re-proof."""
+
+    def __init__(self, code=CODE_TOO_LARGE,
+                 detail="table exceeds the 33554432-byte load limit "
+                        "(size 40000000 bytes)"):
+        self.code = code
+        self.detail = detail
+        self.calls = []
+
+    def __call__(self, table, process_name):
+        self.calls.append((table.relative_path, process_name))
+        raise TableLoadGateRefusal(self.code, self.detail)
+
+
+class LoadGateRefusalTests(unittest.TestCase):
+    """MT-9 wiring: a gate refusal from the plan compiler fails the load
+    through the same fail-closed loop guard as a compile refusal — the
+    refusal stays named and visible, the exact (name, PID) pair is not
+    hot-retried, and an explicit retry re-arms."""
+
+    def test_gate_refusal_fails_load_and_arms_loop_guard(self):
+        index = _index(_entry("a.ct", ("GameA.exe",)))
+        compiler = GateRefusingCompiler()
+        orch, _, _ = OrchestratorFixture.make(
+            index, [_snap(7, "GameA.exe")], compiler=compiler)
+        outcome = orch.tick()
+        self.assertIsNotNone(outcome.request)
+        result = orch.load(outcome.request, outcome.request_process)
+        self.assertIsInstance(result, LoadOutcome)
+        self.assertFalse(result.ok)
+        self.assertIsNone(result.plan)
+        self.assertEqual(compiler.calls, [("a.ct", "GameA.exe")])
+        self.assertEqual(result.error,
+                         "TableLoadGateRefusal: table exceeds the "
+                         "33554432-byte load limit (size 40000000 bytes)")
+        self.assertEqual(orch.state, STATE_WAITING)
+        self.assertEqual(orch.last_error, result.error)
+        self.assertEqual(orch.last_tick_detail,
+                         "load failed for a.ct: " + result.error)
+        # The next tick names the earlier gate refusal instead of
+        # re-requesting the load (no hot-retry).
+        again = orch.tick()
+        self.assertIsNone(again.request)
+        self.assertEqual(again.reason,
+                         "auto-load suppressed (earlier failure for a.ct: "
+                         "TableLoadGateRefusal: table exceeds the "
+                         "33554432-byte load limit (size 40000000 bytes))")
+        # Explicit retry re-arms the exact pair.
+        orch.retry()
+        rearmed = orch.tick()
+        self.assertIsNotNone(rearmed.request)
+
+    def test_gate_refusal_via_choice_uses_the_same_guard(self):
+        # Two tables bind the same process: the picker path (choose ->
+        # load) must run the gate too and fail through the same guard.
+        index = _index(_entry("a.ct", ("GameA.exe",)),
+                       _entry("b.ct", ("GameA.exe",)))
+        compiler = GateRefusingCompiler(code="table-changed-since-last-scan",
+                                        detail="table changed since the "
+                                               "last scan")
+        orch, _, _ = OrchestratorFixture.make(
+            index, [_snap(7, "GameA.exe")], compiler=compiler)
+        outcome = orch.tick()
+        self.assertIsNotNone(outcome.choice)
+        result = orch.choose("b.ct")
+        self.assertFalse(result.ok)
+        self.assertEqual(result.error,
+                         "TableLoadGateRefusal: table changed since the "
+                         "last scan")
+        self.assertEqual(orch.state, STATE_WAITING)
+        # The failed pair is remembered: the picker is not re-issued
+        # while the exact process identity stays visible.
+        again = orch.tick()
+        self.assertIsNone(again.request)
+        self.assertIsNone(again.choice)
+        self.assertIn("auto-load suppressed (earlier failure: "
+                      "TableLoadGateRefusal:", again.reason)
+        # Explicit retry re-arms the pair: the picker opens again.
+        orch.retry()
+        rearmed = orch.tick()
+        self.assertIsNone(rearmed.request)
+        self.assertIsNotNone(rearmed.choice)
 
 
 class ActiveStateTests(unittest.TestCase):

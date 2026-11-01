@@ -87,10 +87,21 @@ class MasterApp:
         self.state_dir_factory = state_dir_factory
         if plan_compiler is None:
             from ..compiler import compile_table
+            from .table_gate import TableLoadGateRefusal, gate_table_for_load
             folder = self.folder
 
             def plan_compiler(entry, process_name):
+                # MT-9 load gate: re-prove the table file (compatibility +
+                # size + drift vs the index entry) at the moment the load
+                # is requested.  A refusal raises the named refusal, so
+                # the orchestrator's fail-closed loop guard records the
+                # exact (name, PID) pair: no crash and no hot-retry even
+                # when the target process was found (visible in the
+                # status line + error dialog; Rescan/Retry load re-arm).
                 path = Path(folder) / entry.relative_path
+                result = gate_table_for_load(path, entry)
+                if not result.ok:
+                    raise TableLoadGateRefusal(result.code, result.detail)
                 return compile_table(path, process_name, architecture="x64",
                                      debug_log=debug_log)
             self.plan_compiler = plan_compiler

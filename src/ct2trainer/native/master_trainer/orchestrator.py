@@ -5,7 +5,10 @@ The orchestrator owns the waiting-mode decisions:
 - ``waiting``:  each tick lists the process snapshot and matches it
   against the index's bound process names.  A single-table match yields a
   direct load request (the documented auto-load policy); a multi-table
-  match yields a choice request; no match stays waiting.
+  match yields a choice request; no match stays waiting.  While a
+  failed load for the exact (name, PID) pair is remembered, no load
+  request and no choice re-issue goes out for that pair — the tick
+  returns the named suppression instead (an explicit retry re-arms).
 - ``choosing``: a multi-table match is pending; the UI offers the picker.
 - ``loading``:  a table compile is in flight (side effect owned by the
   UI layer; the orchestrator tracks the attempt and failure state).
@@ -189,6 +192,17 @@ class MasterOrchestrator:
             self.last_error = None
             return TickOutcome(self.state, request=table,
                                request_process=process, running=running)
+        failure = self._failed.get((key, min(e.pid for e in entries)))
+        if failure is not None:
+            # A load for this exact process identity already failed
+            # (compile or gate refusal): do not re-issue the picker
+            # while that identity stays visible — the named suppression
+            # replaces the choice until an explicit retry re-arms.
+            self.last_tick_detail = ("auto-load suppressed (earlier "
+                                     "failure: " + failure + ")")
+            self.last_error = failure
+            return TickOutcome(self.state, reason=self.last_tick_detail,
+                               running=running)
         original_name = next(n for n in self.index.process_names()
                              if n.casefold() == key)
         self.choice = PendingChoice(

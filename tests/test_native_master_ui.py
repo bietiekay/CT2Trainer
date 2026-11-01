@@ -48,6 +48,7 @@ from ct2trainer.native.master_trainer.master_state import (load_master_state,
                                                            save_master_state)
 from ct2trainer.native.master_trainer.table_index import (TableIndexRefusal,
                                                           load_index)
+from ct2trainer.native.master_trainer.table_gate import TableLoadGateRefusal
 
 CT_GAMEA = '''<CheatTable CheatEngineTableVersion="46"><CheatEntries>
 <CheatEntry><ID>1</ID><Description>"HP"</Description>
@@ -1138,6 +1139,109 @@ class Mt67WiringTests(unittest.TestCase):
         # Nothing is written back on close (the refusal owns the file).
         window.close()
         self.assertEqual(path.read_bytes(), document_to_json(foreign_doc))
+
+
+class LoadGateWiringTests(unittest.TestCase):
+    """MT-9 wiring in the UI layer: the default plan compiler re-proves
+    the table file (compatibility + size + drift vs the index entry) at
+    the moment the load is requested, and a refusal is visible + guarded
+    even when the target process was found."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(self._rmtree)
+        self.folder = self.tmp / "tables"
+        self.folder.mkdir()
+        self.state_home = self.tmp / "state"
+        self.state_home.mkdir()
+        (self.folder / "a.ct").write_text(CT_GAMEA, encoding="utf-8")
+        self.root = tk.Tk()
+        self.root.withdraw()
+
+    def _rmtree(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def tearDown(self):
+        try:
+            self.root.destroy()
+        except tk.TclError:
+            pass
+
+    def test_default_compiler_refuses_drifted_table(self):
+        app = MasterApp(self.folder, state_home=str(self.state_home),
+                        poll_ms=50, lister=_FakeLister())
+        entry = app.index.entries_for_process("GameA.exe")[0]
+        # The file drifts after the index was built (same path, new
+        # content): the gate must refuse with the stale-scan code.
+        (self.folder / "a.ct").write_text(
+            CT_GAMEA.replace("GameA.exe", "GameB.exe"), encoding="utf-8")
+        with self.assertRaises(TableLoadGateRefusal) as ctx:
+            app.plan_compiler(entry, "GameA.exe")
+        self.assertEqual(ctx.exception.code,
+                         "table-changed-since-last-scan")
+        self.assertIn("Rescan", str(ctx.exception))
+
+    def test_default_compiler_refuses_missing_table(self):
+        app = MasterApp(self.folder, state_home=str(self.state_home),
+                        poll_ms=50, lister=_FakeLister())
+        entry = app.index.entries_for_process("GameA.exe")[0]
+        (self.folder / "a.ct").unlink()
+        with self.assertRaises(TableLoadGateRefusal) as ctx:
+            app.plan_compiler(entry, "GameA.exe")
+        self.assertEqual(ctx.exception.code, "table-file-missing")
+
+    def test_default_compiler_gate_passes_unchanged_table_to_compile(self):
+        with patch("ct2trainer.native.compiler.compile_table") as compile_mock:
+            app = MasterApp(self.folder, state_home=str(self.state_home),
+                            poll_ms=50, lister=_FakeLister())
+            entry = app.index.entries_for_process("GameA.exe")[0]
+            plan = app.plan_compiler(entry, "GameA.exe")
+        compile_mock.assert_called_once_with(
+            self.folder / "a.ct", "GameA.exe",
+            architecture="x64", debug_log=False)
+        self.assertIs(plan, compile_mock.return_value)
+
+    def test_start_load_gate_refusal_is_visible_and_arms_guard(self):
+        # The target process is running and the table matches: the
+        # auto-load fires, the gate refuses the drifted file, the
+        # refusal is named (dialog + status line), no engine is created,
+        # and the loop guard blocks the hot-retry until an explicit
+        # retry (Rescan also re-arms via its retry call).
+        app = MasterApp(self.folder, state_home=str(self.state_home),
+                        poll_ms=50,
+                        lister=_FakeLister([ProcessSnapshotEntry(7,
+                                                                 "GameA.exe")]))
+        window = MasterWindow(self.root, app)
+        window.root.after = lambda ms, cb=None: None
+        # The file drifts after the index was built (new content, same
+        # bound process): the gate must refuse with the stale-scan code.
+        (self.folder / "a.ct").write_text(
+            CT_GAMEA.replace('"HP"', '"HP2"'), encoding="utf-8")
+        with patch("ct2trainer.native.master_trainer.master_ui.messagebox") \
+                as box:
+            window._poll()
+        box.showerror.assert_called_once()
+        args = str(box.showerror.call_args)
+        self.assertIn("Table load failed", args)
+        self.assertIn("TableLoadGateRefusal", args)
+        self.assertIn("changed since the last scan", args)
+        self.assertIn("a.ct", args)
+        self.assertEqual(app.orchestrator.state, STATE_WAITING)
+        self.assertIsNone(window.engine)
+        # The named refusal is kept visible in the waiting status line
+        # (the dialog closed, the last error stays on the line).
+        self.assertIn("TableLoadGateRefusal", window._status_var.get())
+        self.assertIn("changed since the last scan", window._status_var.get())
+        # The loop guard names the earlier gate refusal on the next tick.
+        outcome = app.orchestrator.tick()
+        self.assertIsNone(outcome.request)
+        self.assertIn("auto-load suppressed (earlier failure for a.ct: "
+                      "TableLoadGateRefusal:", outcome.reason)
+        # Rescan refreshes the index for the drifted content and re-arms
+        # the pair; the next tick requests the load again.
+        window._rescan()
+        outcome = app.orchestrator.tick()
+        self.assertIsNotNone(outcome.request)
 
 
 def _state_for(folder):

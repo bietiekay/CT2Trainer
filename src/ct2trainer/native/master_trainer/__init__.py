@@ -9,6 +9,11 @@ not add new trainer functionality, only the folder-scan and auto-load loop.
 """
 
 from .table_index import TableEntry, TableIndex, load_index, reconcile, save_index
+from .table_gate import (
+    TableGateResult,
+    TableLoadGateRefusal,
+    gate_table_for_load,
+)
 from .process_watch import (
     ProcessSnapshotEntry,
     ProcessLister,
@@ -58,6 +63,9 @@ __all__ = [
     "load_index",
     "reconcile",
     "save_index",
+    "TableGateResult",
+    "TableLoadGateRefusal",
+    "gate_table_for_load",
     "ProcessSnapshotEntry",
     "ProcessLister",
     "ProcfsProcessLister",

@@ -51,7 +51,16 @@ auto-load/handoff loop around that existing engine.
   - a load failure (compile refusal, engine start refusal) is named in
     the status line and an error dialog; the failed (name, PID) pair is
     remembered so the loop does not hot-retry while the same process
-    lives.
+    lives;
+  - before any compile, the load-time gate re-proves the table file
+    against its index entry: compatibility (a table this tool can
+    actually load — malformed XML, DTD/entity input and unparseable
+    legacy binaries are named refusals) and size (non-empty, within the
+    32 MiB load limit), plus a drift check — a file that changed since
+    the last scan is a named stale refusal (Rescan refreshes the index
+    and re-arms). A refused load is visible even though the target
+    process was found: no crash, named dialog + status line, no
+    hot-retry.
 
 ### Trainer mode
 
