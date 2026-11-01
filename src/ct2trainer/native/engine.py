@@ -869,7 +869,15 @@ def validate_plan(plan: dict) -> None:
         completed.add(identifier)
 
     for entry in entries:
-        if entry["selected"] and entry["supported"]:
+        # Placeholder headings are non-actionable (WP-32/WP-33): their
+        # display address and its symbol references are shape-checked plan
+        # metadata (the compiler pins requires against the address for the
+        # canonical zero-byte placeholder), never a runtime write, so they
+        # must not create plan-level symbol dependencies.  The actionable
+        # records that truly need those symbols are visited on their own and
+        # are blocked at compile time when the base is unresolvable.
+        if (entry["selected"] and entry["supported"]
+                and entry["kind"] != "heading"):
             visit(entry["id"])
     if "selected_ids" in plan and plan["selected_ids"] != sorted(e["id"] for e in entries if e["selected"]):
         raise NativeRuntimeError("Selected IDs do not match entry flags")
@@ -2352,6 +2360,17 @@ class TrainerEngine:
         return entry
 
     def _dependencies(self, entry: dict, trail: set[int] | None = None, persist: bool = True) -> None:
+        # WP-53: a supported heading is a non-actionable placeholder - its
+        # activation performs no target-memory operation (plain headings
+        # flip the group's own active state only; cascade headings go
+        # through the explicit activation-set targets), so the symbols
+        # named by its display address are never runtime dependencies.
+        # The actionable records that need those symbols resolve them
+        # through their own entries (and are blocked at compile time when
+        # the base is unresolvable).  Headings also never appear as
+        # provider nodes, so the skip loses no recursion.
+        if entry["kind"] == "heading":
+            return
         trail = set() if trail is None else set(trail)
         if entry["id"] in trail:
             raise NativeRuntimeError("Symbol dependency cycle")
