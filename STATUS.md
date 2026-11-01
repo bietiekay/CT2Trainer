@@ -1,22 +1,37 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-01. **0.23 content on `main`** (full Master
-Trainer roadmap: MT-6 per-table settings sidecar, MT-7 documented
+**Updated:** 2026-11-01. **0.23 released** (full Master Trainer
+roadmap: MT-6 per-table settings sidecar, MT-7 documented
 SteamOS/CheatDeck target route, MT-8 frozen `CT2Trainer-Master.exe`
-now part of every build, waiting-view observability, ask-on-first-
-start table-folder parameter; branch `native-0.23-master-roadmap`,
-`main` @ `b2d0344`; catalog zero delta
-`blocked-catalog-023-master-roadmap`; see the 0.23 section below).
-**Latest verified release:** 0.22, build
-`native-20261101T075049Z-f32c112d` (built from `main` at `2b24a1c`,
-2026-11-01): the 0.22 FO4 field-fix cycle release - bounded automatic
-re-arm of ScanMiss enable failures (30 s x 10 attempts, budget reset
-per (re-)attach, armed set survives target exit) plus manual "Try
-again" / "Re-attach" actions (merge `a12a0b6`, +17 tests; zero catalog
-delta `blocked-catalog-022-rearm`; the SC2 0.19 hotkey-bridge field
-findings are recorded in the section below, fixes deferred to the next
-field-fix cycle). In-build suite 4,061 OK / 30 expected skips,
-`ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+now part of every build, MT-9 load-time table compatibility & size
+gate, waiting-view observability, ask-on-first-start table-folder
+parameter, plus the same-day field fixes - placeholder-heading
+symbol-dependency skip and the Sinking City 2 hotkey-bridge field
+fix; branch `native-0.23-master-roadmap` + load-gate branch
+`native-0.23-load-gate`, `main` @ `6e3ec98`; catalog zero delta
+`blocked-catalog-023-field-fixes`; see the 0.23 section below).
+**Latest verified release:** 0.23, build
+`native-20261101T145310Z-a160bae4` (built from `main` at `6e3ec98`,
+2026-11-01): the 0.23 Master Trainer roadmap release - MT-6/MT-7/
+MT-8/MT-9 (frozen `CT2Trainer-Master.exe` now part of every build,
+per-table settings sidecar, documented SteamOS/CheatDeck route,
+load-time table compatibility & size gate with graceful named load
+failures), waiting-view observability, ask-on-first-start
+table-folder parameter, plus the same-day field fixes (placeholder
+headings no longer create plan-level symbol dependencies; SC2
+hotkey-bridge field fix from the 0.22.1 lane) - see the 0.23 section
+below. In-build suite 4,176 OK / 30 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate. Superseded 0.22,
+build `native-20261101T075049Z-f32c112d` (built from `main` at
+`2b24a1c`, 2026-11-01): the 0.22 FO4 field-fix cycle release -
+bounded automatic re-arm of ScanMiss enable failures (30 s x 10
+attempts, budget reset per (re-)attach, armed set survives target
+exit) plus manual "Try again" / "Re-attach" actions (merge `a12a0b6`,
++17 tests; zero catalog delta `blocked-catalog-022-rearm`; the SC2
+0.19 hotkey-bridge field findings are recorded in the section below -
+the fix itself ships in 0.23 via the 0.22.1 lane). In-build suite
+4,061 OK / 30 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate.
 Superseded 0.21, build
 `native-20261031T211046Z-14707e12` (built from `main` at `9a725a8`,
 2026-10-31): the 0.21 feature release - RT-5 complete (item B
@@ -265,12 +280,14 @@ logs kept local-only (clean-room rule).
   expect the `hotkey-*` events.
 
 **0.23 Master Trainer roadmap complete (2026-11-01, branch
-`native-0.23-master-roadmap`, `main` @ `b2d0344`):** the remaining
-roadmap items MT-6/MT-7/MT-8 landed (two lane subagents + root
-integration), together with the waiting-view observability work and
-the ask-on-first-start table-folder parameter. No new trainer
-functionality - the Master stays a wrapper around the tested
-engine.
+`native-0.23-master-roadmap` @ `b2d0344` + load-gate branch
+`native-0.23-load-gate` @ `98a9226`; `main` @ `6e3ec98`; released in
+build `native-20261101T145310Z-a160bae4`):** the remaining roadmap
+items MT-6/MT-7/MT-8/MT-9 landed (two lane subagents + root
+integration + the load-gate cycle), together with the waiting-view
+observability work and the ask-on-first-start table-folder
+parameter. No new trainer functionality - the Master stays a wrapper
+around the tested engine.
 
 - **MT-8 (frozen Master entry point):** `tools/native_master.py`
   frozen to `CT2Trainer-Master.exe` with the user-provided
@@ -328,11 +345,53 @@ engine.
   tolerant load) is reused when it still exists; only a genuinely
   first start (or a stale stored folder) shows the directory
   picker. +15 tests, +3 UI tests.
-- Suite: +72 tests (4,061 -> 4,133); catalog zero delta
-  (`blocked-catalog-023-master-roadmap`, 2026-11-01: 151/151 loaded,
-  0 compile errors, 117,809 total / 116,756 supported / 60,161
-  staged / 1,053 blocked / 0 load errors; per-table count and
-  reason changes: 0).
+- **MT-9 (load-time table compatibility & size gate,
+  `master_trainer/table_gate.py`):** before any compile, the load
+  re-proves the table file against its index entry - missing / not a
+  regular file / stat-or-read failure / empty / over the 32 MiB load
+  limit (33,554,432 bytes) / changed since the last scan (named
+  stale refusal; Rescan re-arms) / not loadable by the tested
+  `read_table` parser (malformed XML, DTD/entity input, unparseable
+  legacy binary) / changed during analysis. Every refusal is a
+  stable named code + displayable detail, cheapest-first; the
+  default plan compiler raises the named `TableLoadGateRefusal`, so
+  a table load failure is graceful even when the target process was
+  found: no crash, named dialog + status line, the fail-closed loop
+  guard records the exact (name, PID) pair (no hot-retry), Rescan /
+  Retry load re-arm, and the picker is not re-issued for a failed
+  pair. +16 gate tests, +2 orchestrator, +4 UI.
+- **Same-day field fixes in the 0.23 content** (merged to `main`
+  after the MT-9 merge): placeholder headings no longer create
+  plan-level symbol dependencies (`28c9b57`, +10 tests - the
+  WP-32/WP-33 non-actionable placeholder display-address requires are
+  display metadata, never runtime writes) and the Sinking City 2
+  hotkey-bridge field fix (0.22.1 lane: T1 named missing-export
+  guard, T2 engine containment of bridge faults as deduped named
+  warnings, T3 loop-thread close protocol, T7 persistence ordering;
+  merge `4e9b95b`, +11 tests) - the fix for the SC2 0.19
+  hotkey-bridge findings deferred in the 0.22 field cycle.
+- Suite: +115 tests (4,061 -> 4,176); catalog zero delta across all
+  three 0.23 remeasures (`blocked-catalog-023-master-roadmap` @
+  `b2d0344`, `blocked-catalog-023-load-gate` @ `98a9226`,
+  `blocked-catalog-023-field-fixes` @ `4e9b95b`, all 2026-11-01:
+  151/151 loaded, 0 compile errors, 117,809 total / 116,756
+  supported / 60,161 staged / 1,053 blocked / 0 load errors;
+  per-table count and reason changes: 0).
+- **Build record:** 0.23 shipped as build
+  `native-20261101T145310Z-a160bae4` (cut from `main` @ `6e3ec98`,
+  2026-11-01, canonical path; in-build suite 4,176 OK / 30 expected
+  skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+  gate; source ZIP `CT2Trainer-0.23-source.zip` sha256
+  `3360cab031cb1334dda71bb02a511170a9a70d1f583b5a8721624f46e24da464`
+  (14,291,040 bytes), portable ZIP
+  `CT2Trainer-0.23-windows-portable.zip` sha256
+  `eec023ba09e8fcb80608736896f0477f4a783034046e6ad67514e96ed0a2905b`
+  (49,609,916 bytes); the frozen `CT2Trainer-Master.exe` (sha256
+  `e5822f688c653242a9f64bd92e4ba92529d485b89c11607cf20d32e728ca3c20`,
+  16,895,048 bytes) ships in the run folder, the payload inventory
+  and the portable ZIP next to the converter; the source ZIP carries
+  `table_gate.py` + `tests/test_native_master_table_gate.py` and the
+  final 0.23 changelog entry).
 
 This page is a short explanation of the
 evidence in
@@ -352,8 +411,8 @@ defines the work and completion gates.
 
 | Area | Achieved | Still needed |
 | --- | --- | --- |
-| Independently built product | The 0.22 source and Windows portable ZIPs passed the offline build (build `native-20261101T075049Z-f32c112d`) with **4,061 tests OK, 30 expected skips**, and `ce_inputs: []`; the re-arm tests + 0.22 changelog entry ship in the source ZIP; the `master_trainer` subpackage + user-provided `Master_Trainer` icons ship in the source ZIP; the 0.20/0.20.1 branding icons remain embedded in the frozen converter EXE and the generated-trainer template EXE (verified by PE icon-resource extraction against the committed ICOs). | Keep the clean-room build and release checks green after each change. |
-| Master Trainer (released in 0.21; roadmap complete in 0.23 content) | Full MT-1..MT-8 feature set on `main` (branch `native-0.20-master-trainer` merged at `9a725a8`; branch `native-0.23-master-roadmap` merged at `b2d0344`): incremental table index (folder + sub-folders, sha256-bound JSON in the state home, foreign-schema/tamper refusal), cross-platform read-only process watch, pure orchestrator (unique-match auto-load, multi-table picker, fail-closed loop guard, live `running` tick feedback), waiting UI (metadata line, live "Running now" line, running/PID tree markers) + handoff into the exact standalone trainer with `master_back`, per-table on/off persistence via the engine state store, MT-6 per-table settings sidecar keyed by table content sha256 (restore-on-load / save-on-close, named refusals), MT-7 documented SteamOS/CheatDeck target route (named fail-closed non-Windows attach refusals; NOT a Linux attach backend), MT-8 frozen `CT2Trainer-Master.exe` in every build, ask-on-first-start table-folder parameter (`master-settings.json` in the state home; explicit folder argument wins), `master` CLI subcommand, `Master_Trainer` icon contract. 284 master-trainer tests; full main suite 4,133 OK / 30 expected skips; catalog zero delta `blocked-catalog-023-master-roadmap`. | User field test of the 0.23 build (Master window + frozen `CT2Trainer-Master.exe`, incl. a non-Windows waiting-view run); MT-7 owned Linux attach backend + the real Deck protocol run with exact build hashes (root/user field work). |
+| Independently built product | The 0.23 source and Windows portable ZIPs passed the offline build (build `native-20261101T145310Z-a160bae4`) with **4,176 tests OK, 30 expected skips**, and `ce_inputs: []`; the MT-9 gate tests + the placeholder-heading / SC2 hotkey-bridge field-fix test files + the 0.23 changelog entry ship in the source ZIP; the `master_trainer` subpackage + user-provided `Master_Trainer` icons ship in the source ZIP, and the frozen `CT2Trainer-Master.exe` ships in the portable ZIP next to the converter; the 0.20/0.20.1 branding icons remain embedded in the frozen converter EXE and the generated-trainer template EXE (verified by PE icon-resource extraction against the committed ICOs). | Keep the clean-room build and release checks green after each change. |
+| Master Trainer (released in 0.21; roadmap complete in the 0.23 release) | Full MT-1..MT-9 feature set on `main` (branch `native-0.20-master-trainer` merged at `9a725a8`; branch `native-0.23-master-roadmap` merged at `b2d0344`; load-gate branch `native-0.23-load-gate` merged at `98a9226`): incremental table index (folder + sub-folders, sha256-bound JSON in the state home, foreign-schema/tamper refusal), cross-platform read-only process watch, pure orchestrator (unique-match auto-load, multi-table picker, fail-closed loop guard, live `running` tick feedback, no picker re-issue for a failed pair), waiting UI (metadata line, live "Running now" line, running/PID tree markers) + handoff into the exact standalone trainer with `master_back`, per-table on/off persistence via the engine state store, MT-6 per-table settings sidecar keyed by table content sha256 (restore-on-load / save-on-close, named refusals), MT-7 documented SteamOS/CheatDeck target route (named fail-closed non-Windows attach refusals; NOT a Linux attach backend), MT-8 frozen `CT2Trainer-Master.exe` in every build, MT-9 load-time table compatibility & size gate (stable named refusals, graceful named load failure even when the target process was found, no hot-retry, Rescan / Retry re-arm), ask-on-first-start table-folder parameter (`master-settings.json` in the state home; explicit folder argument wins), `master` CLI subcommand, `Master_Trainer` icon contract. 306 master-trainer tests; full main suite 4,176 OK / 30 expected skips; catalog zero delta `blocked-catalog-023-field-fixes` (all three 0.23 remeasures). | User field test of the 0.23 build (Master window + frozen `CT2Trainer-Master.exe`, incl. a non-Windows waiting-view run); MT-7 owned Linux attach backend + the real Deck protocol run with exact build hashes (root/user field work). |
 | Synthetic feature coverage | **42/42** declared feature classes and **7,475/7,475** action weight covered across **30 synthetic tables**. | This metric does not establish support for every original table or a real game effect. Add synthetic cases when a new behavior is found. |
 | Original reference tables | All **151/151** table paths load after the RT-3 legacy-binary CT loader (2026-10-23). Local static catalog (0.21 RT-5 item B/E remeasure, run `blocked-catalog-020-rt5-be`, 2026-10-31, frozen manifest `gap_inventory/reference-manifest.json`; +175 supported vs `blocked-catalog-020-icons` - the 175 `CodeEntry` records of the 22 CheatCodes tables now `code_patch` plan rows, zero newly blocked, zero reason changes) classifies **116,756 supported**, including **60,161 staged**, out of **117,809 plan entries**. | **1,053 entries are blocked** (was 1,351 after RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6, 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3 and 2,698 before RT-4.1; RT-4.2 cleared the last 298 rows - R4 Lua-runtime symbol providers re-staged, R7 GetAsyncKeyState bare calls, keep-first scope fallback; zero newly blocked). The 0.19 field-fix cycle changed no catalog row (no corpus table uses `moAlwaysHideChildren`). RT-5 item B (0.21) added exactly 175 supported `code_patch` rows with no blocked or staged movement; item E is runtime-only (zero catalog delta). Staged entries still need their runtime conditions proved. |
 | Observed game effects | Owned fixtures and selected runtime chains have tests. | The AP-11 campaign has **0 of 6,143** game effects confirmed. Original-table behavior must be checked against pinned game builds or explicitly equivalent owned targets. |

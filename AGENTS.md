@@ -78,8 +78,29 @@ ZIP), plus the waiting-view observability (metadata line, live
 "Running now" line, running/PID tree markers) and the
 ask-on-first-start table-folder parameter (`master-settings.json`
 persisted in the state home; an explicit folder argument always
-wins); no new trainer functionality; full main suite 4,133 OK / 30
-expected skips, zero catalog delta `blocked-catalog-023-master-roadmap`.
+wins); no new trainer functionality; then the MT-9 load-time table
+compatibility & size gate (branch `native-0.23-load-gate`, merge
+`98a9226`: `table_gate.py` re-proves the table file against its
+index entry at load request - missing / not-a-file / read failure /
+empty / over the 32 MiB limit / changed since last scan / not
+loadable by the tested parser / changed during analysis; stable
+named codes + displayable detail; the named `TableLoadGateRefusal`
+from the default plan compiler fails the load through the
+orchestrator's fail-closed loop guard - no crash, named dialog +
+status line, no hot-retry, Rescan / Retry re-arm, no picker
+re-issue for a failed pair; +22 tests), plus the same-day field
+fixes (placeholder headings no longer create plan-level symbol
+dependencies, `28c9b57`, +10 tests; the SC2 hotkey-bridge field
+fix from the 0.22.1 lane - T1 named missing-export guard, T2 engine
+containment, T3 loop-thread close protocol, T7 persistence
+ordering - merge `4e9b95b`, +11 tests); full main suite 4,176 OK /
+30 expected skips, zero catalog delta on all three remeasures
+(`blocked-catalog-023-master-roadmap`, `blocked-catalog-023-load-gate`,
+`blocked-catalog-023-field-fixes`); the 0.23 build (run
+`native-20261101T145310Z-a160bae4`, cut from `main` @ `6e3ec98`,
+2026-11-01) is green in-build at 4,176 OK / 30 expected skips with
+`ce_inputs: []` - the frozen `CT2Trainer-Master.exe` ships in the
+run folder, the payload inventory and the portable ZIP.
 The RT-5 API/construct inventory is
 documented in `documentation/rt5-api-inventory.md`. The
 latest original-table catalog (run `blocked-catalog-020-rt5-be`,
@@ -107,24 +128,39 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-01, 0.23 content on `main` (full Master
+**CT2Trainer (status 2026-11-01, 0.23 released (full Master
 Trainer roadmap: MT-6 per-table settings sidecar (content-sha keyed,
 restore-on-load / save-on-close) + MT-7 documented SteamOS/CheatDeck
 target route (named fail-closed non-Windows attach refusals, NOT a
 Linux attach backend) + MT-8 frozen `CT2Trainer-Master.exe` now part
-of every build + waiting-view observability + ask-on-first-start
-table-folder parameter, branch `native-0.23-master-roadmap` merged @
-`b2d0344`, +72 tests, full main suite 4,133 OK / 30 expected skips,
-zero catalog delta `blocked-catalog-023-master-roadmap`); latest
-verified release 0.22 (build
+of every build + MT-9 load-time table compatibility & size gate
+(stable named refusals, fail-closed loop guard, no hot-retry) +
+waiting-view observability + ask-on-first-start table-folder
+parameter + same-day field fixes (placeholder-heading symbol-
+dependency skip 28c9b57 +10 tests; SC2 hotkey-bridge field fix
+0.22.1 lane merge 4e9b95b +11 tests), branch
+`native-0.23-master-roadmap` @ b2d0344 + load-gate branch
+`native-0.23-load-gate` @ 98a9226, main @ 6e3ec98, +115 tests, full
+main suite 4,176 OK / 30 expected skips, zero catalog delta
+`blocked-catalog-023-field-fixes`); latest
+verified release 0.23 (build
+`native-20261101T145310Z-a160bae4` cut from `main` @ `6e3ec98` - the
+0.23 Master Trainer roadmap release, in-build suite 4,176 OK / 30
+expected skips, `ce_inputs: []`, source ZIP
+`CT2Trainer-0.23-source.zip` sha256 3360cab031cb1334dda71bb02a511170a9a70d1f583b5a8721624f46e24da464
+14,291,040 bytes, portable ZIP
+`CT2Trainer-0.23-windows-portable.zip` sha256
+eec023ba09e8fcb80608736896f0477f4a783034046e6ad67514e96ed0a2905b
+49,609,916 bytes, frozen `CT2Trainer-Master.exe` in the run folder,
+payload inventory and portable ZIP); superseded 0.22 (build
 `native-20261101T075049Z-f32c112d` cut from `main` @ `2b24a1c` - the
 0.22 FO4 field-fix cycle release: bounded automatic re-arm of
 ScanMiss enable failures (30 s x 10 attempts, budget reset per
 (re-)attach, armed set survives target exit) + manual Try again /
 Re-attach actions (merge a12a0b6, +17 tests, in-build suite 4,061 OK
 / 30 expected skips, zero catalog delta blocked-catalog-022-rearm;
-SC2 0.19 hotkey-bridge field findings recorded, fixes deferred to the
-next field-fix cycle); superseded 0.21 (build
+SC2 0.19 hotkey-bridge field findings recorded, fixes shipped in
+0.23 via the 0.22.1 lane); superseded 0.21 (build
 `native-20261031T211046Z-14707e12` cut from `main` @ `9a725a8` - the
 0.21 feature release: RT-5 complete (item B CheatCodes code-patch
 plan path (merge `9ef4a74`, +26 tests, catalog
@@ -296,7 +332,25 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261101T075049Z-f32c112d` (0.22,
+**Latest verified build:** `native-20261101T145310Z-a160bae4` (0.23,
+cut from `main` @ `6e3ec98`; in-build suite 4,176 OK / 30 expected
+skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; source ZIP `CT2Trainer-0.23-source.zip` sha256
+`3360cab031cb1334dda71bb02a511170a9a70d1f583b5a8721624f46e24da464`
+(14,291,040 bytes) - carries the `master_trainer` subpackage incl.
+`table_gate.py`, the MT-9 test file, the placeholder-heading + SC2
+hotkey-bridge field-fix test files and the final 0.23 changelog
+entry - and portable ZIP
+`CT2Trainer-0.23-windows-portable.zip` sha256
+`eec023ba09e8fcb80608736896f0477f4a783034046e6ad67514e96ed0a2905b`
+(49,609,916 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `e5822f688c653242a9f64bd92e4ba92529d485b89c11607cf20d32e728ca3c20`,
+16,895,048 bytes) ships next to the converter)).
+0.23 ships the full Master Trainer roadmap (MT-6/MT-7/MT-8/MT-9,
+waiting-view observability, ask-on-first-start folder parameter)
+plus the same-day field fixes (placeholder-heading symbol-
+dependency skip, SC2 hotkey-bridge field fix from the 0.22.1 lane).
+Superseded 0.22 build: `native-20261101T075049Z-f32c112d` (0.22,
 cut from `main` @ `2b24a1c`; in-build suite 4,061 OK / 30 expected
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
 gate; source ZIP `CT2Trainer-0.22-source.zip` sha256
@@ -310,9 +364,8 @@ changelog entry - and portable ZIP
 ScanMiss enable failures, 30 s x 10 attempts, budget reset per
 (re-)attach, armed set survives target exit + manual Try again /
 Re-attach actions; The Sinking City 2 0.19 hotkey-bridge field
-findings are recorded in the ledger and deferred to the next
-field-fix cycle - hotkey-bridge code unchanged in 0.22). Superseded
-0.21 build: `native-20261031T211046Z-14707e12` (0.21,
+findings are recorded in the ledger - the fix itself ships in 0.23
+via the 0.22.1 lane). Superseded 0.21 build: `native-20261031T211046Z-14707e12` (0.21,
 cut from `main` @ `9a725a8`; in-build suite 4,044 OK / 30 expected
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
 gate; source ZIP `CT2Trainer-0.21-source.zip` sha256

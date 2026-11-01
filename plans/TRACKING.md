@@ -179,7 +179,8 @@ game-facing action.
 - 0.23 Master Trainer roadmap complete (2026-11-01, branch
   `native-0.23-master-roadmap`; lane `lane-mt8-frozen-entry` merge
   `deed3c5`, lane `lane-mt67-sidecar-deck` merge `cee58b7`, root
-  integration `b2d0344`, main @ `b2d0344`): MT-8 frozen entry
+  integration `b2d0344`; MT-9 load-gate branch
+  `native-0.23-load-gate` merge `98a9226`; main @ `6e3ec98`): MT-8 frozen entry
   `tools/native_master.py` -> `CT2Trainer-Master.exe` (windowed,
   lazy `master_ui` import so `--help` + named exit-2 refusals need
   no tkinter; CLI mirrors the `master` subcommand; `build()`
@@ -208,19 +209,61 @@ game-facing action.
   table-folder parameter (`master_state.py`, `master-settings.json`
   checksum-bound under the state home; explicit folder argument
   always wins + becomes the new persisted folder; stale stored
-  folder -> picker). No new trainer functionality (wrapper around
-  the tested engine). +72 tests (8 frozen + 17 sidecar + 13 route +
-  15 state + 13 UI + 6 orchestrator); full main suite 4,133 OK /
-  30 expected skips (canonical path, 2026-11-01). Catalog zero delta
-  `blocked-catalog-023-master-roadmap` (151/151 loaded, 0 compile
-  errors, 117,809 total / 116,756 supported / 60,161 staged /
-  1,053 blocked / 0 load errors; per-table count and reason
-  changes: 0). The 0.23 build is cut from this content.
-- Latest verified release: 0.22, build
-  `native-20261101T075049Z-f32c112d` (cut from `main` @ `2b24a1c`,
-  2026-11-01), in-build suite 4,061 OK / 30 expected skips,
+  folder -> picker); MT-9 `table_gate.py` (load-time compatibility +
+  size re-proof of the table file against its index entry at the
+  moment the load is requested: missing / not-a-regular-file /
+  stat-or-read failure / empty / over the 32 MiB load limit
+  (33,554,432 bytes) / changed since the last scan (named stale
+  refusal, Rescan re-arms; keeps the MT-6 sidecar sha keying
+  consistent) / not loadable by the tested `read_table` parser
+  (malformed XML, DTD/entity input, unparseable legacy binary) /
+  changed during analysis; stable named codes + displayable detail,
+  cheapest-first; the default plan compiler raises
+  `TableLoadGateRefusal` so a load failure is graceful even when the
+  target process was found: named dialog + status line, fail-closed
+  loop guard records the exact (name, PID) pair, no hot-retry,
+  Rescan / Retry re-arm, no picker re-issue for a failed pair; +22
+  tests: 16 gate + 2 orchestrator + 4 UI); same-day field fixes
+  merged after the MT-9 merge: placeholder headings no longer create
+  plan-level symbol dependencies (`28c9b57`, +10 tests) and the SC2
+  hotkey-bridge field fix from the 0.22.1 lane (T1 named
+  missing-export guard, T2 engine containment of bridge faults, T3
+  loop-thread close protocol, T7 persistence ordering; merge
+  `4e9b95b`, +11 tests). No new trainer functionality (wrapper
+  around the tested engine). +115 tests (72 roadmap + 22 MT-9 + 10
+  placeholder + 11 hotkey); full main suite 4,176 OK / 30 expected
+  skips (canonical path, 2026-11-01). Catalog zero delta on all
+  three remeasures (`blocked-catalog-023-master-roadmap` @
+  `b2d0344`, `blocked-catalog-023-load-gate` @ `98a9226`,
+  `blocked-catalog-023-field-fixes` @ `4e9b95b`: 151/151 loaded, 0
+  compile errors, 117,809 total / 116,756 supported / 60,161 staged
+  / 1,053 blocked / 0 load errors; per-table count and reason
+  changes: 0). The 0.23 build was cut from this content set: run
+  `native-20261101T145310Z-a160bae4` (in-build suite 4,176 OK / 30
+  expected skips, `ce_inputs: []`, source ZIP sha256
+  `3360cab031cb1334dda71bb02a511170a9a70d1f583b5a8721624f46e24da464`
+  14,291,040 bytes, portable ZIP sha256
+  `eec023ba09e8fcb80608736896f0477f4a783034046e6ad67514e96ed0a2905b`
+  49,609,916 bytes).
+- Latest verified release: 0.23, build
+  `native-20261101T145310Z-a160bae4` (cut from `main` @ `6e3ec98`,
+  2026-11-01), in-build suite 4,176 OK / 30 expected skips,
   `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
-  the 0.22 FO4 field-fix cycle release - bounded automatic re-arm of
+  the 0.23 Master Trainer roadmap release (MT-6/MT-7/MT-8/MT-9 +
+  waiting-view observability + ask-on-first-start folder parameter +
+  the placeholder-heading and SC2 hotkey-bridge field fixes); source
+  ZIP `CT2Trainer-0.23-source.zip` sha256
+  `3360cab031cb1334dda71bb02a511170a9a70d1f583b5a8721624f46e24da464`
+  (14,291,040 bytes), portable ZIP
+  `CT2Trainer-0.23-windows-portable.zip` sha256
+  `eec023ba09e8fcb80608736896f0477f4a783034046e6ad67514e96ed0a2905b`
+  (49,609,916 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `e5822f688c653242a9f64bd92e4ba92529d485b89c11607cf20d32e728ca3c20`
+  16,895,048 bytes ships next to the converter). Superseded 0.22,
+  build `native-20261101T075049Z-f32c112d` (cut from `main` @
+  `2b24a1c`, 2026-11-01), in-build suite 4,061 OK / 30 expected
+  skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+  gate; the 0.22 FO4 field-fix cycle release - bounded automatic re-arm of
   ScanMiss enable failures (30 s x 10 attempts, budget reset per
   (re-)attach, armed set survives target exit) + manual Try again /
   Re-attach actions (merge `a12a0b6`, +17 tests, zero catalog delta
