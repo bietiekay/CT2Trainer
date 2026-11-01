@@ -176,6 +176,46 @@ game-facing action.
   first-restart refusal on "absent" observations; SC2 hotkey-bridge
   fixes deferred to the next field-fix cycle. The 0.22 build is cut
   from this content.
+- 0.23 Master Trainer roadmap complete (2026-11-01, branch
+  `native-0.23-master-roadmap`; lane `lane-mt8-frozen-entry` merge
+  `deed3c5`, lane `lane-mt67-sidecar-deck` merge `cee58b7`, root
+  integration `b2d0344`, main @ `b2d0344`): MT-8 frozen entry
+  `tools/native_master.py` -> `CT2Trainer-Master.exe` (windowed,
+  lazy `master_ui` import so `--help` + named exit-2 refusals need
+  no tkinter; CLI mirrors the `master` subcommand; `build()`
+  freezes it after the converter with the `Master_Trainer.ico`, no
+  `CT2BASE1` marker, `inventory()` scan, `payload-inventory.json` /
+  `build.json` outputs / portable ZIP entry - the Master Trainer is
+  now part of every build; `scripts/Build-Native.ps1` unchanged);
+  MT-6 `settings_sidecar.py` (`MasterSettingsStore` keyed by the
+  table content sha256, never path; `<state home>/settings/<sha>.ct2trainer.json`;
+  `load_for` (document, reasons) contract - absent file normal,
+  `SettingsRejection` reasons displayable, structural
+  `SettingsError` named; `save_for` document-derived known ids +
+  named `nothing to persist`; UI restore-on-load with visible named
+  refusal, save-on-close; on/off wish persistence stays on the
+  engine state store); MT-7 `steamdeck_route.py` (documented-route
+  surface, NOT a Linux attach backend: `attach_gate` /
+  `require_engine_attach` / `route_text`; named
+  `DeckAttachUnavailableError` with the Proton-wrapped standalone
+  CT2Trainer Windows trainer EXE route; gate before any engine
+  creation; permanent waiting-view route hint on non-Windows; the
+  real Deck protocol run with exact build hashes stays root/user
+  field work); waiting-view observability (metadata line - table
+  counts / bound names / scan time / state home; live "Running now"
+  line with PIDs; running/PID tree-row markers; `TickOutcome.running`
+  live bound-process list on every tick path); ask-on-first-start
+  table-folder parameter (`master_state.py`, `master-settings.json`
+  checksum-bound under the state home; explicit folder argument
+  always wins + becomes the new persisted folder; stale stored
+  folder -> picker). No new trainer functionality (wrapper around
+  the tested engine). +72 tests (8 frozen + 17 sidecar + 13 route +
+  15 state + 13 UI + 6 orchestrator); full main suite 4,133 OK /
+  30 expected skips (canonical path, 2026-11-01). Catalog zero delta
+  `blocked-catalog-023-master-roadmap` (151/151 loaded, 0 compile
+  errors, 117,809 total / 116,756 supported / 60,161 staged /
+  1,053 blocked / 0 load errors; per-table count and reason
+  changes: 0). The 0.23 build is cut from this content.
 - Latest verified release: 0.22, build
   `native-20261101T075049Z-f32c112d` (cut from `main` @ `2b24a1c`,
   2026-11-01), in-build suite 4,061 OK / 30 expected skips,

@@ -2,6 +2,81 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.23 (2026-11-01)
+
+Master Trainer roadmap complete (MT-6 / MT-7 / MT-8) - the full
+feature set of the all-in-one "Forever Master Trainer" front end,
+plus the waiting-view observability work and the ask-on-first-start
+table-folder parameter (branch `native-0.23-master-roadmap`; lane
+`lane-mt8-frozen-entry` merge `deed3c5`, lane `lane-mt67-sidecar-deck`
+merge `cee58b7`, root integration `b2d0344`; `main` @ `b2d0344`):
+
+- **MT-8 frozen Master entry point**: `tools/native_master.py`
+  frozen to `CT2Trainer-Master.exe` with the user-provided
+  `Master_Trainer.ico` (windowed; lazy `master_ui` import so
+  `--help` and the named exit-2 refusals never require tkinter or a
+  display; CLI mirrors the `master` subcommand: optional folder
+  positional, `--state-dir`, `--debug-log`, `--poll-ms`). `build()`
+  freezes it after the converter (no `CT2BASE1` marker - templates
+  are converter-only), runs the CE-content `inventory()` scan, adds
+  it to `payload-inventory.json`, the `build.json` outputs and the
+  portable ZIP next to the converter - the Master Trainer is now
+  part of every build. `scripts/Build-Native.ps1` unchanged (its
+  single `build()` call emits the new EXE + ZIP entry). +8 tests.
+- **MT-6 per-table settings sidecar**: `settings_sidecar.py`
+  `MasterSettingsStore` keyed by the table content sha256 (never by
+  path), layout `<state home>/settings/<sha>.ct2trainer.json`;
+  `load_for` returns `(document, [])` / `(None, reasons)` - absent
+  file is normal, `SettingsRejection` reasons pass through
+  displayable (never a silent reset to defaults), structural
+  `SettingsError` named; `save_for` derives the known-id set from
+  the document and refuses an all-empty draft with the named
+  `nothing to persist`; reuses the tested `SettingsModel` unchanged.
+  UI wiring: restore on load (a refused stored document is shown
+  with its named reasons and the session continues without it),
+  save on close (back-to-Master and window close). The on/off wish
+  persistence itself stays on the engine state store (MT-4). +17
+  sidecar tests, +2 UI wiring tests.
+- **MT-7 SteamOS / CheatDeck target route (documented-route scope)**:
+  `steamdeck_route.py` `AttachRoute` + `attach_gate` /
+  `require_engine_attach` / `route_text`; Windows -> attach
+  available through the unchanged native engine path; Linux/other ->
+  named `DeckAttachUnavailableError` carrying the documented route
+  (Proton-wrapped standalone CT2Trainer Windows trainer EXE,
+  CheatDeck-compatible; the Linux/SteamOS Master Trainer runs
+  detection + table index + waiting UI only; the owned Linux attach
+  backend remains a later work item). The gate runs before any
+  engine creation (a refusal fails the load through the
+  orchestrator's named loop guard); the waiting view shows the
+  route hint permanently on non-Windows. Deliberately NOT a Linux
+  attach backend - the real Deck protocol run with exact build
+  hashes stays root/user field work
+  (`tests/deck/compatibility-matrix.md`). +13 route tests, +3 UI
+  wiring tests.
+- **Waiting-view observability**: the waiting view now shows a
+  compact metadata line (table counts, bound process names, last
+  scan time, the state home location) and a live "Running now" line
+  (bound processes visible in the latest snapshot, with PIDs);
+  table rows for a running process are marked `running (PID n)`;
+  `TickOutcome.running` carries the live bound-process list from
+  the orchestrator tick (stable name/PID order on every tick path).
+  +6 orchestrator tests, +5 UI tests.
+- **Ask on first start for the table folder** (CT source directory
+  parameter): an explicit folder argument (CLI or frozen EXE)
+  always wins; without one, the last-used folder persisted in the
+  state home (`master-settings.json`, new checksum-bound
+  `master_state.py` module with named `MasterStateRefusal` and
+  tolerant load) is reused when it still exists; only a genuinely
+  first start (or a stale stored folder) shows the directory
+  picker. +15 tests, +3 UI tests.
+- No new trainer functionality: the Master stays a wrapper around
+  the tested engine. +72 tests in total (4,061 -> 4,133); catalog
+  zero delta (`blocked-catalog-023-master-roadmap`, 2026-11-01:
+  151/151 loaded, 0 compile errors, 117,809 total / 116,756
+  supported / 60,161 staged / 1,053 blocked / 0 load errors - zero
+  delta vs `blocked-catalog-022-rearm`, per-table count and reason
+  changes: 0).
+
 ## 0.22 (2026-11-01)
 
 FO4 field-fix cycle - bounded automatic re-arm of scan-missed enables,

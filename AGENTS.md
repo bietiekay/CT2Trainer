@@ -65,7 +65,22 @@ PatchConflict Win32 299, state-lock first-restart refusal) recorded in
 deferred to the next field-fix cycle (hotkey-bridge code unchanged in
 0.22); the 0.22 build (run `native-20261101T075049Z-f32c112d`, cut from
 `main` @ `2b24a1c`, 2026-11-01) is green in-build at 4,061 OK / 30
-expected skips with `ce_inputs: []`. The RT-5 API/construct inventory is
+expected skips with `ce_inputs: []`. The 0.23 Master Trainer roadmap
+completion (2026-11-01, branch `native-0.23-master-roadmap`, main @
+`b2d0344`) ships MT-6 (per-table settings sidecar keyed by table
+content sha256 under the state home, restore-on-load / save-on-close,
+named refusals), MT-7 (documented SteamOS/CheatDeck target route:
+named fail-closed non-Windows attach refusals, NOT a Linux attach
+backend; the real Deck protocol run stays root/user field work) and
+MT-8 (frozen `CT2Trainer-Master.exe` with the `Master_Trainer.ico`,
+now emitted by every build into the run folder and the portable
+ZIP), plus the waiting-view observability (metadata line, live
+"Running now" line, running/PID tree markers) and the
+ask-on-first-start table-folder parameter (`master-settings.json`
+persisted in the state home; an explicit folder argument always
+wins); no new trainer functionality; full main suite 4,133 OK / 30
+expected skips, zero catalog delta `blocked-catalog-023-master-roadmap`.
+The RT-5 API/construct inventory is
 documented in `documentation/rt5-api-inventory.md`. The
 latest original-table catalog (run `blocked-catalog-020-rt5-be`,
 2026-10-31) has 1,053 blocked of 117,809 plan entries, 116,756 supported
@@ -92,7 +107,16 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-01, 0.22 released (build
+**CT2Trainer (status 2026-11-01, 0.23 content on `main` (full Master
+Trainer roadmap: MT-6 per-table settings sidecar (content-sha keyed,
+restore-on-load / save-on-close) + MT-7 documented SteamOS/CheatDeck
+target route (named fail-closed non-Windows attach refusals, NOT a
+Linux attach backend) + MT-8 frozen `CT2Trainer-Master.exe` now part
+of every build + waiting-view observability + ask-on-first-start
+table-folder parameter, branch `native-0.23-master-roadmap` merged @
+`b2d0344`, +72 tests, full main suite 4,133 OK / 30 expected skips,
+zero catalog delta `blocked-catalog-023-master-roadmap`); latest
+verified release 0.22 (build
 `native-20261101T075049Z-f32c112d` cut from `main` @ `2b24a1c` - the
 0.22 FO4 field-fix cycle release: bounded automatic re-arm of
 ScanMiss enable failures (30 s x 10 attempts, budget reset per
@@ -100,7 +124,7 @@ ScanMiss enable failures (30 s x 10 attempts, budget reset per
 Re-attach actions (merge a12a0b6, +17 tests, in-build suite 4,061 OK
 / 30 expected skips, zero catalog delta blocked-catalog-022-rearm;
 SC2 0.19 hotkey-bridge field findings recorded, fixes deferred to the
-next field-fix cycle); superseded 0.21 released (build
+next field-fix cycle); superseded 0.21 (build
 `native-20261031T211046Z-14707e12` cut from `main` @ `9a725a8` - the
 0.21 feature release: RT-5 complete (item B CheatCodes code-patch
 plan path (merge `9ef4a74`, +26 tests, catalog
