@@ -1,8 +1,11 @@
 # CT2Trainer Master Trainer — Concept
 
-**Status:** implemented on branch `native-0.20-master-trainer` (2026-10-30),
-pending merge to `main`. Design and implementation notes; the working plan
-is [ROADMAP.md](ROADMAP.md).
+**Status:** MT-1..MT-5 merged into `main` with the 0.21 release (merge
+`9a725a8`, 2026-10-31); MT-6..MT-8 (the full roadmap) implemented on
+branch `native-0.23-master-roadmap` (2026-11-01) together with the
+waiting-view observability work and the ask-on-first-start folder
+persistence. Design and implementation notes; the working plan is
+[ROADMAP.md](ROADMAP.md).
 
 ## What it is
 
@@ -26,8 +29,18 @@ auto-load/handoff loop around that existing engine.
 
 ### Waiting mode (default)
 
-- Shows the configured folder, the table index (one row per `.ct` table:
-  relative path, bound process name(s), status) and a live status line.
+- Shows the configured folder, a compact metadata line (table counts,
+  bound process names, last scan time, the state home location), a live
+  “Running now” line (which bound processes are visible in the latest
+  process snapshot, with PIDs), the table index (one row per `.ct` table:
+  relative path, bound process name(s), status — rows for a running
+  process are marked `running` with its PID(s)) and a live status line.
+  On non-Windows the metadata line also carries the permanent MT-7 route
+  hint (attach unavailable; the documented Proton-wrapped trainer route).
+- The table folder is taken from a CLI parameter, or from the
+  last-used folder persisted in the state home (`master-settings.json`);
+  only a genuinely first start (or a stale stored folder) shows the
+  directory picker — “ask on first start”.
 - A 1 s poll tick asks the pure orchestrator for a decision:
   - no bound process running → stays waiting, the line says so;
   - exactly one table binds the running process → **auto-loads** that
@@ -136,9 +149,18 @@ stays visibly inactive and is never re-applied (unchanged engine
 contract).
 
 The richer sidecar model (`settings_model.py`, `.ct2trainer.json`:
-visible-name drafts, value defaults, hotkeys) exists in the main branch
-but is not wired into the engine yet; wiring it as a per-table master
-sidecar is queued as work package MT-6.
+visible-name drafts, value defaults, hotkeys) is wired in as a per-table
+master sidecar (MT-6, done 2026-11-01): `settings_sidecar.py` keys the
+sidecar by the table's **content sha256** (never by path) under the state
+home at `<state home>/settings/<table_sha256>.ct2trainer.json`. On load
+the Master restores the document for the table it is about to open and
+shows the named refusal reasons when the stored document is refused
+(different table, unknown record ids, ...); on session end (back-to-
+Master and window close) the restored document is saved back. A stored
+document that cannot be used never silently resets to defaults — the
+refusal is visible, and the session continues without it. Applying value
+defaults stays a separate explicit engine write (unchanged
+`settings_model` contract).
 
 ## CLI
 
@@ -146,28 +168,42 @@ sidecar is queued as work package MT-6.
 ct2trainer native master [FOLDER] [--state-dir DIR] [--debug-log] [--poll-ms N]
 ```
 
-- `FOLDER` optional; when omitted (or when started via the frozen entry
-  point) a directory picker is shown.
+- `FOLDER` optional; when omitted the last-used folder stored in the
+  state home is reused when it still exists, and only a genuinely first
+  start (or a stale stored folder) shows the directory picker. An
+  explicit folder always wins and becomes the new persisted folder.
 - `--state-dir` overrides the state home (tests, portable installs).
 - `--debug-log` propagates into the compiled plans, so the trainer
   writes the usual `.ct2debug.log` next to the running trainer.
+
+The frozen entry point `CT2Trainer-Master.exe` (MT-8, part of every
+build's portable ZIP) exposes the same surface:
+`CT2Trainer-Master.exe [FOLDER] [--state-dir DIR] [--debug-log]
+[--poll-ms N]`; a missing/non-directory folder and a non-positive
+`--poll-ms` are named exit-2 refusals before any window is created.
 
 ## Platform strategy
 
 - The index, matcher, orchestrator and the waiting UI are pure Python +
   Tk and run unchanged on Windows and SteamOS.
 - The memory-attach backend is currently Windows-only (as in the rest of
-  CT2Trainer). On SteamOS the Master Trainer therefore runs as a
-  detector/presentation layer for the CheatDeck Proton-wrapped trainer;
-  the owned Linux attach route is explicitly out of scope here (see
-  ROADMAP, MT-7) and keeps the engine's fail-closed refusal behavior
-  until it exists.
+  CT2Trainer). The SteamOS/CheatDeck target route is the documented-route
+  surface implemented in MT-7 (done 2026-11-01, `steamdeck_route.py`):
+  on a Steam Deck / SteamOS the supported route is the Proton-wrapped
+  standalone CT2Trainer Windows trainer EXE (CheatDeck-compatible); the
+  Linux/SteamOS Master Trainer runs detection + table index + waiting UI
+  only, and every engine-attach attempt is refused fail-closed with the
+  named `DeckAttachUnavailableError` (visible in the waiting view and at
+  the load attempt). The owned Linux attach backend remains a later work
+  item, and the Deck protocol run with exact build hashes
+  (`tests/deck/compatibility-matrix.md`) is root/user field work.
 
 ## Icon
 
-The Master window uses the user-provided `Master_Trainer.ico` /
-`Master_Trainer.png` (kept in `src/ct2trainer/assets/`, shipped in the
-build allowlist and embedded into any future frozen Master entry point).
+The Master window and the frozen `CT2Trainer-Master.exe` use the
+user-provided `Master_Trainer.ico` / `Master_Trainer.png` (kept in
+`src/ct2trainer/assets/`, shipped in the build allowlist; the icon is
+passed to the MT-8 PyInstaller freeze).
 
 ## Explicit non-goals
 

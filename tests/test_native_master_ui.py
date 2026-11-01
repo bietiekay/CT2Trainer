@@ -44,6 +44,8 @@ from ct2trainer.native.master_trainer.orchestrator import (STATE_ACTIVE,
                                                            STATE_WAITING)
 from ct2trainer.native.master_trainer.process_watch import (ProcessLister,
                                                             ProcessSnapshotEntry)
+from ct2trainer.native.master_trainer.master_state import (load_master_state,
+                                                           save_master_state)
 from ct2trainer.native.master_trainer.table_index import (TableIndexRefusal,
                                                           load_index)
 
@@ -849,6 +851,299 @@ class TrainerWindowMasterBackTests(unittest.TestCase):
         canvas.destroy()
         window.canvas = canvas
         window.render()  # must not raise out of mainloop
+
+
+@unittest.skipUnless(tk is not None, "tkinter required for real widget construction")
+class FirstStartAndWaitingViewTests(unittest.TestCase):
+    """First-start ask (persisted folder), folder persistence, and the
+    waiting-view metadata / running lines."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(self._rmtree)
+        self.folder = self.tmp / "tables"
+        self.folder.mkdir()
+        self.state_home = self.tmp / "state"
+        self.state_home.mkdir()
+        (self.folder / "a.ct").write_text(CT_GAMEA, encoding="utf-8")
+
+    def _rmtree(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    # -- MasterApp folder persistence -----------------------------------
+
+    def test_app_state_path_lives_in_state_home(self):
+        app = _make_app(self.folder, self.state_home)
+        self.assertEqual(app.state_path().parent, self.state_home)
+
+    def test_app_persist_folder_writes_loadable_state(self):
+        app = _make_app(self.folder, self.state_home)
+        app.persist_folder()
+        stored = load_master_state(app.state_path())
+        self.assertIsNotNone(stored)
+        self.assertEqual(stored.last_folder, app.folder)
+
+    def test_app_set_folder_persists_new_folder(self):
+        app = _make_app(self.folder, self.state_home)
+        other = self.tmp / "other"
+        other.mkdir()
+        (other / "d.ct").write_text(CT_GAMEA.replace("GameA", "GameD"),
+                                   encoding="utf-8")
+        app.set_folder(other)
+        stored = load_master_state(app.state_path())
+        self.assertEqual(stored.last_folder, app.folder)
+
+    # -- run_master first-start ask --------------------------------------
+
+    def test_run_master_reuses_persisted_folder_without_picking(self):
+        save_master_state(_state_for(self.folder),
+                          self.state_home / "master-settings.json")
+        with patch.object(master_ui.tk, "Tk") as tk_cls, \
+                patch.object(master_ui.filedialog, "askdirectory") as ask, \
+                patch.object(master_ui, "MasterWindow") as window_cls:
+            with redirect_stdout(io.StringIO()) as out:
+                rc = run_master(None, state_home=str(self.state_home))
+        self.assertEqual(rc, 0)
+        ask.assert_not_called()
+        # Exactly one Tk root: the main window (no bootstrap picker root).
+        self.assertEqual(tk_cls.call_count, 1)
+        app = window_cls.call_args[0][1]
+        self.assertEqual(app.folder, str(self.folder.resolve()))
+        self.assertIn("Using folder from last session:", out.getvalue())
+
+    def test_run_master_stale_persisted_folder_falls_back_to_picker(self):
+        stale = self.tmp / "gone"
+        save_master_state(_state_for(stale),
+                          self.state_home / "master-settings.json")
+        with patch.object(master_ui.tk, "Tk") as tk_cls, \
+                patch.object(master_ui.filedialog, "askdirectory",
+                             return_value=str(self.folder)) as ask, \
+                patch.object(master_ui, "MasterWindow") as window_cls:
+            with redirect_stdout(io.StringIO()) as out:
+                rc = run_master(None, state_home=str(self.state_home))
+        self.assertEqual(rc, 0)
+        ask.assert_called_once()
+        app = window_cls.call_args[0][1]
+        self.assertEqual(app.folder, str(self.folder.resolve()))
+        # And the picked folder becomes the new persisted one.
+        stored = load_master_state(self.state_home / "master-settings.json")
+        self.assertEqual(stored.last_folder, str(self.folder.resolve()))
+
+    def test_run_master_persists_explicit_folder_argument(self):
+        with patch.object(master_ui.tk, "Tk"), \
+                patch.object(master_ui, "MasterWindow"):
+            rc = run_master(str(self.folder),
+                           state_home=str(self.state_home))
+        self.assertEqual(rc, 0)
+        stored = load_master_state(self.state_home / "master-settings.json")
+        self.assertEqual(stored.last_folder, str(self.folder.resolve()))
+
+    # -- waiting view: metadata + running lines ---------------------------
+
+    def test_waiting_view_shows_metadata_and_state_home(self):
+        app = _make_app(self.folder, self.state_home)
+        window = MasterWindow(self.root(), app)
+        meta = window._meta_label.cget("text")
+        self.assertIn("1 table(s) indexed", meta)
+        self.assertIn("bound: GameA.exe", meta)
+        self.assertIn("state: " + app.state_home, meta)
+        self.assertIn("scanned ", meta)
+        self.assertIn("Running now: (none of the bound processes)",
+                      window._running_label.cget("text"))
+
+    def test_running_line_and_tree_mark_running_entries(self):
+        # The bound process is running; the pair is suppressed so the tick
+        # only updates the running feedback (no auto-load handoff).
+        process = ProcessSnapshotEntry(7, "GameA.exe")
+        app = _make_app(self.folder, self.state_home, [process])
+        app.orchestrator.suppress("gamea.exe", 7)
+        window = MasterWindow(self.root(), app)
+        self._schedule_spy(window)
+        window._poll()
+        self.assertIn("GameA.exe (PID 7)",
+                      window._running_label.cget("text"))
+        values = list(window._table_tree.item(
+            window._table_tree.get_children()[0])["values"])
+        self.assertEqual(values[2], "running")
+        self.assertEqual(values[3], "PID 7")
+        # The process exits: the next tick clears the line and the tree.
+        app.lister.entries.clear()
+        window._poll()
+        self.assertIn("Running now: (none of the bound processes)",
+                      window._running_label.cget("text"))
+        values = list(window._table_tree.item(
+            window._table_tree.get_children()[0])["values"])
+        self.assertEqual(values[2], "ok")
+        self.assertEqual(values[3], "")
+
+    def _schedule_spy(self, window):
+        window.root.after = lambda ms, cb=None: None
+        return []
+
+    def root(self):
+        root = tk.Tk()
+        root.withdraw()
+        self.addCleanup(root.destroy)
+        return root
+
+
+@unittest.skipUnless(tk is not None, "tkinter required for real widget construction")
+class Mt67WiringTests(unittest.TestCase):
+    """MT-6 sidecar restore/save and the MT-7 attach gate in the handoff
+    and the waiting view."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(self._rmtree)
+        self.folder = self.tmp / "tables"
+        self.folder.mkdir()
+        self.state_home = self.tmp / "state"
+        self.state_home.mkdir()
+        (self.folder / "a.ct").write_text(CT_GAMEA, encoding="utf-8")
+        self.process = ProcessSnapshotEntry(7, "GameA.exe")
+
+    def _rmtree(self):
+        import shutil
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _root(self):
+        root = tk.Tk()
+        root.withdraw()
+        self.addCleanup(self._destroy_root, root)
+        return root
+
+    @staticmethod
+    def _destroy_root(root):
+        try:
+            root.destroy()
+        except tk.TclError:
+            pass
+
+    def _app_with_plan_entries(self):
+        def compiler(entry, name):
+            return {"title": "T", "process_name": "GameA.exe",
+                    "entries": [{"id": 1, "supported": True},
+                                {"id": 2, "supported": True}]}
+        return _make_app(self.folder, self.state_home, [self.process],
+                         compiler=compiler)
+
+    def _handoff(self, window, app):
+        root = window.root
+        with patch("ct2trainer.native.master_trainer.master_ui.TrainerEngine") as engine_cls, \
+                patch("ct2trainer.native.master_trainer.master_ui.TrainerWindow") as window_cls, \
+                patch("ct2trainer.native.master_trainer.master_ui.messagebox") as box:
+            entry = app.index.entries_for_process("GameA.exe")[0]
+            window._start_load(entry, self.process)
+        return engine_cls, window_cls, box
+
+    # -- MT-7 attach gate -------------------------------------------------
+
+    def test_handoff_refused_on_non_windows_platform(self):
+        from ct2trainer.native.master_trainer.steamdeck_route import (
+            AttachRoute, DeckAttachUnavailableError, STEAMDECK_ROUTE_TEXT)
+        app = self._app_with_plan_entries()
+        window = MasterWindow(self._root(), app)
+        window.root.after = lambda ms, cb=None: None
+        gate = DeckAttachUnavailableError(AttachRoute(
+            "linux", False, "steamdeck-proton-wrapped", STEAMDECK_ROUTE_TEXT))
+        with patch.object(master_ui, "require_engine_attach",
+                          side_effect=gate) as gate_spy, \
+                patch.object(master_ui, "messagebox") as box:
+            entry = app.index.entries_for_process("GameA.exe")[0]
+            window._start_load(entry, self.process)
+        gate_spy.assert_called_once_with()
+        box.showerror.assert_called_once()
+        self.assertIn(STEAMDECK_ROUTE_TEXT, str(box.showerror.call_args))
+        self.assertIsNone(window.engine)
+        self.assertEqual(app.orchestrator.state, STATE_WAITING)
+        self.assertIn(STEAMDECK_ROUTE_TEXT, window._status_var.get())
+        # The named refusal is remembered by the loop guard.
+        outcome = app.orchestrator.tick()
+        self.assertIsNone(outcome.request)
+        self.assertIn("auto-load suppressed", outcome.reason)
+
+    def test_waiting_view_shows_deck_route_hint_off_windows(self):
+        from ct2trainer.native.master_trainer.steamdeck_route import (
+            AttachRoute, STEAMDECK_ROUTE_TEXT)
+        app = _make_app(self.folder, self.state_home)
+        window = MasterWindow(self._root(), app)
+        route = AttachRoute("linux", False, "steamdeck-proton-wrapped",
+                            STEAMDECK_ROUTE_TEXT)
+        with patch.object(master_ui, "attach_gate", return_value=route):
+            meta = window._meta_text()
+        self.assertIn("Proton-wrapped", meta)
+        self.assertIn("fail-closed", meta)
+
+    def test_waiting_view_has_no_route_hint_on_windows(self):
+        app = _make_app(self.folder, self.state_home)
+        window = MasterWindow(self._root(), app)
+        self.assertNotIn("Proton-wrapped", window._meta_text())
+
+    # -- MT-6 sidecar restore / save ---------------------------------------
+
+    def test_sidecar_restored_on_handoff_and_saved_on_close(self):
+        from dataclasses import replace
+        from ct2trainer.native.settings_model import (SETTINGS_SCHEMA,
+                                                      SettingsDocument,
+                                                      SettingsModel,
+                                                      document_to_json)
+        app = self._app_with_plan_entries()
+        sha = app.index.get("a.ct").sha256
+        store = app.settings_store
+        document = SettingsDocument(
+            schema=SETTINGS_SCHEMA, table_sha256=sha, trainer_id=None,
+            process_name=None, selected=(1,), names={1: "HP"},
+            start_on=(), value_defaults={}, hotkeys={})
+        SettingsModel(sha, [1, 2]).save(document, store.sidecar_path(sha))
+        window = MasterWindow(self._root(), app)
+        window.root.after = lambda ms, cb=None: None
+        engine_cls, _, box = self._handoff(window, app)
+        box.showwarning.assert_not_called()
+        self.assertEqual(window._sidecar_document, document)
+        self.assertEqual(window._sidecar_sha, sha)
+        self.assertIsNotNone(window.engine)
+        # Save on close: the restored document is persisted again.
+        window.close()
+        self.assertTrue(app.closed)
+        self.assertEqual(store.sidecar_path(sha).read_bytes(),
+                         document_to_json(document))
+
+    def test_sidecar_refusal_is_visible_and_session_continues(self):
+        from ct2trainer.native.settings_model import SettingsDocument
+        app = self._app_with_plan_entries()
+        sha = app.index.get("a.ct").sha256
+        store = app.settings_store
+        foreign = "cd" * 32
+        # A sidecar bound to a different table (same layout, foreign sha).
+        foreign_doc = SettingsDocument(
+            schema=1, table_sha256=foreign, trainer_id=None,
+            process_name=None, selected=(1,), names={1: "HP"},
+            start_on=(), value_defaults={}, hotkeys={})
+        from ct2trainer.native.settings_model import (SettingsModel,
+                                                      document_to_json)
+        path = store.sidecar_path(sha)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(document_to_json(foreign_doc))
+        window = MasterWindow(self._root(), app)
+        window.root.after = lambda ms, cb=None: None
+        engine_cls, _, box = self._handoff(window, app)
+        # The refusal is shown with its named reason; the session still
+        # starts (no silent reset to defaults, no blocked trainer).
+        box.showwarning.assert_called_once()
+        self.assertIn("refused", str(box.showwarning.call_args))
+        self.assertIn("different table", str(box.showwarning.call_args))
+        self.assertIsNone(window._sidecar_document)
+        self.assertIsNotNone(window.engine)
+        # Nothing is written back on close (the refusal owns the file).
+        window.close()
+        self.assertEqual(path.read_bytes(), document_to_json(foreign_doc))
+
+
+def _state_for(folder):
+    from ct2trainer.native.master_trainer.master_state import (
+        MASTER_STATE_SCHEMA, MasterState)
+    return MasterState(MASTER_STATE_SCHEMA, str(Path(folder).resolve()))
 
 
 if __name__ == "__main__":

@@ -698,5 +698,58 @@ class ProcessNameDisplayTests(unittest.TestCase):
         self.assertEqual(process_name_display(choice), "Game.exe (PID 10, 20)")
 
 
+class TickRunningFeedbackTests(unittest.TestCase):
+    """TickOutcome.running: the live bound-process list for the waiting UI."""
+
+    def test_running_empty_without_matches(self):
+        index = _index(_entry("alpha.ct", ("Game.exe",)))
+        orch, lister, _ = OrchestratorFixture.make(index, [_snap(5, "Other.exe")])
+        outcome = orch.tick()
+        self.assertEqual(outcome.running, ())
+        self.assertIsNone(outcome.request)
+
+    def test_running_lists_single_match(self):
+        index = _index(_entry("alpha.ct", ("Game.exe",)))
+        orch, lister, _ = OrchestratorFixture.make(index, [_snap(7, "game.exe")])
+        outcome = orch.tick()
+        self.assertEqual(outcome.running, (_snap(7, "game.exe"),))
+        self.assertIsNotNone(outcome.request)
+
+    def test_running_is_stable_name_pid_order_across_groups(self):
+        index = _index(_entry("alpha.ct", ("Bgame.exe", "Agames.exe")),
+                       _entry("beta.ct", ("Agames.exe",)))
+        orch, lister, _ = OrchestratorFixture.make(
+            index, [_snap(9, "bgame.exe"), _snap(4, "agames.exe"),
+                    _snap(6, "AGAMES.exe")])
+        outcome = orch.tick()
+        self.assertEqual(
+            [(e.name, e.pid) for e in outcome.running],
+            [("agames.exe", 4), ("AGAMES.exe", 6), ("bgame.exe", 9)])
+
+    def test_running_set_during_suppression_and_choice(self):
+        index = _index(_entry("alpha.ct", ("Game.exe",)))
+        orch, lister, _ = OrchestratorFixture.make(index, [_snap(7, "game.exe")])
+        orch.suppress("game.exe", 7)
+        outcome = orch.tick()
+        self.assertIsNone(outcome.request)
+        self.assertIn("auto-load deferred", outcome.reason)
+        self.assertEqual(outcome.running, (_snap(7, "game.exe"),))
+
+    def test_running_set_on_snapshot_failure(self):
+        index = _index(_entry("alpha.ct", ("Game.exe",)))
+        orch, lister, _ = OrchestratorFixture.make(
+            index, (), lister=FakeLister([], error=RuntimeError("kernel32 down")))
+        outcome = orch.tick()
+        self.assertEqual(outcome.running, ())
+        self.assertIsNotNone(outcome.reason)
+
+    def test_running_reflects_process_exit_on_next_tick(self):
+        index = _index(_entry("alpha.ct", ("Game.exe",)))
+        orch, lister, _ = OrchestratorFixture.make(index, [_snap(7, "game.exe")])
+        self.assertEqual(orch.tick().running, (_snap(7, "game.exe"),))
+        lister.snapshot = []
+        self.assertEqual(orch.tick().running, ())
+
+
 if __name__ == "__main__":
     unittest.main()

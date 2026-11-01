@@ -29,6 +29,28 @@ from .orchestrator import (
     STATE_WAITING,
 )
 from .master_ui import MasterWindow, MasterApp, run_master
+from .master_state import (
+    MASTER_STATE_SCHEMA,
+    MASTER_STATE_FILENAME,
+    MasterState,
+    MasterStateRefusal,
+    empty_master_state,
+    load_master_state,
+    save_master_state,
+    master_state_from_bytes,
+    master_state_to_bytes,
+)
+from .settings_sidecar import MasterSettingsStore, MasterSettingsRefusal
+from .steamdeck_route import (
+    AttachRoute,
+    DeckAttachUnavailableError,
+    STEAMDECK_ROUTE_TEXT,
+    WINDOWS_ROUTE_TEXT,
+    attach_gate,
+    detect_platform,
+    require_engine_attach,
+    route_text,
+)
 
 __all__ = [
     "TableEntry",
@@ -54,4 +76,23 @@ __all__ = [
     "MasterWindow",
     "MasterApp",
     "run_master",
+    "MASTER_STATE_SCHEMA",
+    "MASTER_STATE_FILENAME",
+    "MasterState",
+    "MasterStateRefusal",
+    "empty_master_state",
+    "load_master_state",
+    "save_master_state",
+    "master_state_from_bytes",
+    "master_state_to_bytes",
+    "MasterSettingsStore",
+    "MasterSettingsRefusal",
+    "AttachRoute",
+    "DeckAttachUnavailableError",
+    "STEAMDECK_ROUTE_TEXT",
+    "WINDOWS_ROUTE_TEXT",
+    "attach_gate",
+    "detect_platform",
+    "require_engine_attach",
+    "route_text",
 ]

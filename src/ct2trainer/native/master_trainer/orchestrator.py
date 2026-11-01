@@ -53,7 +53,10 @@ class TickOutcome:
 
     ``request`` is the auto-load candidate (single-table match);
     ``choice`` is the pending multi-table match; ``reason`` names why
-    nothing was requested on a matching tick (loop guard).
+    nothing was requested on a matching tick (loop guard); ``running``
+    lists every bound process currently visible in the snapshot (stable
+    name/PID order) so the waiting UI can show live running feedback
+    independent of the load decision.
     """
 
     state: str
@@ -61,6 +64,7 @@ class TickOutcome:
     request_process: ProcessSnapshotEntry | None = None
     choice: PendingChoice | None = None
     reason: str | None = None
+    running: tuple[ProcessSnapshotEntry, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -123,6 +127,9 @@ class MasterOrchestrator:
             return TickOutcome(self.state, reason=self.last_tick_detail)
         target_names = self.index.process_name_set()
         matches = match_targets(snapshot, target_names)
+        running = tuple(sorted((e for group in matches.values() for e in group),
+                               key=lambda e: (e.name.casefold(), e.pid))) \
+            if matches else ()
         if not matches:
             self._drop_stale({entry.pid for entry in snapshot})
             detail = (f"scanned {len(snapshot)} processes; "
@@ -135,14 +142,15 @@ class MasterOrchestrator:
                 # open: the pending choice is stale, back to waiting.
                 self.choice = None
                 self.state = STATE_WAITING
-            return TickOutcome(self.state)
+            return TickOutcome(self.state, running=running)
         key, entries = min(matches.items(), key=lambda item: (item[0], min(e.pid for e in item[1])))
         if self.state == STATE_CHOOSING and self.choice is not None:
             if self.choice.process_key in matches:
                 # The picker is open for this process: keep the pending
                 # choice stable and start no other load until it is
                 # resolved.
-                return TickOutcome(self.state, choice=self.choice)
+                return TickOutcome(self.state, choice=self.choice,
+                                   running=running)
             # The open choice's process no longer matches: the choice is
             # stale, drop it and re-evaluate from waiting.
             self.choice = None
@@ -155,7 +163,7 @@ class MasterOrchestrator:
             if self.state == STATE_CHOOSING:
                 self.choice = None
                 self.state = STATE_WAITING
-            return TickOutcome(self.state, reason=detail)
+            return TickOutcome(self.state, reason=detail, running=running)
         table_entries = self.index.entries_for_process(key)
         if not table_entries:
             # A snapshot name matched a stored bound name, but every
@@ -163,7 +171,8 @@ class MasterOrchestrator:
             self.last_tick_detail = ("matched process '" + entries[0].name
                                      + "' but every bound table is unreadable")
             self.last_error = self.last_tick_detail
-            return TickOutcome(self.state, reason=self.last_tick_detail)
+            return TickOutcome(self.state, reason=self.last_tick_detail,
+                               running=running)
         if len(table_entries) == 1:
             table = table_entries[0]
             process = min(entries, key=lambda e: e.pid)
@@ -172,12 +181,14 @@ class MasterOrchestrator:
                 self.last_tick_detail = ("auto-load suppressed (earlier failure for "
                                          + table.relative_path + ": " + failure + ")")
                 self.last_error = failure
-                return TickOutcome(self.state, reason=self.last_tick_detail)
+                return TickOutcome(self.state, reason=self.last_tick_detail,
+                                   running=running)
             self.last_tick_detail = ("matched " + process.name
                                      + " (PID " + str(process.pid) + "); "
                                      "loading " + table.relative_path)
             self.last_error = None
-            return TickOutcome(self.state, request=table, request_process=process)
+            return TickOutcome(self.state, request=table,
+                               request_process=process, running=running)
         original_name = next(n for n in self.index.process_names()
                              if n.casefold() == key)
         self.choice = PendingChoice(
@@ -189,7 +200,7 @@ class MasterOrchestrator:
                                  + "; " + str(len(table_entries))
                                  + " tables bind to it - choosing")
         self.last_error = None
-        return TickOutcome(self.state, choice=self.choice)
+        return TickOutcome(self.state, choice=self.choice, running=running)
 
     # -- choice resolution -----------------------------------------------------
 
