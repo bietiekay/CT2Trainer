@@ -329,7 +329,12 @@ def build(output):
     stub = template.read_bytes()
     template.write_bytes(stub + hashlib.sha256(stub).digest() + b"CT2BASE1")
     converter = freeze("native_converter.py", "CT2Trainer-Converter", ("--add-data", str(template) + ";native-template"), icon=assets / "ct2trainer-converter.ico")
-    contents = [inventory(template), inventory(converter)]
+    # MT-8: the Master Trainer is a plain frozen entry point sharing the same
+    # template/bundle machinery as the standalone trainer. It does not consume
+    # templates, so it gets no CT2BASE1 marker (that marker is exclusive to the
+    # converter's template stub).
+    master = freeze("native_master.py", "CT2Trainer-Master", icon=assets / "Master_Trainer.ico")
+    contents = [inventory(template), inventory(converter), inventory(master)]
     (output / "payload-inventory.json").write_text(json.dumps(contents, indent=2) + "\n", encoding="utf-8")
     if source_files()!=files or any(digest(path)!=snapshots[path.relative_to(ROOT).as_posix()] for path in files):
         raise ValueError('Native source changed during freezing; preserve this run and build a fresh stable snapshot')
@@ -477,6 +482,7 @@ gap_inventory/feature-coverage.json. Release notes: CHANGELOG.md.
     portable_zip = output / f"CT2Trainer-{VERSION}-windows-portable.zip"
     with zipfile.ZipFile(portable_zip, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         archive.write(converter, converter.name)
+        archive.write(master, master.name)
         for path in notices.iterdir():
             archive.write(path, "licenses/" + path.name)
         archive.write(ROOT / "LICENSE.md", "LICENSE.md")
@@ -519,6 +525,14 @@ How to use it
    trainer restart, on a freshly verified target). A failed enable
    attempt stays visibly inactive and is never re-applied as a saved
    wish.
+
+Also in this ZIP
+================
+CT2Trainer-Master.exe is the always-on Master Trainer: point it at a
+folder of .ct tables and it keeps an index of that folder, watches for
+the bound game processes, and loads the matching table automatically
+into the standalone trainer UI - the same feature set as the generated
+trainers, no new trainer functionality.
 
 What it can do
 ==============
@@ -574,7 +588,7 @@ generated trainers. User CT rights are separate.
 """)
     report = {"schema": "ct2trainer-repository-build/v1", "version": VERSION, "python": sys.version, "pyinstaller": __import__("PyInstaller").__version__, "ce_inputs": [], "runtime_unverified": True,
               "source_inputs": [{"path": p.relative_to(ROOT).as_posix(), "sha256": digest(p)} for p in files],
-              "outputs": [{"file": p.name, "sha256": digest(p), "bytes": p.stat().st_size} for p in (template, converter, source_zip, portable_zip)]}
+              "outputs": [{"file": p.name, "sha256": digest(p), "bytes": p.stat().st_size} for p in (template, converter, master, source_zip, portable_zip)]}
     (output / "build.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     print(portable_zip)
     print(source_zip)
