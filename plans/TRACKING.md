@@ -144,7 +144,54 @@ game-facing action.
   pass at the canonical build path). Catalog: unchanged (no
   plan-builder code touched; zero Master Trainer effect vs
   `blocked-catalog-020-rt5-be`).
-- Latest verified release: 0.21, build
+- 0.22 FO4 field-fix cycle (2026-11-01, branch
+  `native-0.21-fo4-rearm`, merged `main` @ `a12a0b6`, commit
+  `5704fd2`): bounded automatic re-arm of ScanMiss enable failures -
+  arming from manual toggle and wish restore (fresh budget), executor
+  and `try_again` consume attempts; 30 s x 10 attempts
+  (`REARM_INTERVAL_SECONDS` / `REARM_MAX_ATTEMPTS` module constants);
+  budget reset per confirmed (re-)attach; armed set + `enable_failures`
+  survive detach; value-read / non-ScanMiss failures never armed
+  (plain-failed contract unchanged); manual "Try again" row action
+  (3-tuple context-menu item with disabled state, budget reset after
+  exhaustion) and top-level "Re-attach" header action
+  (`_detach_current_target` extracted from the target-exited poll
+  branch; named refusals while closed/blocked/busy); JSONL events
+  rearm-scheduled/-attempt{-attempt,max,result}/-succeeded/-exhausted
+  + reattach-requested/-done{pid}/-failed{reason} (deduped per request
+  across the five unattached attach-failure points)/-detached;
+  `tests/test_native_rearm.py` +17 (10 engine + 7 UI/pure). Driver:
+  FO4 0.20 field test 2026-10-31 (Steam Deck / Proton) - 6/8 wish
+  restores ScanMiss while the game was still loading. Full main suite
+  4,061 OK / 30 expected skips (canonical path); catalog zero delta
+  `blocked-catalog-022-rearm` (151/151 loaded, 0 compile errors,
+  117,809 total / 116,756 supported / 60,161 staged / 1,053 blocked /
+  0 load errors). Field-test findings recorded from the FO4 (0.20)
+  and SC2 (0.19, 3 sessions) debug logs (local-only, never committed):
+  SC2 hotkey-bridge defects - unguarded `RegisterHotKeyW` missing-export
+  path (raw AttributeError where the named HotkeyRegistrationError was
+  designed), hotkey failure hard-blocking the engine incl. close(),
+  deterministic close-timeout + AV in the bridge message loop (Windows
+  x2 + Deck x1), transient-read PatchConflict (Win32 299), state-lock
+  first-restart refusal on "absent" observations; SC2 hotkey-bridge
+  fixes deferred to the next field-fix cycle. The 0.22 build is cut
+  from this content.
+- Latest verified release: 0.22, build
+  `native-20261101T075049Z-f32c112d` (cut from `main` @ `2b24a1c`,
+  2026-11-01), in-build suite 4,061 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  the 0.22 FO4 field-fix cycle release - bounded automatic re-arm of
+  ScanMiss enable failures (30 s x 10 attempts, budget reset per
+  (re-)attach, armed set survives target exit) + manual Try again /
+  Re-attach actions (merge `a12a0b6`, +17 tests, zero catalog delta
+  `blocked-catalog-022-rearm`; SC2 0.19 hotkey-bridge field findings
+  recorded, fixes deferred to the next field-fix cycle); source ZIP
+  `CT2Trainer-0.22-source.zip` sha256
+  `c5db1b92c8851d4937e2544a77bd0787c5d48c941ebcfef8741cf4ae104ac7cf`
+  (14,243,974 bytes), portable ZIP
+  `CT2Trainer-0.22-windows-portable.zip` sha256
+  `f89cd0225b5d439bf18106728c3a89e906e56957fd28b9b7b2b5e16f5c3c221a`
+  (33,023,506 bytes). Superseded 0.21, build
   `native-20261031T211046Z-14707e12` (cut from `main` @ `9a725a8`),
   in-build suite 4,044 OK / 30 expected skips, `ce_inputs: []`,
   `runtime_unverified` deliberately kept per gate; the 0.21 feature

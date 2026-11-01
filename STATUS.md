@@ -1,6 +1,16 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-31. **Latest verified release:** 0.21, build
+**Updated:** 2026-11-01. **Latest verified release:** 0.22, build
+`native-20261101T075049Z-f32c112d` (built from `main` at `2b24a1c`,
+2026-11-01): the 0.22 FO4 field-fix cycle release - bounded automatic
+re-arm of ScanMiss enable failures (30 s x 10 attempts, budget reset
+per (re-)attach, armed set survives target exit) plus manual "Try
+again" / "Re-attach" actions (merge `a12a0b6`, +17 tests; zero catalog
+delta `blocked-catalog-022-rearm`; the SC2 0.19 hotkey-bridge field
+findings are recorded in the section below, fixes deferred to the next
+field-fix cycle). In-build suite 4,061 OK / 30 expected skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+Superseded 0.21, build
 `native-20261031T211046Z-14707e12` (built from `main` at `9a725a8`,
 2026-10-31): the 0.21 feature release - RT-5 complete (item B
 CheatCodes code-patch plan path, merge `9ef4a74`, +26 tests, catalog
@@ -198,6 +208,55 @@ the 3 path-dependent baseline-reproducibility tests); catalog
 unchanged (zero Master Trainer effect; latest remeasure
 `blocked-catalog-020-rt5-be`).
 
+**0.22 field cycle (2026-11-01): FO4 re-arm + SC2 hotkey-bridge
+findings (released in build `native-20261101T075049Z-f32c112d`).**
+Field tests 2026-10-30/31: Fallout 4 (0.20, Steam Deck /
+Proton) and The Sinking City 2 (0.19; Windows x2 + Deck x1); debug
+logs kept local-only (clean-room rule).
+
+- **FO4 (0.20, Deck, 2026-10-31 13:37-13:45 UTC, target pid 696):** 8
+  auto-on wishes queued pre-attach, auto-attach OK, but 6 of 8 wish
+  restores failed `ScanMiss` while the game was still loading (43 OK;
+  1052 AOB first match OK then second ScanMiss); 15+ manual taps all
+  ScanMiss; value-read failures on 8 identifiers while the engine
+  loaded (expected - unresolved pointer chains; 0.19
+  `value-read-failed` observability covers them). Shipped fix: bounded
+  automatic re-arm (30 s x 10 attempts, armed by any ScanMiss enable
+  failure, budget reset per (re-)attach, armed set survives target
+  exit) + manual "Try again" row action + top-level "Re-attach"
+  button; `tests/test_native_rearm.py` (+17). Catalog zero delta
+  (`blocked-catalog-022-rearm`).
+- **SC2 (0.19, 3 sessions) hotkey-bridge defects - NOT fixed in 0.22**
+  (hotkey-bridge code unchanged; next field-fix cycle):
+  (1) the missing-`RegisterHotKeyW` guard flag set in
+  `hotkey_bridge.py:343-351` is never checked by `register_hotkey`
+  (:404) / `unregister_hotkey` (:408) -> raw `AttributeError` instead
+  of the named non-blocking `HotkeyRegistrationError`; (2) the error
+  escapes toggle/poll and hard-blocks the whole engine - S1 entry 198
+  shows `toggle-ok` **and** `toggle-failed` (the programmatic enable
+  had succeeded), and S2's `poll-crashed` -> `engine-blocked` then
+  refuses every toggle incl. `close()`; (3) deterministic close
+  failure on every platform (S1/S2 Windows + S3 Deck): the bridge
+  window is created on the main thread (`connect()`, :381) while the
+  loop thread (:393, `GetMessageW(NULL)`) pumps its own empty queue,
+  so `WM_BRIDGE_QUIT` is only deliverable on the main thread, but
+  `destroy()` (:415) blocks that thread in `join(timeout=5.0)` ->
+  guaranteed 5 s timeout ("hotkey bridge message loop did not stop
+  within 5s") -> `DestroyWindow` never reached -> daemon loop thread
+  AVs in `GetMessageW` during process teardown (3x) -> state lock
+  survives the crash.
+- **Other findings:** transient-read `PatchConflict` (Win32 299,
+  `ReadProcessMemory failed`) ~1 h after attach (S1 22:19:19) - a
+  transient read error must not become a receipt change; state-lock
+  first-restart refusal ("not proven dead in both observations
+  (absent)") although both dead PIDs were absent, second start
+  recovered via `StaleStateRecoverable` (S2 12:31); wish persisted
+  before `toggle-failed` (S1 entry 198) - violates the "only confirmed
+  ON-switches are persisted" rule.
+- **Open field verification:** no `WM_HOTKEY` dispatch observed in
+  either log yet - next field test should press a bound hotkey and
+  expect the `hotkey-*` events.
+
 This page is a short explanation of the
 evidence in
 [central tracking](plans/TRACKING.md) and the
@@ -216,7 +275,7 @@ defines the work and completion gates.
 
 | Area | Achieved | Still needed |
 | --- | --- | --- |
-| Independently built product | The 0.21 source and Windows portable ZIPs passed the offline build (build `native-20261031T211046Z-14707e12`) with **4,044 tests OK, 30 expected skips**, and `ce_inputs: []`; the `master_trainer` subpackage + user-provided `Master_Trainer` icons ship in the source ZIP; the 0.20/0.20.1 branding icons remain embedded in the frozen converter EXE and the generated-trainer template EXE (verified by PE icon-resource extraction against the committed ICOs). | Keep the clean-room build and release checks green after each change. |
+| Independently built product | The 0.22 source and Windows portable ZIPs passed the offline build (build `native-20261101T075049Z-f32c112d`) with **4,061 tests OK, 30 expected skips**, and `ce_inputs: []`; the re-arm tests + 0.22 changelog entry ship in the source ZIP; the `master_trainer` subpackage + user-provided `Master_Trainer` icons ship in the source ZIP; the 0.20/0.20.1 branding icons remain embedded in the frozen converter EXE and the generated-trainer template EXE (verified by PE icon-resource extraction against the committed ICOs). | Keep the clean-room build and release checks green after each change. |
 | Master Trainer (released in 0.21) | Full MT-1..MT-5 feature set on `main` (branch `native-0.20-master-trainer` merged at `9a725a8`): incremental table index (folder + sub-folders, sha256-bound JSON in the state home, foreign-schema/tamper refusal), cross-platform read-only process watch, pure orchestrator (unique-match auto-load, multi-table picker, fail-closed loop guard), waiting UI + handoff into the exact standalone trainer with `master_back`, per-table on/off persistence via the engine state store, `master` CLI subcommand, `Master_Trainer` icon contract. 141 master-trainer tests; in-build suite 4,044 OK / 30 expected skips (build `native-20261031T211046Z-14707e12`). | User field test of the Master Trainer window; MT-6/7/8 queued (settings sidecar wiring, SteamOS/CheatDeck attach route, frozen `CT2Trainer-Master.exe`). |
 | Synthetic feature coverage | **42/42** declared feature classes and **7,475/7,475** action weight covered across **30 synthetic tables**. | This metric does not establish support for every original table or a real game effect. Add synthetic cases when a new behavior is found. |
 | Original reference tables | All **151/151** table paths load after the RT-3 legacy-binary CT loader (2026-10-23). Local static catalog (0.21 RT-5 item B/E remeasure, run `blocked-catalog-020-rt5-be`, 2026-10-31, frozen manifest `gap_inventory/reference-manifest.json`; +175 supported vs `blocked-catalog-020-icons` - the 175 `CodeEntry` records of the 22 CheatCodes tables now `code_patch` plan rows, zero newly blocked, zero reason changes) classifies **116,756 supported**, including **60,161 staged**, out of **117,809 plan entries**. | **1,053 entries are blocked** (was 1,351 after RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6, 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3 and 2,698 before RT-4.1; RT-4.2 cleared the last 298 rows - R4 Lua-runtime symbol providers re-staged, R7 GetAsyncKeyState bare calls, keep-first scope fallback; zero newly blocked). The 0.19 field-fix cycle changed no catalog row (no corpus table uses `moAlwaysHideChildren`). RT-5 item B (0.21) added exactly 175 supported `code_patch` rows with no blocked or staged movement; item E is runtime-only (zero catalog delta). Staged entries still need their runtime conditions proved. |
