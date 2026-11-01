@@ -2,6 +2,61 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.22 (2026-11-01)
+
+FO4 field-fix cycle - bounded automatic re-arm of scan-missed enables,
+plus explicit "Try again" and "Re-attach" actions (branch
+`native-0.21-fo4-rearm`, merged `main` @ `a12a0b6`; commit `5704fd2`,
+5 files, +1,005/-62). Driven by the Fallout 4 0.20 field test
+(2026-10-31, Steam Deck / Proton): 6 of 8 auto-on wish restores failed
+`ScanMiss` while the game was still loading and stayed off; manual
+taps kept missing the same way.
+
+- **Bounded automatic re-arm**: any enable that fails with `ScanMiss`
+  (manual toggle, wish restore, at any depth) is armed; the engine
+  re-runs the full enable path every 30 s (`REARM_INTERVAL_SECONDS`)
+  up to 10 attempts (`REARM_MAX_ATTEMPTS`) while attached. The budget
+  resets on every confirmed (re-)attach; the armed set and
+  `enable_failures` survive a target exit within one trainer session;
+  exhaustion stops automatic retries; value-read failures and all
+  other named refusals are never armed (plain-failed contract
+  unchanged).
+- **Manual "Try again"** row action (context menu, disabled when the
+  last attempt succeeded): immediate full-enable retry that resets the
+  re-arm budget after exhaustion.
+- **Top-level "Re-attach" header button**: detaches the live target
+  through the normal engine teardown (`_detach_current_target`,
+  extracted from the target-exited poll branch) and re-enters the
+  waiting attach cycle - fresh game process, fresh re-arm budget;
+  named refusals while closed/blocked/busy.
+- JSONL events: `rearm-scheduled`, `rearm-attempt {attempt,max,result}`,
+  `rearm-succeeded`, `rearm-exhausted {attempts}`;
+  `reattach-requested`, `reattach-done {pid}`, `reattach-failed
+  {reason}` (deduped per request across the five unattached
+  attach-failure points), `reattach-detached`.
+- `tests/test_native_rearm.py` (+17: 10 engine + 7 UI/pure);
+  `RowSnapshot` gains validated `enable_failed`/`rearm` fields and the
+  row sublabel shows "re-arming n/10 (last: ScanMiss)" / "enable
+  failed: <reason> - Try again".
+
+Field findings recorded, not fixed here (tracked for the next
+field-fix cycle): The Sinking City 2 0.19 log (3 sessions: Windows x2 +
+Deck x1) shows an unguarded `RegisterHotKeyW` missing-export path (raw
+`AttributeError` where the module docstring promises the named
+non-blocking `HotkeyRegistrationError`), hotkey failures
+hard-blocking the engine incl. `close()`, and a deterministic
+close-timeout + access violation in the bridge message loop (window
+created on the main thread, loop thread pumps its own empty queue,
+`WM_BRIDGE_QUIT` undeliverable while `destroy()` blocks the main
+thread in `join(5s)`); plus a transient-read `PatchConflict` (Win32
+299) ~1 h after attach and a state-lock first-restart refusal. The
+hotkey-bridge code is unchanged in 0.22. Full main suite 4,061 OK /
+30 expected skips (canonical path, 2026-11-01; 4,044 from the 0.21
+build + 17 re-arm tests); the in-build suite is recorded with the
+0.22 build id. Catalog: zero delta (`blocked-catalog-022-rearm`:
+151/151 loaded, 0 compile errors, 117,809 total / 116,756 supported /
+60,161 staged / 1,053 blocked / 0 load errors).
+
 ## 0.21 (2026-10-31)
 
 RT-5 complete + Master Trainer — the final two implementation items of the RT-5

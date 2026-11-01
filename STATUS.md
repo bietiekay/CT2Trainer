@@ -1,6 +1,11 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-10-31. **Latest verified release:** 0.21, build
+**Updated:** 2026-11-01. **0.22 content on `main`** (FO4 field-fix
+cycle: bounded automatic re-arm of ScanMiss enable failures plus manual
+"Try again" / "Re-attach" actions, merge `a12a0b6`, +17 tests, full
+main suite 4,061 OK / 30 expected skips, zero catalog delta
+`blocked-catalog-022-rearm`; the 0.22 build is cut from this content).
+**Latest verified release:** 0.21, build
 `native-20261031T211046Z-14707e12` (built from `main` at `9a725a8`,
 2026-10-31): the 0.21 feature release - RT-5 complete (item B
 CheatCodes code-patch plan path, merge `9ef4a74`, +26 tests, catalog
@@ -197,6 +202,54 @@ skips, 0 failures (fully green at the canonical build path, incl.
 the 3 path-dependent baseline-reproducibility tests); catalog
 unchanged (zero Master Trainer effect; latest remeasure
 `blocked-catalog-020-rt5-be`).
+
+**0.22 field cycle (2026-11-01): FO4 re-arm + SC2 hotkey-bridge
+findings.** Field tests 2026-10-30/31: Fallout 4 (0.20, Steam Deck /
+Proton) and The Sinking City 2 (0.19; Windows x2 + Deck x1); debug
+logs kept local-only (clean-room rule).
+
+- **FO4 (0.20, Deck, 2026-10-31 13:37-13:45 UTC, target pid 696):** 8
+  auto-on wishes queued pre-attach, auto-attach OK, but 6 of 8 wish
+  restores failed `ScanMiss` while the game was still loading (43 OK;
+  1052 AOB first match OK then second ScanMiss); 15+ manual taps all
+  ScanMiss; value-read failures on 8 identifiers while the engine
+  loaded (expected - unresolved pointer chains; 0.19
+  `value-read-failed` observability covers them). Shipped fix: bounded
+  automatic re-arm (30 s x 10 attempts, armed by any ScanMiss enable
+  failure, budget reset per (re-)attach, armed set survives target
+  exit) + manual "Try again" row action + top-level "Re-attach"
+  button; `tests/test_native_rearm.py` (+17). Catalog zero delta
+  (`blocked-catalog-022-rearm`).
+- **SC2 (0.19, 3 sessions) hotkey-bridge defects - NOT fixed in 0.22**
+  (hotkey-bridge code unchanged; next field-fix cycle):
+  (1) the missing-`RegisterHotKeyW` guard flag set in
+  `hotkey_bridge.py:343-351` is never checked by `register_hotkey`
+  (:404) / `unregister_hotkey` (:408) -> raw `AttributeError` instead
+  of the named non-blocking `HotkeyRegistrationError`; (2) the error
+  escapes toggle/poll and hard-blocks the whole engine - S1 entry 198
+  shows `toggle-ok` **and** `toggle-failed` (the programmatic enable
+  had succeeded), and S2's `poll-crashed` -> `engine-blocked` then
+  refuses every toggle incl. `close()`; (3) deterministic close
+  failure on every platform (S1/S2 Windows + S3 Deck): the bridge
+  window is created on the main thread (`connect()`, :381) while the
+  loop thread (:393, `GetMessageW(NULL)`) pumps its own empty queue,
+  so `WM_BRIDGE_QUIT` is only deliverable on the main thread, but
+  `destroy()` (:415) blocks that thread in `join(timeout=5.0)` ->
+  guaranteed 5 s timeout ("hotkey bridge message loop did not stop
+  within 5s") -> `DestroyWindow` never reached -> daemon loop thread
+  AVs in `GetMessageW` during process teardown (3x) -> state lock
+  survives the crash.
+- **Other findings:** transient-read `PatchConflict` (Win32 299,
+  `ReadProcessMemory failed`) ~1 h after attach (S1 22:19:19) - a
+  transient read error must not become a receipt change; state-lock
+  first-restart refusal ("not proven dead in both observations
+  (absent)") although both dead PIDs were absent, second start
+  recovered via `StaleStateRecoverable` (S2 12:31); wish persisted
+  before `toggle-failed` (S1 entry 198) - violates the "only confirmed
+  ON-switches are persisted" rule.
+- **Open field verification:** no `WM_HOTKEY` dispatch observed in
+  either log yet - next field test should press a bound hotkey and
+  expect the `hotkey-*` events.
 
 This page is a short explanation of the
 evidence in
