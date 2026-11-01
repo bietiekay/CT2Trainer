@@ -36,7 +36,7 @@ from .managed_session import (
 
 
 from .architecture import ArchitectureError, require_target_architecture
-from .hotkey_bridge import HotkeyRegistrationError
+from .hotkey_bridge import HotkeyBridgeError, HotkeyRegistrationError
 from .hotkey_model import (ACTIVATION_HOTKEY_ACTIONS, VALUE_HOTKEY_ACTIONS,
                            HotkeyController, HotkeyModelError, HotKeySpec,
                            ToggleOutcome, ToggleOutcomeStatus, format_hotkey_keys,
@@ -1483,6 +1483,10 @@ class TrainerEngine:
         # last reconciled against.  Warnings are deduplicated, monotonic and
         # surfaced by the trainer UI; the plan keeps every original binding.
         self.hotkey_warnings: list[str] = []
+        # 0.22.1 field fix (Sinking City 2 0.19, T2): debug events for
+        # named hotkey-bridge faults are deduped per distinct message so
+        # repeated failures on the steady poll tick do not spam the log.
+        self._hotkey_bridge_faults: set[str] = set()
         self._hotkey_live: set[int] = set()
         self._hotkey_owner = plan["trainer_id"]
         self.hotkey_controller = HotkeyController(
@@ -2926,6 +2930,12 @@ class TrainerEngine:
             self.rearm.pop(identifier, None)
             self.enable_failures.pop(identifier, None)
             self.entry_errors.pop(identifier, None)
+            # 0.22.1 field fix (Sinking City 2 0.19, T2/T7): same
+            # transaction shape as toggle - the hotkey mirror runs before
+            # the success is confirmed, with named bridge faults
+            # contained as per-entry warnings; the wish was persisted
+            # only by the confirmed enable above.
+            self._hotkey_sync()
             self.status = f"{entry['label']}: enabled and saved"
             if was_armed:
                 self.debug_log.log("rearm-attempt", identifier=identifier,
@@ -2935,7 +2945,6 @@ class TrainerEngine:
                                    label=entry["label"])
             self.debug_log.log("try-again-ok", identifier=identifier,
                                label=entry["label"])
-            self._hotkey_sync()
         finally:
             self.busy = False
 
@@ -5550,9 +5559,19 @@ class TrainerEngine:
                 self.status = f"{entry['label']}: {message}"
             else:
                 self.status = f"{entry['label']}: {'enabled and saved' if enabled else 'disabled and saved'}"
+            # 0.22.1 field fix (Sinking City 2 0.19, T2/T7): the hotkey
+            # mirror runs BEFORE the toggle is confirmed, so toggle-ok
+            # means the whole transaction (programmatic effect plus
+            # hotkey sync) completed; a named bridge fault is contained
+            # as a per-entry warning above and can no longer downgrade
+            # the confirmed enable into a toggle-failed (the field
+            # sequence state-save -> toggle-failed is gone).  The wish
+            # was persisted only by the confirmed enable above, so the
+            # saved-wish invariant (persisted wish implies confirmed
+            # toggle) holds.
+            self._hotkey_sync()
             self.debug_log.log("toggle-ok", identifier=identifier, label=entry["label"],
                                direction=enabled)
-            self._hotkey_sync()
             return enabled
         except Exception as exc:
             self.debug_log.error("toggle-failed", exc, identifier=identifier,
@@ -6049,6 +6068,25 @@ class TrainerEngine:
         if message not in self.hotkey_warnings:
             self.hotkey_warnings.append(message)
 
+    def _hotkey_bridge_fault(self, where: str, exc: Exception) -> None:
+        """0.22.1 field fix (Sinking City 2 0.19, T2): a named hotkey-bridge
+        failure (missing OS export, dead loop thread, failed quit post, ...)
+        is a per-entry hotkey warning, never an engine fault.
+
+        The field evidence showed a raw bridge error escaping _hotkey_sync
+        through the toggle path (a confirmed enable reported toggle-failed
+        with its wish already persisted) and the poll path (poll-crashed
+        -> engine-blocked -> every later toggle and close() refused).
+        The warning is deduplicated in hotkey_warnings and the debug event
+        is logged once per distinct message; the programmatic enable
+        result stands on its own.
+        """
+        message = str(exc)
+        self._hotkey_warn(message)
+        if message not in self._hotkey_bridge_faults:
+            self._hotkey_bridge_faults.add(message)
+            self.debug_log.error("hotkey-bridge-failed", exc, where=where)
+
     def _hotkey_register_record(self, record_id: int) -> None:
         """Publish one newly live record's declared hotkeys (first-wins).
 
@@ -6156,8 +6194,14 @@ class TrainerEngine:
             return
         try:
             bridge.register(spec)
-        except HotkeyRegistrationError as exc:
-            self._hotkey_warn(str(exc))
+        except HotkeyBridgeError as exc:
+            # HotkeyRegistrationError is a named subclass of
+            # HotkeyBridgeError: a busy combination, an invalid parameter
+            # or a missing OS export (0.22.1 field fix, Sinking City 2
+            # 0.19, T1) all land here as the per-entry warning; the
+            # binding stays published for the programmatic dispatch path
+            # and the programmatic enable result stands on its own (T2).
+            self._hotkey_bridge_fault("register", exc)
             return
         self._hotkey_os.setdefault(record_id, set()).add(spec)
 
@@ -6168,15 +6212,35 @@ class TrainerEngine:
         if bridge is None or not specs:
             return
         for spec in sorted(specs, key=lambda item: (item.key, sorted(item.modifiers))):
-            bridge.unregister(spec)
+            try:
+                bridge.unregister(spec)
+            except HotkeyBridgeError as exc:
+                # 0.22.1 field fix (Sinking City 2 0.19, T2): releasing a
+                # registration through a dead bridge is a per-entry
+                # warning, never an engine fault; the OS releases the
+                # registration with the window either way.
+                self._hotkey_bridge_fault("unregister", exc)
 
     def _hotkey_release_all_os(self) -> None:
-        """Trainer close: release every OS registration and the window."""
+        """Trainer close: release every OS registration and the window.
+
+        0.22.1 field fix (Sinking City 2 0.19, T2): a bridge teardown
+        failure (quit post / join timeout) is a named hotkey warning,
+        never a close fault - the OS releases the window and every
+        registration with the process, so close() proceeds with
+        pending hotkey warnings instead of being refused.
+        """
         bridge = self.hotkey_bridge
         if bridge is None:
             return
         self._hotkey_os.clear()
-        bridge.close()
+        try:
+            bridge.close()
+        except HotkeyBridgeError as exc:
+            self._hotkey_bridge_fault("close", exc)
+        note = getattr(bridge, "destroy_note", None)
+        if note:
+            self.debug_log.log("hotkey-bridge-teardown-note", note=note)
         self.hotkey_bridge = None
 
     def _hotkey_drain(self) -> tuple:
@@ -6193,7 +6257,16 @@ class TrainerEngine:
             source = self.hotkey_bridge.take_specs
         else:
             return ()
-        specs = list(source())
+        try:
+            specs = list(source())
+        except HotkeyBridgeError as exc:
+            # 0.22.1 field fix (Sinking City 2 0.19, T2): the poll-tick
+            # drain is part of the hotkey subsystem; a named bridge fault
+            # is a per-entry warning, never a poll-crashed /
+            # engine-blocked fault - the poll continues and the programmatic
+            # dispatch path is unaffected.
+            self._hotkey_bridge_fault("drain", exc)
+            return ()
         for spec in specs:
             if not isinstance(spec, HotKeySpec):
                 raise NativeRuntimeError(
