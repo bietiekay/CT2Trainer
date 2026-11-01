@@ -14,7 +14,11 @@ gate, first-wins dedupe, tone policy, ``suppressed-*`` statuses).
 :class:`HotkeyRegistrationError` whose text the engine appends verbatim
 to ``engine.hotkey_warnings``; the binding stays visible and the
 programmatic dispatch path keeps working.  ``close()`` releases every
-registration and destroys the window (trainer close, no OS leak).
+registration and destroys the window (trainer close, no OS leak).  On
+user32 builds that lack the ``RegisterHotKeyW`` / ``UnregisterHotKeyW``
+exports the registration path fails closed with the same named error
+naming the missing export (non-blocking); the window lifecycle and the
+programmatic dispatch path stay unaffected.
 
 On non-Windows platforms the module is a no-op:
 :func:`hotkey_bridge_available` is False and :func:`create_hotkey_bridge`
@@ -169,6 +173,9 @@ class HotkeyBridge:
         self._spec_to_id: dict[HotKeySpec, int] = {}
         self._next_id = 1
         self._closed = False
+        # Named teardown note from the seam (set on close when the quit
+        # post finds an already-gone window); the engine logs it once.
+        self.destroy_note = None
 
     # ------------------------------------------------------------- register
     def register(self, spec: HotKeySpec) -> int:
@@ -231,10 +238,19 @@ class HotkeyBridge:
         if self._closed:
             return
         for spec in list(self._spec_to_id):
-            self._seam.unregister_hotkey(self._spec_to_id[spec])
+            try:
+                self._seam.unregister_hotkey(self._spec_to_id[spec])
+            except HotkeyBridgeError:
+                # Teardown containment (field case 2026-10-31, Sinking
+                # City 2 0.19, T3): a missing OS export or a dead window
+                # must not abort the close protocol before destroy();
+                # the OS releases every registration with the window
+                # and the process either way.
+                continue
         self._spec_to_id.clear()
         self._id_to_spec.clear()
         self._seam.destroy()
+        self.destroy_note = getattr(self._seam, "last_destroy_note", None)
         self._closed = True
 
     def _guard_open(self) -> None:
@@ -255,16 +271,44 @@ def create_hotkey_bridge() -> HotkeyBridge | None:
 
 
 # ------------------------------------------------------------------ real seam
+# Per-instance window class names: the class is registered on the loop
+# thread and unregistered again in destroy(), so a later bridge instance
+# in the same process (tests) starts from a clean class registration
+# instead of reusing a class bound to a stale WNDPROC.
+_CLASS_BASE = "CT2TrainerNativeHotkeyBridge"
+_class_counter = 0
+
+
+def _next_class_name() -> str:
+    global _class_counter
+    _class_counter += 1
+    return "%s%04d" % (_CLASS_BASE, _class_counter)
+
+
 def _real_seam():
     """Build the Windows-only hidden-window seam.
 
-    The message loop runs on a dedicated daemon thread; ``WM_HOTKEY`` is
-    delivered by the OS to that thread and mapped through the handler the
-    bridge handed to ``connect``.  Teardown posts a private quit message
-    so the loop stops from its own thread; the window is destroyed after
-    the loop exits.  The thread is a daemon, so a process exit without
-    close() cannot hang, and the OS releases the window and every
-    hotkey with the process.
+    The message-only window is created ON the dedicated daemon loop
+    thread: ``WM_BRIDGE_QUIT`` is only deliverable when the thread that
+    created the window pumps it, and the pump is that same thread, so
+    the quit protocol works as designed (field case 2026-10-31,
+    Sinking City 2 0.19: the window lived on the calling thread while
+    the loop thread pumped its own queue, so the quit message was
+    undeliverable, ``destroy()`` always hit the 5 s join timeout, the
+    window was never destroyed and the daemon loop thread access-
+    violated in ``GetMessageW`` during process teardown).
+
+    ``connect()`` starts the loop thread, which registers the per-
+    instance window class, creates the window, stores the handle and
+    signals a completion event before entering the pump; ``connect()``
+    waits for that event (bounded) and fails closed with the real
+    Win32 error when class registration or window creation failed on
+    the loop thread.  ``destroy()`` posts the private quit message
+    (checked), the WNDPROC destroys the window from its own thread and
+    quits the pump, the loop thread exits and the per-instance window
+    class is released.  The thread is a daemon, so a process exit
+    without close() cannot hang, and the OS releases the window and
+    every hotkey with the process.
     """
     if sys.platform != "win32":
         raise HotkeyBridgeError(
@@ -336,6 +380,8 @@ def _real_seam():
     user32.PostMessageW.restype = wintypes.BOOL
     user32.DestroyWindow.argtypes = [wintypes.HWND]
     user32.DestroyWindow.restype = wintypes.BOOL
+    user32.UnregisterClassW.argtypes = [wintypes.LPCWSTR, wintypes.HINSTANCE]
+    user32.UnregisterClassW.restype = wintypes.BOOL
     # RegisterHotKeyW / UnregisterHotKeyW may be absent in stripped or
     # minimal user32 builds (e.g. some embedded Python distributions);
     # guard so the seam can still be constructed for the window lifecycle
@@ -350,7 +396,19 @@ def _real_seam():
     except AttributeError:
         _hotkey_api_available = False
 
-    state = {"handler": None, "hwnd": 0, "thread": None, "proc": None}
+    def _require_hotkey_export(export_name: str) -> None:
+        # Field case 2026-10-31 (Sinking City 2 0.19, T1): a stripped
+        # user32 build may lack the hotkey exports; the guard raises the
+        # named, non-blocking registration error naming the missing
+        # export instead of a raw AttributeError escaping the engine.
+        if not _hotkey_api_available or not hasattr(user32, export_name):
+            raise HotkeyRegistrationError(
+                "the hotkey registry",
+                f"the OS export {export_name} is missing from user32")
+
+    state = {"handler": None, "hwnd": 0, "thread": None, "proc": None,
+             "ready": None, "error": None, "class_name": None,
+             "hinstance": None}
 
     class _WindowProc:
         """Private WNDPROC class; the instance is pinned on the state."""
@@ -359,52 +417,92 @@ def _real_seam():
             if message == WM_HOTKEY:
                 state["handler"](int(wparam))
             elif message == WM_BRIDGE_QUIT:
+                # Destroy the window from its own thread (legal: this
+                # thread created it), then quit the pump; destroy() on
+                # the calling thread only posts and joins, so the quit
+                # protocol can no longer dead-lock on the 5 s join
+                # timeout (field case 2026-10-31, Sinking City 2 0.19).
+                user32.DestroyWindow(wintypes.HWND(hwnd))
                 user32.PostQuitMessage(0)
+                return 0
             return user32.DefWindowProcW(hwnd, message, wparam, lparam)
 
     class _RealHotkeySeam:
+        def __init__(self):
+            # Set by destroy() when the quit-post path finds the window is
+            # already gone; the engine surfaces it as a named debug event.
+            self.last_destroy_note = None
+
         def connect(self, handler) -> int:
             state["handler"] = handler
             state["proc"] = _WindowProc()
-            hinstance = kernel32.GetModuleHandleW(None)
-            window_class = WNDCLASSEXW()
-            window_class.cbSize = ctypes.sizeof(WNDCLASSEXW)
-            window_class.style = CS_HREDRAW | CS_VREDRAW
-            window_class.lpfnWndProc = WNDPROC(state["proc"])
-            window_class.hInstance = hinstance
-            window_class.lpszClassName = "CT2TrainerNativeHotkeyBridge"
-            atom = user32.RegisterClassExW(ctypes.byref(window_class))
-            if atom == 0:
-                raise HotkeyBridgeError(
-                    "could not register the hotkey bridge window class: "
-                    f"Win32 error {ctypes.get_last_error()}")
-            hwnd = user32.CreateWindowExW(
-                0, "CT2TrainerNativeHotkeyBridge", "CT2Trainer Hotkey Bridge",
-                0, 0, 0, 0, 0, HWND_MESSAGE, None, hinstance, None)
-            if not hwnd:
-                raise HotkeyBridgeError(
-                    f"could not create the hidden hotkey window: "
-                    f"Win32 error {ctypes.get_last_error()}")
-            state["hwnd"] = int(hwnd)
+            state["ready"] = threading.Event()
+            state["error"] = None
+            state["hwnd"] = 0
+            class_name = _next_class_name()
+            state["class_name"] = class_name
 
             def loop():
-                message = wintypes.MSG()
-                while True:
-                    result = user32.GetMessageW(ctypes.byref(message), None, 0, 0)
-                    if result in (0, -1):
+                try:
+                    hinstance = kernel32.GetModuleHandleW(None)
+                    state["hinstance"] = hinstance
+                    window_class = WNDCLASSEXW()
+                    window_class.cbSize = ctypes.sizeof(WNDCLASSEXW)
+                    window_class.style = CS_HREDRAW | CS_VREDRAW
+                    window_class.lpfnWndProc = WNDPROC(state["proc"])
+                    window_class.hInstance = hinstance
+                    window_class.lpszClassName = class_name
+                    atom = user32.RegisterClassExW(ctypes.byref(window_class))
+                    if atom == 0:
+                        state["error"] = (
+                            "could not register the hotkey bridge window "
+                            f"class: Win32 error {ctypes.get_last_error()}")
+                        state["ready"].set()
                         return
-                    user32.DispatchMessageW(ctypes.byref(message))
+                    hwnd = user32.CreateWindowExW(
+                        0, class_name, "CT2Trainer Hotkey Bridge",
+                        0, 0, 0, 0, 0, HWND_MESSAGE, None, hinstance, None)
+                    if not hwnd:
+                        state["error"] = (
+                            "could not create the hidden hotkey window: "
+                            f"Win32 error {ctypes.get_last_error()}")
+                        state["ready"].set()
+                        return
+                    state["hwnd"] = int(hwnd)
+                    state["ready"].set()
+                    message = wintypes.MSG()
+                    while True:
+                        result = user32.GetMessageW(
+                            ctypes.byref(message), None, 0, 0)
+                        if result in (0, -1):
+                            return
+                        user32.DispatchMessageW(ctypes.byref(message))
+                except Exception as exc:
+                    # Unexpected loop-thread failure: surface a named
+                    # error to the caller instead of a silent dead thread.
+                    state["error"] = (
+                        "hotkey bridge window thread failed: " + str(exc))
+                    state["ready"].set()
 
             state["thread"] = threading.Thread(
                 target=loop, name="ct2trainer-hotkey-bridge", daemon=True)
             state["thread"].start()
+            if not state["ready"].wait(timeout=5.0):
+                raise HotkeyBridgeError(
+                    "hotkey bridge window did not start within 5s")
+            if state["error"] is not None:
+                raise HotkeyBridgeError(state["error"])
+            if state["hwnd"] <= 0:
+                raise HotkeyBridgeError("Hotkey bridge window handle is invalid.")
             return state["hwnd"]
 
         def register_hotkey(self, hotkey_id: int, mods: int, vk: int) -> bool:
+            _require_hotkey_export("RegisterHotKeyW")
             return bool(user32.RegisterHotKeyW(
                 wintypes.HWND(state["hwnd"]), hotkey_id, mods, vk))
 
         def unregister_hotkey(self, hotkey_id: int) -> bool:
+            _require_hotkey_export("UnregisterHotKeyW")
             return bool(user32.UnregisterHotKeyW(wintypes.HWND(state["hwnd"]),
                                                  hotkey_id))
 
@@ -412,14 +510,51 @@ def _real_seam():
             return ctypes.get_last_error()
 
         def destroy(self) -> None:
-            user32.PostMessageW(wintypes.HWND(state["hwnd"]),
-                               WM_BRIDGE_QUIT, 0, 0)
+            hwnd = state["hwnd"]
             thread = state["thread"]
+            note = None
+            if hwnd:
+                posted = bool(user32.PostMessageW(
+                    wintypes.HWND(hwnd), WM_BRIDGE_QUIT, 0, 0))
+                if not posted:
+                    if thread is None or not thread.is_alive():
+                        # The window is already gone (its loop thread is
+                        # gone too): a clean state, reported as a named
+                        # note for the engine's debug log instead of an
+                        # error.
+                        note = (
+                            "hotkey bridge quit post failed "
+                            f"(Win32 error {ctypes.get_last_error()}); the "
+                            "loop thread was already gone, nothing to "
+                            "destroy")
+                    else:
+                        raise HotkeyBridgeError(
+                            "could not post the hotkey bridge quit "
+                            f"message: Win32 error {ctypes.get_last_error()}")
             if thread is not None:
                 thread.join(timeout=5.0)
                 if thread.is_alive():
                     raise HotkeyBridgeError(
                         "hotkey bridge message loop did not stop within 5s")
-            user32.DestroyWindow(wintypes.HWND(state["hwnd"]))
+            if hwnd or thread is not None:
+                # The window was destroyed by its own WNDPROC; release
+                # the per-instance class so a later bridge instance in
+                # this process registers fresh.
+                unregistered = bool(user32.UnregisterClassW(
+                    wintypes.LPCWSTR(state["class_name"]),
+                    state["hinstance"]))
+                if not unregistered and note is None:
+                    # Documented best-effort cleanup: the OS releases the
+                    # class with the process; a failure here means a
+                    # window of the class is still outstanding.
+                    note = (
+                        "hotkey bridge window class unregistration "
+                        f"failed: Win32 error {ctypes.get_last_error()}")
+                state["hwnd"] = 0
+                state["thread"] = None
+                state["class_name"] = None
+                state["hinstance"] = None
+            if note is not None:
+                self.last_destroy_note = note
 
     return _RealHotkeySeam()
