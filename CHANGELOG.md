@@ -52,8 +52,11 @@ thread in `join(5s)`); plus a transient-read `PatchConflict` (Win32
 299) ~1 h after attach and a state-lock first-restart refusal. The
 hotkey-bridge code is unchanged in 0.22. Full main suite 4,061 OK /
 30 expected skips (canonical path, 2026-11-01; 4,044 from the 0.21
-build + 17 re-arm tests); the in-build suite is recorded with the
-0.22 build id. Catalog: zero delta (`blocked-catalog-022-rearm`:
+build + 17 re-arm tests); in-build suite on the 0.22 build (run
+`native-20261101T075049Z-f32c112d`, cut from `main` @ `2b24a1c`,
+2026-11-01): 4,061 OK / 30 expected skips, 0 failures - fully green
+at the canonical build path. Catalog: zero delta
+(`blocked-catalog-022-rearm`:
 151/151 loaded, 0 compile errors, 117,809 total / 116,756 supported /
 60,161 staged / 1,053 blocked / 0 load errors).
 

@@ -63,7 +63,9 @@ deterministic close-timeout + AV in the message loop, transient-read
 PatchConflict Win32 299, state-lock first-restart refusal) recorded in
 `documentation/native-progress.md` (section 0.22 field cycle) and
 deferred to the next field-fix cycle (hotkey-bridge code unchanged in
-0.22). The RT-5 API/construct inventory is
+0.22); the 0.22 build (run `native-20261101T075049Z-f32c112d`, cut from
+`main` @ `2b24a1c`, 2026-11-01) is green in-build at 4,061 OK / 30
+expected skips with `ce_inputs: []`. The RT-5 API/construct inventory is
 documented in `documentation/rt5-api-inventory.md`. The
 latest original-table catalog (run `blocked-catalog-020-rt5-be`,
 2026-10-31) has 1,053 blocked of 117,809 plan entries, 116,756 supported
@@ -90,11 +92,15 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-01, 0.22 content on main (FO4 field-fix
-cycle: bounded re-arm + Try again / Re-attach, merge a12a0b6, +17
-tests, full main suite 4,061 OK / 30 expected skips, zero catalog delta
-blocked-catalog-022-rearm; SC2 0.19 hotkey-bridge field findings
-recorded, fixes deferred to the next cycle); 0.21 released (build
+**CT2Trainer (status 2026-11-01, 0.22 released (build
+`native-20261101T075049Z-f32c112d` cut from `main` @ `2b24a1c` - the
+0.22 FO4 field-fix cycle release: bounded automatic re-arm of
+ScanMiss enable failures (30 s x 10 attempts, budget reset per
+(re-)attach, armed set survives target exit) + manual Try again /
+Re-attach actions (merge a12a0b6, +17 tests, in-build suite 4,061 OK
+/ 30 expected skips, zero catalog delta blocked-catalog-022-rearm;
+SC2 0.19 hotkey-bridge field findings recorded, fixes deferred to the
+next field-fix cycle); superseded 0.21 released (build
 `native-20261031T211046Z-14707e12` cut from `main` @ `9a725a8` - the
 0.21 feature release: RT-5 complete (item B CheatCodes code-patch
 plan path (merge `9ef4a74`, +26 tests, catalog
@@ -106,7 +112,7 @@ feature set: incremental folder table index, cross-platform process
 watch, unique-match auto-load / multi-table picker, handoff into the
 exact standalone trainer UI, per-table on/off persistence, 141 tests,
 zero catalog effect); in-build suite 4,044 OK / 30 expected skips,
-`ce_inputs: []`; latest verified release 0.21); superseded 0.20.1
+`ce_inputs: []`); superseded 0.20.1
 (build `native-20261031T104114Z-d64ae4c2` cut from `main` @ `080128c`
 - the 0.20.1 release-content re-cut of the 0.20
 branding-icon release: 0.20 changelog suite line corrected to the
@@ -266,7 +272,23 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261031T211046Z-14707e12` (0.21,
+**Latest verified build:** `native-20261101T075049Z-f32c112d` (0.22,
+cut from `main` @ `2b24a1c`; in-build suite 4,061 OK / 30 expected
+skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; source ZIP `CT2Trainer-0.22-source.zip` sha256
+`c5db1b92c8851d4937e2544a77bd0787c5d48c941ebcfef8741cf4ae104ac7cf`
+(14,243,974 bytes) - carries `tests/test_native_rearm.py` and the 0.22
+changelog entry - and portable ZIP
+`CT2Trainer-0.22-windows-portable.zip` sha256
+`f89cd0225b5d439bf18106728c3a89e906e56957fd28b9b7b2b5e16f5c3c221a`
+(33,023,506 bytes)).
+0.22 ships the FO4 field-fix cycle (bounded automatic re-arm of
+ScanMiss enable failures, 30 s x 10 attempts, budget reset per
+(re-)attach, armed set survives target exit + manual Try again /
+Re-attach actions; The Sinking City 2 0.19 hotkey-bridge field
+findings are recorded in the ledger and deferred to the next
+field-fix cycle - hotkey-bridge code unchanged in 0.22). Superseded
+0.21 build: `native-20261031T211046Z-14707e12` (0.21,
 cut from `main` @ `9a725a8`; in-build suite 4,044 OK / 30 expected
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
 gate; source ZIP `CT2Trainer-0.21-source.zip` sha256
