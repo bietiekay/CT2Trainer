@@ -4,12 +4,13 @@ Single maintained changelog for CT2Trainer releases.
 
 ## 0.23 (2026-11-01)
 
-Master Trainer roadmap complete (MT-6 / MT-7 / MT-8) - the full
+Master Trainer roadmap complete (MT-6 / MT-7 / MT-8 / MT-9) - the full
 feature set of the all-in-one "Forever Master Trainer" front end,
 plus the waiting-view observability work and the ask-on-first-start
 table-folder parameter (branch `native-0.23-master-roadmap`; lane
 `lane-mt8-frozen-entry` merge `deed3c5`, lane `lane-mt67-sidecar-deck`
-merge `cee58b7`, root integration `b2d0344`; `main` @ `b2d0344`):
+merge `cee58b7`, root integration `b2d0344`, MT-9 load-gate branch
+`native-0.23-load-gate` merge `98a9226`; `main` @ `98a9226`):
 
 - **MT-8 frozen Master entry point**: `tools/native_master.py`
   frozen to `CT2Trainer-Master.exe` with the user-provided
@@ -69,9 +70,42 @@ merge `cee58b7`, root integration `b2d0344`; `main` @ `b2d0344`):
   tolerant load) is reused when it still exists; only a genuinely
   first start (or a stale stored folder) shows the directory
   picker. +15 tests, +3 UI tests.
+- **MT-9 load-time table compatibility & size gate**: `table_gate.py`
+  `gate_table_for_load` re-proves one table file against its index
+  entry at the moment the load is requested (auto-load or picker):
+  missing file / not a regular file / stat-or-read failure / empty /
+  exceeds the 32 MiB load limit (33,554,432 bytes - the bound the
+  table parser and the plan compiler enforce) / changed since the
+  last scan (a named stale refusal: Rescan refreshes the index and
+  re-arms; also keeps the MT-6 sidecar keying - the table content
+  sha256 - consistent with what the trainer loads) / not loadable by
+  the tested `read_table` parser (malformed XML, DTD/entity input,
+  unparseable legacy binary - the `LegacyCTError` named error passes
+  through displayable) / changed during analysis. Cheapest-first
+  ordering (no parser call for a stat-level refusal); every refusal a
+  stable named code + displayable detail. The default plan compiler
+  raises the named `TableLoadGateRefusal`, so a table load failure is
+  handled gracefully even when the target process was found: no
+  crash, named error dialog + status line, the orchestrator's
+  fail-closed loop guard records the exact (name, PID) pair (no
+  hot-retry), Rescan / Retry load re-arm, and the picker is not
+  re-issued for a failed pair (named suppression until an explicit
+  retry). +22 tests (16 gate, 2 orchestrator, 4 UI).
+- **Also in the 0.23 content (same-day field fixes merged to
+  `main` after the MT-9 merge)**: placeholder headings no longer
+  create plan-level symbol dependencies (`28c9b57`, +10 tests - the
+  WP-32/WP-33 non-actionable placeholder display-address requires are
+  display metadata, never runtime writes, so neither the validate-plan
+  symbol walk nor the engine dependency walk treats them as
+  dependencies) and the Sinking City 2 hotkey-bridge field fix
+  (0.22.1 lane: T1 named missing-export guard, T2 engine containment
+  of bridge faults as deduped named warnings, T3 loop-thread close
+  protocol, T7 persistence ordering; merge `4e9b95b`, +11 tests).
 - No new trainer functionality: the Master stays a wrapper around
-  the tested engine. +72 tests in total (4,061 -> 4,133); catalog
-  zero delta (`blocked-catalog-023-master-roadmap`, 2026-11-01:
+  the tested engine. +115 tests in total (4,061 -> 4,176); catalog
+  zero delta (`blocked-catalog-023-master-roadmap` at `b2d0344`,
+  `blocked-catalog-023-load-gate` at `98a9226` and
+  `blocked-catalog-023-field-fixes` at `4e9b95b`, all 2026-11-01:
   151/151 loaded, 0 compile errors, 117,809 total / 116,756
   supported / 60,161 staged / 1,053 blocked / 0 load errors - zero
   delta vs `blocked-catalog-022-rearm`, per-table count and reason
