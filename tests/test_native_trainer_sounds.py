@@ -40,6 +40,7 @@ from unittest import mock
 from unittest.mock import patch
 
 from ct2trainer.native import trainer_sounds
+from native_tk_teardown import force_root_release
 from ct2trainer.native.compiler import compile_table
 from ct2trainer.native.engine import TrainerEngine
 from ct2trainer.native.hotkey_model import (HotkeyBinding, HotKeySpec,
@@ -265,10 +266,7 @@ class TrainerWindowSoundTests(unittest.TestCase):
 
     def tearDown(self):
         if self.root is not None:
-            try:
-                self.root.destroy()
-            except tk.TclError:
-                pass
+            force_root_release([self.root], ((self, "root"),))
         if self.engine is not None and not self.engine.closed:
             try:
                 self.engine.close()

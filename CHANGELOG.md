@@ -2,6 +2,59 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.25 (2026-11-02)
+
+Master Trainer user control (MT-10 / MT-11 / MT-12) — the trainer can be
+detached, and the user chooses which table runs against which process,
+with the configuration remembered (user request 2026-11-02; the feature
+set was evaluated against online all-in-one trainers and the CE 7.5
+process picker — see the Master Trainer ROADMAP “Online feature
+evaluation” section):
+
+- **MT-10 explicit table load**: the “Load table” waiting-view header
+  button + the per-row right-click menu (“Load this table”); the table
+  loads even while the bound process is not running yet (the engine
+  waits for it); the last explicitly loaded table persists in the state
+  home (`master-settings.json` schema 2) and is shown in the metadata
+  line. The orchestrator's `request_load()` carries stable named
+  refusals (`not-in-index` / `table-unreadable` /
+  `no-process-binding` / `process-snapshot-failed`) — a refused load
+  shows a named dialog + status line, never a crash; an explicit load
+  bypasses the auto-load loop guard, but a failed explicit load still
+  records the ordinary (name, PID) suppression.
+- **MT-11 process selection + persisted attach mode**: the
+  “Attach: auto/ask” toggle button (persisted). “auto” (default, legacy
+  behavior): smallest-PID direct attach, no picker. “ask”: the process
+  picker (name + PID rows) is shown for every attach, even a single
+  running candidate. The chosen PID pins the session through the
+  injected memory factory; the pin self-clears when that process exits
+  and the session falls back to the ordinary name-based attach
+  (smallest PID). Cancel semantics per origin (an auto-load pick defers
+  the exact process pair, a table choice defers exactly like “Not
+  now”, an attach stays paused).
+- **MT-12 detach / user attach**: the new “Detach” header button in
+  Master mode only (the standalone trainer header stays
+  byte-identical). Detaching holds the engine's attach branch (no auto
+  re-attach; session state, journals and wishes untouched; status
+  “Detached; waiting for user attach”; debug events
+  `attach-paused` / `attach-resumed`). The button turns into “Attach”:
+  in “ask” mode the process picker offers the running candidates and
+  the chosen PID is pinned on resume; in “auto” mode the ordinary wait
+  simply resumes. A target exit while attached is unaffected (the
+  engine keeps waiting as before).
+- `master-settings.json` schema 2 (`last_table`, `attach_mode`):
+  schema-1 documents promote on load with the documented defaults
+  (`last_table=null`, `attach_mode="auto"`); only schema 2 is writable.
+- Tests: +65 (`tests/test_native_master_process_picker.py` 16,
+  `tests/test_native_master_explicit_load.py` 13,
+  `tests/test_native_master_ui_mt12.py` 24,
+  `tests/test_native_attach_pause.py` 5, +7 schema-2 tests in
+  `tests/test_native_master_state.py`). Full main suite 4,258 OK / 30
+  expected skips (2026-11-02), zero catalog delta vs
+  `blocked-catalog-024-sounds` (run `blocked-catalog-025-master-ui`:
+  151/151 loaded, 117,809 total / 116,756 supported / 60,161 staged /
+  1,053 blocked / 0 load errors).
+
 ## 0.24 (2026-11-01)
 
 Trainer tick sounds (user field request 2026-11-01): the generated

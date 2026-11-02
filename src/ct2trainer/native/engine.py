@@ -1641,6 +1641,12 @@ class TrainerEngine:
             self.enable_failures: dict[int, str] = {}
             self._reattach_pending = False
             self._last_reattach_failure = None
+            # MT-12 (0.25): explicit user detach hold. While paused, the
+            # poll attach branch must not attach to the next matching
+            # process on its own; the Master UI resumes it only after the
+            # user chose a target (process picker) or accepted the ordinary
+            # wait. Session state only; dies with the engine.
+            self._attach_paused = False
             self.blocked = False
             self.busy = False
             self.closed = False
@@ -2500,6 +2506,11 @@ class TrainerEngine:
                 self._hotkey_sync()
                 self._run_rearm()
                 return self.status
+            # MT-12 (0.25): attach hold after an explicit user detach -
+            # no attach attempts until resume_attach() releases the hold;
+            # the paused status stays visible in the status line.
+            if self._attach_paused:
+                return self.status
             try:
                 memory = self.memory_factory(self.plan["process_name"])
             except Exception as exc:
@@ -2976,15 +2987,67 @@ class TrainerEngine:
         self._last_reattach_failure = None
         self.debug_log.log("reattach-requested",
                            process_name=self.plan["process_name"])
+        # MT-12 (0.25): an explicit detach that runs with an active attach
+        # hold keeps the hold visible in the status line.
+        paused_status = "Detached; waiting for user attach"
         if self.memory is not None:
             self.debug_log.log("reattach-detached",
                                pid=getattr(self.memory, "pid", None),
                                process_name=self.plan["process_name"])
             self._detach_current_target()
-            self.status = "Re-attaching; waiting for " + self.plan["process_name"]
+            self.status = (paused_status if self._attach_paused else
+                           "Re-attaching; waiting for "
+                           + self.plan["process_name"])
         else:
             # The target already exited; just re-arm the wait.
-            self.status = "Waiting for " + self.plan["process_name"]
+            self.status = (paused_status if self._attach_paused else
+                           "Waiting for " + self.plan["process_name"])
+
+    def pause_attach(self) -> None:
+        """Hold the wait-to-attach transition until ``resume_attach`` (MT-12).
+
+        Used by the Master Trainer detach action: the trainer stays open and
+        waiting, but the engine must not attach to the next matching process
+        on its own - the user chooses the target explicitly (process picker)
+        or resumes the ordinary wait.  Pausing changes no session state,
+        journal or wish; it only gates the poll attach branch.  Refused while
+        closed, blocked or busy.
+        """
+        if self.closed:
+            raise NativeRuntimeError("Trainer is closed")
+        if self.blocked:
+            raise NativeRuntimeError(
+                "Attach cannot be paused while the engine is blocked: "
+                + self.error)
+        if self.busy:
+            raise NativeRuntimeError("Another trainer action is in progress")
+        if self._attach_paused:
+            return
+        self._attach_paused = True
+        self.status = "Detached; waiting for user attach"
+        self.debug_log.log("attach-paused",
+                           process_name=self.plan["process_name"])
+
+    @property
+    def attach_paused(self) -> bool:
+        """True while the wait-to-attach transition is held by the user."""
+        return self._attach_paused
+
+    def resume_attach(self) -> None:
+        """Release a paused attach hold (MT-12).
+
+        The next poll tick attempts the ordinary attach (honoring the
+        injected memory factory, e.g. a user-selected PID).  Idempotent no-op
+        when not paused; refused while closed.
+        """
+        if self.closed:
+            raise NativeRuntimeError("Trainer is closed")
+        if not self._attach_paused:
+            return
+        self._attach_paused = False
+        self.status = "Waiting for " + self.plan["process_name"]
+        self.debug_log.log("attach-resumed",
+                           process_name=self.plan["process_name"])
 
     def _check_patches(self) -> None:
         if self.global_pool is not None:

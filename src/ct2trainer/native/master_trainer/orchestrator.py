@@ -31,13 +31,47 @@ from dataclasses import dataclass
 import time
 from typing import Callable
 
-from .process_watch import ProcessSnapshotEntry, ProcessLister, match_targets
+from .process_picker import candidate_processes
+from .process_watch import (ProcessSnapshotEntry, ProcessLister,
+                            match_targets)
 from .table_index import TableEntry, TableIndex
 
 STATE_WAITING = "waiting"
 STATE_CHOOSING = "choosing"
 STATE_LOADING = "loading"
 STATE_ACTIVE = "active"
+
+
+class ExplicitLoadRefusal(ValueError):
+    """A named refusal for an explicit user table load (MT-10).
+
+    ``code`` is the stable machine-readable reason; ``detail`` is
+    displayable in the status line and dialogs.
+    """
+
+    def __init__(self, code: str, detail: str):
+        super().__init__(detail)
+        self.code = code
+        self.detail = detail
+
+
+@dataclass(frozen=True)
+class ExplicitLoadRequest:
+    """An explicit user table load resolved against index + snapshot.
+
+    ``plan_process`` is the process name the plan must be compiled with:
+    a running bound name when one is visible, otherwise the first bound
+    name in casefold order.  ``candidates`` are the running PIDs the user
+    may pick (MT-11); empty means the trainer loads and the engine waits
+    for the process to start.  ``process`` is the entry to hand to
+    :meth:`MasterOrchestrator.load` - the chosen candidate, or a
+    synthetic zero-PID entry when nothing runs yet.
+    """
+
+    table: TableEntry
+    plan_process: str
+    candidates: tuple
+    process: ProcessSnapshotEntry
 
 
 @dataclass(frozen=True)
@@ -314,6 +348,68 @@ class MasterOrchestrator:
                              "or neither")
         self._failed.pop((process_key, pid), None)
         self._suppressed.discard((process_key, pid))
+
+    # -- explicit load (MT-10) ---------------------------------------------------
+
+    def request_load(self, relative_path: str) -> ExplicitLoadRequest:
+        """Explicit user table load (MT-10): resolve one indexed table
+        against the live process snapshot.
+
+        Named refusals (:class:`ExplicitLoadRefusal` with stable ``code``):
+
+        - ``not-in-index``: the path is not part of the index (the table
+          is new or gone; Rescan re-arms the index);
+        - ``table-unreadable``: the entry is visible but not loadable
+          (the named scan error rides in the detail);
+        - ``no-process-binding``: the entry binds no process name, so no
+          target can be attached to it;
+        - ``process-snapshot-failed``: the snapshot backend failed.
+
+        Unlike the auto-load tick this path never consults the fail-
+        closed loop guard: the user asked for this table, so the attempt
+        runs.  A later :meth:`load` failure still records the ordinary
+        (name, PID) suppression for the auto-load loop.  A running bound
+        process wins the plan process name; when nothing runs the first
+        bound name in casefold order is used and the engine simply waits
+        for the process to start (the plan is compiled statically).
+        """
+        if type(relative_path) is not str or not relative_path:
+            raise ExplicitLoadRefusal("not-in-index",
+                                      "no table path given")
+        entry = self.index.get(relative_path)
+        if entry is None:
+            raise ExplicitLoadRefusal(
+                "not-in-index",
+                "table '" + relative_path + "' is not part of the index "
+                "(Rescan the folder first if the table is new)")
+        if entry.status != "ok":
+            raise ExplicitLoadRefusal(
+                "table-unreadable",
+                "table '" + relative_path + "' is unreadable: "
+                + (entry.detail or "no detail"))
+        if not entry.process_names:
+            raise ExplicitLoadRefusal(
+                "no-process-binding",
+                "table '" + relative_path + "' binds no process name, so "
+                "no target can be attached to it")
+        try:
+            snapshot = self.lister.list_processes()
+        except Exception as exc:
+            raise ExplicitLoadRefusal(
+                "process-snapshot-failed",
+                "the process snapshot failed: "
+                + exc.__class__.__name__ + ": " + str(exc)) from exc
+        candidates = candidate_processes(snapshot, entry.process_names)
+        if candidates:
+            # The smallest-PID candidate is the documented determinism
+            # rule; the plan compiles against that process's name.
+            process = min(candidates, key=lambda e: e.pid)
+            plan_process = process.name
+        else:
+            plan_process = sorted(entry.process_names, key=str.casefold)[0]
+            process = ProcessSnapshotEntry(0, plan_process)
+        return ExplicitLoadRequest(table=entry, plan_process=plan_process,
+                                   candidates=candidates, process=process)
 
     # -- internals ---------------------------------------------------------------
 

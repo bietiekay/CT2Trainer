@@ -14,7 +14,16 @@ synthetic matrix or carry stale counts into this overview.
 
 **Active outcome (2026-10-26): 100% of the 151 local-only reference-table
 paths (143 distinct hashes) must load and support their intended behavior
-through an independent clean-room implementation.** The 0.16 Wave-4
+through an independent clean-room implementation.** 0.25 content on main
+(2026-11-02): the Master Trainer user control MT-10/11/12 - explicit
+table load, process picker + persisted attach mode, detach/user
+attach - plus the online feature evaluation record in
+`master_trainer/ROADMAP.md` and the Tcl test-harness hardening
+(`tests/native_tk_teardown.py`); +65 tests, full main suite 4,258
+OK / 30 expected skips, catalog zero delta
+`blocked-catalog-025-master-ui`; the 0.24 build
+`native-20261102T102029Z-fe358e35` remains the latest verified
+release until the 0.25 build is cut. The 0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
 now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
@@ -128,8 +137,14 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-02, 0.24 released (trainer tick
-sounds - user field request 2026-11-01; clean-room in-code tick
+**CT2Trainer (status 2026-11-02, 0.25 content on main (Master
+Trainer user control MT-10/11/12: explicit table load, process
+picker + persisted attach mode, detach/user attach; online feature
+evaluation; Tcl test-harness hardening; +65 tests; full main suite
+4,258 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-025-master-ui`), 0.24 released as the latest
+verified build (trainer tick sounds - user field request
+2026-11-01; clean-room in-code tick
 synthesis for on/off/attach in `trainer_sounds.py`, `ui.py` rewired
 (row switch + group heading toggle + attach-success transition in
 `TrainerWindow.poll()`), `engine.py` `pop_hotkey_ui_toggles()`

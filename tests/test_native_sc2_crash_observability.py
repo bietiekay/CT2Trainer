@@ -44,6 +44,7 @@ from unittest.mock import patch
 from test_native_debug_log import read_events
 from test_native_engine import FakeMemory
 from ct2trainer.native.compiler import compile_table
+from native_tk_teardown import force_root_release
 from ct2trainer.native.debug_log import (TrainerDebugLog, _crash,
                                          _crash_excepthook,
                                          _crash_thread_excepthook)
@@ -199,10 +200,7 @@ class PollGuardTests(unittest.TestCase):
 
     def tearDown(self):
         if self.root is not None:
-            try:
-                self.root.destroy()
-            except tk.TclError:
-                pass
+            force_root_release([self.root], ((self, "root"),))
         if self.engine is not None and not self.engine.closed:
             try:
                 self.engine.close()

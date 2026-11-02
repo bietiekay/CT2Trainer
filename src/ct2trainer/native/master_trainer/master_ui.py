@@ -10,7 +10,16 @@ One long-lived window.  Two modes share it:
 - Trainer mode: the exact ``TrainerWindow`` row grid of the standalone
   trainer, running on the same Tk root.  The header gains one extra
   button ("⬅ Master") that closes the engine cleanly and rebuilds the
-  waiting view, so the same process can keep watching the folder.
+  waiting view, so the same process can keep watching the folder;
+  0.25 adds the "Detach" header button (MT-12) that detaches the live
+  target and re-attaches to a user-chosen process in "ask" mode.
+
+0.25 user control (MT-10/11/12): the waiting view gains the "Load
+table" header button and the row context menu (explicit table load,
+including while the bound process is not running yet), the persisted
+attach-mode toggle (auto/ask) and the process picker for
+multi-instance targets; the session pins the chosen PID through the
+injected memory factory.
 
 All waiting-mode logic lives in the pure orchestrator; this module is
 Tk wiring plus the picker Toplevel.
@@ -29,9 +38,16 @@ from ..engine import (TrainerEngine, StaleStateRecoverable,
 from ..window_icon import window_icon_path
 from ..about_ui import repo_link
 from .orchestrator import (MasterOrchestrator, STATE_ACTIVE,
-                           STATE_CHOOSING, TickOutcome)
+                           STATE_CHOOSING, TickOutcome,
+                           ExplicitLoadRefusal)
 from .master_state import (MASTER_STATE_SCHEMA, MASTER_STATE_FILENAME,
-                           MasterState, load_master_state, save_master_state)
+                           ATTACH_MODE_ASK, ATTACH_MODE_AUTO,
+                           MasterState, load_master_state,
+                           save_master_state)
+from .process_picker import (DECISION_PICK, attach_decision,
+                             candidate_processes,
+                             make_pinned_memory_factory)
+from .process_watch import names_match
 from .settings_sidecar import MasterSettingsStore
 from .steamdeck_route import (attach_gate, require_engine_attach,
                               DeckAttachUnavailableError)
@@ -82,6 +98,14 @@ class MasterApp:
         self.last_changes = result.changes
         self.scan_error = result.scan_error
         self.last_scan_at = _utc_now()
+        # MT-10/11 (0.25): stored preferences (last explicitly loaded
+        # table, attach mode) from the master-state document; an absent
+        # or refused document means the documented defaults.
+        state = load_master_state(Path(self.state_home)
+                                  / MASTER_STATE_FILENAME)
+        self.last_table = state.last_table if state is not None else None
+        self.attach_mode = (state.attach_mode if state is not None
+                            else ATTACH_MODE_AUTO)
         self.lister = lister if lister is not None else default_process_lister()
         self.plan_compiler = plan_compiler
         self.state_dir_factory = state_dir_factory
@@ -117,14 +141,31 @@ class MasterApp:
         from pathlib import Path
         return Path(self.state_home) / MASTER_STATE_FILENAME
 
-    def persist_folder(self) -> None:
-        """Remember the current table folder for the next parameterless
+    def persist_state(self) -> None:
+        """Remember the current table folder plus the MT-10/11
+        preferences (last explicit table, attach mode) for the next
         start (best effort, like the index persistence)."""
         try:
-            save_master_state(MasterState(MASTER_STATE_SCHEMA, self.folder),
-                              self.state_path())
+            save_master_state(MasterState(
+                MASTER_STATE_SCHEMA, self.folder,
+                last_table=self.last_table,
+                attach_mode=self.attach_mode),
+                self.state_path())
         except Exception:
             pass
+
+    def set_attach_mode(self, mode: str) -> None:
+        """Switch the persisted attach mode (MT-11) and re-persist it."""
+        if mode not in (ATTACH_MODE_AUTO, ATTACH_MODE_ASK):
+            raise ValueError("attach mode must be 'auto' or 'ask'")
+        self.attach_mode = mode
+        self.persist_state()
+
+    def remember_last_table(self, relative_path: str | None) -> None:
+        """Remember the last explicitly loaded table (MT-10) and
+        re-persist the master-state document."""
+        self.last_table = relative_path
+        self.persist_state()
 
     def rescan(self) -> None:
         from .table_index import reconcile
@@ -153,7 +194,7 @@ class MasterApp:
             save_index(self.index, self.index_path())
         except Exception:
             pass
-        self.persist_folder()
+        self.persist_state()
 
     def save_index(self) -> None:
         from .table_index import save_index
@@ -181,6 +222,20 @@ class MasterWindow:
         self.trainer_window = None
         self._picker = None
         self._picker_selection = None
+        # MT-10/11/12 (0.25): explicit-load pickers, the process picker,
+        # the pending choice-table (ask mode) and the session PID pin
+        # ({"pid": None} = no pin, ordinary name-based attach).
+        self._table_load_picker = None
+        self._table_load_listbox = None
+        self._table_load_entries = ()
+        self._proc_picker = None
+        self._proc_picker_listbox = None
+        self._proc_picker_candidates = ()
+        self._proc_picker_entry = None
+        self._proc_picker_origin = None
+        self._choice_table_rel = None
+        self._attach_pin = {"pid": None}
+        self._attach_mode_btn = None
         self._table_frame = None
         self._folder_label = None
         self._meta_label = None
@@ -223,6 +278,10 @@ class MasterWindow:
         button(header, "Close", self.close).pack(side="right")
         button(header, "Rescan", self._rescan).pack(side="right", padx=(0, 8))
         button(header, "Change folder…", self._change_folder).pack(side="right", padx=(0, 8))
+        # MT-10 (0.25): explicit table load (loads even while the bound
+        # process is not running; the engine then waits for it).
+        button(header, "Load table", self._open_table_load_picker).pack(
+            side="right", padx=(0, 8))
         repo_link(header, bg=BG_HEADER, fg=FG).pack(side="right", padx=(0, 16))
         self._folder_label = tk.Label(self.root, text=self._folder_text(),
                                       bg=BG, fg=FG_DIM, font=("Segoe UI", 11),
@@ -253,6 +312,8 @@ class MasterWindow:
                                command=self._table_tree.yview)
         self._table_tree.configure(yscrollcommand=scroll.set)
         self._table_tree.pack(side="left", fill="both", expand=True)
+        # MT-10 (0.25): right-click a row to load that table explicitly.
+        self._table_tree.bind("<Button-3>", self._table_context_menu)
         scroll.pack(side="right", fill="y")
 
         self._status_var = tk.StringVar(value="Scanning…")
@@ -262,6 +323,11 @@ class MasterWindow:
         tk.Label(status, textvariable=self._status_var, anchor="w",
                  justify="left", wraplength=900, bg=BG, fg=FG,
                  font=("Segoe UI", 11)).pack(side="left", fill="x", expand=True)
+        # MT-11 (0.25): the persisted attach-mode toggle (auto/ask).
+        self._attach_mode_btn = button(status, "Attach: "
+                                       + self.app.attach_mode,
+                                       self._toggle_attach_mode, width=14)
+        self._attach_mode_btn.pack(side="right")
         button(self.root, "Retry load", self._retry, width=12).pack(
             anchor="e", padx=12)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
@@ -288,6 +354,10 @@ class MasterWindow:
         names = app.index.process_names()
         bound = "bound: " + (", ".join(names) if names else "(none yet)")
         parts = [count, bound]
+        # MT-10/11 (0.25): the stored preferences are visible at a glance.
+        if app.last_table:
+            parts.append("last loaded: " + app.last_table)
+        parts.append("attach mode: " + app.attach_mode)
         if app.last_scan_at:
             parts.append("scanned " + app.last_scan_at)
         parts.append("state: " + app.state_home)
@@ -397,12 +467,19 @@ class MasterWindow:
             # Trainer mode (or shutdown): the trainer window runs its own
             # poll loop, so the waiting-mode tick must not double-fire.
             return
+        if self._proc_picker is not None \
+                or self._table_load_picker is not None:
+            # MT-10/11 (0.25): a user picker is open - the orchestrator
+            # must not decide (auto-load) while the user is choosing, but
+            # the loop keeps its cadence.
+            self.root.after(self.app.poll_ms, self._poll)
+            return
         try:
             outcome = self.app.orchestrator.tick()
             self._set_running(outcome.running)
             self._set_status(self._waiting_status_line())
             if outcome.request is not None and outcome.request_process is not None:
-                self._start_load(outcome.request, outcome.request_process)
+                self._auto_load(outcome.request, outcome.request_process)
             elif outcome.choice is not None and self._picker is None:
                 self._open_picker(outcome.choice)
         except Exception as exc:
@@ -412,9 +489,16 @@ class MasterWindow:
         if not self.app.closed and self.engine is None:
             self.root.after(self.app.poll_ms, self._poll)
 
-    def _start_load(self, entry, process):
+    def _start_load(self, entry, process, explicit=False):
+        # MT-11 (0.25): pin the chosen process for this session; the
+        # injected memory factory honors it and falls back to the
+        # ordinary name-based attach once that PID exits.
+        self._attach_pin = {"pid": process.pid if process.pid else None}
         self._set_status("Loading " + entry.relative_path + " for " +
                          process.name + " (PID " + str(process.pid) + ")…")
+        if explicit:
+            # MT-10: remember the explicitly loaded table.
+            self.app.remember_last_table(entry.relative_path)
         outcome = self.app.orchestrator.load(entry, process)
         if not outcome.ok:
             self._set_status("Load failed: " + outcome.error)
@@ -436,7 +520,7 @@ class MasterWindow:
             messagebox.showerror("Attach not available on this platform",
                                  str(exc), parent=self.root)
             self._fail_trainer_start(str(exc))
-            return
+            return False
         # MT-6: restore the per-table settings sidecar (keyed by the table
         # content sha, never by path) for this session. A stored document
         # the settings model refuses is shown with its named reasons; the
@@ -475,20 +559,21 @@ class MasterWindow:
                 # the waiting loop would stay stuck on the error text.
                 self._fail_trainer_start(
                     "startup recovery did not converge within four attempts")
-                return
+                return False
             try:
                 engine = TrainerEngine(plan,
-                                       state_dir=self.app.state_dir_for(plan))
+                                       state_dir=self.app.state_dir_for(plan),
+                                       memory_factory=self._memory_factory())
                 break
             except StaleStateRecoverable as exc:
                 if not self._confirm_recovery("stale state", exc):
                     self._fail_trainer_start(str(exc))
-                    return
+                    return False
                 continue
             except StaleArtifactsRecoverable as exc:
                 if not self._confirm_recovery("unfinished receipts", exc):
                     self._fail_trainer_start(str(exc))
-                    return
+                    return False
                 continue
             except LiveStateConflict as exc:
                 messagebox.showerror(
@@ -497,16 +582,17 @@ class MasterWindow:
                     ") still uses this table's state.\nClose the other "
                     "trainer and try again.", parent=self.root)
                 self._fail_trainer_start(str(exc))
-                return
+                return False
             except Exception as exc:
                 messagebox.showerror("Trainer cannot start",
                                      str(exc), parent=self.root)
                 self._fail_trainer_start(str(exc))
-                return
+                return False
         self.engine = engine
         try:
-            self.trainer_window = TrainerWindow(self.root, engine,
-                                                master_back=self._back_to_master)
+            self.trainer_window = TrainerWindow(
+                self.root, engine, master_back=self._back_to_master,
+                detach_cb=self._detach_or_attach)
         except Exception as exc:
             # The engine is up but the trainer view could not be built:
             # close the engine again and fail the load so the waiting
@@ -522,6 +608,7 @@ class MasterWindow:
             self._fail_trainer_start(str(exc))
             return
         self.app.orchestrator.mark_active()
+        return True
 
     def _confirm_recovery(self, kind: str, exc) -> bool:
         if kind == "stale state":
@@ -558,6 +645,324 @@ class MasterWindow:
     def _fail_trainer_start(self, error: str):
         self.app.orchestrator.fail_load(error)
         self._set_status("Trainer start failed: " + error)
+
+    # ------------------------------------------------------------------
+    # explicit table load (MT-10) / attach mode (MT-11) / detach (MT-12)
+    # ------------------------------------------------------------------
+
+    def _auto_load(self, request, process):
+        """Auto-load path with the MT-11 attach decision applied: in
+        'ask' mode the user picks the target process first (even for a
+        single running candidate); 'auto' attaches directly to the
+        documented smallest-PID process."""
+        candidates = candidate_processes(self._running,
+                                         request.process_names)
+        decision, _ = attach_decision(candidates, self.app.attach_mode)
+        if decision == DECISION_PICK:
+            self._open_process_picker(request, candidates,
+                                      origin="auto-load")
+            return
+        self._start_load(request, process)
+
+    def _memory_factory(self):
+        """The MT-11 memory factory for the current session: it honors
+        the session's pinned PID (the user's process choice) and falls
+        back to the ordinary name-based attach once that process exits."""
+        return make_pinned_memory_factory(self.app.lister,
+                                          self._attach_pin)
+
+    def _load_selected_table(self, rel):
+        """Explicit user table load (MT-10): resolve the table against
+        the live snapshot, apply the attach decision, then load.  Named
+        refusals land in the status line + dialog, never a crash."""
+        try:
+            request = self.app.orchestrator.request_load(rel)
+        except ExplicitLoadRefusal as exc:
+            self._set_status("Explicit load refused: " + exc.detail)
+            messagebox.showerror("Table load refused",
+                                 rel + "\n\n" + exc.detail,
+                                 parent=self.root)
+            return
+        decision, _ = attach_decision(request.candidates,
+                                      self.app.attach_mode)
+        if decision == DECISION_PICK:
+            self._open_process_picker(request.table, request.candidates,
+                                      origin="explicit")
+            return
+        self._start_load(request.table, request.process, explicit=True)
+
+    def _open_table_load_picker(self):
+        """The MT-10 table picker: every readable indexed table, pick
+        one to load now (the load runs even if the bound process does
+        not run yet; the engine then waits for it)."""
+        entries = [e for e in self.app.index.tables() if e.status == "ok"]
+        if not entries:
+            messagebox.showwarning(
+                "No loadable table",
+                "No readable table is indexed yet; point the Master at a "
+                "folder with .ct tables first.", parent=self.root)
+            return
+        top = tk.Toplevel(self.root)
+        top.title("Load table")
+        top.resizable(False, False)
+        top.transient(self.root)
+        tk.Label(top, text="Choose the table to load now:",
+                 anchor="w", padx=14, font=("Segoe UI", 11)
+                 ).pack(fill="x", pady=(12, 4))
+        listbox = tk.Listbox(top, exportselection=False, width=56,
+                             height=12, font=("Segoe UI", 10))
+        for entry in entries:
+            listbox.insert("end", entry.relative_path)
+        listbox.pack(padx=14, pady=4)
+        listbox.selection_set(0)
+        buttons = tk.Frame(top, padx=14)
+        buttons.pack(fill="x", pady=(4, 12))
+        tk.Button(buttons, text="Load",
+                  command=self._table_load_picker_load,
+                  font=("Segoe UI", 12), width=10,
+                  bg="#2a3547", fg=FG).pack(side="left")
+        tk.Button(buttons, text="Cancel",
+                  command=self._close_table_load_picker,
+                  font=("Segoe UI", 12), width=10,
+                  bg="#2a3547", fg=FG).pack(side="left", padx=(8, 0))
+        self._table_load_picker = top
+        self._table_load_listbox = listbox
+        self._table_load_entries = tuple(entries)
+        top.protocol("WM_DELETE_WINDOW", self._close_table_load_picker)
+        try:
+            top.grab_set()
+        except tk.TclError:
+            pass
+        top.update_idletasks()
+
+    def _table_load_picker_load(self):
+        if self._table_load_picker is None:
+            return
+        sel = self._table_load_listbox.curselection()
+        self._close_table_load_picker()
+        if not sel:
+            return
+        self._load_selected_table(
+            self._table_load_entries[sel[0]].relative_path)
+
+    def _close_table_load_picker(self):
+        if self._table_load_picker is not None:
+            self._table_load_picker.destroy()
+        self._table_load_picker = None
+        self._table_load_listbox = None
+        self._table_load_entries = ()
+
+    def _table_context_menu(self, event):
+        """The MT-10 row menu: right-click a table row to load it."""
+        item = self._table_tree.identify_row(event.y)
+        if not item:
+            return
+        values = self._table_tree.item(item, "values")
+        if not values:
+            return
+        rel = values[0]
+        menu = tk.Menu(self.root, tearoff=0)
+        menu.add_command(label="Load this table",
+                         command=lambda: self._load_selected_table(rel))
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.destroy()
+
+    def _open_process_picker(self, entry, candidates, origin):
+        """The MT-11 process picker: one row per running candidate
+        (name + PID), an Attach button and Cancel.
+
+        ``origin`` names the pending action the choice resumes:
+        ``auto-load`` (the auto-load request), ``explicit`` (the MT-10
+        table load), ``choice`` (a table from the open table picker) or
+        ``attach`` (the MT-12 attach after a detach).
+        """
+        top = tk.Toplevel(self.root)
+        if origin == "attach":
+            top.title("Which process to attach?")
+        else:
+            top.title("Which process for " + entry.relative_path + "?")
+        top.resizable(False, False)
+        top.transient(self.root)
+        tk.Label(top, text="Select the running process to attach to:",
+                 anchor="w", padx=14, font=("Segoe UI", 11)
+                 ).pack(fill="x", pady=(12, 4))
+        listbox = tk.Listbox(top, exportselection=False, width=48,
+                             height=8, font=("Segoe UI", 10))
+        for cand in candidates:
+            listbox.insert("end", cand.name + "  (PID " + str(cand.pid) + ")")
+        listbox.pack(padx=14, pady=4)
+        if candidates:
+            listbox.selection_set(0)
+        buttons = tk.Frame(top, padx=14)
+        buttons.pack(fill="x", pady=(4, 12))
+        tk.Button(buttons, text="Attach",
+                  command=self._proc_picker_attach,
+                  font=("Segoe UI", 12), width=10,
+                  bg="#2a3547", fg=FG).pack(side="left")
+        tk.Button(buttons, text="Cancel",
+                  command=self._proc_picker_cancel,
+                  font=("Segoe UI", 12), width=10,
+                  bg="#2a3547", fg=FG).pack(side="left", padx=(8, 0))
+        self._proc_picker = top
+        self._proc_picker_listbox = listbox
+        self._proc_picker_candidates = tuple(candidates)
+        self._proc_picker_entry = entry
+        self._proc_picker_origin = origin
+        top.protocol("WM_DELETE_WINDOW", self._proc_picker_cancel)
+        try:
+            top.grab_set()
+        except tk.TclError:
+            pass
+        top.update_idletasks()
+
+    def _proc_picker_attach(self):
+        if self._proc_picker is None:
+            return
+        sel = self._proc_picker_listbox.curselection()
+        if not sel:
+            self._set_status("No process selected.")
+            return
+        self._proc_picker_chosen(sel[0])
+
+    def _proc_picker_chosen(self, index):
+        """Route the user's process choice to the pending action."""
+        origin = self._proc_picker_origin
+        entry = self._proc_picker_entry
+        chosen = self._proc_picker_candidates[index]
+        self._close_proc_picker()
+        self._attach_pin = {"pid": chosen.pid}
+        if origin == "attach":
+            # MT-12: resume the held attach to the chosen PID.
+            try:
+                self.engine.resume_attach()
+            except Exception as exc:
+                messagebox.showerror("Attach failed", str(exc),
+                                     parent=self.root)
+            return
+        if origin == "choice":
+            outcome = self.app.orchestrator.choose(self._choice_table_rel)
+            self._choice_table_rel = None
+            if not outcome.ok:
+                self._set_status("Load failed: " + (outcome.error or ""))
+                messagebox.showerror("Table load failed",
+                                     (outcome.error or "unknown error"),
+                                     parent=self.root)
+                self._set_status(self._waiting_status_line())
+                return
+            self._enter_trainer(outcome.plan, entry)
+            return
+        self._start_load(entry, chosen,
+                         explicit=(origin == "explicit"))
+
+    def _proc_picker_cancel(self):
+        if self._proc_picker is None:
+            return
+        origin = self._proc_picker_origin
+        candidates = self._proc_picker_candidates
+        self._close_proc_picker()
+        if origin == "attach":
+            # Stay detached; the engine holds the attach until the user
+            # chooses again (the status line shows the hold).
+            return
+        if origin == "choice":
+            # The table choice stays deferred exactly like "Not now".
+            orch = self.app.orchestrator
+            if orch.state == STATE_CHOOSING and orch.choice is not None:
+                for e in orch.choice.snapshot_entries:
+                    orch.suppress(orch.choice.process_key, e.pid)
+                orch.cancel_choice()
+            self._set_status("Table choice deferred; not asking again while "
+                             "this exact process runs. Use Retry load to "
+                             "re-arm.")
+            return
+        if origin == "auto-load":
+            # Declined the pick: do not re-ask while these exact
+            # processes run (Retry load re-arms, as always).
+            orch = self.app.orchestrator
+            for e in candidates:
+                orch.suppress(e.name.casefold(), e.pid)
+            self._set_status("Process choice deferred; not auto-loading "
+                             "while these exact processes run. Use Retry "
+                             "load to re-arm.")
+            return
+        # Explicit load: the user asked and declined the pick; nothing
+        # auto-retries, just return to the waiting status.
+        self._set_status(self._waiting_status_line())
+
+    def _close_proc_picker(self):
+        if self._proc_picker is not None:
+            self._proc_picker.destroy()
+        self._proc_picker = None
+        self._proc_picker_listbox = None
+        self._proc_picker_candidates = ()
+        self._proc_picker_entry = None
+        self._proc_picker_origin = None
+
+    def _toggle_attach_mode(self):
+        """Flip the persisted attach mode (MT-11) and refresh the button."""
+        mode = (ATTACH_MODE_ASK if self.app.attach_mode == ATTACH_MODE_AUTO
+                else ATTACH_MODE_AUTO)
+        try:
+            self.app.set_attach_mode(mode)
+        except Exception as exc:
+            self._set_status("Attach mode change failed: " + str(exc))
+            return
+        if self._attach_mode_btn is not None:
+            self._attach_mode_btn.configure(text="Attach: " + mode)
+        if self._meta_label is not None:
+            self._meta_label.configure(text=self._meta_text())
+        self._set_status("Attach mode: " + mode +
+                         (" - the process picker is shown for every "
+                          "attach" if mode == ATTACH_MODE_ASK
+                          else " - auto-attach, smallest PID when "
+                               "several instances run"))
+
+    def _detach_or_attach(self):
+        """The MT-12 header action: detach the live target, or (while
+        detached by the user) attach - in 'ask' mode via the process
+        picker, in 'auto' mode by resuming the ordinary wait."""
+        engine = self.engine
+        if engine is None:
+            return
+        if engine.memory is not None:
+            try:
+                engine.pause_attach()
+            except Exception as exc:
+                messagebox.showerror("Detach failed", str(exc),
+                                     parent=self.root)
+                return
+            try:
+                engine.reattach()
+            except Exception as exc:
+                messagebox.showerror("Detach failed", str(exc),
+                                     parent=self.root)
+            return
+        if not engine.attach_paused:
+            # Detached by the target exit, not by the user: the ordinary
+            # wait already runs, there is nothing to resume.
+            return
+        if self.app.attach_mode == ATTACH_MODE_ASK:
+            plan_name = engine.plan["process_name"]
+            try:
+                snapshot = self.app.lister.list_processes()
+            except Exception as exc:
+                self._set_status("Process snapshot failed: "
+                                 + exc.__class__.__name__ + ": " + str(exc))
+                return
+            candidates = tuple(sorted(
+                (e for e in snapshot if names_match(e.name, plan_name)),
+                key=lambda e: e.pid))
+            if candidates:
+                self._open_process_picker(None, candidates,
+                                          origin="attach")
+                return
+        try:
+            engine.resume_attach()
+        except Exception as exc:
+            messagebox.showerror("Attach failed", str(exc),
+                                 parent=self.root)
 
     # ------------------------------------------------------------------
     # table picker
@@ -615,6 +1020,17 @@ class MasterWindow:
                              "this exact process runs. Use Retry load to "
                              "re-arm.")
             return
+        # MT-11 (0.25): in 'ask' mode the target process must be picked
+        # before the load; the choice stays open until that is resolved.
+        if (self.app.attach_mode == ATTACH_MODE_ASK
+                and orch.state == STATE_CHOOSING and orch.choice is not None
+                and orch.choice.snapshot_entries):
+            self._choice_table_rel = rel
+            entry = next(t for t in orch.choice.tables
+                         if t.relative_path == rel)
+            self._open_process_picker(
+                entry, tuple(orch.choice.snapshot_entries), origin="choice")
+            return
         outcome = orch.choose(rel)
         if not outcome.ok:
             self._set_status("Load failed: " + (outcome.error or ""))
@@ -626,6 +1042,13 @@ class MasterWindow:
         entry = next(t for t in self.app.orchestrator.choice.tables
                      if t.relative_path == rel) if self.app.orchestrator.choice \
             else None
+        # Auto mode: the documented smallest-PID rule; pin it so the
+        # session cannot drift to another instance mid-flight.
+        if self.app.orchestrator.choice is not None:
+            self._attach_pin = {"pid": min(
+                e.pid for e in self.app.orchestrator.choice.snapshot_entries)}
+        else:
+            self._attach_pin = {"pid": None}
         self._enter_trainer(outcome.plan, entry)
 
     def _picker_cancel(self):
@@ -661,6 +1084,10 @@ class MasterWindow:
                 "restart the target before manual recovery.",
                 parent=self.root)
         self.app.orchestrator.deactivate()
+        # The MT-10/11 pickers are children of the root that is rebuilt
+        # below; close them explicitly before the teardown.
+        self._close_proc_picker()
+        self._close_table_load_picker()
         for binding in ("<Prior>", "<Next>", "<MouseWheel>", "<Escape>",
                         "<Configure>"):
             self.root.unbind(binding)
@@ -684,6 +1111,8 @@ class MasterWindow:
         if self._picker is not None:
             self._picker.destroy()
             self._picker = None
+        self._close_proc_picker()
+        self._close_table_load_picker()
         self.app.closed = True
         self.root.destroy()
 
@@ -736,7 +1165,7 @@ def run_master(folder=None, *, state_home: str | None = None,
                     poll_ms=poll_ms)
     try:
         app.save_index()
-        app.persist_folder()
+        app.persist_state()
     except Exception:
         pass
     root = tk.Tk()

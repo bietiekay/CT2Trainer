@@ -152,6 +152,7 @@ def source_files():
     files += [ROOT / 'scripts/Build-Native.ps1', ROOT / 'tests/windows/native_probe.py']
     files += list((ROOT / 'tests').glob('test_native_*.py'))
     files += [ROOT / 'tests/native_il2cpp_static_fixtures.py']
+    files += [ROOT / 'tests/native_tk_teardown.py']
     files += [ROOT / 'tests/windows/fixture_target' / n for n in ('fixture_target.c','fixture.ct','fixture_one_shot.ct')]
     for fixture in ('hook_fixture','debug_hook_fixture','clock_fixture','scan_fixture','target_broker_fixture','string_fixture'):
         files += [p for p in (ROOT/'tests/windows'/fixture).glob('*')

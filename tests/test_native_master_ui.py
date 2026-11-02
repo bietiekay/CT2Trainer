@@ -31,6 +31,7 @@ except ImportError:  # pragma: no cover - environment without Tcl/Tk
     tk = None
 
 from ct2trainer import __version__
+from native_tk_teardown import force_root_release
 from ct2trainer.native.engine import (LiveStateConflict,
                                       StaleArtifactsRecoverable,
                                       StaleStateRecoverable)
@@ -295,10 +296,7 @@ class MasterWindowTests(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def tearDown(self):
-        try:
-            self.root.destroy()
-        except tk.TclError:
-            pass
+        force_root_release([self.root], ((self, "root"),))
 
     def _schedule_spy(self, window):
         scheduled = []
@@ -436,7 +434,8 @@ class MasterWindowTests(unittest.TestCase):
             window._poll()
         engine = engine_cls.return_value
         window_cls.assert_called_once_with(
-            self.root, engine, master_back=window._back_to_master)
+            self.root, engine, master_back=window._back_to_master,
+            detach_cb=window._detach_or_attach)
         self.assertIs(window.engine, engine)
         self.assertIsNotNone(window.trainer_window)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
@@ -513,7 +512,8 @@ class MasterWindowTests(unittest.TestCase):
         self.assertIsNone(window._picker_selection)
         engine = engine_cls.return_value
         window_cls.assert_called_once_with(
-            self.root, engine, master_back=window._back_to_master)
+            self.root, engine, master_back=window._back_to_master,
+            detach_cb=window._detach_or_attach)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
         self.assertIs(window.engine, engine)
 
@@ -665,10 +665,7 @@ class TrainerHandoffTests(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def tearDown(self):
-        try:
-            self.root.destroy()
-        except tk.TclError:
-            pass
+        force_root_release([self.root], ((self, "root"),))
 
     def _window_with_engine(self, engine_side_effect, askyesno=True,
                             recover=(True, "Archived stale state")):
@@ -713,7 +710,8 @@ class TrainerHandoffTests(unittest.TestCase):
         self.assertIs(window.engine, engine)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
         window_cls.assert_called_once_with(
-            self.root, engine, master_back=window._back_to_master)
+            self.root, engine, master_back=window._back_to_master,
+            detach_cb=window._detach_or_attach)
         box.showerror.assert_not_called()
 
     def test_recovery_artifacts_declined_fails_start(self):
@@ -740,7 +738,8 @@ class TrainerHandoffTests(unittest.TestCase):
         self.assertIs(window.engine, engine)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
         window_cls.assert_called_once_with(
-            self.root, engine, master_back=window._back_to_master)
+            self.root, engine, master_back=window._back_to_master,
+            detach_cb=window._detach_or_attach)
         self.assertIn("unfinished receipts", str(box.askyesno.call_args))
 
     def test_recovery_failure_shows_error_and_fails_start(self):
@@ -796,10 +795,7 @@ class TrainerWindowMasterBackTests(unittest.TestCase):
         self.root.withdraw()
 
     def tearDown(self):
-        try:
-            self.root.destroy()
-        except tk.TclError:
-            pass
+        force_root_release([self.root], ((self, "root"),))
 
     def test_master_back_defaults_none(self):
         from ct2trainer.native.ui import TrainerWindow
@@ -830,13 +826,13 @@ class TrainerWindowMasterBackTests(unittest.TestCase):
         from ct2trainer.native.ui import TrainerWindow
         root1 = tk.Tk()
         root1.withdraw()
-        self.addCleanup(root1.destroy)
+        self.addCleanup(force_root_release, [root1])
         w1 = TrainerWindow(root1, self._engine(), master_back=lambda: None)
         self.assertIn("\u2b05 Master", _button_texts(w1.header))
 
         root2 = tk.Tk()
         root2.withdraw()
-        self.addCleanup(root2.destroy)
+        self.addCleanup(force_root_release, [root2])
         w2 = TrainerWindow(root2, self._engine())
         self.assertNotIn("\u2b05 Master", _button_texts(w2.header))
 
@@ -878,9 +874,9 @@ class FirstStartAndWaitingViewTests(unittest.TestCase):
         app = _make_app(self.folder, self.state_home)
         self.assertEqual(app.state_path().parent, self.state_home)
 
-    def test_app_persist_folder_writes_loadable_state(self):
+    def test_app_persist_state_writes_loadable_state(self):
         app = _make_app(self.folder, self.state_home)
-        app.persist_folder()
+        app.persist_state()
         stored = load_master_state(app.state_path())
         self.assertIsNotNone(stored)
         self.assertEqual(stored.last_folder, app.folder)
@@ -985,7 +981,7 @@ class FirstStartAndWaitingViewTests(unittest.TestCase):
     def root(self):
         root = tk.Tk()
         root.withdraw()
-        self.addCleanup(root.destroy)
+        self.addCleanup(force_root_release, [root])
         return root
 
 
@@ -1011,15 +1007,8 @@ class Mt67WiringTests(unittest.TestCase):
     def _root(self):
         root = tk.Tk()
         root.withdraw()
-        self.addCleanup(self._destroy_root, root)
+        self.addCleanup(force_root_release, [root])
         return root
-
-    @staticmethod
-    def _destroy_root(root):
-        try:
-            root.destroy()
-        except tk.TclError:
-            pass
 
     def _app_with_plan_entries(self):
         def compiler(entry, name):
@@ -1162,10 +1151,7 @@ class LoadGateWiringTests(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def tearDown(self):
-        try:
-            self.root.destroy()
-        except tk.TclError:
-            pass
+        force_root_release([self.root], ((self, "root"),))
 
     def test_default_compiler_refuses_drifted_table(self):
         app = MasterApp(self.folder, state_home=str(self.state_home),

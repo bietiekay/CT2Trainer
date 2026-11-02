@@ -288,6 +288,84 @@ game-facing action.
   `5f3a66400c2c1775e6fc50ad6bbbc36aa8a6bcf8b58fe56507117dc33683494d`
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP.
+- 0.25 Master Trainer user control (2026-11-02, user request;
+  root-direct on `main`, VERSION 0.25 + CHANGELOG entry in the same
+  change; full main suite 4,258 OK / 30 expected skips): the Master
+  Trainer gains explicit user control over which table loads and
+  which process attaches, plus a detach / user-attach hold. The
+  feature set was evaluated against online all-in-one trainer front
+  ends (OpenForge (openforge-aio), the CE 7.5 process picker as the
+  local read-only behavior reference, LaunchForge / auto-update
+  loaders) and recorded in `master_trainer/ROADMAP.md` ("Online
+  feature evaluation (2026-11-02)"): adopted MT-10/11/12;
+  deliberately deferred (documented) global per-feature hotkeys,
+  auto-update (offline/hash-verified build policy) and concurrent
+  multi-table sessions (documented single-session model). MT-10
+  explicit table load (waiting-view "Load table" header button +
+  per-row "Load this table" context menu; the table loads even while
+  the bound process is not running yet - the plan compiles
+  statically, the engine waits for the process to start; the last
+  explicitly loaded table persists in `master-settings.json` schema
+  2 `last_table` and is visible in the metadata line;
+  `orchestrator.request_load()` stable named refusals
+  not-in-index / table-unreadable / no-process-binding /
+  process-snapshot-failed - a refused load shows a named dialog +
+  status line and never crashes; an explicit load bypasses the
+  auto-load loop guard, but a failed explicit load still records the
+  ordinary (name, PID) suppression). MT-11 process selection +
+  persisted attach mode (new `process_picker.py` pure decision
+  layer: `candidate_processes`, `attach_decision` -> attach-direct /
+  pick / wait, `make_pinned_memory_factory` - the injected factory
+  honors the session PID pin, self-clears the pin once that PID
+  exits, falls back to the ordinary smallest-PID name-based attach;
+  modes "auto" default legacy behavior - no picker, smallest PID -
+  and "ask" - the process picker, one row per running candidate
+  name+PID, shown for every attach incl. a single candidate; the
+  "Attach: auto/ask" toggle persists the mode in
+  `master-settings.json` schema 2, schema-1 documents promote on
+  load with documented defaults last_table=null,
+  attach_mode="auto"; cancel semantics per origin: auto-load pick
+  defers the exact (name, PID) pair (Retry load re-arms), table
+  choice defers like "Not now", explicit load returns to the waiting
+  status, attach after detach stays paused). MT-12 detach / user
+  attach (engine `pause_attach()` / `resume_attach()` /
+  `attach_paused` - while paused the poll attach branch is gated:
+  status "Detached; waiting for user attach", no attach attempts,
+  session state/journals/wishes untouched, debug events
+  attach-paused/attach-resumed, pausing refused with a named error
+  while closed/blocked/busy; "Detach"/"Attach" header button in
+  Master mode only, standalone trainer header byte-identical,
+  `TrainerWindow` optional `detach_cb`; on "Attach": "ask" mode with
+  running candidates opens the process picker (origin "attach") and
+  the chosen PID pins the session, "auto" mode simply resumes the
+  ordinary wait; a target exit while attached is unaffected).
+  Test-harness hardening (test-only, no product code change): new
+  `tests/native_tk_teardown.py` with `force_root_release()` -
+  deterministic Tk-root teardown on the creator thread (destroy +
+  drop named test-side references + forced main-thread gc.collect),
+  applied in all 7 UI test modules (17 root creations); removes the
+  intermittent `Tcl_AsyncDelete: async handler deleted by the wrong
+  thread` abort of the 0.25 full-suite non-verbose runs
+  (2026-11-02) - mechanism verified against the CPython 3.12
+  tkinter source + faulthandler dump: the Tk root/interpreter
+  reference cycle survives destroy() until a cyclic GC on whichever
+  thread allocates finalizes the Tcl interpreter, and a
+  worker-thread GC finalization aborts Tcl off the creator thread
+  (two non-verbose full-suite runs aborted at ~71% with exit 1 and
+  no summary; the verbose full run completed green; a middle-set
+  repro did not reproduce; a clean-tree 0.24 @ `aba8b65` full run
+  had no Tcl fatal). +65 tests (`tests/test_native_master_process_picker.py`
+  16, `tests/test_native_master_explicit_load.py` 13,
+  `tests/test_native_attach_pause.py` 5,
+  `tests/test_native_master_ui_mt12.py` 24, +7 schema-2 tests in
+  `tests/test_native_master_state.py`). Catalog remeasure
+  `blocked-catalog-025-master-ui` (chunked 64x3 audit over the 151
+  reference tables, 2026-11-02): 151/151 loaded, 0 load errors,
+  117,809 total / 116,756 supported / 60,161 staged / 103,607
+  actionable / 12,974 headings / 1,053 blocked - zero delta vs
+  `blocked-catalog-024-sounds` (per-table count/reason/sha changes:
+  0); feature matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143.
 - Latest verified release: 0.24, build
   `native-20261102T102029Z-fe358e35` (cut from `main` @ `a2777ed`,
   2026-11-02), in-build suite 4,193 OK / 30 expected skips,

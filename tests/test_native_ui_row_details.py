@@ -22,6 +22,7 @@ except ImportError:  # pragma: no cover - environment without Tcl/Tk
     scrolledtext = None
 
 from ct2trainer.native.ui import TrainerWindow
+from native_tk_teardown import force_root_release
 from ct2trainer.native.ui_script_view import (
     entry_actions,
     entry_assessment,
@@ -295,7 +296,7 @@ class RowDetailsWiringTests(unittest.TestCase):
         self.root = tk.Tk()
 
     def tearDown(self):
-        self.root.destroy()
+        force_root_release([self.root], ((self, "root"),))
 
     def test_menu_items_lead_with_row_details(self):
         window = _window_stub(self.root, _program_entry())

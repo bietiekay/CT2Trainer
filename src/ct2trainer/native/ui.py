@@ -90,12 +90,20 @@ class TrainerWindow:
     """Canvas renderer over the pure row model; forwards input to the engine."""
 
     def __init__(self, root: tk.Tk, engine: TrainerEngine,
-                 master_back: Callable[[], None] | None = None):
+                 master_back: Callable[[], None] | None = None,
+                 detach_cb: Callable[[], None] | None = None):
         self.root, self.engine = root, engine
         # MT-4 (Master Trainer): optional "back to the Master wait mode"
         # callback.  None keeps the standalone trainer exactly as before
         # (no extra header button); the Master Trainer passes its handler.
         self.master_back = master_back
+        # MT-12 (Master Trainer, 0.25): optional detach/attach handler.  The
+        # Master passes its handler; None keeps the standalone trainer
+        # header byte-identical.  The button reads "Detach" while the
+        # engine is attached and "Attach" while detached (the poll tick
+        # keeps the label in sync).
+        self.detach_cb = detach_cb
+        self.detach_btn: tk.Button | None = None
         self.view = "Switches"
         self.page = 0
         self.drafts = {i: tk.StringVar(value=str(entry.get("value_default") or entry.get("default_value") or ""))
@@ -183,6 +191,15 @@ class TrainerWindow:
         # budget) without restarting the trainer.
         self._button(self.header, "Re-attach", self.on_reattach,
                      width=10).pack(side="right")
+        # MT-12 (Master Trainer, 0.25): explicit detach/attach control.
+        # Present only when the Master passes its handler; the standalone
+        # trainer header stays byte-identical.  The label mirrors the
+        # attach state ("Detach" attached / "Attach" detached) and the
+        # poll tick keeps it in sync.
+        if self.detach_cb is not None:
+            self.detach_btn = self._button(self.header, "Detach",
+                                           self.detach_cb, width=10)
+            self.detach_btn.pack(side="right")
 
     def _chip(self, parent, name):
         return self._button(parent, name, lambda: self.set_view(name),
@@ -1038,6 +1055,13 @@ class TrainerWindow:
         # generated trainer sounds on every toggle, not only UI taps).
         if (self.engine.memory is not None and not was_attached):
             play_sound("attach")
+        # MT-12 (Master Trainer, 0.25): keep the Detach/Attach button label in
+        # sync with the live attach state; standalone trainers have no such
+        # button and skip this.
+        if getattr(self, "detach_btn", None) is not None:
+            label = "Detach" if self.engine.memory is not None else "Attach"
+            if str(self.detach_btn.cget("text")) != label:
+                self.detach_btn.configure(text=label)
         for toggle_id, on in self.engine.pop_hotkey_ui_toggles():
             play_sound("on" if on else "off")
         self._status_text.set(self.engine.status)

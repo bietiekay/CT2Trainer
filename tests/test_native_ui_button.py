@@ -25,6 +25,7 @@ except ImportError:  # pragma: no cover - environment without Tcl/Tk
     tk = None
 
 from ct2trainer.native.ui import TrainerWindow
+from native_tk_teardown import force_root_release
 
 
 @unittest.skipUnless(tk is not None, 'tkinter required for real widget construction')
@@ -33,7 +34,7 @@ class UiButtonKwargTests(unittest.TestCase):
         self.root = tk.Tk()
 
     def tearDown(self):
-        self.root.destroy()
+        force_root_release([self.root], ((self, "root"),))
 
     def test_chip_signature_does_not_collide_with_button_defaults(self):
         # The exact call _chip issues (ui.py): width=9, height=2,

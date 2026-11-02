@@ -32,6 +32,7 @@ except ImportError:  # pragma: no cover - environment without Tcl/Tk
     tk = None
 
 from ct2trainer.native.compiler import compile_table
+from native_tk_teardown import force_root_release
 from ct2trainer.native.engine import NativeRuntimeError
 from ct2trainer.native.ui import TrainerWindow
 from ct2trainer.native.ui_rows import (ROW_SECTION, ROW_SWITCH,
@@ -159,7 +160,7 @@ class StagedTapGuardTests(unittest.TestCase):
         self.root = tk.Tk()
 
     def tearDown(self):
-        self.root.destroy()
+        force_root_release([self.root], ((self, "root"),))
 
     def test_pending_value_tap_refuses_editor_and_names_provider(self):
         window = _window_stub(self.root, _staged_entry())

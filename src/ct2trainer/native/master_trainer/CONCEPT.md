@@ -1,11 +1,11 @@
 # CT2Trainer Master Trainer — Concept
 
 **Status:** MT-1..MT-5 merged into `main` with the 0.21 release (merge
-`9a725a8`, 2026-10-31); MT-6..MT-8 (the full roadmap) implemented on
-branch `native-0.23-master-roadmap` (2026-11-01) together with the
-waiting-view observability work and the ask-on-first-start folder
-persistence. Design and implementation notes; the working plan is
-[ROADMAP.md](ROADMAP.md).
+`9a725a8`, 2026-10-31); MT-6..MT-9 (the full roadmap) with the 0.23
+release (2026-11-01); MT-10..MT-12 (user control: explicit table
+load, persisted attach mode + process picker, detach / user attach)
+on `main` with the 0.25 release (2026-11-02). Design and
+implementation notes; the working plan is [ROADMAP.md](ROADMAP.md).
 
 ## What it is
 
@@ -66,14 +66,19 @@ auto-load/handoff loop around that existing engine.
 
 The orchestrator hands the compiled plan to `TrainerWindow` on the same
 Tk root — the identical row grid, filters, status line, hotkeys, saved
-wishes and state journal of the standalone trainer. The only visible
-difference is one extra header button, “⬅ Master”, which:
+wishes and state journal of the standalone trainer. The visible
+differences from the standalone trainer are two extra header buttons:
+“⬅ Master”, which:
 
 1. closes the engine cleanly (`engine.close()`; the state and session
    journals are preserved on an unclean close, exactly as the standalone
    trainer does),
 2. destroys the trainer widgets,
-3. rebuilds the waiting view in the same window and resumes polling.
+3. rebuilds the waiting view in the same window and resumes polling;
+
+and — 0.25 (MT-12) — the “Detach” / “Attach” button, which holds the
+live target (no auto re-attach; see User control below) and re-attaches
+to a user-chosen process in “ask” mode.
 
 Closing the window (X) in either mode closes the whole app: in trainer
 mode it first runs the engine close, so no state is orphaned.
@@ -171,6 +176,49 @@ refusal is visible, and the session continues without it. Applying value
 defaults stays a separate explicit engine write (unchanged
 `settings_model` contract).
 
+## User control (0.25: MT-10 / MT-11 / MT-12)
+
+User request 2026-11-02 (evaluated against online all-in-one trainers
+and the CE 7.5 process picker — the evaluation record is in
+ROADMAP.md, “Online feature evaluation”): detach the trainer, choose
+which table runs against which process, and remember the
+configuration.
+
+- **MT-10 explicit table load.** The “Load table” header button and the
+  per-row context menu (“Load this table”) load the table the user
+  picked, even while the bound process is not running yet (the plan
+  compiles statically; the engine waits for the process to start).
+  Named refusals (`not-in-index` / `table-unreadable` /
+  `no-process-binding` / `process-snapshot-failed`) land in the status
+  line + a named dialog — never a crash. An explicit load bypasses the
+  auto-load loop guard (the user asked for this table), but a failed
+  load still records the ordinary (name, PID) suppression for the
+  auto-load loop. The last explicitly loaded table persists in the
+  state home (`master-settings.json`, schema 2) and is visible in the
+  metadata line.
+- **MT-11 process selection + persisted attach mode.** “auto”
+  (default, legacy behavior): no picker ever, the documented
+  smallest-PID rule. “ask”: the process picker (one row per running
+  candidate, name + PID) is shown for every attach — even a single
+  candidate. The “Attach: auto/ask” toggle button persists the mode
+  (schema 2; schema-1 documents promote on load with the documented
+  defaults). The chosen PID pins the session through the injected
+  memory factory; the pin self-clears once that process exits and the
+  session falls back to the ordinary name-based attach (smallest PID).
+  Cancel semantics depend on the origin: an auto-load pick defers the
+  exact (name, PID) pair (Retry load re-arms), a table choice defers
+  exactly like “Not now”, an explicit load returns to the waiting
+  status, and an attach after a detach stays paused.
+- **MT-12 detach / user attach.** The “Detach” header button (Master
+  mode only; the standalone trainer header stays byte-identical) holds
+  the engine's attach branch: no auto re-attach, session state,
+  journals and wishes untouched, the status line says
+  “Detached; waiting for user attach”. The button turns into
+  “Attach”: in “ask” mode the process picker offers the running
+  candidates and the chosen PID is pinned on resume; in “auto” mode
+  the ordinary wait simply resumes. A target exit while attached is
+  unaffected — the engine keeps waiting as before.
+
 ## CLI
 
 ```
@@ -223,3 +271,8 @@ passed to the MT-8 PyInstaller freeze).
 - No cross-machine index sync, no multi-root index, no hot-reload of a
   loaded table while its trainer session is active (return to the
   Master, then re-load).
+- No global per-feature hotkeys, no auto-update, no concurrent
+  multi-table sessions (recorded with the online feature evaluation in
+  ROADMAP.md: the engine already supports per-record hotkeys, the
+  build policy is offline/hash-verified, and the documented model is
+  one active session at a time).

@@ -1,11 +1,13 @@
-"""Master state document (MT: ask on first start).
+"""Master state document (MT: ask on first start; 0.25 preferences).
 
 Covers the ``master_state`` persistence module end-to-end: canonical
 byte-stable serialization, strict checksum-bound load, every fail-closed
 refusal (malformed JSON, invalid shape, tampered checksum, foreign schema,
 unknown fields, out-of-bounds last_folder, size limit), tolerant
 ``load_master_state`` (absent / refused -> None), and
-``save_master_state`` directory creation.
+``save_master_state`` directory creation.  Schema 2 (0.25) carries the
+MT-10/11 preferences (last_table, attach_mode); schema-1 documents are
+promoted on load with the documented defaults.
 """
 from __future__ import annotations
 
@@ -16,6 +18,8 @@ import unittest
 from pathlib import Path
 
 from ct2trainer.native.master_trainer.master_state import (
+    ATTACH_MODE_ASK,
+    ATTACH_MODE_AUTO,
     MASTER_STATE_FILENAME,
     MASTER_STATE_SCHEMA,
     MAX_MASTER_STATE_BYTES,
@@ -39,7 +43,9 @@ class MasterStateSerializeTests(unittest.TestCase):
         document = json.loads(raw)
         self.assertEqual(set(document), {"payload", "sha256"})
         self.assertEqual(document["payload"],
-                         {"schema": MASTER_STATE_SCHEMA, "last_folder": None})
+                         {"schema": MASTER_STATE_SCHEMA, "last_folder": None,
+                          "last_table": None,
+                          "attach_mode": ATTACH_MODE_AUTO})
         canonical = json.dumps(document["payload"], sort_keys=True,
                                separators=(",", ":"), allow_nan=False,
                                ensure_ascii=True).encode("utf-8")
@@ -55,6 +61,66 @@ class MasterStateSerializeTests(unittest.TestCase):
         self.assertEqual(master_state_to_bytes(_state(folder)), raw)
         # Canonical trailing newline (same discipline as the tables index).
         self.assertTrue(raw.endswith(b"\n"))
+
+    # -- schema 2 (0.25) preferences -------------------------------------------
+
+    @staticmethod
+    def _document(payload):
+        """One checksum-bound document envelope around a raw payload."""
+        canonical = json.dumps(payload, sort_keys=True,
+                               separators=(",", ":"), allow_nan=False,
+                               ensure_ascii=True).encode("utf-8")
+        return (json.dumps({"payload": payload,
+                            "sha256": hashlib.sha256(canonical).hexdigest()})
+                .encode("utf-8"))
+
+    def test_state_with_preferences_roundtrip(self):
+        state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
+                            last_table="sub\\gamea.ct",
+                            attach_mode=ATTACH_MODE_ASK)
+        raw = master_state_to_bytes(state)
+        self.assertEqual(master_state_from_bytes(raw), state)
+
+    def test_legacy_schema1_document_promotes_on_load(self):
+        payload = {"schema": 1, "last_folder": "C:\\tables"}
+        state = master_state_from_bytes(self._document(payload))
+        self.assertEqual(state, MasterState(
+            MASTER_STATE_SCHEMA, "C:\\tables", last_table=None,
+            attach_mode=ATTACH_MODE_AUTO))
+
+    def test_to_bytes_refuses_legacy_schema(self):
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_to_bytes(MasterState(schema=1, last_folder=None))
+        self.assertIn("schema", str(ctx.exception))
+
+    def test_from_bytes_refuses_bad_attach_mode(self):
+        payload = {"schema": MASTER_STATE_SCHEMA, "last_folder": None,
+                   "last_table": None, "attach_mode": "sometimes"}
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(payload))
+        self.assertIn("attach_mode", str(ctx.exception))
+
+    def test_from_bytes_refuses_malformed_last_table(self):
+        for bad in (123, "", ["a.ct"], {"t": 1}):
+            payload = {"schema": MASTER_STATE_SCHEMA, "last_folder": None,
+                       "last_table": bad, "attach_mode": ATTACH_MODE_AUTO}
+            with self.assertRaises(MasterStateRefusal) as ctx:
+                master_state_from_bytes(self._document(payload))
+            self.assertIn("last_table", str(ctx.exception))
+
+    def test_from_bytes_refuses_oversized_last_table(self):
+        payload = {"schema": MASTER_STATE_SCHEMA, "last_folder": None,
+                   "last_table": "x" * 5000,
+                   "attach_mode": ATTACH_MODE_AUTO}
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(payload))
+        self.assertIn("last_table", str(ctx.exception))
+
+    def test_from_bytes_refuses_schema1_with_schema2_fields(self):
+        payload = {"schema": 1, "last_folder": None, "last_table": "a.ct"}
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(payload))
+        self.assertIn("unknown fields", str(ctx.exception))
 
     def test_to_bytes_refuses_non_state_document(self):
         with self.assertRaises(MasterStateRefusal):

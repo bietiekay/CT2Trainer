@@ -1,12 +1,18 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-02. **0.24 released** (trainer tick
-sounds, user field request 2026-11-01: the generated trainer plays
-the tick character of the original native trainer generator - a
-distinct double tick on a confirmed (re-)attach plus high/low single
-ticks on every confirmed on/off toggle (row switch, group heading,
-hotkey dispatch); clean-room synthesis, no CE asset bytes; branch
-`native-0.24-trainer-sounds`; see the 0.24 section below).
+**Updated:** 2026-11-02. **0.25 content on main** (Master Trainer
+user control MT-10/11/12, user request 2026-11-02: explicit table
+load, process picker + persisted attach mode, detach/user attach;
+plus the online feature evaluation record in
+`master_trainer/ROADMAP.md` and the Tcl test-harness hardening
+(`tests/native_tk_teardown.py`, test-only); +65 tests; full main
+suite 4,258 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-025-master-ui`; see the 0.25 section below). The
+0.25 build has not been cut yet - the latest verified release
+remains **0.24** (build `native-20261102T102029Z-fe358e35`, cut
+from `main` @ `a2777ed`, 2026-11-02; trainer tick sounds, user
+field request 2026-11-01; branch `native-0.24-trainer-sounds`; see
+the 0.24 section below).
 **Latest verified release:** 0.24, build
 `native-20261102T102029Z-fe358e35` (built from `main` at `a2777ed`,
 2026-11-02): the 0.24 trainer tick sounds release (see the 0.24
@@ -353,6 +359,114 @@ CE asset bytes are copied.
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
 
+**0.25 content on main (2026-11-02, root-direct on `main`): Master
+Trainer user control MT-10/11/12 (user request 2026-11-02).** The
+Master Trainer now gives the user explicit control over which table
+loads and which process attaches - and lets the user detach and
+re-attach on demand. The feature set was evaluated against online
+all-in-one trainer front ends (OpenForge (openforge-aio), the CE 7.5
+process picker as a local read-only behavior reference,
+LaunchForge/auto-update loaders); the evaluation is recorded in
+`src/ct2trainer/native/master_trainer/ROADMAP.md` ("Online feature
+evaluation (2026-11-02)"). Adopted: MT-10/11/12. Deliberately
+deferred (documented): global per-feature hotkeys, auto-update
+(offline/hash-verified build policy), and concurrent multi-table
+sessions (documented single-session model).
+
+- **MT-10 (explicit table load):** a "Load table" header button in
+  the waiting view and a per-row "Load this table" context menu.
+  The table loads even while the bound process is not running yet
+  (the plan compiles statically; the engine waits for the process to
+  start). The last explicitly loaded table persists in the state
+  home (`master-settings.json` schema 2, `last_table`) and is visible
+  in the metadata line. `orchestrator.request_load()` carries stable
+  named refusals (`not-in-index` / `table-unreadable` /
+  `no-process-binding` / `process-snapshot-failed`): a refused load
+  shows a named dialog + status line and never crashes; an explicit
+  load bypasses the auto-load loop guard, but a failed explicit load
+  still records the ordinary (name, PID) suppression.
+- **MT-11 (process selection + persisted attach mode):** new
+  `process_picker.py` - a pure decision layer (`candidate_processes`,
+  `attach_decision` -> attach-direct / pick / wait,
+  `make_pinned_memory_factory` - the injected factory honors the
+  session PID pin, self-clears the pin once that PID exits, and
+  falls back to the ordinary smallest-PID name-based attach). Attach
+  modes: "auto" (default, legacy behavior - no picker, smallest PID)
+  and "ask" (the process picker, one row per running candidate
+  name + PID, is shown for every attach, even a single candidate).
+  The "Attach: auto/ask" toggle button persists the mode
+  (`master-settings.json` schema 2; schema-1 documents promote on
+  load with the documented defaults `last_table=null`,
+  `attach_mode="auto"`). Cancel semantics per origin: an auto-load
+  pick defers the exact (name, PID) pair (Retry load re-arms), a
+  table choice defers exactly like "Not now", an explicit load
+  returns to the waiting status, and an attach after detach stays
+  paused.
+- **MT-12 (detach / user attach):** engine `pause_attach()` /
+  `resume_attach()` / `attach_paused` - while paused the poll attach
+  branch is gated (status "Detached; waiting for user attach", no
+  attach attempts, session state/journals/wishes untouched; debug
+  events `attach-paused` / `attach-resumed`; pausing refused with a
+  named error while closed/blocked/busy). The new "Detach"/"Attach"
+  header button exists in Master mode only (the standalone trainer
+  header stays byte-identical; `TrainerWindow` gains the optional
+  `detach_cb`). On "Attach": "ask" mode with running candidates
+  opens the process picker (origin "attach") and the chosen PID
+  pins the session, then the hold resumes; "auto" mode simply
+  resumes the ordinary wait. A target exit while attached is
+  unaffected.
+- **Tcl test-harness hardening (test-only change, no product code
+  change):** new `tests/native_tk_teardown.py` with
+  `force_root_release()` - deterministic Tk-root teardown on the
+  creator thread (destroy + drop named test-side references + forced
+  main-thread `gc.collect`) applied in all 7 UI test modules (17
+  root creations: `test_native_master_ui.py`,
+  `test_native_master_ui_mt12.py`,
+  `test_native_sc2_crash_observability.py`,
+  `test_native_staged_options_ui.py`, `test_native_trainer_sounds.py`,
+  `test_native_ui_button.py`, `test_native_ui_row_details.py`). It
+  removes the intermittent `Tcl_AsyncDelete: async handler deleted
+  by the wrong thread` abort observed in the 0.25 full-suite
+  non-verbose runs (2026-11-02). Mechanism (verified against the
+  CPython 3.12 tkinter source + faulthandler dump): `Tk.destroy()`
+  destroys the toplevel window and deletes the widgets' Tcl
+  commands, but the underlying Tcl interpreter (the `_tkinter`
+  Tkapp behind `root.tk`) is only released when the Python Tk
+  object is deallocated; the root/interpreter reference cycle (the
+  `after` poll callback and button commands hold bound methods
+  inside the interpreter; the bound methods hold the window; the
+  children/master bookkeeping holds the root) survives until the
+  next cyclic GC, which runs on whatever thread allocates; when a
+  worker thread's GC cycle finalizes the interpreter, Tcl aborts the
+  process off the creator thread. The fault dump showed the fatal
+  thread as a freshly started thread running the GC collector while
+  the main test thread was mid NASM assembly in
+  `test_native_record_hotkeys`. Evidence: two full-suite
+  non-verbose runs aborted with the Tcl fatal (exit 1, no summary,
+  ~71% position); the verbose full run completed green (Ran 4258,
+  OK, skipped=30); a middle-set repro (`test_native_master_ui` +
+  `test_native_master_ui_mt12` + `test_native_os_hotkeys` +
+  `test_native_rearm` + `test_native_record_hotkeys`, x10) did not
+  reproduce; a clean-tree (0.24 @ `aba8b65`) full run completed
+  without the Tcl fatal.
+- **Evidence:** +65 tests (`tests/test_native_master_process_picker.py`
+  16, `tests/test_native_master_explicit_load.py` 13,
+  `tests/test_native_attach_pause.py` 5,
+  `tests/test_native_master_ui_mt12.py` 24, +7 schema-2 tests in
+  `tests/test_native_master_state.py`); full main suite
+  **4,258 OK / 30 expected skips** (2026-11-02); catalog remeasure
+  `blocked-catalog-025-master-ui` (chunked 64x3 audit over the 151
+  reference tables, 2026-11-02): 151/151 loaded, 0 load errors,
+  117,809 total / 116,756 supported / 60,161 staged / 103,607
+  actionable / 12,974 headings / 1,053 blocked - **zero delta** vs
+  `blocked-catalog-024-sounds` (per-table count/reason/sha changes:
+  0). Feature matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION 0.25 +
+  CHANGELOG 0.25 entry in the same change (root-direct on `main`,
+  versioning rule). The 0.25 build is pending cut - the latest
+  verified release remains 0.24 (build
+  `native-20261102T102029Z-fe358e35`).
+
 **0.23 Master Trainer roadmap complete (2026-11-01, branch
 `native-0.23-master-roadmap` @ `b2d0344` + load-gate branch
 `native-0.23-load-gate` @ `98a9226`; `main` @ `6e3ec98`; released in
@@ -486,7 +600,7 @@ defines the work and completion gates.
 | Area | Achieved | Still needed |
 | --- | --- | --- |
 | Independently built product | The 0.23 source and Windows portable ZIPs passed the offline build (build `native-20261101T145310Z-a160bae4`) with **4,176 tests OK, 30 expected skips**, and `ce_inputs: []`; the MT-9 gate tests + the placeholder-heading / SC2 hotkey-bridge field-fix test files + the 0.23 changelog entry ship in the source ZIP; the `master_trainer` subpackage + user-provided `Master_Trainer` icons ship in the source ZIP, and the frozen `CT2Trainer-Master.exe` ships in the portable ZIP next to the converter; the 0.20/0.20.1 branding icons remain embedded in the frozen converter EXE and the generated-trainer template EXE (verified by PE icon-resource extraction against the committed ICOs). | Keep the clean-room build and release checks green after each change. |
-| Master Trainer (released in 0.21; roadmap complete in the 0.23 release) | Full MT-1..MT-9 feature set on `main` (branch `native-0.20-master-trainer` merged at `9a725a8`; branch `native-0.23-master-roadmap` merged at `b2d0344`; load-gate branch `native-0.23-load-gate` merged at `98a9226`): incremental table index (folder + sub-folders, sha256-bound JSON in the state home, foreign-schema/tamper refusal), cross-platform read-only process watch, pure orchestrator (unique-match auto-load, multi-table picker, fail-closed loop guard, live `running` tick feedback, no picker re-issue for a failed pair), waiting UI (metadata line, live "Running now" line, running/PID tree markers) + handoff into the exact standalone trainer with `master_back`, per-table on/off persistence via the engine state store, MT-6 per-table settings sidecar keyed by table content sha256 (restore-on-load / save-on-close, named refusals), MT-7 documented SteamOS/CheatDeck target route (named fail-closed non-Windows attach refusals; NOT a Linux attach backend), MT-8 frozen `CT2Trainer-Master.exe` in every build, MT-9 load-time table compatibility & size gate (stable named refusals, graceful named load failure even when the target process was found, no hot-retry, Rescan / Retry re-arm), ask-on-first-start table-folder parameter (`master-settings.json` in the state home; explicit folder argument wins), `master` CLI subcommand, `Master_Trainer` icon contract. 306 master-trainer tests; full main suite 4,176 OK / 30 expected skips; catalog zero delta `blocked-catalog-023-field-fixes` (all three 0.23 remeasures). | User field test of the 0.23 build (Master window + frozen `CT2Trainer-Master.exe`, incl. a non-Windows waiting-view run); MT-7 owned Linux attach backend + the real Deck protocol run with exact build hashes (root/user field work). |
+| Master Trainer (released in 0.21; roadmap complete in the 0.23 release; user control MT-10/11/12 as 0.25 content on main) | Full MT-1..MT-12 feature set on `main` (branch `native-0.20-master-trainer` merged at `9a725a8`; branch `native-0.23-master-roadmap` merged at `b2d0344`; load-gate branch `native-0.23-load-gate` merged at `98a9226`): incremental table index (folder + sub-folders, sha256-bound JSON in the state home, foreign-schema/tamper refusal), cross-platform read-only process watch, pure orchestrator (unique-match auto-load, multi-table picker, fail-closed loop guard, live `running` tick feedback, no picker re-issue for a failed pair), waiting UI (metadata line, live "Running now" line, running/PID tree markers) + handoff into the exact standalone trainer with `master_back`, per-table on/off persistence via the engine state store, MT-6 per-table settings sidecar keyed by table content sha256 (restore-on-load / save-on-close, named refusals), MT-7 documented SteamOS/CheatDeck target route (named fail-closed non-Windows attach refusals; NOT a Linux attach backend), MT-8 frozen `CT2Trainer-Master.exe` in every build, MT-9 load-time table compatibility & size gate (stable named refusals, graceful named load failure even when the target process was found, no hot-retry, Rescan / Retry re-arm), ask-on-first-start table-folder parameter (`master-settings.json` in the state home; explicit folder argument wins), `master` CLI subcommand, `Master_Trainer` icon contract. 306 master-trainer tests; full main suite 4,176 OK / 30 expected skips; catalog zero delta `blocked-catalog-023-field-fixes` (all three 0.23 remeasures). 0.25 content on main (2026-11-02, root-direct): MT-10 explicit table load, MT-11 process picker + persisted attach mode, MT-12 detach / user attach (details in the 0.25 section above); online feature evaluation record in `master_trainer/ROADMAP.md` (MT-10/11/12 adopted; global hotkeys / auto-update / concurrent multi-table sessions deliberately deferred); Tcl test-harness hardening (test-only `tests/native_tk_teardown.py`). 371 master-trainer tests (306 + 65: 16 process picker + 13 explicit load + 5 attach pause + 24 master UI MT-12 + 7 schema-2); full main suite 4,258 OK / 30 expected skips; catalog zero delta `blocked-catalog-025-master-ui` (vs `blocked-catalog-024-sounds`). | User field test of the 0.25 content (explicit table load / process picker / detach; the 0.25 build is pending cut - 0.24 remains the latest verified build); MT-7 owned Linux attach backend + the real Deck protocol run with exact build hashes (root/user field work). |
 | Synthetic feature coverage | **42/42** declared feature classes and **7,475/7,475** action weight covered across **30 synthetic tables**. | This metric does not establish support for every original table or a real game effect. Add synthetic cases when a new behavior is found. |
 | Original reference tables | All **151/151** table paths load after the RT-3 legacy-binary CT loader (2026-10-23). Local static catalog (0.21 RT-5 item B/E remeasure, run `blocked-catalog-020-rt5-be`, 2026-10-31, frozen manifest `gap_inventory/reference-manifest.json`; +175 supported vs `blocked-catalog-020-icons` - the 175 `CodeEntry` records of the 22 CheatCodes tables now `code_patch` plan rows, zero newly blocked, zero reason changes) classifies **116,756 supported**, including **60,161 staged**, out of **117,809 plan entries**. | **1,053 entries are blocked** (was 1,351 after RT-4.3, 1,743 after RT-4.5, 1,778 after RT-4.6, 1,807 after RT-4.4, 1,858 after RT-4.1/RT-3 and 2,698 before RT-4.1; RT-4.2 cleared the last 298 rows - R4 Lua-runtime symbol providers re-staged, R7 GetAsyncKeyState bare calls, keep-first scope fallback; zero newly blocked). The 0.19 field-fix cycle changed no catalog row (no corpus table uses `moAlwaysHideChildren`). RT-5 item B (0.21) added exactly 175 supported `code_patch` rows with no blocked or staged movement; item E is runtime-only (zero catalog delta). Staged entries still need their runtime conditions proved. |
 | Observed game effects | Owned fixtures and selected runtime chains have tests. | The AP-11 campaign has **0 of 6,143** game effects confirmed. Original-table behavior must be checked against pinned game builds or explicitly equivalent owned targets. |
