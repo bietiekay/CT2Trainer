@@ -128,15 +128,17 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-02, 0.24 content on main - trainer tick
-sounds (user field request 2026-11-01; clean-room in-code tick
+**CT2Trainer (status 2026-11-02, 0.24 released (trainer tick
+sounds - user field request 2026-11-01; clean-room in-code tick
 synthesis for on/off/attach in `trainer_sounds.py`, `ui.py` rewired
 (row switch + group heading toggle + attach-success transition in
 `TrainerWindow.poll()`), `engine.py` `pop_hotkey_ui_toggles()`
 surfaces confirmed hotkey activation toggles, branch
 `native-0.24-trainer-sounds`, +21 tests, full main suite 4,193 OK /
-30 expected skips, zero catalog delta `blocked-catalog-024-sounds`);
-0.23 released (full Master
+30 expected skips, zero catalog delta `blocked-catalog-024-sounds`;
+the 0.24 build `native-20261102T102029Z-fe358e35` was cut from
+`main` @ `a2777ed` - in-build suite 4,193 OK / 30 expected skips,
+`ce_inputs: []`); superseded 0.23 released (full Master
 Trainer roadmap: MT-6 per-table settings sidecar (content-sha keyed,
 restore-on-load / save-on-close) + MT-7 documented SteamOS/CheatDeck
 target route (named fail-closed non-Windows attach refusals, NOT a
@@ -151,7 +153,19 @@ dependency skip 28c9b57 +10 tests; SC2 hotkey-bridge field fix
 `native-0.23-load-gate` @ 98a9226, main @ 6e3ec98, +115 tests, full
 main suite 4,176 OK / 30 expected skips, zero catalog delta
 `blocked-catalog-023-field-fixes`); latest
-verified release 0.23 (build
+verified release 0.24 (build
+`native-20261102T102029Z-fe358e35` cut from `main` @ `a2777ed`,
+2026-11-02 - the 0.24 trainer tick sounds release, in-build suite
+4,193 OK / 30 expected skips, `ce_inputs: []`, source ZIP
+`CT2Trainer-0.24-source.zip` sha256
+dfdd8cfcca90a2789bf544d8f8de4e34941067feeb2b32ce8d550f98e5bc4eb6
+14,298,696 bytes, portable ZIP
+`CT2Trainer-0.24-windows-portable.zip` sha256
+12262cf16e906c3811ade0a8c582b7a1057c834a3110aff004dfd13b3067e7ab
+49,618,009 bytes, frozen `CT2Trainer-Master.exe` (sha256
+5f3a66400c2c1775e6fc50ad6bbbc36aa8a6bcf8b58fe56507117dc33683494d,
+16,896,995 bytes) in the run folder, the payload inventory and the
+portable ZIP); superseded 0.23 (build
 `native-20261101T145310Z-a160bae4` cut from `main` @ `6e3ec98` - the
 0.23 Master Trainer roadmap release, in-build suite 4,176 OK / 30
 expected skips, `ce_inputs: []`, source ZIP
@@ -340,7 +354,23 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261101T145310Z-a160bae4` (0.23,
+**Latest verified build:** `native-20261102T102029Z-fe358e35` (0.24,
+cut from `main` @ `a2777ed`; in-build suite 4,193 OK / 30 expected
+skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; source ZIP `CT2Trainer-0.24-source.zip` sha256
+`dfdd8cfcca90a2789bf544d8f8de4e34941067feeb2b32ce8d550f98e5bc4eb6`
+(14,298,696 bytes) - carries `trainer_sounds.py`, the
+`test_native_trainer_sounds.py` test file (supersedes the removed
+`test_native_ui_tone.py`) and the final 0.24 changelog entry - and
+portable ZIP `CT2Trainer-0.24-windows-portable.zip` sha256
+`12262cf16e906c3811ade0a8c582b7a1057c834a3110aff004dfd13b3067e7ab`
+(49,618,009 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `5f3a66400c2c1775e6fc50ad6bbbc36aa8a6bcf8b58fe56507117dc33683494d`,
+16,896,995 bytes) ships next to the converter)).
+0.24 ships the trainer tick sounds (user field request 2026-11-01;
+clean-room in-code tick synthesis for on/off/attach; the tick
+sounds are untested on a live game session - field test pending).
+Superseded 0.23 build: `native-20261101T145310Z-a160bae4` (0.23,
 cut from `main` @ `6e3ec98`; in-build suite 4,176 OK / 30 expected
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
 gate; source ZIP `CT2Trainer-0.23-source.zip` sha256

@@ -276,7 +276,28 @@ game-facing action.
   `blocked-catalog-023-field-fixes` (151/151 loaded, 117,809 total /
   116,756 supported / 60,161 staged / 1,053 blocked / 0 load errors;
   per-table changes 0).
-- Latest verified release: 0.23, build
+  Build `native-20261102T102029Z-fe358e35` (2026-11-02, cut from
+  `main` @ `a2777ed`): in-build suite 4,193 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.24-source.zip` sha256
+  `dfdd8cfcca90a2789bf544d8f8de4e34941067feeb2b32ce8d550f98e5bc4eb6`
+  (14,298,696 bytes), portable ZIP
+  `CT2Trainer-0.24-windows-portable.zip` sha256
+  `12262cf16e906c3811ade0a8c582b7a1057c834a3110aff004dfd13b3067e7ab`
+  (49,618,009 bytes); frozen `CT2Trainer-Master.exe` sha256
+  `5f3a66400c2c1775e6fc50ad6bbbc36aa8a6bcf8b58fe56507117dc33683494d`
+  (16,896,995 bytes) in the run folder, the payload inventory and
+  the portable ZIP.
+- Latest verified release: 0.24, build
+  `native-20261102T102029Z-fe358e35` (cut from `main` @ `a2777ed`,
+  2026-11-02), in-build suite 4,193 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.24-source.zip` sha256
+  `dfdd8cfcca90a2789bf544d8f8de4e34941067feeb2b32ce8d550f98e5bc4eb6`
+  (14,298,696 bytes), portable ZIP
+  `CT2Trainer-0.24-windows-portable.zip` sha256
+  `12262cf16e906c3811ade0a8c582b7a1057c834a3110aff004dfd13b3067e7ab`
+  (49,618,009 bytes); superseded 0.23, build
   `native-20261101T145310Z-a160bae4` (cut from `main` @ `6e3ec98`,
   2026-11-01), in-build suite 4,176 OK / 30 expected skips,
   `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;

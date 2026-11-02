@@ -1,13 +1,25 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-01. **0.24 content on `main`** (trainer tick
+**Updated:** 2026-11-02. **0.24 released** (trainer tick
 sounds, user field request 2026-11-01: the generated trainer plays
 the tick character of the original native trainer generator - a
 distinct double tick on a confirmed (re-)attach plus high/low single
 ticks on every confirmed on/off toggle (row switch, group heading,
 hotkey dispatch); clean-room synthesis, no CE asset bytes; branch
 `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.23, build
+**Latest verified release:** 0.24, build
+`native-20261102T102029Z-fe358e35` (built from `main` at `a2777ed`,
+2026-11-02): the 0.24 trainer tick sounds release (see the 0.24
+section below) - in-build suite 4,193 OK / 30 expected skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+source ZIP `CT2Trainer-0.24-source.zip` sha256
+`dfdd8cfcca90a2789bf544d8f8de4e34941067feeb2b32ce8d550f98e5bc4eb6`
+(14,298,696 bytes), portable ZIP
+`CT2Trainer-0.24-windows-portable.zip` sha256
+`12262cf16e906c3811ade0a8c582b7a1057c834a3110aff004dfd13b3067e7ab`
+(49,618,009 bytes), frozen `CT2Trainer-Master.exe` (sha256
+`5f3a66400c2c1775e6fc50ad6bbbc36aa8a6bcf8b58fe56507117dc33683494d`)
+next to the converter. Superseded 0.23, build
 `native-20261101T145310Z-a160bae4` (built from `main` at `6e3ec98`,
 2026-11-01): the 0.23 Master Trainer roadmap release - MT-6/MT-7/
 MT-8/MT-9 (frozen `CT2Trainer-Master.exe` now part of every build,
@@ -327,6 +339,19 @@ CE asset bytes are copied.
   vs `blocked-catalog-023-field-fixes` (151/151 loaded, 117,809 total
   / 116,756 supported / 60,161 staged / 1,053 blocked / 0 load
   errors; per-table changes 0).
+  Build `native-20261102T102029Z-fe358e35` (2026-11-02, cut from
+  `main` @ `a2777ed`): in-build suite 4,193 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.24-source.zip` sha256
+  `dfdd8cfcca90a2789bf544d8f8de4e34941067feeb2b32ce8d550f98e5bc4eb6`
+  (14,298,696 bytes), portable ZIP
+  `CT2Trainer-0.24-windows-portable.zip` sha256
+  `12262cf16e906c3811ade0a8c582b7a1057c834a3110aff004dfd13b3067e7ab`
+  (49,618,009 bytes), frozen `CT2Trainer-Master.exe` sha256
+  `5f3a66400c2c1775e6fc50ad6bbbc36aa8a6bcf8b58fe56507117dc33683494d`
+  (16,896,995 bytes) in the run folder, the payload inventory and
+  the portable ZIP. Field test of the tick sounds on a live game
+  is pending.
 
 **0.23 Master Trainer roadmap complete (2026-11-01, branch
 `native-0.23-master-roadmap` @ `b2d0344` + load-gate branch
