@@ -41,8 +41,7 @@ parity).
   recording contract, real-Tk attach-transition / manual-toggle /
   group-toggle / hotkey-toggle wiring); `tests/test_native_ui_tone.py`
   (4 tests) superseded and removed with the old helper.  Full main
-  suite 4,193 OK / 30 expected skips on `main` @ (commit of this
-  change), zero catalog delta vs `blocked-catalog-023-field-fixes`
+  suite 4,193 OK / 30 expected skips on `main` @ `60dbc21` (2026-11-02), zero catalog delta vs `blocked-catalog-023-field-fixes`
   (151/151 loaded, 117,809 total / 116,756 supported / 60,161 staged /
   1,053 blocked / 0 load errors; run `blocked-catalog-024-sounds`).
 

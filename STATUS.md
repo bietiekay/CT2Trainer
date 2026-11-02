@@ -323,8 +323,7 @@ CE asset bytes are copied.
   recording contract, real-Tk attach-transition / manual-toggle /
   group-toggle / hotkey-toggle wiring); `tests/test_native_ui_tone.py`
   (4 tests) superseded and removed with the old helper.  Full main
-  suite 4,193 OK / 30 expected skips on `main` @ (this change's
-  commit); catalog remeasure `blocked-catalog-024-sounds`: zero delta
+  suite 4,193 OK / 30 expected skips on `main` @ `60dbc21` (2026-11-02); catalog remeasure `blocked-catalog-024-sounds`: zero delta
   vs `blocked-catalog-023-field-fixes` (151/151 loaded, 117,809 total
   / 116,756 supported / 60,161 staged / 1,053 blocked / 0 load
   errors; per-table changes 0).
