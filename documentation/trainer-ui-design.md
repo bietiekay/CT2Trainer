@@ -223,7 +223,7 @@ constants.
 | `tests/test_native_ui_layout.py` | constants + page math updated to the row grid (e.g. "400×800 shows ≥ 2 value rows", 56 px touch minimum on interactive rows, chrome stacking without overlap) |
 | `tests/test_native_ui_group_sections.py` | **replaces** `test_native_ui_group_nav.py` — section header model, collapse/expand, counter, flagged-group toggle vs plain group, nested sections |
 | `tests/test_native_ui_rows.py` | **new** — pure row model: truncation (deterministic), state→accent mapping per D6 table, filter behavior (Switches/On/Saved/Values/All), value-editor expand/collapse, hit-area geometry, mixed-page slicing |
-| `tests/test_native_ui_tone.py` | unchanged (audio contract untouched) |
+| `tests/test_native_trainer_sounds.py` | **replaces** `test_native_ui_tone.py` (0.24) - clean-room trainer tick sound synthesis (on/off/attach ticks), best-effort Win32 winmm playback contract, hotkey-toggle recording surface, real-Tk attach-transition wiring |
 | `tests/test_native_ui_recovery_flow.py` | unchanged (mocked window) |
 | `tests/test_native_record_hotkeys.py`, `tests/test_native_dynamic_address_provider.py` | unchanged as long as banner/marker strings keep their exact text (design keeps them) |
 | `tests/deck/compatibility-matrix.md` | layout description (line ~105) updated to the row grid; D1 run-sheet row stays, touch checklist adapts (tap rows, drag paging, editor expand) |

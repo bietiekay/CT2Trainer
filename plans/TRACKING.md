@@ -245,6 +245,37 @@ game-facing action.
   14,291,040 bytes, portable ZIP sha256
   `eec023ba09e8fcb80608736896f0477f4a783034046e6ad67514e96ed0a2905b`
   49,609,916 bytes).
+- 0.24 trainer tick sounds (2026-11-01, user field request; branch
+  `native-0.24-trainer-sounds`, full main suite 4,193 OK / 30 expected
+  skips): the generated trainer now plays the tick sounds of the
+  original native trainer generator's character - a distinct double
+  tick on a confirmed (re-)attach to the game process and high/low
+  single ticks on every confirmed on/off toggle of an item (manual row
+  switch, group heading toggle, hotkey-dispatched activation toggles -
+  CE parity: the original generated trainer sounds on every toggle,
+  not only UI taps). Behavior reference (read-only, never copied): CE
+  7.5's native trainer generator ships two built-in tick sounds
+  (`Sounds.RC` -> `tick1.wav` / `tick2.wav`, `BUILDIN_ACTIVATE` /
+  `BUILDIN_DEACTIVATE` RCDATA; ~28 ms, 8-bit unsigned mono, 11025 Hz,
+  ~4.4 kHz activate / ~3.8 kHz deactivate, Win32 winmm `PlaySound`
+  `SND_MEMORY | SND_ASYNC`); the reference corpus carries no
+  table-embedded audio, so that built-in pair is the original sound
+  set. Clean-room: deterministic in-code synthesis in the same format
+  and pitch character, no CE asset bytes. New
+  `src/ct2trainer/native/trainer_sounds.py` (tick synthesis,
+  module-cached buffers, best-effort named-result playback that never
+  raises), `ui.py` rewired (old 880/440 Hz sine helper removed; row
+  switch + group heading toggle + the attach-success transition in
+  `TrainerWindow.poll()` all play the ticks; the attach tick plays
+  exactly once per (re-)attach, failed attach attempts stay silent),
+  `engine.py` surfaces confirmed hotkey activation toggles through
+  `TrainerEngine.pop_hotkey_ui_toggles()` (value-action hotkeys are
+  not recorded). New `tests/test_native_trainer_sounds.py` +21
+  (supersedes `tests/test_native_ui_tone.py`, 4 tests, removed).
+  Catalog remeasure `blocked-catalog-024-sounds`: zero delta vs
+  `blocked-catalog-023-field-fixes` (151/151 loaded, 117,809 total /
+  116,756 supported / 60,161 staged / 1,053 blocked / 0 load errors;
+  per-table changes 0).
 - Latest verified release: 0.23, build
   `native-20261101T145310Z-a160bae4` (cut from `main` @ `6e3ec98`,
   2026-11-01), in-build suite 4,176 OK / 30 expected skips,

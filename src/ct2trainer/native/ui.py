@@ -13,8 +13,10 @@ details window (raw script + assessment + actions used, 0.18), the
 script preview, a copy of the script text and the unchanged Info
 dialog; the pure text builders live in ``ui_script_view``.
 
-Deliberately unchanged by the redesign: the audio tones
-(``play_toggle_sound``, 880/440 Hz), the amber banner strings (hotkey
+Deliberately unchanged by the redesign: the trainer tick sounds
+(``trainer_sounds``: clean-room ~28 ms 8-bit ticks for a confirmed on /
+off toggle plus an attach-success tick, Win32 winmm memory playback,
+best-effort, never raises), the amber banner strings (hotkey
 conflict, table-Lua bootstrap), the Info dialog content, the startup
 recovery dialogs in ``run_trainer`` and the dark high-contrast palette
 (constants extended for the row accents, not replaced).
@@ -22,10 +24,8 @@ recovery dialogs in ``run_trainer`` and the dark high-contrast palette
 from __future__ import annotations
 
 import json
-import math
 import sys
 from pathlib import Path
-import struct
 import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
 from typing import Callable
@@ -52,6 +52,7 @@ from .ui_rows import (ACCENT_BAR_WIDTH, ACCENT_ERROR, ACCENT_OFF, ACCENT_ON,
                       RowSnapshot, build_rows, find_row, slice_pages,
                       try_again_available)
 from .ui_script_view import entry_assessment, row_details, script_preview
+from .trainer_sounds import play_sound
 
 
 # High-contrast dark palette: dark background, bright text.
@@ -69,37 +70,12 @@ OFF_BG, OFF_FG = "#e5484d", "#ffffff"
 BANNER_BG = "#3a2f14"
 BANNER_FG = "#ffd977"
 
-# Pre-synthesized toggle tones, kept in module scope for the whole process:
-# winsound SND_MEMORY + SND_ASYNC requires the buffer to stay alive for the
-# whole playback.
-_TONE_CACHE: dict[str, bytes] = {}
-
-
-def _tone_wav(freq: float, ms: int = 120, rate: int = 22050) -> bytes:
-    """Short sine tone with a 20 ms fade-in/out as 16-bit mono WAV bytes."""
-    n = int(rate * ms / 1000)
-    fade = max(1, int(rate * 0.02))
-    amp = 12000
-    frames = bytearray()
-    for i in range(n):
-        gain = 1.0 if (i + 1 >= fade and n - i >= fade) else min((i + 1) / fade, (n - i) / fade)
-        frames += struct.pack("<h", int(amp * gain * math.sin(2 * math.pi * freq * i / rate)))
-    header = (b"RIFF" + struct.pack("<I", 36 + len(frames)) + b"WAVEfmt "
-              + struct.pack("<IHHIIHH", 16, 1, 1, rate, rate * 2, 2, 16)
-              + b"data" + struct.pack("<I", len(frames)))
-    return bytes(header + frames)
-
-
-def play_toggle_sound(on: bool) -> None:
-    """Confirmed manual toggle: ON plays the higher tone, OFF the lower one."""
-    key = "on" if on else "off"
-    if key not in _TONE_CACHE:
-        _TONE_CACHE[key] = _tone_wav(880.0 if on else 440.0)
-    try:
-        import winsound
-        winsound.PlaySound(_TONE_CACHE[key], winsound.SND_MEMORY | winsound.SND_ASYNC)
-    except Exception:
-        pass
+# Trainer tick sounds (2026-11-01, clean-room): in the character of the
+# original native trainer generator's built-in Activate/Deactivate
+# ticks, a confirmed manual on/off toggle of an item plays the high /
+# lower tick, and a confirmed (re-)attach plays the distinct
+# attach-success tick.  Synthesis, caching and best-effort Win32 winmm
+# memory playback live in ``trainer_sounds``; playback never raises.
 
 
 # Touch input and transient-reaction timing (D6/D8 of the design doc).
@@ -822,7 +798,10 @@ class TrainerWindow:
                 self.engine.request_auto_on(identifier)
         else:
             self.engine.toggle(identifier)
-            play_toggle_sound(on=identifier in self.engine.applied)
+            # 2026-11-01 (trainer sounds): a confirmed manual toggle plays the
+            # native trainer generator's tick in the character of the original
+            # (high on / lower off); a failed toggle stays silent.
+            play_sound("on" if identifier in self.engine.applied else "off")
             self._flash(identifier)
 
     def _toggle_section(self, identifier):
@@ -835,6 +814,9 @@ class TrainerWindow:
     def _toggle_group(self, identifier):
         # Flagged group heading: runs the existing parent-activation cascade.
         self.engine.toggle(identifier)
+        # 2026-11-01 (trainer sounds): the group toggle is a manual on/off
+        # action too, so it plays the same native-trainer tick character.
+        play_sound("on" if identifier in self.engine.applied else "off")
 
     def _toggle_value_editor(self, identifier):
         if identifier in self.expanded_values:
@@ -1027,6 +1009,7 @@ class TrainerWindow:
         if self.engine.closed:
             return
         before = self._signature()
+        was_attached = self.engine.memory is not None
         try:
             self.engine.poll()
         except Exception as exc:
@@ -1046,6 +1029,17 @@ class TrainerWindow:
                 self.engine._block(exc)
             except Exception:
                 pass
+        # 2026-11-01 (trainer sounds): a confirmed (re-)attach - the engine
+        # memory handle going from nothing to a live target - plays the
+        # attach tick exactly once per transition; a failed attach attempt
+        # leaves the handle None and stays silent.  Confirmed activation
+        # toggles dispatched by OS hotkey (bridge drain) in this same tick
+        # play the same on/off ticks a manual tap would (CE parity: the
+        # generated trainer sounds on every toggle, not only UI taps).
+        if (self.engine.memory is not None and not was_attached):
+            play_sound("attach")
+        for toggle_id, on in self.engine.pop_hotkey_ui_toggles():
+            play_sound("on" if on else "off")
         self._status_text.set(self.engine.status)
         self._update_banners()
         if before != self._signature():

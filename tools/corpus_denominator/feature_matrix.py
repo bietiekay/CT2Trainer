@@ -553,13 +553,15 @@ FEATURES = {
     "lua_gui_api": {
         "status": "covered",
         "evidence": ("tests/test_native_ui_layout.py",
-                     "tests/test_native_ui_tone.py",
+                     "tests/test_native_trainer_sounds.py",
                      "tests/test_native_lua.py"),
         "modules": ("src/ct2trainer/native/ui.py",
                     "src/ct2trainer/native/ui_layout.py",
+                    "src/ct2trainer/native/trainer_sounds.py",
                     "src/ct2trainer/native/lua_host.py"),
         "note": "showMessage/Forms surface in the owned host profile; the "
-                "touch UI layout contract and tone playback are tested.",
+                "touch UI layout contract and trainer tick sound playback "
+                "are tested.",
     },
     "lua_host_profile": {
         "status": "covered",

@@ -128,7 +128,15 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-01, 0.23 released (full Master
+**CT2Trainer (status 2026-11-02, 0.24 content on main - trainer tick
+sounds (user field request 2026-11-01; clean-room in-code tick
+synthesis for on/off/attach in `trainer_sounds.py`, `ui.py` rewired
+(row switch + group heading toggle + attach-success transition in
+`TrainerWindow.poll()`), `engine.py` `pop_hotkey_ui_toggles()`
+surfaces confirmed hotkey activation toggles, branch
+`native-0.24-trainer-sounds`, +21 tests, full main suite 4,193 OK /
+30 expected skips, zero catalog delta `blocked-catalog-024-sounds`);
+0.23 released (full Master
 Trainer roadmap: MT-6 per-table settings sidecar (content-sha keyed,
 restore-on-load / save-on-close) + MT-7 documented SteamOS/CheatDeck
 target route (named fail-closed non-Windows attach refusals, NOT a

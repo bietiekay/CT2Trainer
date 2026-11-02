@@ -1505,6 +1505,12 @@ class TrainerEngine:
         self.hotkey_bridge = None
         self.hotkey_spec_source = None
         self._hotkey_os: dict[int, set[HotKeySpec]] = {}
+        # 2026-11-01 (trainer sounds): confirmed activation toggles
+        # dispatched through the hotkey path (OS bridge drain or
+        # programmatic dispatch) are surfaced to the UI layer here so the
+        # trainer can play the same on/off tick a manual tap plays.  The
+        # list is append-only between polls; the UI pops it on its tick.
+        self._hotkey_ui_toggles: list[tuple[int, bool]] = []
         # RT-4.1 (CE dupIgnore narrowing): multiple selected providers of
         # one symbol are legal; the runtime resolves keep-first through
         # registered_by at activation.  The map keeps the first selected
@@ -6303,6 +6309,12 @@ class TrainerEngine:
         try:
             if action in ACTIVATION_HOTKEY_ACTIONS:
                 self.toggle(binding.record_id)
+                # 2026-11-01 (trainer sounds): surface the confirmed
+                # activation toggle so the UI layer plays the same on/off
+                # tick a manual tap plays (CE parity: the generated
+                # trainer sounds on every toggle, not only UI taps).
+                self._hotkey_ui_toggles.append(
+                    (binding.record_id, binding.record_id in self.applied))
                 return ToggleOutcome(ToggleOutcomeStatus.CONFIRMED, True)
             if action in VALUE_HOTKEY_ACTIONS:
                 if action == "Set Value":
@@ -6384,6 +6396,19 @@ class TrainerEngine:
         binding handler to the record's declared action.
         """
         return self.hotkey_controller.dispatch(spec)
+
+    def pop_hotkey_ui_toggles(self) -> list[tuple[int, bool]]:
+        """UI seam (2026-11-01 trainer sounds): confirmed activation
+        toggles dispatched through the hotkey path since the previous
+        pop, in dispatch order, as (record_id, resulting-active) pairs.
+
+        The list is append-only between pops; the trainer UI pops it on
+        each poll tick and plays the same on/off tick a manual tap
+        would.  Headless consumers simply never pop (the list is
+        bounded by the dispatch count of the session).
+        """
+        toggles, self._hotkey_ui_toggles = self._hotkey_ui_toggles, []
+        return toggles
 
     def _set_recursive_value(self, identifier: int, entry: dict, text: str) -> str:
         """Apply one moRecursiveSetValue write across the value-descendant closure.

@@ -2,6 +2,50 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.24 (2026-11-01)
+
+Trainer tick sounds (user field request 2026-11-01): the generated
+trainer now plays the short tick sounds of the original native
+trainer generator's character - a distinct double tick on a confirmed
+attach to the game process, and a high / low single tick on a manual
+on/off toggle of an item (row switch, group heading, or hotkey-
+dispatched activation toggle, i.e. every confirmed toggle path, CE
+parity).
+
+- New `src/ct2trainer/native/trainer_sounds.py`: deterministic
+  clean-room synthesis of the three ticks as 8-bit unsigned mono
+  11025 Hz RIFF/WAVE bytes (on ~5.5 kHz 28 ms, off ~3.7 kHz 28 ms,
+  attach = double 3.7 kHz tick with a silent gap; the format and
+  pitch character follow the CE 7.5 native trainer generator's built-in
+  `tick1.wav` / `tick2.wav` Activate/Deactivate pair, measured
+  read-only - no CE asset bytes are copied).  `play_sound(kind)` is
+  best-effort: Win32 `winmm` `PlaySound` with `SND_MEMORY | SND_ASYNC`,
+  a stable named result string (`played` /
+  `skipped: non-windows platform` / `refused: <reason>`), never raises
+  into the UI; buffers are cached at module scope because
+  `SND_MEMORY` requires the buffer to stay alive for the playback.
+- `ui.py`: the old 880/440 Hz sine `play_toggle_sound` helper is
+  replaced by `trainer_sounds.play_sound` at every confirmed toggle
+  site (row switch + group heading toggle now both sound) and on the
+  attach success transition detected in `TrainerWindow.poll()` (the
+  engine memory handle going from nothing to a live target plays the
+  attach tick exactly once per (re-)attach; failed attach attempts
+  stay silent).
+- `engine.py`: confirmed activation toggles dispatched through the
+  hotkey path (OS bridge drain or programmatic `dispatch_hotkey`)
+  surface as `(record_id, resulting-active)` pairs through
+  `TrainerEngine.pop_hotkey_ui_toggles()` so the UI tick matches CE's
+  on-every-toggle behavior; value-action hotkeys are not recorded.
+- Tests: new `tests/test_native_trainer_sounds.py` +21 (synthesis
+  shape/determinism/character, named playback refusals, hotkey-surface
+  recording contract, real-Tk attach-transition / manual-toggle /
+  group-toggle / hotkey-toggle wiring); `tests/test_native_ui_tone.py`
+  (4 tests) superseded and removed with the old helper.  Full main
+  suite 4,193 OK / 30 expected skips on `main` @ (commit of this
+  change), zero catalog delta vs `blocked-catalog-023-field-fixes`
+  (151/151 loaded, 117,809 total / 116,756 supported / 60,161 staged /
+  1,053 blocked / 0 load errors; run `blocked-catalog-024-sounds`).
+
 ## 0.23 (2026-11-01)
 
 Master Trainer roadmap complete (MT-6 / MT-7 / MT-8 / MT-9) - the full
