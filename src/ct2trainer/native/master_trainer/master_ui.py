@@ -611,13 +611,24 @@ class MasterWindow:
         return True
 
     def _confirm_recovery(self, kind: str, exc) -> bool:
+        live_target = bool(getattr(exc, "live_target_takeover", False))
         if kind == "stale state":
-            prompt = messagebox.askyesno(
-                "Trainer state",
-                ("A previous session of this table left a state lock; the "
-                 "previous trainer process is verified terminated.\n\n"
-                 "Recover (archive the old state byte-for-byte) and start?"),
-                parent=self.root)
+            if live_target:
+                body = (
+                    "A previous session of this table left a state lock; the "
+                    "previous trainer process is verified terminated, but the "
+                    "game it trained is still running.\n\n"
+                    "Recover (archive the old state byte-for-byte) and attach "
+                    "to the running game? Already applied patches stay in the "
+                    "game; saved toggles are re-applied and toggles that no "
+                    "longer match their scan pattern will show a scan error.")
+            else:
+                body = (
+                    "A previous session of this table left a state lock; the "
+                    "previous trainer process is verified terminated.\n\n"
+                    "Recover (archive the old state byte-for-byte) and start?")
+            prompt = messagebox.askyesno("Trainer state", body,
+                                         parent=self.root)
             if prompt:
                 ok, detail = perform_stale_recovery(exc)
                 if not ok:
@@ -625,11 +636,19 @@ class MasterWindow:
                                          parent=self.root)
                     return False
         else:
-            prompt = messagebox.askyesno(
-                "Trainer state",
-                ("A previous session left unfinished receipts; the recorded "
-                 "processes are verified terminated.\n\nRecover and start?"),
-                parent=self.root)
+            if live_target:
+                body = (
+                    "A previous session left unfinished receipts; the recorded "
+                    "trainer processes are verified terminated, but the game "
+                    "the previous session trained is still running.\n\n"
+                    "Recover (archive the old receipts byte-for-byte) and "
+                    "attach to the running game?")
+            else:
+                body = (
+                    "A previous session left unfinished receipts; the recorded "
+                    "processes are verified terminated.\n\nRecover and start?")
+            prompt = messagebox.askyesno("Trainer state", body,
+                                         parent=self.root)
             if prompt:
                 ok, detail = perform_stale_recovery(exc)
                 if not ok:

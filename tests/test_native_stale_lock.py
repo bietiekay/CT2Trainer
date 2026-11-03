@@ -145,11 +145,18 @@ class StaleLockStartupTests(unittest.TestCase):
             self._engine(_probe())
         self.assertNotIsInstance(ctx.exception, StaleStateRecoverable)
 
-    def test_live_target_blocks_recovery(self):
+    def test_live_target_yields_takeover_handle(self):
+        # Field case 2026-11-03: the owner is dead but the previous
+        # session's game is still running - the startup offers the
+        # user-confirmed live-target takeover instead of the "close the
+        # game" dead end. The probe is read-only: the lock stays in place.
         self._write_state()
-        with self.assertRaises(StateError) as ctx:
+        with self.assertRaises(StaleStateRecoverable) as ctx:
             self._engine(_probe(status_for_pid={TARGET_PID: "alive"}))
-        self.assertNotIsInstance(ctx.exception, StaleStateRecoverable)
+        self.assertTrue(ctx.exception.live_target_takeover)
+        self.assertFalse(ctx.exception.assessment.eligible)
+        self.assertTrue(ctx.exception.assessment.live_target_eligible,
+                        ctx.exception.assessment.reasons)
         self.assertTrue((self.state / "state.lock").exists())
 
 

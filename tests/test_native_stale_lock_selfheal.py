@@ -211,12 +211,35 @@ class StaleLockSelfHealStartupTests(unittest.TestCase):
         self.assertNotIsInstance(ctx.exception, StaleStateRecoverable)
         self.assertTrue((self.state / "state.lock").exists())
 
-    def test_ineligible_assessment_yields_actionable_refusal(self):
+    def test_dead_owner_live_target_yields_takeover_handle(self):
+        # Field case 2026-11-03 (supersedes the 2026-10-20 actionable
+        # refusal for this exact case): the owner is dead and only the
+        # previous session's target is still running, so the startup offers
+        # the user-confirmed live-target takeover instead of the "close the
+        # game" dead end. The probe is read-only: the lock stays in place.
         self._write_state()
 
         def probe(identity):
-            # The owner is dead, but the previous session's target is still
-            # running (field case 2026-10-20 at the 19:18 restart).
+            if identity.pid == TARGET_PID:
+                return ProcessObservation(identity, "alive", identity.created, WAIT_OBJECT_0)
+            return ProcessObservation(identity, "dead", identity.created, WAIT_OBJECT_0)
+
+        with self.assertRaises(StaleStateRecoverable) as ctx:
+            self._engine(probe)
+        self.assertTrue(ctx.exception.live_target_takeover)
+        self.assertFalse(ctx.exception.assessment.eligible)
+        self.assertTrue(ctx.exception.assessment.live_target_eligible,
+                        ctx.exception.assessment.reasons)
+        self.assertTrue((self.state / "state.lock").exists())
+
+    def test_ineligible_assessment_with_foreign_artifact_yields_actionable_refusal(self):
+        # Any non-target blocker (here: a foreign file inside the state
+        # directory) keeps the actionable refusal even while the previous
+        # session's target is still running.
+        self._write_state()
+        (self.state / "foreign.txt").write_bytes(b"x")
+
+        def probe(identity):
             if identity.pid == TARGET_PID:
                 return ProcessObservation(identity, "alive", identity.created, WAIT_OBJECT_0)
             return ProcessObservation(identity, "dead", identity.created, WAIT_OBJECT_0)
@@ -226,8 +249,8 @@ class StaleLockSelfHealStartupTests(unittest.TestCase):
         self.assertNotIsInstance(ctx.exception, StaleStateRecoverable)
         msg = str(ctx.exception)
         # The refusal is actionable: it names the verified-dead owner, surfaces
-        # the concrete assessment reason (the still-alive target), and points to
-        # the state directory - instead of the bare "delete that folder" line.
+        # the concrete assessment reasons, and points to the state directory -
+        # instead of the bare "delete that folder" line.
         self.assertIn(str(OWNER_PID), msg)
         self.assertIn("verified as terminated", msg)
         self.assertIn("not proven dead", msg)

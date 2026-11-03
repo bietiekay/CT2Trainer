@@ -1137,14 +1137,30 @@ def run_trainer(plan: dict | str | Path) -> int:
             root.destroy()
             return 1
         if stale is not None:
+            if stale.live_target_takeover:
+                stale_body = (
+                    "The previous session of this trainer did not shut down cleanly and left a state lock behind.\n"
+                    "The previous trainer process has been verified as terminated, but the game it "
+                    "trained is still running.\n\n"
+                    "Recovering archives the old state byte-for-byte to\n"
+                    + str(stale.archive_directory) + "\n"
+                    "and releases the lock. The trainer then attaches to the running game and "
+                    "re-applies the saved toggles. Cheats the previous session already applied "
+                    "stay in the game; toggles whose original scan pattern no longer matches "
+                    "(because the game already carries that patch) will show a scan error "
+                    "instead of re-applying.\n\n"
+                    "Recover and attach to the running game?")
+            else:
+                stale_body = (
+                    "The previous session of this trainer did not shut down cleanly and left a state lock behind.\n"
+                    "The previous trainer process has been verified as terminated.\n\n"
+                    "Recovering archives the old state byte-for-byte to\n"
+                    + str(stale.archive_directory) + "\n"
+                    "and releases the lock, so the trainer can start normally.\n\n"
+                    "Recover and start?")
             prompt = messagebox.askyesno(
                 "CT2Trainer - stale state",
-                ("The previous session of this trainer did not shut down cleanly and left a state lock behind.\n"
-                 "The previous trainer process has been verified as terminated.\n\n"
-                 "Recovering archives the old state byte-for-byte to\n"
-                 + str(stale.archive_directory) + "\n"
-                 "and releases the lock, so the trainer can start normally.\n\n"
-                 "Recover and start?"),
+                stale_body,
                 parent=root)
             if prompt:
                 ok, detail = perform_stale_recovery(stale)
@@ -1172,15 +1188,26 @@ def run_trainer(plan: dict | str | Path) -> int:
             if (artifacts.state_directory / "recovery.lock").exists():
                 fence_note = ("A recovery fence left by an interrupted recovery attempt is also part of "
                               "the stale artifacts; its owner process was verified as terminated as well.\n")
+            if artifacts.live_target_takeover:
+                process_note = (
+                    "The recorded trainer processes have been verified as terminated, but the game "
+                    "the previous session trained is still running. The trainer will attach to the "
+                    "running game and re-apply the saved toggles; already applied patches stay in "
+                    "the game, and toggles that no longer match their scan pattern will show a "
+                    "scan error.\n")
+            else:
+                process_note = "The recorded target and trainer processes have been verified as terminated.\n"
             prompt = messagebox.askyesno(
                 "CT2Trainer - previous session incomplete",
                 ("The previous session of this trainer left unfinished receipts behind.\n"
                  + fence_note +
-                 "The recorded target and trainer processes have been verified as terminated.\n\n"
+                 process_note +
+                 "\n"
                  "Recovering archives the unfinished receipts byte-for-byte to\n"
                  + str(artifacts.archive_directory) + "\n"
                  "and releases them, so the trainer can start normally.\n\n"
-                 "Recover and start?"),
+                 + ("Recover and attach to the running game?" if artifacts.live_target_takeover
+                    else "Recover and start?")),
                 parent=root)
             if prompt:
                 ok, detail = perform_stale_recovery(artifacts)

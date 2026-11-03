@@ -189,13 +189,23 @@ class StaleArtifactsEngineTests(unittest.TestCase):
         self.assertFalse((state / "state.lock").exists())
         self.assertFalse((state / "recovery.lock").exists())
 
-    def test_live_target_keeps_conservative_refusal(self):
+    def test_live_target_yields_live_target_handle(self):
+        # Field case 2026-11-03: the orphaned journal's recorded target is
+        # still running - the user-confirmed live-target takeover archives
+        # the journal and the new session attaches to the running target,
+        # instead of the "restart the exact target" dead end. The probe is
+        # read-only: no artifact is touched.
         state, shared = _layout(self.root, self.trainer_id,
                                 self.table_sha256, with_session=False)
-        with self.assertRaisesRegex(
-                StateError,
-                "Prior executable allocations still have an unfinalized receipt"):
+        journal = state / "hooks" / "hook.json"
+        before = journal.read_bytes()
+        with self.assertRaises(StaleArtifactsRecoverable) as caught:
             self._start(state, shared, _AliveProbe())
+        self.assertTrue(caught.exception.live_target_takeover)
+        self.assertFalse(caught.exception.assessment.eligible)
+        self.assertTrue(caught.exception.assessment.live_target_eligible,
+                        caught.exception.assessment.reasons)
+        self.assertEqual(journal.read_bytes(), before)
 
     def test_unreadable_receipt_keeps_conservative_refusal(self):
         state, shared = _layout(self.root, self.trainer_id,

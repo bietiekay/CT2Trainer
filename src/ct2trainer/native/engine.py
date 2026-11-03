@@ -92,11 +92,18 @@ class StaleStateRecoverable(NativeRuntimeError):
 
     Carries the fresh read-only assessment and the directories an explicit,
     user-confirmed ``perform_stale_recovery`` call needs. The state itself is
-    not touched until that call succeeds.
+    not touched until that call succeeds. With ``live_target_takeover`` the
+    recorded target process is still running (the previous session's patches
+    stay in the live game): the user-confirmed recovery archives the stale
+    state and the new session attaches to the running target, re-applying the
+    saved wishes - entries whose original scan pattern no longer matches
+    (because the game already carries the previous session's patch) surface
+    as named entry errors instead of failing the startup.
     """
 
     def __init__(self, assessment: Any, state_directory: str | Path, process_lock_directory: str | Path,
-                 archive_directory: str | Path, trainer_id: str, table_sha256: str):
+                 archive_directory: str | Path, trainer_id: str, table_sha256: str,
+                 live_target_takeover: bool = False):
         self.assessment = assessment
         self.state_directory = Path(state_directory)
         self.process_lock_directory = Path(process_lock_directory)
@@ -104,8 +111,15 @@ class StaleStateRecoverable(NativeRuntimeError):
         self.trainer_id = trainer_id
         self.table_sha256 = table_sha256
         self.exclusive_controller_claim = False
-        super().__init__("state.lock is owned by a process proven dead; verified recovery is available for "
-                         + str(state_directory))
+        self.live_target_takeover = bool(live_target_takeover)
+        if self.live_target_takeover:
+            message = ("state.lock is owned by a process proven dead, but the previous session's "
+                       "target process is still running; verified live-target recovery is available "
+                       "for " + str(state_directory))
+        else:
+            message = ("state.lock is owned by a process proven dead; verified recovery is available "
+                       "for " + str(state_directory))
+        super().__init__(message)
 
 
 class StaleArtifactsRecoverable(NativeRuntimeError):
@@ -115,11 +129,15 @@ class StaleArtifactsRecoverable(NativeRuntimeError):
     executable receipts, incomplete session files, or leftover shared process
     claims. Carries the fresh read-only assessment and the directories an
     explicit, user-confirmed ``perform_stale_recovery`` call needs. The state
-    itself is not touched until that call succeeds.
+    itself is not touched until that call succeeds. With ``live_target_takeover``
+    the recorded target process is still running; the user-confirmed recovery
+    archives the stale artifacts and the new session attaches to the running
+    target as with the state-lock variant.
     """
 
     def __init__(self, assessment: Any, state_directory: str | Path, process_lock_directory: str | Path,
-                 archive_directory: str | Path, trainer_id: str, table_sha256: str):
+                 archive_directory: str | Path, trainer_id: str, table_sha256: str,
+                 live_target_takeover: bool = False):
         self.assessment = assessment
         self.state_directory = Path(state_directory)
         self.process_lock_directory = Path(process_lock_directory)
@@ -127,8 +145,15 @@ class StaleArtifactsRecoverable(NativeRuntimeError):
         self.trainer_id = trainer_id
         self.table_sha256 = table_sha256
         self.exclusive_controller_claim = True
-        super().__init__("prior session artifacts are stale and their exact processes are proven dead; "
-                         "verified recovery is available for " + str(state_directory))
+        self.live_target_takeover = bool(live_target_takeover)
+        if self.live_target_takeover:
+            message = ("prior session artifacts are stale and their exact trainer processes are "
+                       "proven dead, but the recorded target is still running; verified "
+                       "live-target recovery is available for " + str(state_directory))
+        else:
+            message = ("prior session artifacts are stale and their exact processes are proven dead; "
+                       "verified recovery is available for " + str(state_directory))
+        super().__init__(message)
 
 
 class LiveStateConflict(StateError):
@@ -167,7 +192,8 @@ def perform_stale_recovery(stale, process_probe: Any = None) -> tuple[bool, str]
                                     expected_trainer_id=stale.trainer_id,
                                     expected_table_sha256=stale.table_sha256,
                                     process_probe=process_probe,
-                                    exclusive_controller_claim=stale.exclusive_controller_claim)
+                                    exclusive_controller_claim=stale.exclusive_controller_claim,
+                                    allow_live_target=bool(getattr(stale, "live_target_takeover", False)))
     except (RecoveryOperationError, OSError) as exc:
         return False, str(exc) or type(exc).__name__
     if not report.completed:
@@ -1123,6 +1149,15 @@ class _StateStore:
         except Exception:
             return None
         if not assessment.eligible:
+            if assessment.live_target_eligible:
+                # Same live-target qualification as the state-lock probe:
+                # only the recorded target is not proven dead, so the
+                # user-confirmed takeover handles the stale artifacts
+                # without a "close the game" dead end.
+                return StaleArtifactsRecoverable(assessment, self.directory, self.process_lock_dir,
+                                                 self.directory.parent / "archives",
+                                                 self.plan["trainer_id"], self.plan["table_sha256"],
+                                                 live_target_takeover=True)
             return None
         return StaleArtifactsRecoverable(assessment, self.directory, self.process_lock_dir,
                                          self.directory.parent / "archives",
@@ -1139,10 +1174,15 @@ class _StateStore:
         is treated as a transient failure and retried once (field case
         2026-10-20: first startup attempt plain refusal, eight seconds
         later the same lock classified recoverable). A proven-dead owner
-        whose full assessment is not eligible (most commonly: the previous
-        session's target process still running) yields an actionable
-        StateError carrying the assessment reasons instead of falling back
-        to the generic "delete that folder" line.
+        whose only unproven identities are the previous session's target
+        (field case 2026-11-03, Indiana Jones and the Great Circle 0.22
+        log: hotkey-bridge AV during close left the state lock while the
+        game kept running, so the strict all-dead proof could never pass
+        and the user had to delete the state folder by hand) yields the
+        user-confirmed live-target takeover handle; any other non-eligible
+        assessment yields an actionable StateError carrying the assessment
+        reasons instead of falling back to the generic "delete that folder"
+        line.
         """
         if not (isinstance(exc, StateError) and isinstance(exc.__cause__, FileExistsError)):
             return None
@@ -1183,11 +1223,21 @@ class _StateStore:
         except Exception:
             return None
         if not assessment.eligible:
+            if assessment.live_target_eligible:
+                # Owner is proven dead; only the previous session's target is
+                # not proven dead. Offer the user-confirmed live-target
+                # takeover instead of the "close the game" dead end: the
+                # stale state is archived and the new session attaches to
+                # the running target (saved wishes re-applied; already
+                # applied patches stay in the game).
+                return StaleStateRecoverable(assessment, self.directory, self.process_lock_dir,
+                                             self.directory.parent / "archives",
+                                             self.plan["trainer_id"], self.plan["table_sha256"],
+                                             live_target_takeover=True)
             # Owner is proven dead but the full assessment is not eligible
-            # (most commonly: the previous session's target process is still
-            # alive, so its still-applied patches must stay recoverable).
-            # Surface the concrete reasons so the startup refusal is
-            # actionable instead of a generic "delete that folder" line.
+            # in any other way. Surface the concrete reasons so the startup
+            # refusal is actionable instead of a generic "delete that
+            # folder" line.
             reasons = "\n".join("  - " + reason for reason in assessment.reasons[:3]) \
                       or "  - (assessment produced no reason)"
             return StateError(
@@ -1234,6 +1284,15 @@ class _StateStore:
         except Exception:
             return None
         if not assessment.eligible:
+            if assessment.live_target_eligible:
+                # Same live-target qualification as the state-lock probe:
+                # only the recorded target is not proven dead, so the
+                # user-confirmed takeover handles the stale artifacts
+                # without a "close the game" dead end.
+                return StaleArtifactsRecoverable(assessment, self.directory, self.process_lock_dir,
+                                                 self.directory.parent / "archives",
+                                                 self.plan["trainer_id"], self.plan["table_sha256"],
+                                                 live_target_takeover=True)
             return None
         return StaleArtifactsRecoverable(assessment, self.directory, self.process_lock_dir,
                                          self.directory.parent / "archives",

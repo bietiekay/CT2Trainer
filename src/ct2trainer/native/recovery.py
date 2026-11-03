@@ -112,6 +112,21 @@ class RecoveryAssessment:
     directory_identities: tuple[tuple[str, tuple[int, int, int, int, int] | None], ...] = ()
     read_only: bool = True
     mutation_authorized: bool = False
+    live_target_eligible: bool = False
+
+
+def is_target_role(role: str) -> bool:
+    """True for recorded roles that bind an identity to the game process.
+
+    Recovery evidence distinguishes trainer-side roles (state-lock, session,
+    shared-lock and recovery-fence owners) from target-side roles (the session
+    target, the shared-lock target, and each per-journal target). The
+    live-target takeover relaxes the strict all-dead proof for target-side
+    identities only; any identity carrying a trainer-side or unknown role
+    keeps the strict proof, so a live or unprovable trainer can never be
+    displaced through the relaxation.
+    """
+    return role in ("session target", "shared-lock target") or role.startswith("journal target: ")
 
 
 class _FileTime(ctypes.Structure):
@@ -1012,8 +1027,28 @@ def assess_recovery(state_directory: str | Path, process_lock_directory: str | P
             statuses = ", ".join(item.status for item in process.observations) or "unprobed"
             problem(f"Exact process {process.identity.pid}/{process.identity.created} is not proven dead in both observations ({statuses})")
     eligible = ownership_artifacts and bool(evidence) and not reasons
+    # Live-target takeover qualification (field case 2026-11-03, Indiana
+    # Jones and the Great Circle 0.22 log): the state-lock owner is proven
+    # dead while the previous session's game process is still running, so the
+    # strict all-dead proof cannot pass and the startup would otherwise be a
+    # "close the game / delete the folder" dead end. The qualification is set
+    # only when every identity that is not proven dead carries target-side
+    # roles alone and every assessment reason is one of those same
+    # not-proven-dead lines - any other blocker (live or unprovable owner,
+    # changed inventory, foreign artifact, ...) keeps the strict refusal.
+    live_target_eligible = (
+        not eligible
+        and ownership_artifacts
+        and all(is_target_role(role)
+                for process in evidence
+                if not process.proven_dead
+                for role in process.roles)
+        and all(re.fullmatch(r"Exact process \d+/\d+ is not proven dead in both observations \(.+\)", reason)
+                for reason in reasons)
+    )
     status = "eligible-read-only" if eligible else "blocked" if ownership_artifacts or reasons else "clean"
     digest_input = {"directories": directories, "files": [(str(item.path), item.kind, item.size, item.sha256, item.identity) for item in snapshots]}
     digest = hashlib.sha256(json.dumps(digest_input, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return RecoveryAssessment(directory, shared, status, eligible, tuple(reasons), snapshots, digest, evidence,
-                              tuple(sorted(candidates, key=str)), _RECOVERY_PLAN, directory_identities=directories)
+                              tuple(sorted(candidates, key=str)), _RECOVERY_PLAN, directory_identities=directories,
+                              live_target_eligible=live_target_eligible)

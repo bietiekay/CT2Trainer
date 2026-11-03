@@ -29,7 +29,7 @@ import zipfile
 
 from .recovery import (
     RecoveryAssessment, ProcessObservation, WindowsProcessProbe, current_process_identity,
-    assess_recovery, _fingerprint, _HEX32, _HEX64, _document, _fields, _identity,
+    assess_recovery, is_target_role, _fingerprint, _HEX32, _HEX64, _document, _fields, _identity,
     _inventory, _safe_stat, _issue_fence_allowance,
 )
 
@@ -246,8 +246,12 @@ def _directory_objects(assessment):
             for path, identity in assessment.directory_identities}
 
 
-def _same_assessment(original, fresh, fence):
-    if not fresh.eligible:
+def _same_assessment(original, fresh, fence, live_target=False):
+    # The live-target takeover admits a fresh reassessment that is itself
+    # live-target qualified (the recorded target is still running); any other
+    # fresh refusal - including a new non-dead trainer-side identity - blocks
+    # the release exactly as before.
+    if not (fresh.eligible or (live_target and fresh.live_target_eligible)):
         _fail("Recovery reassessment blocks release: " + "; ".join(fresh.reasons[:8]))
     # A fence that already existed at assessment time is part of both
     # inventories and must compare equal on both sides; a fence the operator
@@ -322,8 +326,20 @@ def _archive(assessment, held, archive, deadline):
 def recover_assessment(assessment: RecoveryAssessment, archive_directory: str | Path, *,
                        expected_trainer_id: str, expected_table_sha256: str,
                        process_probe=None,
-                       exclusive_controller_claim: bool = False) -> RecoveryReport:
+                       exclusive_controller_claim: bool = False,
+                       allow_live_target: bool = False) -> RecoveryReport:
     """Explicitly archive and release only one fresh, eligible assessment.
+
+    ``allow_live_target`` admits the live-target takeover qualification
+    (``RecoveryAssessment.live_target_eligible``): the state-lock owner is
+    proven dead while the previous session's game process is still running.
+    The transaction then relaxes the strict all-dead proof for target-side
+    identities only - the post-fence reassessment may itself be live-target
+    qualified instead of fully eligible, and the final probe pass requires
+    every trainer-side identity to stay proven dead while target-side
+    identities may remain alive (their still-applied patches stay in the
+    running game, which the operator explicitly confirmed). Every other
+    refusal path is unchanged.
 
     A refused operation has made no ownership changes. Failure while fenced is
     uncertain and retains the fence, archive and operation journal. Directory
@@ -350,6 +366,10 @@ def recover_assessment(assessment: RecoveryAssessment, archive_directory: str | 
     fence = archive = journal = None
     claimed, fence_released, status = False, False, "refused"
     deadline = time.monotonic() + MAX_OPERATION_SECONDS
+    # Live-target takeover: the qualification comes from the assessment
+    # itself (owner proven dead, only target-side identities not proven
+    # dead); the caller flag alone can never widen the proof.
+    live_target = bool(allow_live_target) and assessment.live_target_eligible
 
     def record(state, **fields):
         nonlocal journal_hash
@@ -365,9 +385,14 @@ def recover_assessment(assessment: RecoveryAssessment, archive_directory: str | 
     try:
         if sys.platform != "win32":
             _fail("Held-file verified recovery is implemented only for Windows")
-        if (not assessment.eligible or assessment.status != "eligible-read-only" or not assessment.read_only
-                or assessment.mutation_authorized or assessment.reasons or not assessment.processes
-                or any(not process.proven_dead for process in assessment.processes)
+        if (not assessment.eligible and not live_target
+                or assessment.status != ("eligible-read-only" if assessment.eligible else "blocked")
+                or not assessment.read_only
+                or assessment.mutation_authorized
+                or not assessment.processes
+                or any(not process.proven_dead for process in assessment.processes
+                       if not (live_target and all(is_target_role(role) for role in process.roles)))
+                or (not live_target and assessment.reasons)
                 or not assessment.directory_identities):
             _fail("The supplied assessment is not an eligible read-only death proof")
         if (len(assessment.files) > MAX_OPERATION_FILES or sum(item.size for item in assessment.files) > MAX_OPERATION_BYTES
@@ -451,7 +476,7 @@ def recover_assessment(assessment: RecoveryAssessment, archive_directory: str | 
                                 expected_table_sha256=expected_table_sha256,
                                 exclusive_controller_claim=exclusive_controller_claim,
                                 _fence_allowance=allowance)
-        _same_assessment(assessment, fresh, fence_path)
+        _same_assessment(assessment, fresh, fence_path, live_target=live_target)
         _check_time(deadline)
         for item in assessment.files:
             _check_time(deadline)
@@ -469,12 +494,18 @@ def recover_assessment(assessment: RecoveryAssessment, archive_directory: str | 
         _inventory_guard(assessment, fence_path, released)
         # Every original object is now held and archived. Probe all exact recorded
         # identities once more; no path reopen is required for this proof pass.
+        # The live-target takeover relaxes this proof for target-side identities
+        # only: their still-applied patches remain in the running game, which the
+        # operator explicitly confirmed. Every trainer-side identity must still
+        # be proven dead before any state file is released.
         probe = process_probe or WindowsProcessProbe()
         for process in assessment.processes:
             _check_time(deadline)
             observation = probe(process.identity) if callable(probe) else probe.probe(process.identity)
-            if (not isinstance(observation, ProcessObservation) or observation.identity != process.identity
-                    or not observation.proven_dead):
+            if not isinstance(observation, ProcessObservation) or observation.identity != process.identity:
+                _fail("An exact owner or target is not proven dead before file release")
+            if (not observation.proven_dead
+                    and not (live_target and all(is_target_role(role) for role in process.roles))):
                 _fail("An exact owner or target is not proven dead before file release")
         # The fence itself (own or taken over) is released in the final
         # held-object step below, never inside the candidate release loop.
