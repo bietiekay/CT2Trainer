@@ -11,9 +11,16 @@ from __future__ import annotations
 
 import unittest
 
+from ct2trainer.native.master_trainer.master_state import (
+    VIEW_MODES as STATE_VIEW_MODES,
+    VIEW_SORT_MODES as STATE_VIEW_SORT_MODES,
+)
 from ct2trainer.native.master_trainer.table_filter import (
     SORT_MODES,
+    UNBOUND_PROCESS_LABEL,
+    VIEW_MODES,
     filter_tables,
+    group_tables_by_process,
     sort_tables,
 )
 
@@ -157,6 +164,83 @@ class SortTests(unittest.TestCase):
 
     def test_sort_modes_tuple_is_stable(self):
         self.assertEqual(SORT_MODES, ("name", "process", "status"))
+
+
+class GroupByProcessTests(unittest.TestCase):
+    """MT-17 (0.27): the pure process-grouping reshaping."""
+
+    def setUp(self):
+        self.entries = [
+            _Entry("Games/Indiana Jones/Great Circle.ct",
+                   ("Indiana Jones and the Great Circle.exe",)),
+            _Entry("Sub/RDR2 (Legacy).ct",
+                   ("RDR2.exe", "RDR2legacy.exe")),
+            _Entry("hades.ct", ("hades2.exe",)),
+            _Entry("empty names.ct", ()),
+        ]
+
+    def test_groups_by_each_bound_name(self):
+        groups = dict(group_tables_by_process(self.entries))
+        self.assertEqual(set(groups),
+                         {"hades2.exe",
+                          "indiana jones and the great circle.exe",
+                          "rdr2.exe", "rdr2legacy.exe",
+                          UNBOUND_PROCESS_LABEL})
+
+    def test_a_multi_bound_table_appears_in_each_group(self):
+        groups = dict(group_tables_by_process(self.entries))
+        rdr2 = self.entries[1]
+        self.assertIn(rdr2, groups["rdr2.exe"])
+        self.assertIn(rdr2, groups["rdr2legacy.exe"])
+
+    def test_bound_groups_sort_casefolded_and_unbound_last(self):
+        order = [label for label, _ in
+                 group_tables_by_process(self.entries)]
+        self.assertEqual(order,
+                         ["hades2.exe",
+                          "indiana jones and the great circle.exe",
+                          "rdr2.exe", "rdr2legacy.exe",
+                          UNBOUND_PROCESS_LABEL])
+
+    def test_within_group_input_order_is_preserved(self):
+        entries = [
+            _Entry("two.ct", ("b.exe",)),
+            _Entry("one.ct", ("b.exe",)),
+            _Entry("zero.ct", ("a.exe",)),
+        ]
+        groups = dict(group_tables_by_process(entries))
+        self.assertEqual([e.relative_path for e in groups["b.exe"]],
+                         ["two.ct", "one.ct"])
+        self.assertEqual([e.relative_path for e in groups["a.exe"]],
+                         ["zero.ct"])
+
+    def test_grouping_preserves_the_row_set(self):
+        # The documented composition: group(filter(sort(entries, mode))).
+        # Every row appears exactly as often as it has bound names (one
+        # for the unbound row); nothing is added or dropped.
+        rows = filter_tables(sort_tables(self.entries, "name"), "")
+        grouped = [e for _, group in group_tables_by_process(rows)
+                   for e in group]
+        self.assertEqual(len(grouped),
+                         sum(len(e.process_names) or 1
+                             for e in rows))
+
+    def test_empty_input_yields_no_groups(self):
+        self.assertEqual(group_tables_by_process([]), [])
+
+    def test_only_unbound_tables_yield_the_single_unbound_group(self):
+        entries = [_Entry("a.ct", ()), _Entry("b.ct", ())]
+        groups = group_tables_by_process(entries)
+        self.assertEqual([label for label, _ in groups],
+                         [UNBOUND_PROCESS_LABEL])
+        self.assertEqual(len(groups[0][1]), 2)
+
+    def test_view_modes_tuple_is_stable(self):
+        self.assertEqual(VIEW_MODES, ("list", "process"))
+        # MT-16: the state document's format-level constants mirror the
+        # pure layer (the attach-mode pattern).
+        self.assertEqual(VIEW_MODES, STATE_VIEW_MODES)
+        self.assertEqual(SORT_MODES, STATE_VIEW_SORT_MODES)
 
 
 if __name__ == "__main__":

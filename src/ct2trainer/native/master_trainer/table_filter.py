@@ -80,3 +80,44 @@ def sort_tables(entries, mode: str) -> list:
     return sorted(base,
                   key=lambda e: (0 if e.status == "ok" else 1,
                                  e.relative_path.casefold()))
+
+
+# MT-17 (0.27): the waiting-view display modes.  "list" is the flat MT-13
+# row order; "process" is the grouped view (one parent row per bound
+# process name).  The master-state document (schema 4, MT-16) persists the
+# user's choice with its own format-level constant; the two must stay in
+# sync (mirrors the attach-mode pattern in master_state.py).
+VIEW_MODES = ("list", "process")
+
+UNBOUND_PROCESS_LABEL = "(no process binding)"
+
+
+def group_tables_by_process(entries) -> list[tuple[str, list]]:
+    """MT-17 (0.27): group an already-ordered entry list by process name.
+
+    ``entries`` is the waiting-view row set the caller already sorted and
+    filtered (``filter_tables(sort_tables(...), query)``); this function
+    only reshapes the rows, it never adds or drops tables.  A table that
+    binds several process names appears once under EACH of them (the
+    table shows up in every candidate game's group); a table without a
+    bound name goes under :data:`UNBOUND_PROCESS_LABEL`.  Group order:
+    bound groups in casefolded name order, the unbound group last.
+    Within a group the input order (the caller's sort) is preserved.
+    The group labels are the casefolded bound names, so the grouped view
+    keys off the same identity the running-PID markers use.
+    """
+    groups: dict[str, list] = {}
+    for entry in entries:
+        names = entry.process_names
+        if not names:
+            groups.setdefault(UNBOUND_PROCESS_LABEL, []).append(entry)
+            continue
+        for name in names:
+            groups.setdefault(name.casefold(), []).append(entry)
+    ordered: list[tuple[str, list]] = []
+    for key in sorted(k for k in groups if k != UNBOUND_PROCESS_LABEL):
+        ordered.append((key, groups[key]))
+    if UNBOUND_PROCESS_LABEL in groups:
+        ordered.append((UNBOUND_PROCESS_LABEL,
+                        groups[UNBOUND_PROCESS_LABEL]))
+    return ordered

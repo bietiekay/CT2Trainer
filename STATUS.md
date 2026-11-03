@@ -1,17 +1,26 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-03. **0.26 released** (build
-`native-20261103T112811Z-59a6b3d5`, cut from `main` @ `c114ec2`,
-2026-11-03) - Master Trainer
-waiting-view usability MT-13/14/15 (user request 2026-11-02/03,
-online-evaluated: search/filter/sort through the new pure
+**Updated:** 2026-11-03. **0.27 content on main** - the 0.27 build
+is cut from this content; 0.26 remains the latest verified release
+(build `native-20261103T112811Z-59a6b3d5`, cut from `main` @
+`c114ec2`, 2026-11-03) - Master Trainer waiting-view settings
+persistence MT-16 (`master-settings.json` schema 3 → 4: the filter
+query, sort mode and view mode restored at start and persisted on
+every change) + the process-grouped waiting view MT-17 (group-by-
+bound-process tree, display-only group rows); +22 tests; full main
+suite 4,342 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-027-view`; see the 0.27 section below.
+Superseded 0.26 (build `native-20261103T112811Z-59a6b3d5`, cut from
+`main` @ `c114ec2`, 2026-11-03) - Master Trainer waiting-view
+usability MT-13/14/15 (user request 2026-11-02/03, online-
+evaluated: search/filter/sort through the new pure
 `table_filter.py` layer, keyboard load flow, rolling recent tables
 in `master-settings.json` schema 3 + Size/Modified/Last-used
 columns), plus the live-target takeover field fix (stale-lock
 recovery attaches to the still-running game behind one
 user-confirmed prompt when the owner is proven dead and only
-target-side identities remain unproven); +61 tests; full main suite
-4,320 OK / 30 expected skips; catalog zero delta
+target-side identities remain unproven); +61 tests; full main
+suite 4,320 OK / 30 expected skips; catalog zero delta
 `blocked-catalog-026-master-ui`; see the 0.26 section below.
 Superseded 0.25 (build `native-20261103T062439Z-f4c16be9`, cut from
 `main` @ `a861bfb`, 2026-11-03) - Master Trainer user control
@@ -400,6 +409,63 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.27 content on main (2026-11-03, root-direct; the 0.27 build is
+cut from this content - 0.26 remains the latest verified release):
+Master Trainer waiting-view settings persistence (MT-16) +
+process-grouped waiting view (MT-17).** The 0.27 feature set was
+evaluated against online table/list UX patterns (playR, Universal
+Game Launcher, GamesList Manager, Game Cheats Manager) and
+recorded in `master_trainer/ROADMAP.md` ("0.27 waiting-view
+settings + process groups"). Adopted: MT-16/17 (both
+deliberately deferred in 0.26). Deliberately deferred
+(documented): entry-count / blocked-count columns, per-table
+status / color-coding.
+- **MT-16 persisted waiting-view settings:**
+  `master-settings.json` schema 3 → 4: `view_filter` (the raw
+  filter entry text, at most `VIEW_FILTER_MAX` = 200 characters,
+  "" = no filter), `view_sort` (one of the table_filter sort
+  modes) and `view_mode` ("list" flat rows / "process" grouped by
+  bound process name). Schema-1/2/3 documents promote on load
+  with the documented defaults ("" / "name" / "list"); a
+  schema-3 document carrying a view_* field is refused as an
+  unknown field (foreign schema, never silently promoted - the
+  same discipline as MT-11/MT-15). The format-level constants
+  live in `master_state` (the attach-mode pattern), pinned
+  against the pure layer by a test.
+  `MasterApp.set_view_settings(filter_query, sort_mode,
+  view_mode)` validates (named `ValueError`s) and re-persists
+  immediately; the window restores all three from the persisted
+  document at construction; every UI change point re-persists
+  (filter `<KeyRelease>`, sort cycle, view cycle, Esc clear).
+  +4 state tests (`tests/test_native_master_state.py`) + 5 UI
+  tests (`tests/test_native_master_ui_mt16.py`).
+- **MT-17 process-grouped waiting view:** the pure
+  `table_filter.group_tables_by_process` reshaping of the
+  already-sorted-and-filtered row set (never adds or drops
+  tables): one parent row per casefolded bound process name (a
+  table bound to several names appears once under each of
+  them), the tables without a bound name under "(no process
+  binding)" last, within-group order = the caller's sort order.
+  The "View: list/process" cycle button sits between the sort
+  button and the filter entry (persisted through MT-16); the
+  tree (`show="headings"`) renders the group label + "N
+  table(s)" count in values[0] of the parent row (the text item
+  is invisible with headings). Group rows are display-only -
+  double-click, Enter and the row context menu are gated by
+  `_is_table_row`, so a group row never loads; the children load
+  through the ordinary MT-10 path. +8 pure tests
+  (`tests/test_native_master_table_filter.py`) + 5 UI tests
+  (`tests/test_native_master_ui_mt16.py`).
+- Full main suite 4,342 OK / 30 expected skips; catalog zero
+  delta `blocked-catalog-027-view` (151/151 loaded, 0 load
+  errors, 117,809 total / 116,756 supported / 1,053 blocked,
+  zero delta vs `blocked-catalog-026-master-ui`); feature matrix
+  unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION bumped
+  to 0.27 with the changelog entry in the same change; the 0.27
+  build is cut from this content (0.26 remains the latest
+  verified release).
 
 **0.26 released (build `native-20261103T112811Z-59a6b3d5`, cut from
 `main` @ `c114ec2`, 2026-11-03): Master Trainer waiting-view

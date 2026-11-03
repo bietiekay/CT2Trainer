@@ -2,6 +2,44 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.27 (2026-11-03)
+
+Master Trainer waiting-view settings persistence (MT-16) +
+process-grouped waiting view (MT-17) - both items deliberately
+deferred in 0.26 are adopted (follow-up online evaluation: playR,
+Universal Game Launcher, GamesList Manager, Game Cheats Manager -
+see the Master Trainer ROADMAP "0.27 waiting-view settings +
+process groups" section):
+
+- **MT-16 persisted waiting-view settings**: `master-settings.json`
+  schema 3 → 4 - the waiting-view filter query, sort mode and view
+  mode are now part of the persisted state document. The filter
+  entry text ("" = no filter, at most 200 characters), the sort
+  mode (name / process / status) and the display mode (list /
+  process) are restored at start and re-persisted on every change
+  (filter typing, sort cycle, view cycle, Esc clear).
+  Schema-1/2/3 documents promote on load with the documented
+  defaults; a schema-3 document carrying a view_* field is refused
+  as an unknown field (foreign schema, never silently promoted -
+  the same discipline as the attach mode and the recent list).
+- **MT-17 process-grouped waiting view**: a "View: list/process"
+  cycle button switches the waiting view between the flat row list
+  and a tree grouped by bound process name: one group per
+  casefolded process name (a table bound to several names appears
+  once under each of them), the tables without a bound name under
+  "(no process binding)" last, within-group order = the current
+  sort order (filter + sort applied first). Group rows are
+  display-only and never load; the tables under a group load
+  through the ordinary explicit-load path.
+- Deliberately deferred (documented): entry-count / blocked-count
+  columns (the catalog numbers belong to the local tooling) and
+  per-table status / color-coding.
+- Test totals: +22 over 0.26 (4 schema-4 state tests, 8 pure
+  process-grouping tests, 10 MT-16/17 UI tests); full main suite
+  4,342 OK / 30 expected skips; catalog remeasure
+  `blocked-catalog-027-view`: zero delta (151/151 loaded, 0 load
+  errors, 117,809 total / 116,756 supported / 1,053 blocked).
+
 ## 0.26 (2026-11-03)
 
 Master Trainer waiting-view usability (MT-13 / MT-14 / MT-15) - with

@@ -7,7 +7,8 @@ load, persisted attach mode + process picker, detach / user attach)
 on `main` with the 0.25 release (2026-11-02); MT-13..MT-15
 (waiting-view usability: search/filter/sort, keyboard flow, recent
 tables + Size/Modified/Last-used columns) with the 0.26 release
-(2026-11-03). Design and
+(2026-11-03); MT-16..MT-17 (persisted waiting-view settings +
+process-grouped view) with the 0.27 release (2026-11-03). Design and
 implementation notes; the working plan is [ROADMAP.md](ROADMAP.md).
 
 ## What it is
@@ -44,8 +45,10 @@ auto-load/handoff loop around that existing engine.
 - 0.26 (MT-13/14/15) waiting-view usability: the table list carries a
   live filter (casefolded substring over the table name AND any bound
   process name; the meta line shows `filtered: N/M` while a query is
-  active) and a name/process/status sort cycle — both session-only; the
-  load picker and the auto-load path keep the full index. Double-click
+  active) and a name/process/status sort cycle; the settings persist in the
+  master-state document (schema 4, MT-16) and are restored at
+  start; the load picker and the auto-load path keep the full
+  index. Double-click
   or Enter loads the selected row through the explicit-load path; “/”
   focuses the filter from anywhere in the waiting view, Esc clears it.
   The rolling recent list (master-state schema 3: most recent first,
@@ -247,11 +250,11 @@ usability”):
   pure `table_filter.py`; the waiting view renders
   `filter_tables(sort_tables(index.tables(), mode), query)`. Row
   identity stays the relative path; the load picker and the auto-load
-  path keep using the full index (separate decision surfaces). Both
-  values are session state — they survive the trainer round-trip but
-  are never persisted (no schema bump for view state). Deliberately
-  out: group-by-process tree, persisted filter/sort, entry-count /
-  blocked-count columns.
+  path keep using the full index (separate decision surfaces). Both values are persisted in the master-state
+  document (schema 4, MT-16) and restored at start; they also
+  survive the trainer round-trip. Deliberately out (0.26):
+  entry-count / blocked-count columns; the group-by-process tree
+  (MT-17) and the persisted filter/sort (MT-16) shipped in 0.27.
 - **MT-14 keyboard flow.** Double-click, Return and KP_Enter load the
   selected row through the MT-10 explicit-load path (named refusals
   included, no new load logic); arrow keys are built into the Treeview.
@@ -270,6 +273,31 @@ usability”):
   Last-used column; the indexed Size (compact B/KB/MB) and Modified
   (local time) join the tree, and the window grows to 1160x600
   (minsize 900x420).
+- **MT-16 persisted waiting-view settings (0.27).** The filter
+  query, the sort mode and the view mode persist in
+  `master-settings.json` (schema 3 → 4: `view_filter` at most
+  200 characters, "" = no filter; `view_sort`; `view_mode`).
+  Schema-1/2/3 documents promote on load with the documented
+  defaults ("" / "name" / "list"); a schema-3 document carrying
+  a view_* field is refused as an unknown field. The window
+  restores all three at construction; every change (filter
+  typing, sort cycle, view cycle, Esc clear) re-persists
+  immediately through `MasterApp.set_view_settings` (named
+  refusals for unknown modes / an over-long filter).
+- **MT-17 process-grouped view (0.27).** The "View: list/process"
+  cycle button switches between the flat row list and the
+  grouped tree: one parent row per casefolded bound process
+  name (a table bound to several names appears once under each
+  of them), the tables without a bound name under
+  "(no process binding)" last, within-group order = the
+  current sort order (filter + sort applied first; the pure
+  reshaping is `table_filter.group_tables_by_process`, which
+  never adds or drops tables). The parent row carries the group
+  label + "N table(s)" count (the tree uses show="headings",
+  so the label is values[0]); group rows are display-only —
+  double-click, Enter and the row context menu are gated by
+  `_is_table_row`, so a group row never loads; the children
+  load through the ordinary MT-10 path.
 
 ## CLI
 

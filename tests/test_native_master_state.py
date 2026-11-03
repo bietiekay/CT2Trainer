@@ -5,9 +5,10 @@ byte-stable serialization, strict checksum-bound load, every fail-closed
 refusal (malformed JSON, invalid shape, tampered checksum, foreign schema,
 unknown fields, out-of-bounds last_folder, size limit), tolerant
 ``load_master_state`` (absent / refused -> None), and
-``save_master_state`` directory creation.  Schema 2 (0.25) carries the
-MT-10/11 preferences (last_table, attach_mode); schema-1 documents are
-promoted on load with the documented defaults.
+``save_master_state`` directory creation.  Schema 4 (0.27) carries the
+MT-10/11/15/16 preferences (last_table, attach_mode, recent_tables,
+waiting-view settings); schema-1/2/3 documents are promoted on load
+with the documented defaults.
 """
 from __future__ import annotations
 
@@ -46,7 +47,10 @@ class MasterStateSerializeTests(unittest.TestCase):
                          {"schema": MASTER_STATE_SCHEMA, "last_folder": None,
                           "last_table": None,
                           "attach_mode": ATTACH_MODE_AUTO,
-                          "recent_tables": []})
+                          "recent_tables": [],
+                          "view_filter": "",
+                          "view_sort": "name",
+                          "view_mode": "list"})
         canonical = json.dumps(document["payload"], sort_keys=True,
                                separators=(",", ":"), allow_nan=False,
                                ensure_ascii=True).encode("utf-8")
@@ -197,6 +201,57 @@ class MasterStateSerializeTests(unittest.TestCase):
         with self.assertRaises(MasterStateRefusal) as ctx:
             master_state_from_bytes(b"x" * (MAX_MASTER_STATE_BYTES + 1))
         self.assertIn("size limit", str(ctx.exception))
+
+    # -- schema 4 (0.27) waiting-view settings (MT-16) ----------------------
+
+    def test_view_settings_roundtrip(self):
+        state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
+                            view_filter="fallout", view_sort="process",
+                            view_mode="process")
+        raw = master_state_to_bytes(state)
+        self.assertEqual(master_state_from_bytes(raw), state)
+
+    def test_schema3_document_promotes_on_load(self):
+        payload = {"schema": 3, "last_folder": "C:\\tables",
+                   "last_table": "sub\\gamea.ct",
+                   "attach_mode": ATTACH_MODE_ASK,
+                   "recent_tables": [{"path": "sub\\gamea.ct",
+                                      "at": "2026-11-03T12:00:00Z"}]}
+        state = master_state_from_bytes(self._document(payload))
+        self.assertEqual(state.schema, MASTER_STATE_SCHEMA)
+        self.assertEqual(state.view_filter, "")
+        self.assertEqual(state.view_sort, "name")
+        self.assertEqual(state.view_mode, "list")
+        self.assertEqual(state.recent_tables,
+                         (("sub\\gamea.ct", "2026-11-03T12:00:00Z"),))
+
+    def test_from_bytes_refuses_schema3_with_view_fields(self):
+        for field in ("view_filter", "view_sort", "view_mode"):
+            payload = {"schema": 3, "last_folder": None,
+                       field: "x" if field == "view_filter" else "name"}
+            with self.assertRaises(MasterStateRefusal) as ctx:
+                master_state_from_bytes(self._document(payload))
+            self.assertIn("unknown fields", str(ctx.exception))
+            self.assertIn(field, str(ctx.exception))
+
+    def test_from_bytes_refuses_bad_view_settings(self):
+        base = {"schema": MASTER_STATE_SCHEMA, "last_folder": None}
+        bad_view_sort = dict(base, view_sort="alphabetical")
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(bad_view_sort))
+        self.assertIn("view_sort", str(ctx.exception))
+        bad_view_mode = dict(base, view_mode="grid")
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(bad_view_mode))
+        self.assertIn("view_mode", str(ctx.exception))
+        long_filter = dict(base, view_filter="x" * 201)
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(long_filter))
+        self.assertIn("view_filter", str(ctx.exception))
+        not_a_string = dict(base, view_filter=7)
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(not_a_string))
+        self.assertIn("view_filter", str(ctx.exception))
 
 
 class MasterStateFileTests(unittest.TestCase):

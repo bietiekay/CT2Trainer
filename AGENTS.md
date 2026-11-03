@@ -26,7 +26,18 @@ when the owner is proven dead and only target-side identities remain
 unproven); +61 tests, full main suite 4,320 OK / 30 expected skips,
 catalog zero delta `blocked-catalog-026-master-ui`; in-build suite
 4,320 OK / 30 expected skips, `ce_inputs: []`; superseded 0.25
-(build `native-20261103T062439Z-f4c16be9`). The 0.16 Wave-4
+(build `native-20261103T062439Z-f4c16be9`). 0.27 content on main
+(2026-11-03, root-direct): the Master Trainer waiting-view settings
+persistence (MT-16: `master-settings.json` schema 3 → 4 -
+`view_filter` / `view_sort` / `view_mode` restored at start and
+persisted on every change; schema-1/2/3 documents promote, a
+schema-3 document carrying a view_* field is refused as an unknown
+field) + the process-grouped waiting view (MT-17: the pure
+`group_tables_by_process` reshaping, the "View: list/process" cycle
+button, display-only group rows); +22 tests, full main suite 4,342
+OK / 30 expected skips, catalog zero delta
+`blocked-catalog-027-view`; the 0.27 build is cut from this content
+(0.26 remains the latest verified release). The 0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
 now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
@@ -140,10 +151,19 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-03, 0.26 released - build
+**CT2Trainer (status 2026-11-03, 0.27 content on main - the 0.27
+build is cut from this content; 0.26 remains the latest verified
+release, build `native-20261103T112811Z-59a6b3d5` cut from `main` @
+`c114ec2`, 2026-11-03, in-build suite 4,320 OK / 30 expected skips,
+`ce_inputs: []`) - 0.27 Master Trainer waiting-view settings
+persistence (MT-16: `master-settings.json` schema 3 → 4 - the filter
+query, sort mode and view mode restored at start and persisted on
+every change) + the process-grouped waiting view (MT-17: group-
+by-bound-process tree, display-only group rows); +22 tests, full
+main suite 4,342 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-027-view`), 0.26 released (build
 `native-20261103T112811Z-59a6b3d5` cut from `main` @ `c114ec2`,
-2026-11-03, in-build suite 4,320 OK / 30 expected skips,
-`ce_inputs: []`) - 0.26 Master Trainer waiting-view usability
+2026-11-03) - the 0.26 Master Trainer waiting-view usability
 MT-13/14/15 (search/filter/sort through the new pure
 `table_filter.py` layer, keyboard load flow, rolling recent tables in
 `master-settings.json` schema 3 + Size/Modified/Last-used columns,

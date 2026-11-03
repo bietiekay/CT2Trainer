@@ -435,6 +435,48 @@ game-facing action.
   (49,653,968 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `895f937ed5c228c09b97edba28aa9dc4ad228abd58585f73080f40ab265bc031`,
   16,925,677 bytes, ships next to the converter).
+- 0.27 Master Trainer waiting-view settings persistence MT-16 +
+  process-grouped waiting view MT-17 (2026-11-03, root-direct on
+  `main`; online-evaluated in `master_trainer/ROADMAP.md`, "0.27
+  waiting-view settings + process groups"). MT-16:
+  `master-settings.json` schema 3 -> 4 (`view_filter` - the raw
+  filter entry text, at most `VIEW_FILTER_MAX` = 200 characters,
+  "" = no filter; `view_sort` - one of the table_filter sort
+  modes; `view_mode` - "list" flat rows / "process" grouped by
+  bound process name); schema-1/2/3 documents promote on load with
+  the documented defaults ("" / "name" / "list"), a schema-3
+  document carrying a view_* field is refused as an unknown field;
+  the format-level constants live in `master_state` (the
+  attach-mode pattern) and a test pins the mirror against the pure
+  layer; `MasterApp.set_view_settings(filter_query, sort_mode,
+  view_mode)` validates with named `ValueError`s and re-persists
+  immediately; the window restores all three from the persisted
+  document at construction and every UI change point re-persists
+  (filter `<KeyRelease>`, sort cycle, view cycle, Esc clear).
+  MT-17: the pure `table_filter.group_tables_by_process` reshaping
+  of the already-sorted-and-filtered row set (never adds or drops
+  tables: one group per casefolded bound process name, a
+  multi-bound table once in EACH bound group, the unbound tables
+  under "(no process binding)" last, within-group input order
+  kept); the "View: list/process" cycle button between the sort
+  button and the filter entry (persisted through MT-16); the tree
+  (`show="headings"`) renders the group label + "N table(s)" count
+  in values[0] of the parent row; group rows are display-only -
+  `_is_table_row` gates the double-click, the Enter selection and
+  the row context menu, the children load through the ordinary
+  MT-10 path. +22 tests (`test_native_master_state.py` +4,
+  `test_native_master_table_filter.py` +8,
+  `tests/test_native_master_ui_mt16.py` new +10). Full main suite
+  4,342 OK / 30 expected skips. Catalog remeasure
+  `blocked-catalog-027-view` (chunked 64x3 audit over the 151
+  reference tables, 2026-11-03): 151/151 loaded, 0 load errors,
+  117,809 total / 116,756 supported / 60,161 staged / 103,607
+  actionable / 12,974 headings / 1,053 blocked - zero delta vs
+  `blocked-catalog-026-master-ui` (per-table count/reason/sha
+  changes: 0); feature matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. The 0.27 build is
+  cut from this content (0.26 remains the latest verified
+  release).
 - Latest verified release: 0.26, build
   `native-20261103T112811Z-59a6b3d5` (cut from `main` @ `c114ec2`,
   2026-11-03), in-build suite 4,320 OK / 30 expected skips,

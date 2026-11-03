@@ -54,9 +54,11 @@ from .orchestrator import (MasterOrchestrator, STATE_ACTIVE,
                            ExplicitLoadRefusal)
 from .master_state import (MASTER_STATE_SCHEMA, MASTER_STATE_FILENAME,
                            ATTACH_MODE_ASK, ATTACH_MODE_AUTO,
-                           RECENT_TABLES_LIMIT, MasterState,
+                           RECENT_TABLES_LIMIT, VIEW_FILTER_MAX, MasterState,
                            load_master_state, save_master_state)
-from .table_filter import SORT_MODES, filter_tables, sort_tables
+from .table_filter import (SORT_MODES, VIEW_MODES, UNBOUND_PROCESS_LABEL,
+                           filter_tables, group_tables_by_process,
+                           sort_tables)
 from .process_picker import (DECISION_PICK, attach_decision,
                              candidate_processes,
                              make_pinned_memory_factory)
@@ -123,6 +125,15 @@ class MasterApp:
         # first; empty on a fresh or refused state home).
         self.recent_tables = (tuple(state.recent_tables) if state is not None
                               else ())
+        # MT-16 (0.27): the persisted waiting-view settings (schema 4):
+        # the filter query, the sort mode and the display mode.  A fresh
+        # or refused state home takes the documented defaults ("" /
+        # "name" / "list").
+        self.view_filter = (state.view_filter if state is not None else "")
+        self.view_sort = (state.view_sort if state is not None
+                          else SORT_MODES[0])
+        self.view_mode = (state.view_mode if state is not None
+                          else VIEW_MODES[0])
         self.lister = lister if lister is not None else default_process_lister()
         self.plan_compiler = plan_compiler
         self.state_dir_factory = state_dir_factory
@@ -159,16 +170,19 @@ class MasterApp:
         return Path(self.state_home) / MASTER_STATE_FILENAME
 
     def persist_state(self) -> None:
-        """Remember the current table folder plus the MT-10/11/15
+        """Remember the current table folder plus the MT-10/11/15/16
         preferences (last explicit table, attach mode, rolling recent
-        tables) for the next start (best effort, like the index
-        persistence)."""
+        tables, waiting-view filter/sort/display mode) for the next
+        start (best effort, like the index persistence)."""
         try:
             save_master_state(MasterState(
                 MASTER_STATE_SCHEMA, self.folder,
                 last_table=self.last_table,
                 attach_mode=self.attach_mode,
-                recent_tables=tuple(self.recent_tables)),
+                recent_tables=tuple(self.recent_tables),
+                view_filter=self.view_filter,
+                view_sort=self.view_sort,
+                view_mode=self.view_mode),
                 self.state_path())
         except Exception:
             pass
@@ -178,6 +192,34 @@ class MasterApp:
         if mode not in (ATTACH_MODE_AUTO, ATTACH_MODE_ASK):
             raise ValueError("attach mode must be 'auto' or 'ask'")
         self.attach_mode = mode
+        self.persist_state()
+
+    def set_view_settings(self, filter_query: str | None, sort_mode: str,
+                          view_mode: str) -> None:
+        """MT-16 (0.27): persist the waiting-view settings (schema 4).
+
+        ``filter_query`` is the raw filter entry text ("" means no
+        filter); ``sort_mode`` / ``view_mode`` must be one of the
+        documented modes.  Invalid values raise the named ValueError,
+        so the UI never persists what it would not render.
+        """
+        if sort_mode not in SORT_MODES:
+            raise ValueError("unknown view sort mode: " + repr(sort_mode)
+                             + " (expected one of "
+                             + ", ".join(SORT_MODES) + ")")
+        if view_mode not in VIEW_MODES:
+            raise ValueError("unknown view mode: " + repr(view_mode)
+                             + " (expected one of " + ", ".join(VIEW_MODES)
+                             + ")")
+        text = filter_query if filter_query is not None else ""
+        if not isinstance(text, str):
+            raise ValueError("filter query must be a string")
+        if len(text) > VIEW_FILTER_MAX:
+            raise ValueError("filter query exceeds "
+                             + str(VIEW_FILTER_MAX) + " characters")
+        self.view_filter = text
+        self.view_sort = sort_mode
+        self.view_mode = view_mode
         self.persist_state()
 
     def remember_last_table(self, relative_path: str | None) -> None:
@@ -276,12 +318,13 @@ class MasterWindow:
         # Live bound-process feedback of the latest waiting tick.
         self._running: tuple = ()
         self._running_keys: frozenset = frozenset()
-        # MT-13/14/15 (0.26): the waiting-view filter/sort state.
-        # Session-only: it survives the trainer round-trip (the waiting
-        # view is rebuilt from these values) but is never persisted to
-        # the state home.
-        self._filter_query = ""
-        self._sort_mode = SORT_MODES[0]
+        # MT-13/14/15 (0.26) + MT-16/17 (0.27): the waiting-view
+        # filter/sort/display state.  Restored from the persisted
+        # master-state document (schema 4) at construction; every
+        # change is re-persisted through app.set_view_settings.
+        self._filter_query = app.view_filter
+        self._sort_mode = app.view_sort
+        self._view_mode = app.view_mode
         try:
             icon = window_icon_path("master")
             if icon.is_file():
@@ -325,8 +368,9 @@ class MasterWindow:
         repo_link(header, bg=BG_HEADER, fg=FG).pack(side="right", padx=(0, 16))
         # MT-13 (0.26): the waiting-view filter + sort cycle.  Packed
         # after the repo link, i.e. left of it in the header row.  The
-        # filter/sort values are session state set in __init__ (survive
-        # the trainer round-trip).
+        # filter/sort/view values are restored from the persisted
+        # master-state document (schema 4, MT-16) and re-persisted on
+        # every change.
         self._sort_btn = tk.Button(header, text="Sort: " + self._sort_mode,
                                    command=self._cycle_sort,
                                    bg="#2a3547", fg=FG,
@@ -335,6 +379,19 @@ class MasterWindow:
                                    font=("Segoe UI", 11),
                                    relief="raised", padx=8, pady=2)
         self._sort_btn.pack(side="right", padx=(0, 8))
+        # MT-17 (0.27): the waiting-view display mode cycle (flat list
+        # vs grouped by bound process name), between the sort button
+        # and the filter entry; persisted like the other view settings
+        # (MT-16).
+        self._view_btn = tk.Button(header,
+                                   text="View: " + self._view_mode,
+                                   command=self._cycle_view,
+                                   bg="#2a3547", fg=FG,
+                                   activebackground="#3a4a63",
+                                   activeforeground=FG,
+                                   font=("Segoe UI", 11),
+                                   relief="raised", padx=8, pady=2)
+        self._view_btn.pack(side="right", padx=(0, 8))
         self._filter_entry = tk.Entry(header, width=30,
                                       font=("Segoe UI", 11),
                                       bg="#10151f", fg=FG,
@@ -505,25 +562,45 @@ class MasterWindow:
         # MT-15 (0.26): the Last-used column is fed by the recent list
         # (the stored UTC timestamp, most recent first).
         recent_at = {path: at for path, at in self.app.recent_tables}
-        for entry in self._visible_tables():
-            names = ", ".join(entry.process_names) or "(none found)"
-            if entry.status == "ok":
-                pids = sorted(set(p for n in entry.process_names
-                                  for p in pids_by_key.get(n.casefold(), ())))
-                if pids:
-                    status = "running"
-                    detail = "PID " + ", ".join(str(p) for p in pids)
-                else:
-                    status, detail = "ok", ""
+        # MT-17 (0.27): the process-grouped view reshapes the very same
+        # row set (filter + sort applied first) into one parent row per
+        # casefolded bound process name; the unbound tables collect
+        # under UNBOUND_PROCESS_LABEL last.  The tree renders with
+        # show="headings", so the group label lives in values[0], not
+        # in the invisible text item.
+        rows = list(self._visible_tables())
+        if self._view_mode != "process":
+            for entry in rows:
+                self._insert_table_row("", entry, pids_by_key, recent_at)
+            return
+        for label, group in group_tables_by_process(rows):
+            parent = tree.insert("", "end", open=True, values=(
+                label, str(len(group)) + " table(s)",
+                "", "", "", "", ""))
+            for entry in group:
+                self._insert_table_row(parent, entry, pids_by_key,
+                                       recent_at)
+
+    def _insert_table_row(self, parent: str, entry, pids_by_key: dict,
+                          recent_at: dict) -> None:
+        """One waiting-view table row (flat list or group child)."""
+        names = ", ".join(entry.process_names) or "(none found)"
+        if entry.status == "ok":
+            pids = sorted(set(p for n in entry.process_names
+                              for p in pids_by_key.get(n.casefold(), ())))
+            if pids:
+                status = "running"
+                detail = "PID " + ", ".join(str(p) for p in pids)
             else:
-                status = "unreadable"
-                detail = entry.detail or ""
-            tree.insert("", "end", values=(entry.relative_path, names,
-                                           status, detail,
-                                           self._format_size(entry.size),
-                                           self._format_mtime(entry.mtime_ns),
-                                           recent_at.get(entry.relative_path,
-                                                 "")))
+                status, detail = "ok", ""
+        else:
+            status = "unreadable"
+            detail = entry.detail or ""
+        self._table_tree.insert(parent, "end", values=(
+            entry.relative_path, names, status, detail,
+            self._format_size(entry.size),
+            self._format_mtime(entry.mtime_ns),
+            recent_at.get(entry.relative_path, "")))
 
     def _visible_tables(self) -> list:
         """MT-13 (0.26): the waiting-view row set - the full index,
@@ -550,17 +627,34 @@ class MasterWindow:
             "%Y-%m-%d %H:%M")
 
     def _cycle_sort(self):
-        """MT-13 (0.26): name -> process -> status -> name."""
+        """MT-13 (0.26): name -> process -> status -> name (the choice
+        is persisted with the waiting-view settings, MT-16)."""
         order = list(SORT_MODES)
         self._sort_mode = order[(order.index(self._sort_mode) + 1)
                                 % len(order)]
         self._sort_btn.configure(text="Sort: " + self._sort_mode)
+        self.app.set_view_settings(self._filter_query, self._sort_mode,
+                                   self._view_mode)
+        self._render_tables()
+
+    def _cycle_view(self):
+        """MT-17 (0.27): list -> process -> list (the choice is
+        persisted with the waiting-view settings, MT-16)."""
+        order = list(VIEW_MODES)
+        self._view_mode = order[(order.index(self._view_mode) + 1)
+                                % len(order)]
+        self._view_btn.configure(text="View: " + self._view_mode)
+        self.app.set_view_settings(self._filter_query, self._sort_mode,
+                                   self._view_mode)
         self._render_tables()
 
     def _on_filter_edit(self, _event):
         """MT-13 (0.26): live filter - re-render plus the meta line
-        counter ('filtered: N/M') while a query is active."""
+        counter ('filtered: N/M') while a query is active.  The query
+        is persisted with the other waiting-view settings (MT-16)."""
         self._filter_query = self._filter_entry.get()
+        self.app.set_view_settings(self._filter_query, self._sort_mode,
+                                   self._view_mode)
         self._render_tables()
         if self._meta_label is not None:
             self._meta_label.configure(text=self._meta_text())
@@ -570,6 +664,8 @@ class MasterWindow:
         the table list."""
         self._filter_entry.delete(0, "end")
         self._filter_query = ""
+        self.app.set_view_settings(self._filter_query, self._sort_mode,
+                                   self._view_mode)
         self._render_tables()
         if self._meta_label is not None:
             self._meta_label.configure(text=self._meta_text())
@@ -583,6 +679,14 @@ class MasterWindow:
             return
         self._filter_entry.focus_set()
 
+    def _is_table_row(self, item: str) -> bool:
+        """MT-17 (0.27): True for loadable table rows - group children
+        in the process view and every row in the flat list.  Group rows
+        themselves are display-only (no load)."""
+        if self._table_tree.parent(item):
+            return True
+        return self._view_mode != "process"
+
     def _table_selected_rel(self):
         item = self._table_tree.focus()
         if not item:
@@ -590,6 +694,8 @@ class MasterWindow:
             if not selected:
                 return None
             item = selected[0]
+        if not self._is_table_row(item):
+            return None
         values = self._table_tree.item(item, "values")
         return values[0] if values else None
 
@@ -597,7 +703,7 @@ class MasterWindow:
         """MT-14 (0.26): double-click loads the clicked row through
         the MT-10 explicit-load path (named refusals included)."""
         item = self._table_tree.identify_row(event.y)
-        if not item:
+        if not item or not self._is_table_row(item):
             return
         values = self._table_tree.item(item, "values")
         if values:
@@ -973,9 +1079,10 @@ class MasterWindow:
         self._table_load_entries = ()
 
     def _table_context_menu(self, event):
-        """The MT-10 row menu: right-click a table row to load it."""
+        """The MT-10 row menu: right-click a table row to load it
+        (group rows are display-only, MT-17)."""
         item = self._table_tree.identify_row(event.y)
-        if not item:
+        if not item or not self._is_table_row(item):
             return
         values = self._table_tree.item(item, "values")
         if not values:
