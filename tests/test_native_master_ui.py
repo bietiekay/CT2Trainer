@@ -45,7 +45,8 @@ from ct2trainer.native.master_trainer.orchestrator import (STATE_ACTIVE,
                                                            STATE_WAITING)
 from ct2trainer.native.master_trainer.process_watch import (ProcessLister,
                                                             ProcessSnapshotEntry)
-from ct2trainer.native.master_trainer.master_state import (load_master_state,
+from ct2trainer.native.master_trainer.master_state import (MasterState,
+                                                           load_master_state,
                                                            save_master_state)
 from ct2trainer.native.master_trainer.table_index import (TableIndexRefusal,
                                                           load_index)
@@ -248,15 +249,47 @@ class RunMasterTests(unittest.TestCase):
         self.assertIn("Error: folder not found:", out.getvalue())
 
     def test_run_master_no_folder_cancelled_returns_0(self):
+        # The state home must be isolated: run_master() reuses the stored
+        # last folder when the state home carries a valid one (the
+        # machine's real state home does on a field-tested box), which
+        # would bypass the picker path this test exists for.  The first
+        # 0.25 in-build run (2026-11-02) read the real state home and
+        # failed exactly that way.
+        state_home = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: shutil.rmtree(state_home, ignore_errors=True))
         with patch("ct2trainer.native.master_trainer.master_ui.tk.Tk") as tk_cls, \
                 patch.object(master_ui.filedialog, "askdirectory",
                              return_value="") as ask:
             with redirect_stdout(io.StringIO()) as out:
-                rc = run_master()
+                rc = run_master(state_home=str(state_home))
         self.assertEqual(rc, 0)
         self.assertIn("No folder chosen; nothing to do.", out.getvalue())
         self.assertEqual(ask.call_count, 1)
         self.assertEqual(tk_cls.call_count, 1)
+
+    def test_run_master_reuses_stored_folder_without_picker(self):
+        # The stored last folder wins over the picker while it still
+        # exists: no askdirectory call, the app is built from the stored
+        # folder, the window runs against it.
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: shutil.rmtree(folder, ignore_errors=True))
+        state_home = Path(tempfile.mkdtemp())
+        self.addCleanup(lambda: shutil.rmtree(state_home, ignore_errors=True))
+        save_master_state(
+            MasterState(schema=2, last_folder=str(folder),
+                        last_table=None, attach_mode="auto"),
+            state_home / "master-settings.json")
+        with patch.object(master_ui.tk, "Tk") as tk_cls, \
+                patch.object(master_ui, "MasterWindow") as window_cls, \
+                patch.object(master_ui.filedialog, "askdirectory") as ask:
+            with redirect_stdout(io.StringIO()) as out:
+                rc = run_master(state_home=str(state_home))
+        self.assertEqual(rc, 0)
+        ask.assert_not_called()
+        window_cls.assert_called_once()
+        app = window_cls.call_args[0][1]
+        self.assertEqual(app.folder, str(folder.resolve()))
+        self.assertIn("Using folder from last session", out.getvalue())
 
     def test_run_master_success_builds_app_saves_index_and_runs_mainloop(self):
         folder = Path(tempfile.mkdtemp())

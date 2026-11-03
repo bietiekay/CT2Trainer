@@ -19,7 +19,7 @@ through an independent clean-room implementation.** 0.25 content on main
 table load, process picker + persisted attach mode, detach/user
 attach - plus the online feature evaluation record in
 `master_trainer/ROADMAP.md` and the Tcl test-harness hardening
-(`tests/native_tk_teardown.py`); +65 tests, full main suite 4,258
+(`tests/native_tk_teardown.py`); +66 tests, full main suite 4,259
 OK / 30 expected skips, catalog zero delta
 `blocked-catalog-025-master-ui`; the 0.24 build
 `native-20261102T102029Z-fe358e35` remains the latest verified
@@ -140,8 +140,11 @@ language used in chat.
 **CT2Trainer (status 2026-11-02, 0.25 content on main (Master
 Trainer user control MT-10/11/12: explicit table load, process
 picker + persisted attach mode, detach/user attach; online feature
-evaluation; Tcl test-harness hardening; +65 tests; full main suite
-4,258 OK / 30 expected skips; catalog zero delta
+evaluation; Tcl test-harness hardening; in-build reliability fix
+(state-home isolation in the `run_master` cancel test + explicit-master Tk
+variables in `master_ui.py`, first in-build run
+`native-20261102T181843Z-ddfb63f0` exposed the dependence); +66 tests; full
+main suite 4,259 OK / 30 expected skips; catalog zero delta
 `blocked-catalog-025-master-ui`), 0.24 released as the latest
 verified build (trainer tick sounds - user field request
 2026-11-01; clean-room in-code tick

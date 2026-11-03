@@ -316,7 +316,7 @@ class MasterWindow:
         self._table_tree.bind("<Button-3>", self._table_context_menu)
         scroll.pack(side="right", fill="y")
 
-        self._status_var = tk.StringVar(value="Scanning…")
+        self._status_var = tk.StringVar(self.root, value="Scanning…")
         status = tk.Frame(self.root, bg=BG, height=40, padx=12)
         status.pack(fill="x")
         status.pack_propagate(False)
@@ -973,7 +973,7 @@ class MasterWindow:
         top.title("Which table for " + choice.process_name + "?")
         top.resizable(False, False)
         top.transient(self.root)
-        selection = tk.StringVar()
+        selection = tk.StringVar(top)
         tk.Label(top, text=choice.process_name + " is running (PID "
                  + str(choice.snapshot_entries[0].pid) + ") and "
                  + str(len(choice.tables)) + " indexed tables bind to it:",

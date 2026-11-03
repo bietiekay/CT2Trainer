@@ -290,7 +290,7 @@ game-facing action.
   the portable ZIP.
 - 0.25 Master Trainer user control (2026-11-02, user request;
   root-direct on `main`, VERSION 0.25 + CHANGELOG entry in the same
-  change; full main suite 4,258 OK / 30 expected skips): the Master
+  change; full main suite 4,259 OK / 30 expected skips): the Master
   Trainer gains explicit user control over which table loads and
   which process attaches, plus a detach / user-attach hold. The
   feature set was evaluated against online all-in-one trainer front
@@ -354,11 +354,23 @@ game-facing action.
   (two non-verbose full-suite runs aborted at ~71% with exit 1 and
   no summary; the verbose full run completed green; a middle-set
   repro did not reproduce; a clean-tree 0.24 @ `aba8b65` full run
-  had no Tcl fatal). +65 tests (`tests/test_native_master_process_picker.py`
+  had no Tcl fatal). In-build reliability fix (first 0.25 in-build
+  suite run `native-20261102T181843Z-ddfb63f0`, 2026-11-02, exposed
+  it: the `run_master` cancel test read the machine's real state
+  home - the in-build suite runs without the LOCALAPPDATA isolation
+  of local dev runs - and on a field-tested box with a stored
+  `last_folder` took the stored-folder reuse path with the mocked
+  `tk.Tk`; the test now uses an isolated state home, a new
+  deterministic test covers the reuse path, and the waiting-view
+  status variable plus the table-picker selection variable in
+  `master_ui.py` carry an explicit master (the window root) instead
+  of the tkinter default-root lifecycle). +66 tests
+  (`tests/test_native_master_process_picker.py`
   16, `tests/test_native_master_explicit_load.py` 13,
   `tests/test_native_attach_pause.py` 5,
   `tests/test_native_master_ui_mt12.py` 24, +7 schema-2 tests in
-  `tests/test_native_master_state.py`). Catalog remeasure
+  `tests/test_native_master_state.py`, +1 state-home isolation test
+  in `tests/test_native_master_ui.py`). Catalog remeasure
   `blocked-catalog-025-master-ui` (chunked 64x3 audit over the 151
   reference tables, 2026-11-02): 151/151 loaded, 0 load errors,
   117,809 total / 116,756 supported / 60,161 staged / 103,607

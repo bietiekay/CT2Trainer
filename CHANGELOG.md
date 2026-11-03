@@ -45,15 +45,28 @@ evaluation” section):
 - `master-settings.json` schema 2 (`last_table`, `attach_mode`):
   schema-1 documents promote on load with the documented defaults
   (`last_table=null`, `attach_mode="auto"`); only schema 2 is writable.
-- Tests: +65 (`tests/test_native_master_process_picker.py` 16,
+- Tests: +66 (`tests/test_native_master_process_picker.py` 16,
   `tests/test_native_master_explicit_load.py` 13,
   `tests/test_native_master_ui_mt12.py` 24,
   `tests/test_native_attach_pause.py` 5, +7 schema-2 tests in
-  `tests/test_native_master_state.py`). Full main suite 4,258 OK / 30
+  `tests/test_native_master_state.py`, +1 state-home isolation test in
+  `tests/test_native_master_ui.py`). Full main suite 4,259 OK / 30
   expected skips (2026-11-02), zero catalog delta vs
   `blocked-catalog-024-sounds` (run `blocked-catalog-025-master-ui`:
   151/151 loaded, 117,809 total / 116,756 supported / 60,161 staged /
   1,053 blocked / 0 load errors).
+- In-build reliability fix (exposed by the first 0.25 in-build suite
+  run `native-20261102T181843Z-ddfb63f0`, 2026-11-02: 4,259 ran,
+  1 error, the rest green): the `run_master` cancel test read the
+  machine's real state home (the in-build suite runs without the
+  LOCALAPPDATA isolation local dev runs use) and, on a field-tested
+  box with a stored `last_folder`, took the stored-folder reuse path
+  with the mocked `tk.Tk` and failed at the waiting-view status
+  variable. The test now uses an isolated state home, a new
+  deterministic test covers the stored-folder reuse path, and the
+  waiting-view status variable plus the table-picker selection
+  variable in `master_ui.py` now carry an explicit master (the window
+  root) instead of relying on the tkinter default-root lifecycle.
 
 ## 0.24 (2026-11-01)
 
