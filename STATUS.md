@@ -1,19 +1,35 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-02. **0.25 content on main** (Master Trainer
-user control MT-10/11/12, user request 2026-11-02: explicit table
-load, process picker + persisted attach mode, detach/user attach;
-plus the online feature evaluation record in
-`master_trainer/ROADMAP.md` and the Tcl test-harness hardening
-(`tests/native_tk_teardown.py`, test-only); +66 tests; full main
-suite 4,259 OK / 30 expected skips; catalog zero delta
-`blocked-catalog-025-master-ui`; see the 0.25 section below). The
-0.25 build has not been cut yet - the latest verified release
-remains **0.24** (build `native-20261102T102029Z-fe358e35`, cut
-from `main` @ `a2777ed`, 2026-11-02; trainer tick sounds, user
-field request 2026-11-01; branch `native-0.24-trainer-sounds`; see
-the 0.24 section below).
-**Latest verified release:** 0.24, build
+**Updated:** 2026-11-03. **0.25 released** (build
+`native-20261103T062439Z-f4c16be9`, cut from `main` @ `a861bfb`,
+2026-11-03) - Master Trainer user control MT-10/11/12 (user request
+2026-11-02: explicit table load, process picker + persisted attach
+mode, detach/user attach), plus the online feature evaluation record
+in `master_trainer/ROADMAP.md`, the Tcl test-harness hardening
+(`tests/native_tk_teardown.py`, test-only), and the in-build
+reliability fix (state-home isolation in the `run_master` cancel
+test + explicit Tk variable masters in `master_ui.py`, first
+in-build run `native-20261102T181843Z-ddfb63f0` exposed the
+dependence); +66 tests; full main suite 4,259 OK / 30 expected
+skips; catalog zero delta `blocked-catalog-025-master-ui`; see the
+0.25 section below. Superseded 0.24 (build
+`native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
+2026-11-02; trainer tick sounds, user field request 2026-11-01;
+branch `native-0.24-trainer-sounds`; see the 0.24 section below).
+**Latest verified release:** 0.25, build
+`native-20261103T062439Z-f4c16be9` (cut from `main` @ `a861bfb`,
+2026-11-03): the 0.25 Master Trainer user-control release
+(MT-10/11/12 + Tcl test-harness hardening + in-build reliability fix)
+- in-build suite 4,259 OK / 30 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.25-source.zip` sha256
+`64f8c3082cff50687b1962234c17a82e2a2f0c19eb1112ece06a0a25132f35be`
+(14,324,774 bytes), portable ZIP
+`CT2Trainer-0.25-windows-portable.zip` sha256
+`774266f7e2c9dc69f4d8cfc963309b9907442ec6b5343ff629b9e30c04049653`
+(49,633,196 bytes), frozen `CT2Trainer-Master.exe` (sha256
+`8736f73e762b57a8f337bf8fa04c2c16f8622c4d99e7dd7f2167b2c9999e3d8f`)
+next to the converter. Superseded 0.24, build
 `native-20261102T102029Z-fe358e35` (built from `main` at `a2777ed`,
 2026-11-02): the 0.24 trainer tick sounds release (see the 0.24
 section below) - in-build suite 4,193 OK / 30 expected skips,
@@ -476,8 +492,11 @@ sessions (documented single-session model).
   0). Feature matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION 0.25 +
   CHANGELOG 0.25 entry in the same change (root-direct on `main`,
-  versioning rule). The 0.25 build is pending cut - the latest
-  verified release remains 0.24 (build
+  versioning rule). The 0.25 build
+  `native-20261103T062439Z-f4c16be9` (cut from `main` @ `a861bfb`,
+  2026-11-03; in-build suite 4,259 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate)
+  is the latest verified release; superseded 0.24 (build
   `native-20261102T102029Z-fe358e35`).
 
 **0.23 Master Trainer roadmap complete (2026-11-01, branch

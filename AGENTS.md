@@ -137,16 +137,19 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-02, 0.25 content on main (Master
-Trainer user control MT-10/11/12: explicit table load, process
-picker + persisted attach mode, detach/user attach; online feature
-evaluation; Tcl test-harness hardening; in-build reliability fix
-(state-home isolation in the `run_master` cancel test + explicit-master Tk
-variables in `master_ui.py`, first in-build run
-`native-20261102T181843Z-ddfb63f0` exposed the dependence); +66 tests; full
-main suite 4,259 OK / 30 expected skips; catalog zero delta
-`blocked-catalog-025-master-ui`), 0.24 released as the latest
-verified build (trainer tick sounds - user field request
+**CT2Trainer (status 2026-11-03, 0.25 released - build
+`native-20261103T062439Z-f4c16be9` cut from `main` @ `a861bfb`,
+2026-11-03, in-build suite 4,259 OK / 30 expected skips,
+`ce_inputs: []`) - Master
+Trainer user control MT-10/11/12 (explicit table load, process
+picker + persisted attach mode, detach/user attach); online feature
+evaluation in `master_trainer/ROADMAP.md`; Tcl test-harness hardening
+(test-only); in-build reliability fix (state-home isolation in the
+`run_master` cancel test + explicit-master Tk variables in
+`master_ui.py`; the first in-build run
+`native-20261102T181843Z-ddfb63f0` exposed the dependence); +66 tests;
+catalog zero delta `blocked-catalog-025-master-ui`), 0.24 released
+as the superseded build (trainer tick sounds - user field request
 2026-11-01; clean-room in-code tick
 synthesis for on/off/attach in `trainer_sounds.py`, `ui.py` rewired
 (row switch + group heading toggle + attach-success transition in
@@ -372,22 +375,30 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261102T102029Z-fe358e35` (0.24,
-cut from `main` @ `a2777ed`; in-build suite 4,193 OK / 30 expected
-skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
-gate; source ZIP `CT2Trainer-0.24-source.zip` sha256
-`dfdd8cfcca90a2789bf544d8f8de4e34941067feeb2b32ce8d550f98e5bc4eb6`
-(14,298,696 bytes) - carries `trainer_sounds.py`, the
-`test_native_trainer_sounds.py` test file (supersedes the removed
-`test_native_ui_tone.py`) and the final 0.24 changelog entry - and
-portable ZIP `CT2Trainer-0.24-windows-portable.zip` sha256
-`12262cf16e906c3811ade0a8c582b7a1057c834a3110aff004dfd13b3067e7ab`
-(49,618,009 bytes; the frozen `CT2Trainer-Master.exe`
-(sha256 `5f3a66400c2c1775e6fc50ad6bbbc36aa8a6bcf8b58fe56507117dc33683494d`,
-16,896,995 bytes) ships next to the converter)).
-0.24 ships the trainer tick sounds (user field request 2026-11-01;
-clean-room in-code tick synthesis for on/off/attach; the tick
-sounds are untested on a live game session - field test pending).
+**Latest verified build:** `native-20261103T062439Z-f4c16be9` (0.25,
+cut from `main` @ `a861bfb`, 2026-11-03; in-build suite 4,259 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.25-source.zip` sha256
+`64f8c3082cff50687b1962234c17a82e2a2f0c19eb1112ece06a0a25132f35be`
+(14,324,774 bytes) - carries the MT-10/11/12 user control,
+`trainer_sounds.py`, the `test_native_master_*` / attach-pause test
+files, and the final 0.25 changelog entry - and portable ZIP
+`CT2Trainer-0.25-windows-portable.zip` sha256
+`774266f7e2c9dc69f4d8cfc963309b9907442ec6b5343ff629b9e30c04049653`
+(49,633,196 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `8736f73e762b57a8f337bf8fa04c2c16f8622c4d99e7dd7f2167b2c9999e3d8f`,
+16,912,561 bytes) ships next to the converter)).
+0.25 ships the Master Trainer user control (MT-10/11/12), the online
+feature evaluation record, the Tcl test-harness hardening, and the
+in-build reliability fix. The tick sounds remain untested on a live
+game session (field test pending). Superseded 0.24 build:
+`native-20261102T102029Z-fe358e35` (0.24, cut from `main` @ `a2777ed`,
+2026-11-02): the trainer tick sounds release (clean-room in-code tick
+synthesis for on/off/attach; in-build suite 4,193 OK / 30 expected
+skips; source ZIP sha256
+`dfdd8cfcca90a2789bf544d8f8de4e34941067feeb2b32ce8d550f98e5bc4eb6`,
+portable ZIP sha256
+`12262cf16e906c3811ade0a8c582b7a1057c834a3110aff004dfd13b3067e7ab`).
 Superseded 0.23 build: `native-20261101T145310Z-a160bae4` (0.23,
 cut from `main` @ `6e3ec98`; in-build suite 4,176 OK / 30 expected
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per

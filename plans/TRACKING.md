@@ -378,11 +378,22 @@ game-facing action.
   `blocked-catalog-024-sounds` (per-table count/reason/sha changes:
   0); feature matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`); AP-11 0/6,143.
-- Latest verified release: 0.24, build
-  `native-20261102T102029Z-fe358e35` (cut from `main` @ `a2777ed`,
-  2026-11-02), in-build suite 4,193 OK / 30 expected skips,
+- Latest verified release: 0.25, build
+  `native-20261103T062439Z-f4c16be9` (cut from `main` @ `a861bfb`,
+  2026-11-03), in-build suite 4,259 OK / 30 expected skips,
   `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
-  source ZIP `CT2Trainer-0.24-source.zip` sha256
+  source ZIP `CT2Trainer-0.25-source.zip` sha256
+  `64f8c3082cff50687b1962234c17a82e2a2f0c19eb1112ece06a0a25132f35be`
+  (14,324,774 bytes), portable ZIP
+  `CT2Trainer-0.25-windows-portable.zip` sha256
+  `774266f7e2c9dc69f4d8cfc963309b9907442ec6b5343ff629b9e30c04049653`
+  (49,633,196 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `8736f73e762b57a8f337bf8fa04c2c16f8622c4d99e7dd7f2167b2c9999e3d8f`,
+  16,912,561 bytes, ships next to the converter); superseded 0.24,
+  build `native-20261102T102029Z-fe358e35` (cut from `main` @
+  `a2777ed`, 2026-11-02), in-build suite 4,193 OK / 30 expected
+  skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+  gate; source ZIP `CT2Trainer-0.24-source.zip` sha256
   `dfdd8cfcca90a2789bf544d8f8de4e34941067feeb2b32ce8d550f98e5bc4eb6`
   (14,298,696 bytes), portable ZIP
   `CT2Trainer-0.24-windows-portable.zip` sha256
