@@ -6,22 +6,30 @@ the measurement snapshot are tracked in one place:
 confirmed-state detail (builds, suites, acceptance records); when in doubt
 about current status, check the tracker first.
 
-Status: **November 2, 2026** (0.25 content on main, 2026-11-02 -
-Master Trainer user control MT-10/11/12: explicit table load,
+Status: **November 3, 2026** (0.26 content on main, 2026-11-03 -
+Master Trainer waiting-view usability MT-13/14/15: search/filter/sort
+through the new pure `table_filter.py` layer, keyboard load flow,
+rolling recent tables in `master-settings.json` schema 3 +
+Size/Modified/Last-used columns; the feature set was online-
+evaluated and recorded in `master_trainer/ROADMAP.md` ("0.26
+waiting-view usability"); plus the live-target takeover field fix
+(stale-lock recovery attaches to the still-running game behind one
+user-confirmed prompt when the owner is proven dead in both
+observations and only target-side identities remain unproven);
++61 tests; full main suite 4,320 OK / 30 expected skips; catalog
+zero delta `blocked-catalog-026-master-ui`;
+root-direct on `main`, `VERSION` 0.26 + CHANGELOG entry in the
+same change; the 0.26 build is not cut yet - the latest verified
+build remains 0.25, build `native-20261103T062439Z-f4c16be9` cut
+from `main` @ `a861bfb` (2026-11-03); record below. 0.25 released
+(Master Trainer user control MT-10/11/12: explicit table load,
 process picker + persisted attach mode, detach/user attach; online
-feature evaluation recorded in `master_trainer/ROADMAP.md`;
-Tcl test-harness hardening (`tests/native_tk_teardown.py`,
-test-only); in-build reliability fix (state-home isolation in the
-`run_master` cancel test + explicit-master Tk variables in
-`master_ui.py`, first in-build run
-`native-20261102T181843Z-ddfb63f0` exposed the dependence); +66 tests;
-full main suite 4,259 OK / 30 expected skips; catalog zero delta
-`blocked-catalog-025-master-ui`;
-root-direct on `main`, `VERSION` 0.25 + CHANGELOG entry in the
-same change; the 0.25 build is not cut yet - the latest verified
-build remains 0.24, build `native-20261102T102029Z-fe358e35` cut
-from `main` @ `a2777ed` (2026-11-02); record below. Superseded
-0.24 (trainer tick sounds, branch `native-0.24-trainer-sounds`,
+feature evaluation in `master_trainer/ROADMAP.md`; Tcl test-harness
+hardening; in-build reliability fix; +66 tests, full main suite
+4,259 OK / 30 expected skips, catalog zero delta
+`blocked-catalog-025-master-ui`, released as build
+`native-20261103T062439Z-f4c16be9`); superseded 0.24 (trainer tick
+sounds, branch `native-0.24-trainer-sounds`,
 +21 tests, full main suite 4,193 OK / 30 expected skips, catalog
 zero delta `blocked-catalog-024-sounds`, released as build
 `native-20261102T102029Z-fe358e35`); superseded 0.23 (build
@@ -2351,9 +2359,120 @@ actionable / 12,974 headings / 1,053 blocked - **zero delta** vs
 `blocked-catalog-024-sounds` (per-table count/reason/sha changes:
 0). Feature matrix unchanged (42/42, 7,475/7,475 over
 `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION bumped to
-0.25 with the changelog entry in the same change (versioning rule);
-the 0.25 build is not cut yet - the latest verified build remains
-0.24 (`native-20261102T102029Z-fe358e35`).
+0.25 with the changelog entry in the same change (versioning rule).
+The 0.25 build `native-20261103T062439Z-f4c16be9` was cut from
+`main` @ `a861bfb` (2026-11-03): in-build suite 4,259 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.25-source.zip` sha256
+`64f8c3082cff50687b1962234c17a82e2a2f0c19eb1112ece06a0a25132f35be`
+(14,324,774 bytes), portable ZIP
+`CT2Trainer-0.25-windows-portable.zip` sha256
+`774266f7e2c9dc69f4d8cfc963309b9907442ec6b5343ff629b9e30c04049653`
+(49,633,196 bytes; the frozen `CT2Trainer-Master.exe` sha256
+`8736f73e762b57a8f337bf8fa04c2c16f8622c4d99e7dd7f2167b2c9999e3d8f`,
+16,912,561 bytes, ships next to the converter).
+
+### 0.26 content: Master Trainer waiting-view usability MT-13/14/15 + live-target takeover field fix (2026-11-03, root-direct on `main`)
+
+0.26 bundles the waiting-view usability package for the Master
+Trainer (user request 2026-11-02/03; feature evaluation recorded
+in `master_trainer/ROADMAP.md`, "0.26 waiting-view usability")
+with the live-target takeover field fix that already shipped on
+`main` (commit `3ffa8fa`; field case 2026-11-03, Indiana Jones
+0.22 log: the hotkey-bridge AV left `state.lock` while the game
+kept running, so the strict all-dead recovery proof could never
+pass and only a manual state-folder delete worked). Adopted:
+MT-13/14/15. Deliberately deferred (documented): group-by-process
+tree, persisted filter/sort, entry-count / blocked-count columns.
+- **MT-13 search / filter / sort:** new pure decision layer
+  `table_filter.py` (no OS / index / state access):
+  `filter_tables` (empty/whitespace query = the identity, input
+  order preserved; otherwise a casefolded substring over the
+  table's relative path AND any bound process name - a table
+  matches when ANY bound name matches) and `sort_tables` (modes
+  name / process / status; the casefolded relative path is the
+  universal tie-breaker; in process mode unbound tables sort last;
+  unknown mode raises `ValueError` - named refusal). The waiting
+  view renders `filter_tables(sort_tables(index.tables(), mode),
+  query)`; row identity stays the relative path; the load picker
+  and the auto-load path keep the full index. Filter and sort are
+  session-only: they survive the trainer round-trip but are never
+  persisted. Header filter entry (live re-render; meta line shows
+  `filtered: N/M`) + "Sort: name/process/status" cycle button.
+  +17 pure tests (`test_native_master_table_filter.py`) + 4 UI
+  tests in `test_native_master_ui_mt13.py`.
+- **MT-14 keyboard flow:** double-click, Return and KP_Enter load
+  the selected row through the MT-10 explicit-load path (named
+  refusals included, no new load logic); arrow keys are built into
+  the Treeview; "/" focuses the filter from anywhere in the
+  waiting view (a no-op in trainer mode); Esc on the filter clears
+  it and returns focus to the table list. +3 tests in
+  `test_native_master_ui_mt13.py`.
+- **MT-15 recent tables + Size / Modified / Last-used columns:**
+  `master-settings.json` schema 2 -> 3: `recent_tables`, most
+  recent first, capped at `RECENT_TABLES_LIMIT` (10), each item
+  `{"path", "at"}` with the persisted UTC timestamp
+  `YYYY-MM-DDTHH:MM:SSZ` (strict format, length-bound); schema-2
+  and schema-1 documents promote on load with `recent_tables=()`,
+  and a schema-2 document carrying the field is refused as an
+  unknown field (foreign schema, never silently promoted).
+  `MasterApp.remember_recent_table` (prepend / dedup / cap /
+  re-persist) is called at all three successful load points (the
+  explicit `_start_load` path, the process-picker choice origin,
+  the table-picker choice). The meta line shows `recent: a, b, c
+  (N more)` (first 3); the status frame gains the "Recent:
+  <path>" one-click load button (MT-10 path, width 28); the tree
+  gains the indexed Size (compact B/KB/MB), Modified (local
+  `YYYY-MM-DD HH:MM`) and Last-used (the stored UTC timestamp)
+  columns; the window grows to 1160x600 / minsize 900x420. +13
+  tests (`tests/test_native_master_recent.py`) + 5 UI tests in
+  `tests/test_native_master_ui_mt13.py`.
+- **Live-target takeover field fix** (code on `main` at `3ffa8fa`;
+  documented here as 0.26 content): when a stale `state.lock` (or
+  stale fence / artifacts) blocks the startup and the owner
+  session is proven dead in both observations while ONLY
+  target-side identities (session target, shared-lock target,
+  journal targets) remain unproven and no other assessment reasons
+  exist, all three startup probes yield the user-confirmed live-
+  target takeover handle instead of the actionable refusal: the
+  recovery archives the stale state byte-for-byte, releases the
+  lock, and the new session attaches to the still-running game;
+  saved wishes are re-applied (code-patch entries adopt via the
+  idempotent current==actual path; AOB entries whose scan pattern
+  no longer matches because the game already carries the previous
+  session's patch surface as named scan errors with the bounded
+  0.22 re-arm). Unprovable or live owners, foreign artifacts or
+  any extra reason keep the strict refusal. `recovery.py`
+  (`is_target_role` + `RecoveryAssessment.live_target_eligible`
+  computed in `assess_recovery`), `recovery_operation.py`
+  (`allow_live_target` gate on entry / fresh-reassessment / final
+  probe - trainer-side identities must stay proven dead),
+  `engine.py` (both handles carry `live_target_takeover`),
+  `ui.py` / `master_ui.py` (dedicated "Recover and attach to the
+  running game?" prompt). +19 tests (18 new in
+  `tests/test_native_live_target_takeover.py` + 1 new foreign-
+  artifact actionable-refusal test; 3 behavior tests updated).
+- Regression fixes from the 0.26 change: `_meta_text()` had lost
+  its `state: <home>` line (re-inserted after the `filtered:`
+  block, before the MT-7 attach-gate block);
+  `test_empty_state_roundtrip` now expects the schema-3
+  `recent_tables: []` payload;
+  `test_run_master_reuses_stored_folder_without_picker` persists
+  through the current-schema state (by design,
+  `master_state_to_bytes` refuses non-current schemas);
+  `test_rescan_rerenders_after_content_change` asserts the 7-value
+  row (Size / Modified / Last-used). Full main suite 4,320 OK /
+  30 expected skips (2026-11-03); catalog remeasure
+  `blocked-catalog-026-master-ui` (chunked 64x3 audit over the 151
+  reference tables, 2026-11-03): 151/151 loaded, 0 load errors,
+  117,809 total / 116,756 supported / 60,161 staged / 103,607
+  actionable / 12,974 headings / 1,053 blocked - **zero delta** vs
+  `blocked-catalog-026-live-target` (per-table count/reason/sha
+  changes: 0); feature matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION bumped to
+  0.26 with the changelog entry in the same change; the 0.26
+  build is not cut yet - the latest verified build remains 0.25
+  (`native-20261103T062439Z-f4c16be9`).
 
 ### 0.23 Master Trainer roadmap complete + 0.23 release (2026-11-01, branch `native-0.23-master-roadmap` @ `b2d0344` + load-gate branch `native-0.23-load-gate` @ `98a9226`, main @ `6e3ec98`, build `native-20261101T145310Z-a160bae4`)
 

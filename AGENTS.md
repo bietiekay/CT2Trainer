@@ -14,16 +14,18 @@ synthetic matrix or carry stale counts into this overview.
 
 **Active outcome (2026-10-26): 100% of the 151 local-only reference-table
 paths (143 distinct hashes) must load and support their intended behavior
-through an independent clean-room implementation.** 0.25 content on main
-(2026-11-02): the Master Trainer user control MT-10/11/12 - explicit
-table load, process picker + persisted attach mode, detach/user
-attach - plus the online feature evaluation record in
-`master_trainer/ROADMAP.md` and the Tcl test-harness hardening
-(`tests/native_tk_teardown.py`); +66 tests, full main suite 4,259
-OK / 30 expected skips, catalog zero delta
-`blocked-catalog-025-master-ui`; the 0.24 build
-`native-20261102T102029Z-fe358e35` remains the latest verified
-release until the 0.25 build is cut. The 0.16 Wave-4
+through an independent clean-room implementation.** 0.26 content on
+main (2026-11-03): the Master Trainer waiting-view usability
+MT-13/14/15 - search/filter/sort through the new pure
+`table_filter.py` layer, keyboard load flow, rolling recent tables in
+`master-settings.json` schema 3 + Size/Modified/Last-used columns -
+plus the live-target takeover field fix (stale-lock recovery now
+attaches to the still-running game behind one user-confirmed prompt
+when the owner is proven dead and only target-side identities remain
+unproven); +61 tests, full main suite 4,320 OK / 30 expected skips,
+catalog zero delta `blocked-catalog-026-master-ui`; the 0.25 build
+`native-20261103T062439Z-f4c16be9` remains the latest verified
+release until the 0.26 build is cut. The 0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
 now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
@@ -137,7 +139,20 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-03, 0.25 released - build
+**CT2Trainer (status 2026-11-03, 0.26 content on main - the 0.26
+build is cut from this content; 0.25 remains the latest verified
+release, build `native-20261103T062439Z-f4c16be9` cut from `main` @
+`a861bfb`, 2026-11-03, in-build suite 4,259 OK / 30 expected skips,
+`ce_inputs: []`) - 0.26 Master Trainer waiting-view usability
+MT-13/14/15 (search/filter/sort through the new pure
+`table_filter.py` layer, keyboard load flow, rolling recent tables in
+`master-settings.json` schema 3 + Size/Modified/Last-used columns,
++42 tests) plus the live-target takeover field fix (stale-lock
+recovery attaches to the still-running game behind one
+user-confirmed prompt when the owner is proven dead and only
+target-side identities remain unproven; +19 tests); full main suite
+4,320 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-026-master-ui`), 0.25 released (build
 `native-20261103T062439Z-f4c16be9` cut from `main` @ `a861bfb`,
 2026-11-03, in-build suite 4,259 OK / 30 expected skips,
 `ce_inputs: []`) - Master
@@ -174,7 +189,19 @@ dependency skip 28c9b57 +10 tests; SC2 hotkey-bridge field fix
 `native-0.23-load-gate` @ 98a9226, main @ 6e3ec98, +115 tests, full
 main suite 4,176 OK / 30 expected skips, zero catalog delta
 `blocked-catalog-023-field-fixes`); latest
-verified release 0.24 (build
+verified release 0.25 (build
+`native-20261103T062439Z-f4c16be9` cut from `main` @ `a861bfb`,
+2026-11-03 - the 0.25 Master Trainer user-control release, in-build
+suite 4,259 OK / 30 expected skips, `ce_inputs: []`, source ZIP
+`CT2Trainer-0.25-source.zip` sha256
+64f8c3082cff50687b1962234c17a82e2a2f0c19eb1112ece06a0a25132f35be
+(14,324,774 bytes), portable ZIP
+`CT2Trainer-0.25-windows-portable.zip` sha256
+774266f7e2c9dc69f4d8cfc963309b9907442ec6b5343ff629b9e30c04049653
+(49,633,196 bytes), frozen `CT2Trainer-Master.exe` (sha256
+8736f73e762b57a8f337bf8fa04c2c16f8622c4d99e7dd7f2167b2c9999e3d8f,
+16,912,561 bytes) in the run folder, the payload inventory and the
+portable ZIP); superseded 0.24 (build
 `native-20261102T102029Z-fe358e35` cut from `main` @ `a2777ed`,
 2026-11-02 - the 0.24 trainer tick sounds release, in-build suite
 4,193 OK / 30 expected skips, `ce_inputs: []`, source ZIP

@@ -18,6 +18,7 @@ from __future__ import annotations
 import inspect
 import io
 import json
+import re
 import shutil
 import tempfile
 import unittest
@@ -275,10 +276,8 @@ class RunMasterTests(unittest.TestCase):
         self.addCleanup(lambda: shutil.rmtree(folder, ignore_errors=True))
         state_home = Path(tempfile.mkdtemp())
         self.addCleanup(lambda: shutil.rmtree(state_home, ignore_errors=True))
-        save_master_state(
-            MasterState(schema=2, last_folder=str(folder),
-                        last_table=None, attach_mode="auto"),
-            state_home / "master-settings.json")
+        save_master_state(_state_for(folder),
+                          state_home / "master-settings.json")
         with patch.object(master_ui.tk, "Tk") as tk_cls, \
                 patch.object(master_ui, "MasterWindow") as window_cls, \
                 patch.object(master_ui.filedialog, "askdirectory") as ask:
@@ -382,7 +381,13 @@ class MasterWindowTests(unittest.TestCase):
                          ("GameZ.exe",))
         values = list(window._table_tree.item(
             window._table_tree.get_children()[0])["values"])
-        self.assertEqual(values, ["a.ct", "GameZ.exe", "ok", ""])
+        self.assertEqual(values[:4], ["a.ct", "GameZ.exe", "ok", ""])
+        # MT-15 (0.26): the row gained Size / Modified / Last-used.
+        self.assertEqual(len(values), 7)
+        self.assertTrue(values[4].endswith((" B", " KB", " MB")), values[4])
+        self.assertTrue(re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}",
+                                     values[5]), values[5])
+        self.assertEqual(values[6], "")
         # The status line is back on the (rebound) waiting line.
         self.assertEqual(window._status_var.get(),
                          window._waiting_status_line())

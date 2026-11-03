@@ -378,6 +378,52 @@ game-facing action.
   `blocked-catalog-024-sounds` (per-table count/reason/sha changes:
   0); feature matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`); AP-11 0/6,143.
+- 0.26 Master Trainer waiting-view usability MT-13/14/15 (2026-11-03,
+  root-direct on `main`; user request 2026-11-02/03, online-evaluated
+  in `master_trainer/ROADMAP.md`, "0.26 waiting-view usability") +
+  the live-target takeover field fix. MT-13: the new pure decision
+  layer `table_filter.py` (`filter_tables` - empty/whitespace query =
+  the identity, input order preserved, otherwise a casefolded
+  substring over the table's relative path AND any bound process
+  name; `sort_tables` - modes name/process/status, the casefolded
+  relative path is the universal tie-breaker, unbound tables sort
+  last in process mode, unknown mode raises `ValueError`); the
+  waiting view renders `filter_tables(sort_tables(index.tables(),
+  mode), query)`; row identity stays the relative path; the load
+  picker and the auto-load path keep the full index; filter/sort are
+  session-only (survive the trainer round-trip, never persisted).
+  MT-14: double-click / Return / KP_Enter load the selected row
+  through the MT-10 explicit-load path; "/" focuses the filter from
+  anywhere in the waiting view (a no-op in trainer mode); Esc
+  clears it. MT-15: `master-settings.json` schema 2 -> 3
+  (`recent_tables`, most recent first, capped at ten, `{"path",
+  "at"}` with the persisted UTC timestamp; schema-1/2 documents
+  promote on load, a schema-2 document carrying the field is
+  refused as an unknown field), `MasterApp.remember_recent_table`
+  (prepend / dedup / cap / persist) at all three successful load
+  points, meta line `recent: a, b, c (N more)`, the "Recent:
+  <path>" one-click load button, tree Size / Modified / Last-used
+  columns, window 1160x600 / minsize 900x420. Live-target takeover
+  field fix: stale-lock recovery attaches to the still-running game
+  behind one user-confirmed prompt when the owner is proven dead in
+  both observations and only target-side identities remain unproven
+  (state archived byte-for-byte; saved wishes re-applied - code-
+  patch adopt idempotent, AOB ScanMiss named scan errors + bounded
+  re-arm); unprovable/live owner, foreign artifact or any extra
+  reason keeps the strict refusal. Regression fixes: `_meta_text()`
+  re-gained its `state: <home>` line; the schema-3 round-trip,
+  stored-folder and rescan tests updated to the new payload / 7
+  columns. +61 tests (`test_native_master_table_filter.py` 17,
+  `test_native_master_recent.py` 13, `test_native_master_ui_mt13.py`
+  12, `test_native_live_target_takeover.py` +19 incl. updates).
+  Full main suite 4,320 OK / 30 expected skips. Catalog remeasure
+  `blocked-catalog-026-master-ui` (chunked 64x3 audit over the 151
+  reference tables, 2026-11-03): 151/151 loaded, 0 load errors,
+  117,809 total / 116,756 supported / 60,161 staged / 103,607
+  actionable / 12,974 headings / 1,053 blocked - zero delta vs
+  `blocked-catalog-026-live-target` (per-table count/reason/sha
+  changes: 0); feature matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143.
 - Latest verified release: 0.25, build
   `native-20261103T062439Z-f4c16be9` (cut from `main` @ `a861bfb`,
   2026-11-03), in-build suite 4,259 OK / 30 expected skips,

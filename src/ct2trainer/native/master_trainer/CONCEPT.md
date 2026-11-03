@@ -4,7 +4,10 @@
 `9a725a8`, 2026-10-31); MT-6..MT-9 (the full roadmap) with the 0.23
 release (2026-11-01); MT-10..MT-12 (user control: explicit table
 load, persisted attach mode + process picker, detach / user attach)
-on `main` with the 0.25 release (2026-11-02). Design and
+on `main` with the 0.25 release (2026-11-02); MT-13..MT-15
+(waiting-view usability: search/filter/sort, keyboard flow, recent
+tables + Size/Modified/Last-used columns) with the 0.26 release
+(2026-11-03). Design and
 implementation notes; the working plan is [ROADMAP.md](ROADMAP.md).
 
 ## What it is
@@ -33,10 +36,21 @@ auto-load/handoff loop around that existing engine.
   bound process names, last scan time, the state home location), a live
   “Running now” line (which bound processes are visible in the latest
   process snapshot, with PIDs), the table index (one row per `.ct` table:
-  relative path, bound process name(s), status — rows for a running
+  relative path, bound process name(s), status, indexed size, modified
+  time, last used — rows for a running
   process are marked `running` with its PID(s)) and a live status line.
   On non-Windows the metadata line also carries the permanent MT-7 route
   hint (attach unavailable; the documented Proton-wrapped trainer route).
+- 0.26 (MT-13/14/15) waiting-view usability: the table list carries a
+  live filter (casefolded substring over the table name AND any bound
+  process name; the meta line shows `filtered: N/M` while a query is
+  active) and a name/process/status sort cycle — both session-only; the
+  load picker and the auto-load path keep the full index. Double-click
+  or Enter loads the selected row through the explicit-load path; “/”
+  focuses the filter from anywhere in the waiting view, Esc clears it.
+  The rolling recent list (master-state schema 3: most recent first,
+  capped at ten, UTC timestamps) feeds the meta line, the “Recent:
+  <path>” one-click load button and the tree's Last-used column.
 - The table folder is taken from a CLI parameter, or from the
   last-used folder persisted in the state home (`master-settings.json`);
   only a genuinely first start (or a stale stored folder) shows the
@@ -218,6 +232,44 @@ configuration.
   candidates and the chosen PID is pinned on resume; in “auto” mode
   the ordinary wait simply resumes. A target exit while attached is
   unaffected — the engine keeps waiting as before.
+
+## Waiting-view usability (0.26: MT-13 / MT-14 / MT-15)
+
+With ~151 indexed tables (143 distinct hashes) the waiting view needed
+real navigation (evaluation record: ROADMAP.md, “0.26 waiting-view
+usability”):
+
+- **MT-13 search / filter / sort.** A header filter entry (live;
+  casefolded substring over the table's relative path AND any bound
+  process name — a table matches when ANY bound name matches; empty or
+  whitespace query = the full list, input order preserved) and a
+  “Sort: name/process/status” cycle button. The decision layer is the
+  pure `table_filter.py`; the waiting view renders
+  `filter_tables(sort_tables(index.tables(), mode), query)`. Row
+  identity stays the relative path; the load picker and the auto-load
+  path keep using the full index (separate decision surfaces). Both
+  values are session state — they survive the trainer round-trip but
+  are never persisted (no schema bump for view state). Deliberately
+  out: group-by-process tree, persisted filter/sort, entry-count /
+  blocked-count columns.
+- **MT-14 keyboard flow.** Double-click, Return and KP_Enter load the
+  selected row through the MT-10 explicit-load path (named refusals
+  included, no new load logic); arrow keys are built into the Treeview.
+  “/” focuses the filter from anywhere in the waiting view (a no-op in
+  trainer mode, where the keys belong to the trainer UI); Esc on the
+  filter clears it and returns focus to the table list.
+- **MT-15 recent tables + metadata columns.** Every successful load
+  (auto or explicit; all three load points) records the table in the
+  rolling recent list — most recent first, deduplicated by relative
+  path, capped at ten, each item the relative path plus the persisted
+  UTC timestamp. The list lives in `master-settings.json` (schema 3;
+  schema 1 / 2 documents promote on load with `recent_tables=()`, and a
+  schema-2 document carrying the field is refused as an unknown field).
+  It feeds the meta line (`recent: a, b, c (N more)`), the “Recent:
+  <path>” one-click load button in the status frame and the tree's
+  Last-used column; the indexed Size (compact B/KB/MB) and Modified
+  (local time) join the tree, and the window grows to 1160x600
+  (minsize 900x420).
 
 ## CLI
 

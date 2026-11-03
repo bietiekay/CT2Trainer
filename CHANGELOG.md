@@ -2,6 +2,57 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.26 (2026-11-03)
+
+Master Trainer waiting-view usability (MT-13 / MT-14 / MT-15) - with
+~151 indexed tables the waiting view gets real navigation (user
+request 2026-11-02/03; the feature set was evaluated against online
+table/list UX patterns - see the Master Trainer ROADMAP "0.26
+waiting-view usability" section) - plus the live-target takeover
+field fix:
+
+- **MT-13 search / filter / sort**: the new pure `table_filter.py`
+  decision layer: a live filter (casefolded substring over the
+  table name AND any bound process name; empty query = the full
+  list, input order preserved) and a name / process / status sort
+  cycle. Row identity stays the table's relative path; the load
+  picker and the auto-load path keep the full index. Filter and
+  sort are session only: they survive the trainer round-trip but
+  are never persisted. While a query is active the metadata line
+  shows `filtered: N/M`.
+- **MT-14 keyboard flow**: double-click, Enter or numeric-pad Enter
+  loads the selected row through the ordinary explicit-load path;
+  "/" focuses the filter from anywhere in the waiting view (a
+  no-op in trainer mode, where the keys belong to the trainer UI);
+  Esc on the filter clears it and returns focus to the table list.
+- **MT-15 recent tables + Size / Modified / Last-used columns**:
+  every successful load records the table in the rolling recent
+  list (`master-settings.json` schema 3 - most recent first,
+  deduplicated, capped at ten, UTC timestamps; older schema
+  documents promote on load). The list feeds the metadata line
+  (`recent: a, b, c (N more)`), the one-click "Recent: <path>"
+  load button and the tree's Last-used column; the indexed Size
+  (compact B/KB/MB) and Modified (local time) join the tree, and
+  the window grows to 1160x600 (minsize 900x420).
+- **Live-target takeover field fix**: when a stale `state.lock`
+  blocks the startup and the previous session's owner is proven
+  dead in both observations while only target-side identities
+  remain unproven, the recovery now - behind one user-confirmed
+  prompt ("Recover and attach to the running game?") - archives
+  the state byte-for-byte and attaches to the still-running game
+  instead of dead-ending on a manual state-folder delete; saved
+  wishes are re-applied (code-patch entries adopt idempotently,
+  AOB entries whose scan pattern no longer matches surface named
+  scan errors with the bounded re-arm). Unprovable or live owners,
+  foreign artifacts or any extra refusal reason keep the strict
+  refusal.
+- Test totals: +61 over 0.25 (17 pure filter/sort tests, 13
+  recent/state tests, 12 MT-13/14/15 UI tests, 19 live-target
+  takeover tests); full main suite 4,320 OK / 30 expected skips;
+  catalog remeasure `blocked-catalog-026-master-ui`: zero delta
+  (151/151 loaded, 0 load errors, 117,809 total / 116,756
+  supported / 1,053 blocked).
+
 ## 0.25 (2026-11-02)
 
 Master Trainer user control (MT-10 / MT-11 / MT-12) — the trainer can be

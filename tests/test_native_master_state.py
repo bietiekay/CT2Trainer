@@ -45,7 +45,8 @@ class MasterStateSerializeTests(unittest.TestCase):
         self.assertEqual(document["payload"],
                          {"schema": MASTER_STATE_SCHEMA, "last_folder": None,
                           "last_table": None,
-                          "attach_mode": ATTACH_MODE_AUTO})
+                          "attach_mode": ATTACH_MODE_AUTO,
+                          "recent_tables": []})
         canonical = json.dumps(document["payload"], sort_keys=True,
                                separators=(",", ":"), allow_nan=False,
                                ensure_ascii=True).encode("utf-8")

@@ -1,18 +1,30 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-03. **0.25 released** (build
-`native-20261103T062439Z-f4c16be9`, cut from `main` @ `a861bfb`,
-2026-11-03) - Master Trainer user control MT-10/11/12 (user request
-2026-11-02: explicit table load, process picker + persisted attach
-mode, detach/user attach), plus the online feature evaluation record
-in `master_trainer/ROADMAP.md`, the Tcl test-harness hardening
-(`tests/native_tk_teardown.py`, test-only), and the in-build
-reliability fix (state-home isolation in the `run_master` cancel
-test + explicit Tk variable masters in `master_ui.py`, first
-in-build run `native-20261102T181843Z-ddfb63f0` exposed the
-dependence); +66 tests; full main suite 4,259 OK / 30 expected
-skips; catalog zero delta `blocked-catalog-025-master-ui`; see the
-0.25 section below. Superseded 0.24 (build
+**Updated:** 2026-11-03. **0.26 content on `main`** (2026-11-03;
+the 0.26 build is cut from this content) - Master Trainer
+waiting-view usability MT-13/14/15 (user request 2026-11-02/03,
+online-evaluated: search/filter/sort through the new pure
+`table_filter.py` layer, keyboard load flow, rolling recent tables
+in `master-settings.json` schema 3 + Size/Modified/Last-used
+columns), plus the live-target takeover field fix (stale-lock
+recovery attaches to the still-running game behind one
+user-confirmed prompt when the owner is proven dead and only
+target-side identities remain unproven); +61 tests; full main suite
+4,320 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-026-master-ui`; see the 0.26 section below.
+0.25 released (build `native-20261103T062439Z-f4c16be9`, cut from
+`main` @ `a861bfb`, 2026-11-03) - Master Trainer user control
+MT-10/11/12 (user request 2026-11-02: explicit table load, process
+picker + persisted attach mode, detach/user attach), plus the online
+feature evaluation record in `master_trainer/ROADMAP.md`, the Tcl
+test-harness hardening (`tests/native_tk_teardown.py`, test-only),
+and the in-build reliability fix (state-home isolation in the
+`run_master` cancel test + explicit Tk variable masters in
+`master_ui.py`, first in-build run
+`native-20261102T181843Z-ddfb63f0` exposed the dependence); +66
+tests; full main suite 4,259 OK / 30 expected skips; catalog zero
+delta `blocked-catalog-025-master-ui`; see the 0.25 section below.
+Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
@@ -374,6 +386,76 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.26 content on main (2026-11-03, root-direct on `main`): Master
+Trainer waiting-view usability MT-13/14/15 (user request
+2026-11-02/03) + live-target takeover field fix.** With ~151
+indexed tables (143 distinct hashes) the waiting view needed real
+navigation; the feature set was evaluated against online table/list
+UX patterns and recorded in `master_trainer/ROADMAP.md` ("0.26
+waiting-view usability"). Adopted: MT-13/14/15. Deliberately
+deferred (documented): group-by-process tree, persisted filter/sort,
+entry-count / blocked-count columns.
+- **MT-13 search / filter / sort:** new pure decision layer
+  `table_filter.py` (no OS / index / state access): `filter_tables`
+  (empty/whitespace query = the identity, input order preserved;
+  otherwise a casefolded substring over the table's relative path
+  AND any bound process name — a table matches when ANY bound name
+  matches) and `sort_tables` (modes name / process / status; the
+  casefolded relative path is the universal tie-breaker; in
+  process mode unbound tables sort last; unknown mode raises
+  `ValueError`). The waiting view renders
+  `filter_tables(sort_tables(index.tables(), mode), query)`; row
+  identity stays the relative path; the load picker and the
+  auto-load path keep the full index. Filter and sort are
+  session-only: they survive the trainer round-trip but are never
+  persisted. Header filter entry (live re-render; meta line shows
+  `filtered: N/M`) + "Sort: name/process/status" cycle button.
+  +21 tests (`test_native_master_table_filter.py` + filter/sort UI
+  tests in `test_native_master_ui_mt13.py`).
+- **MT-14 keyboard flow:** double-click, Return and KP_Enter load
+  the selected row through the ordinary MT-10 explicit-load path
+  (named refusals included, no new load logic); arrow keys are
+  built into the Treeview; "/" focuses the filter from anywhere in
+  the waiting view (a no-op in trainer mode); Esc on the filter
+  clears it and returns focus to the table list. +3 tests.
+- **MT-15 recent tables + metadata columns:**
+  `master-settings.json` schema 2 → 3: `recent_tables`, most recent
+  first, capped at ten, each item `{"path", "at"}` with the
+  persisted UTC timestamp `YYYY-MM-DDTHH:MM:SSZ` (strict format);
+  schema-1/2 documents promote on load with `recent_tables=()`,
+  and a schema-2 document carrying the field is refused as an
+  unknown field. `MasterApp.remember_recent_table` (prepend /
+  dedup / cap / persist) is called at all three successful load
+  points. The meta line shows `recent: a, b, c (N more)`, the
+  status frame gains the "Recent: <path>" one-click load button,
+  and the tree gains indexed Size (compact B/KB/MB), Modified
+  (local `YYYY-MM-DD HH:MM`) and Last-used columns; the window
+  grows to 1160x600 (minsize 900x420). +18 tests.
+- **Live-target takeover field fix:** when a stale `state.lock`
+  blocks the startup and the owner session is proven dead in both
+  observations while only target-side identities remain unproven
+  (no other refusal reasons), the recovery archives the state
+  byte-for-byte and, behind one user-confirmed prompt, attaches to
+  the still-running game; saved wishes are re-applied (code-patch
+  adopt idempotent; AOB ScanMiss entries surface named scan errors
+  + bounded re-arm). Unprovable or live owner, foreign artifact or
+  any extra reason keeps the strict refusal. +19 tests
+  (`test_native_live_target_takeover.py`).
+- Regression fixes: `_meta_text()` re-gained its `state: <home>`
+  line; `test_empty_state_roundtrip` expects the schema-3
+  `recent_tables: []` payload; the stored-folder test persists
+  through the current-schema state (old schemas are refused by
+  `master_state_to_bytes` by design); the rescan test asserts the
+  7-value row. Full main suite 4,320 OK / 30 expected skips;
+  catalog zero delta `blocked-catalog-026-master-ui` (151/151
+  loaded, 0 load errors, 117,809 total / 116,756 supported /
+  1,053 blocked, zero delta vs `blocked-catalog-026-live-target`);
+  feature matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION bumped to
+  0.26 with the changelog entry in the same change; the 0.26 build
+  is not cut yet - the latest verified build remains 0.25
+  (`native-20261103T062439Z-f4c16be9`).
 
 **0.25 content on main (2026-11-02, root-direct on `main`): Master
 Trainer user control MT-10/11/12 (user request 2026-11-02).** The

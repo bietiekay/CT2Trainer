@@ -1,17 +1,22 @@
 """Master Trainer state document (last-used folder, preferences).
 
 The state home holds one small document, ``master-settings.json``, next to
-the tables index.  Schema 2 (0.25) carries:
+the tables index.  Schema 3 (0.26) carries:
 
 - ``last_folder``  - the last-used table folder ("ask on first start");
 - ``last_table``   - the last explicitly loaded table (MT-10), relative
   path within the table folder;
 - ``attach_mode``  - "auto" (never asks; the documented smallest-PID rule)
-  or "ask" (the user always picks the target process, MT-11).
+  or "ask" (the user always picks the target process, MT-11);
+- ``recent_tables``- the rolling recently loaded tables (MT-15): most
+  recent first, capped at ``RECENT_TABLES_LIMIT``, each item the relative
+  path plus the UTC load timestamp (``YYYY-MM-DDTHH:MM:SSZ``).
 
-Schema 1 documents (last_folder only) are promoted on load: the missing
-fields take their documented defaults (last_table=None, attach_mode
-"auto"), so existing state homes keep working unchanged.
+Schema 2 (0.25) documents carry the first three fields; schema 1 documents
+(last_folder only) are schema-2 ancestors.  Both are promoted on load: the
+missing fields take their documented defaults (last_table=None,
+attach_mode "auto", recent_tables=[]), so existing state homes keep
+working unchanged.
 
 Persistence discipline mirrors the table index (``table_index.py``):
 canonical JSON payload with a sha256 checksum envelope, strict size bound,
@@ -26,15 +31,28 @@ import hashlib
 import json
 from pathlib import Path
 
-MASTER_STATE_SCHEMA = 2
+MASTER_STATE_SCHEMA = 3
+MASTER_STATE_SCHEMA_PREVIOUS = 2
 MASTER_STATE_SCHEMA_LEGACY = 1
 MASTER_STATE_FILENAME = "master-settings.json"
 MAX_MASTER_STATE_BYTES = 1024 * 1024
 ATTACH_MODE_AUTO = "auto"
 ATTACH_MODE_ASK = "ask"
 ATTACH_MODES = (ATTACH_MODE_AUTO, ATTACH_MODE_ASK)
+RECENT_TABLES_LIMIT = 10
 _MAX_FOLDER = 4096
 _MAX_TABLE_PATH = 4096
+_MAX_RECENT_TIMESTAMP = 20
+
+
+def _utc_timestamp_ok(value) -> bool:
+    """True for the persisted UTC load timestamp format."""
+    if not isinstance(value, str) or len(value) > _MAX_RECENT_TIMESTAMP:
+        return False
+    if len(value) != 20 or value.endswith("Z") is False:
+        return False
+    import re
+    return re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", value) is not None
 
 
 class MasterStateRefusal(ValueError):
@@ -53,31 +71,37 @@ class MasterStateRefusal(ValueError):
 class MasterState:
     """One master-state document (schema-bound).
 
-    Only schema-2 documents may be written; schema 1 is load-only (promoted
-    on load, see the module docstring).
+    Only schema-3 documents may be written; schema 1 and 2 are load-only
+    (promoted on load, see the module docstring).
     """
 
     schema: int
     last_folder: str | None
     last_table: str | None = None
     attach_mode: str = ATTACH_MODE_AUTO
+    recent_tables: tuple[tuple[str, str], ...] = ()
 
 
 def empty_master_state() -> MasterState:
     return MasterState(schema=MASTER_STATE_SCHEMA, last_folder=None,
-                       last_table=None, attach_mode=ATTACH_MODE_AUTO)
+                       last_table=None, attach_mode=ATTACH_MODE_AUTO,
+                       recent_tables=())
 
 
 def _validate_state_dict(payload: dict) -> MasterState:
     reasons: list[str] = []
     schema = payload.get("schema")
     if type(schema) is not int or schema not in (
-            MASTER_STATE_SCHEMA, MASTER_STATE_SCHEMA_LEGACY):
+            MASTER_STATE_SCHEMA, MASTER_STATE_SCHEMA_PREVIOUS,
+            MASTER_STATE_SCHEMA_LEGACY):
         reasons.append(f"master-state schema {schema!r} is not supported "
-                       f"(expected {MASTER_STATE_SCHEMA}, "
-                       f"legacy {MASTER_STATE_SCHEMA_LEGACY} is promoted on load)")
+                       f"(expected {MASTER_STATE_SCHEMA}, legacy "
+                       f"{MASTER_STATE_SCHEMA_PREVIOUS} and "
+                       f"{MASTER_STATE_SCHEMA_LEGACY} are promoted on load)")
     allowed = {"schema", "last_folder"}
     if schema == MASTER_STATE_SCHEMA:
+        allowed |= {"last_table", "attach_mode", "recent_tables"}
+    elif schema == MASTER_STATE_SCHEMA_PREVIOUS:
         allowed |= {"last_table", "attach_mode"}
     unknown = sorted(set(payload) - allowed)
     if unknown:
@@ -100,21 +124,47 @@ def _validate_state_dict(payload: dict) -> MasterState:
         reasons.append("attach_mode must be one of "
                        + ", ".join(f"'{m}'" for m in ATTACH_MODES)
                        + f" (got {attach_mode!r})")
+    recent_raw = payload.get("recent_tables")
+    recent: list[tuple[str, str]] = []
+    if recent_raw is not None:
+        if not isinstance(recent_raw, list):
+            reasons.append("recent_tables must be a list of "
+                           "{\"path\", \"at\"} objects or absent")
+        else:
+            if len(recent_raw) > RECENT_TABLES_LIMIT:
+                reasons.append("recent_tables exceeds its limit of "
+                               + str(RECENT_TABLES_LIMIT) + " entries")
+            for item in recent_raw:
+                if (not isinstance(item, dict)
+                        or set(item) != {"path", "at"}
+                        or not isinstance(item.get("path"), str)
+                        or not item.get("path")
+                        or len(item.get("path", "")) > _MAX_TABLE_PATH
+                        or not _utc_timestamp_ok(item.get("at"))):
+                    reasons.append("recent_tables carries a malformed "
+                                   "entry (need {\"path\": non-empty string, "
+                                   "\"at\": UTC timestamp YYYY-MM-DDTHH:MM:SSZ})")
+                    break
+            if not reasons:
+                recent = [(item["path"], item["at"]) for item in recent_raw]
     if reasons:
         raise MasterStateRefusal(reasons)
-    # Promote legacy (schema 1) documents to the current schema with the
-    # documented defaults; the stored document itself stays untouched.
+    # Promote older documents (schema 2 / schema 1) to the current schema
+    # with the documented defaults; the stored document itself stays
+    # untouched.  (The schema-2 field set was validated above, so the
+    # values are well-formed; schema 1 only ever carried last_folder.)
     if schema == MASTER_STATE_SCHEMA_LEGACY:
-        return MasterState(schema=MASTER_STATE_SCHEMA, last_folder=last,
-                           last_table=None, attach_mode=ATTACH_MODE_AUTO)
+        last_table = None
+        attach_mode = ATTACH_MODE_AUTO
     return MasterState(schema=MASTER_STATE_SCHEMA, last_folder=last,
-                       last_table=last_table, attach_mode=attach_mode)
+                       last_table=last_table, attach_mode=attach_mode,
+                       recent_tables=tuple(recent))
 
 
 def master_state_to_bytes(state: MasterState) -> bytes:
     """Canonical, deterministic JSON bytes for one master-state document.
 
-    Only the current schema is writable; legacy documents cannot be
+    Only the current schema is writable; older documents cannot be
     re-persisted as-is (they are promoted in memory on load).
     """
     if not isinstance(state, MasterState):
@@ -124,9 +174,15 @@ def master_state_to_bytes(state: MasterState) -> bytes:
                                   f"master-state schema {state.schema!r}"])
     _validate_state_dict({"schema": state.schema, "last_folder": state.last_folder,
                           "last_table": state.last_table,
-                          "attach_mode": state.attach_mode})
+                          "attach_mode": state.attach_mode,
+                          "recent_tables": [
+                              {"path": path, "at": at}
+                              for path, at in state.recent_tables]})
     payload = {"schema": state.schema, "last_folder": state.last_folder,
-               "last_table": state.last_table, "attach_mode": state.attach_mode}
+               "last_table": state.last_table, "attach_mode": state.attach_mode,
+               "recent_tables": [
+                   {"path": path, "at": at}
+                   for path, at in state.recent_tables]}
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
                            allow_nan=False, ensure_ascii=True).encode("utf-8")
     digest = hashlib.sha256(canonical).hexdigest()

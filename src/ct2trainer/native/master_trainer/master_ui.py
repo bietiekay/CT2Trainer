@@ -21,6 +21,18 @@ attach-mode toggle (auto/ask) and the process picker for
 multi-instance targets; the session pins the chosen PID through the
 injected memory factory.
 
+0.26 waiting-view usability (MT-13/14/15): the table list carries a
+live filter (casefolded substring over table name AND bound process
+name, pure layer in ``table_filter.py``) plus a name/process/status
+sort cycle (session-only; the load picker and the auto-load path
+keep the full index), the keyboard flow (double-click / Enter load
+the selected row through the MT-10 explicit path; "/" focuses the
+filter; Esc clears it; arrow keys are built in), and the rolling
+recent list (master-state schema 3, most recent first, capped at ten,
+feeds the meta line, the "Recent:" one-click load button and the
+Last-used column; the indexed Size / Modified columns join the
+tree).
+
 All waiting-mode logic lives in the pure orchestrator; this module is
 Tk wiring plus the picker Toplevel.
 """
@@ -42,8 +54,9 @@ from .orchestrator import (MasterOrchestrator, STATE_ACTIVE,
                            ExplicitLoadRefusal)
 from .master_state import (MASTER_STATE_SCHEMA, MASTER_STATE_FILENAME,
                            ATTACH_MODE_ASK, ATTACH_MODE_AUTO,
-                           MasterState, load_master_state,
-                           save_master_state)
+                           RECENT_TABLES_LIMIT, MasterState,
+                           load_master_state, save_master_state)
+from .table_filter import SORT_MODES, filter_tables, sort_tables
 from .process_picker import (DECISION_PICK, attach_decision,
                              candidate_processes,
                              make_pinned_memory_factory)
@@ -106,6 +119,10 @@ class MasterApp:
         self.last_table = state.last_table if state is not None else None
         self.attach_mode = (state.attach_mode if state is not None
                             else ATTACH_MODE_AUTO)
+        # MT-15 (0.26): the rolling recently loaded tables (most recent
+        # first; empty on a fresh or refused state home).
+        self.recent_tables = (tuple(state.recent_tables) if state is not None
+                              else ())
         self.lister = lister if lister is not None else default_process_lister()
         self.plan_compiler = plan_compiler
         self.state_dir_factory = state_dir_factory
@@ -142,14 +159,16 @@ class MasterApp:
         return Path(self.state_home) / MASTER_STATE_FILENAME
 
     def persist_state(self) -> None:
-        """Remember the current table folder plus the MT-10/11
-        preferences (last explicit table, attach mode) for the next
-        start (best effort, like the index persistence)."""
+        """Remember the current table folder plus the MT-10/11/15
+        preferences (last explicit table, attach mode, rolling recent
+        tables) for the next start (best effort, like the index
+        persistence)."""
         try:
             save_master_state(MasterState(
                 MASTER_STATE_SCHEMA, self.folder,
                 last_table=self.last_table,
-                attach_mode=self.attach_mode),
+                attach_mode=self.attach_mode,
+                recent_tables=tuple(self.recent_tables)),
                 self.state_path())
         except Exception:
             pass
@@ -165,6 +184,19 @@ class MasterApp:
         """Remember the last explicitly loaded table (MT-10) and
         re-persist the master-state document."""
         self.last_table = relative_path
+        self.persist_state()
+
+    def remember_recent_table(self, relative_path: str) -> None:
+        """Record a successful table load in the rolling recent list
+        (MT-15): most recent first, deduplicated by relative path,
+        capped at ``RECENT_TABLES_LIMIT``, re-persisted immediately."""
+        if not isinstance(relative_path, str) or not relative_path:
+            return
+        at = _utc_now()
+        remaining = [item for item in self.recent_tables
+                     if item[0] != relative_path]
+        self.recent_tables = ((relative_path, at),) \
+            + tuple(remaining)[:RECENT_TABLES_LIMIT - 1]
         self.persist_state()
 
     def rescan(self) -> None:
@@ -244,6 +276,12 @@ class MasterWindow:
         # Live bound-process feedback of the latest waiting tick.
         self._running: tuple = ()
         self._running_keys: frozenset = frozenset()
+        # MT-13/14/15 (0.26): the waiting-view filter/sort state.
+        # Session-only: it survives the trainer round-trip (the waiting
+        # view is rebuilt from these values) but is never persisted to
+        # the state home.
+        self._filter_query = ""
+        self._sort_mode = SORT_MODES[0]
         try:
             icon = window_icon_path("master")
             if icon.is_file():
@@ -259,8 +297,10 @@ class MasterWindow:
 
     def _build_waiting_view(self):
         self.root.title(master_title())
-        self.root.geometry("980x600")
-        self.root.minsize(680, 420)
+        # MT-15 (0.26): the tree gained the Size / Modified / Last-used
+        # columns, so the waiting view starts wider.
+        self.root.geometry("1160x600")
+        self.root.minsize(900, 420)
         header = tk.Frame(self.root, bg=BG_HEADER, height=44, padx=12)
         header.pack(fill="x")
         header.pack_propagate(False)
@@ -283,6 +323,31 @@ class MasterWindow:
         button(header, "Load table", self._open_table_load_picker).pack(
             side="right", padx=(0, 8))
         repo_link(header, bg=BG_HEADER, fg=FG).pack(side="right", padx=(0, 16))
+        # MT-13 (0.26): the waiting-view filter + sort cycle.  Packed
+        # after the repo link, i.e. left of it in the header row.  The
+        # filter/sort values are session state set in __init__ (survive
+        # the trainer round-trip).
+        self._sort_btn = tk.Button(header, text="Sort: " + self._sort_mode,
+                                   command=self._cycle_sort,
+                                   bg="#2a3547", fg=FG,
+                                   activebackground="#3a4a63",
+                                   activeforeground=FG,
+                                   font=("Segoe UI", 11),
+                                   relief="raised", padx=8, pady=2)
+        self._sort_btn.pack(side="right", padx=(0, 8))
+        self._filter_entry = tk.Entry(header, width=30,
+                                      font=("Segoe UI", 11),
+                                      bg="#10151f", fg=FG,
+                                      insertbackground=FG, relief="flat")
+        self._filter_entry.pack(side="right", padx=(0, 4))
+        # Restore the session query (survives the trainer round-trip).
+        self._filter_entry.insert(0, self._filter_query)
+        self._filter_entry.bind("<KeyRelease>", self._on_filter_edit)
+        self._filter_entry.bind("<Escape>", self._on_filter_escape)
+        # MT-14 (0.26): "/" focuses the filter from anywhere in the
+        # waiting view (a no-op in trainer mode, where keys belong to
+        # the trainer UI).
+        self.root.bind("<KeyPress>/", self._on_slash)
         self._folder_label = tk.Label(self.root, text=self._folder_text(),
                                       bg=BG, fg=FG_DIM, font=("Segoe UI", 11),
                                       anchor="w", padx=12)
@@ -299,13 +364,19 @@ class MasterWindow:
 
         frame = ttk.Frame(self.root, padding=8)
         frame.pack(fill="both", expand=True)
-        cols = ("table", "processes", "status", "detail")
+        # MT-15 (0.26): the waiting-view tree carries the indexed size /
+        # modified columns plus the Last-used feed of the recent list.
+        cols = ("table", "processes", "status", "detail",
+                "size", "modified", "last_used")
         self._table_tree = ttk.Treeview(frame, columns=cols, show="headings",
                                         height=16)
-        for name, text, width in (("table", "Table", 300),
-                                  ("processes", "Process name(s)", 260),
-                                  ("status", "Status", 90),
-                                  ("detail", "Detail", 260)):
+        for name, text, width in (("table", "Table", 220),
+                                  ("processes", "Process name(s)", 170),
+                                  ("status", "Status", 70),
+                                  ("detail", "Detail", 170),
+                                  ("size", "Size", 80),
+                                  ("modified", "Modified", 130),
+                                  ("last_used", "Last used", 150)):
             self._table_tree.heading(name, text=text)
             self._table_tree.column(name, width=width, anchor="w")
         scroll = ttk.Scrollbar(frame, orient="vertical",
@@ -314,6 +385,12 @@ class MasterWindow:
         self._table_tree.pack(side="left", fill="both", expand=True)
         # MT-10 (0.25): right-click a row to load that table explicitly.
         self._table_tree.bind("<Button-3>", self._table_context_menu)
+        # MT-14 (0.26): double-click or Enter loads the selected row
+        # through the ordinary explicit-load path (named refusals
+        # included; no new load logic).  Arrow keys are built in.
+        self._table_tree.bind("<Double-1>", self._table_double_click)
+        self._table_tree.bind("<Return>", self._table_return)
+        self._table_tree.bind("<KP_Enter>", self._table_return)
         scroll.pack(side="right", fill="y")
 
         self._status_var = tk.StringVar(self.root, value="Scanning…")
@@ -328,6 +405,16 @@ class MasterWindow:
                                        + self.app.attach_mode,
                                        self._toggle_attach_mode, width=14)
         self._attach_mode_btn.pack(side="right")
+        # MT-15 (0.26): one-click re-load of the most recent table
+        # (built per waiting-view build; the list only changes while a
+        # trainer session runs, i.e. while this view is not visible).
+        if self.app.recent_tables:
+            self._recent_btn = button(status, "Recent: "
+                                      + self.app.recent_tables[0][0],
+                                      self._load_recent_table, width=28)
+            self._recent_btn.pack(side="right", padx=(0, 8))
+        else:
+            self._recent_btn = None
         button(self.root, "Retry load", self._retry, width=12).pack(
             anchor="e", padx=12)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
@@ -357,9 +444,22 @@ class MasterWindow:
         # MT-10/11 (0.25): the stored preferences are visible at a glance.
         if app.last_table:
             parts.append("last loaded: " + app.last_table)
+        # MT-15 (0.26): the rolling recent list (most recent first; the
+        # full list feeds the Last-used column).
+        if app.recent_tables:
+            recent = ", ".join(path for path, _at in app.recent_tables[:3])
+            more = len(app.recent_tables) - 3
+            if more > 0:
+                recent += f" ({more} more)"
+            parts.append("recent: " + recent)
         parts.append("attach mode: " + app.attach_mode)
         if app.last_scan_at:
             parts.append("scanned " + app.last_scan_at)
+        # MT-13 (0.26): the active filter is visible in the meta line;
+        # the load picker always lists the full index, the tree only.
+        if self._filter_query.strip():
+            shown = len(self._visible_tables())
+            parts.append(f"filtered: {shown}/{len(entries)}")
         parts.append("state: " + app.state_home)
         # MT-7: on non-Windows the attach gate is fail-closed; the
         # documented SteamOS/CheatDeck route stays visible in the waiting
@@ -402,7 +502,10 @@ class MasterWindow:
         pids_by_key: dict[str, list[int]] = {}
         for entry in self._running:
             pids_by_key.setdefault(entry.name.casefold(), []).append(entry.pid)
-        for entry in self.app.index.tables():
+        # MT-15 (0.26): the Last-used column is fed by the recent list
+        # (the stored UTC timestamp, most recent first).
+        recent_at = {path: at for path, at in self.app.recent_tables}
+        for entry in self._visible_tables():
             names = ", ".join(entry.process_names) or "(none found)"
             if entry.status == "ok":
                 pids = sorted(set(p for n in entry.process_names
@@ -416,7 +519,102 @@ class MasterWindow:
                 status = "unreadable"
                 detail = entry.detail or ""
             tree.insert("", "end", values=(entry.relative_path, names,
-                                           status, detail))
+                                           status, detail,
+                                           self._format_size(entry.size),
+                                           self._format_mtime(entry.mtime_ns),
+                                           recent_at.get(entry.relative_path,
+                                                 "")))
+
+    def _visible_tables(self) -> list:
+        """MT-13 (0.26): the waiting-view row set - the full index,
+        sorted per the current mode, then filtered per the current
+        query.  Row identity stays the relative path; the load picker
+        and the auto-load path keep using the full index."""
+        entries = sort_tables(self.app.index.tables(), self._sort_mode)
+        return filter_tables(entries, self._filter_query)
+
+    @staticmethod
+    def _format_size(size: int) -> str:
+        """Compact human-readable byte size for the Size column."""
+        if size < 1024:
+            return str(size) + " B"
+        if size < 1024 * 1024:
+            return str(int(size / 1024)) + " KB"
+        return f"{size / (1024 * 1024):.1f} MB"
+
+    @staticmethod
+    def _format_mtime(mtime_ns: int) -> str:
+        """Local 'YYYY-MM-DD HH:MM' for the Modified column."""
+        from datetime import datetime
+        return datetime.fromtimestamp(mtime_ns / 1e9).strftime(
+            "%Y-%m-%d %H:%M")
+
+    def _cycle_sort(self):
+        """MT-13 (0.26): name -> process -> status -> name."""
+        order = list(SORT_MODES)
+        self._sort_mode = order[(order.index(self._sort_mode) + 1)
+                                % len(order)]
+        self._sort_btn.configure(text="Sort: " + self._sort_mode)
+        self._render_tables()
+
+    def _on_filter_edit(self, _event):
+        """MT-13 (0.26): live filter - re-render plus the meta line
+        counter ('filtered: N/M') while a query is active."""
+        self._filter_query = self._filter_entry.get()
+        self._render_tables()
+        if self._meta_label is not None:
+            self._meta_label.configure(text=self._meta_text())
+
+    def _on_filter_escape(self, _event):
+        """MT-14 (0.26): Esc clears the filter and returns focus to
+        the table list."""
+        self._filter_entry.delete(0, "end")
+        self._filter_query = ""
+        self._render_tables()
+        if self._meta_label is not None:
+            self._meta_label.configure(text=self._meta_text())
+        self._table_tree.focus_set()
+
+    def _on_slash(self, _event):
+        """MT-14 (0.26): '/' focuses the filter from anywhere in the
+        waiting view; a no-op in trainer mode (the trainer UI owns
+        the keys)."""
+        if self.engine is not None:
+            return
+        self._filter_entry.focus_set()
+
+    def _table_selected_rel(self):
+        item = self._table_tree.focus()
+        if not item:
+            selected = self._table_tree.selection()
+            if not selected:
+                return None
+            item = selected[0]
+        values = self._table_tree.item(item, "values")
+        return values[0] if values else None
+
+    def _table_double_click(self, event):
+        """MT-14 (0.26): double-click loads the clicked row through
+        the MT-10 explicit-load path (named refusals included)."""
+        item = self._table_tree.identify_row(event.y)
+        if not item:
+            return
+        values = self._table_tree.item(item, "values")
+        if values:
+            self._load_selected_table(values[0])
+
+    def _table_return(self, _event):
+        """MT-14 (0.26): Enter loads the selected/focused row."""
+        rel = self._table_selected_rel()
+        if rel:
+            self._load_selected_table(rel)
+
+    def _load_recent_table(self):
+        """MT-15 (0.26): load the most recent table through the MT-10
+        explicit-load path (named refusals included)."""
+        if not self.app.recent_tables:
+            return
+        self._load_selected_table(self.app.recent_tables[0][0])
 
     def _set_status(self, text: str) -> None:
         if self._status_var is not None:
@@ -507,6 +705,9 @@ class MasterWindow:
                                  parent=self.root)
             self._set_status(self._waiting_status_line())
             return
+        # MT-15 (0.26): every successful load (auto or explicit) feeds
+        # the rolling recent list (persisted under the state home).
+        self.app.remember_recent_table(entry.relative_path)
         self._enter_trainer(outcome.plan, entry)
 
     def _enter_trainer(self, plan, entry):
@@ -862,6 +1063,7 @@ class MasterWindow:
             return
         if origin == "choice":
             outcome = self.app.orchestrator.choose(self._choice_table_rel)
+            rel = self._choice_table_rel
             self._choice_table_rel = None
             if not outcome.ok:
                 self._set_status("Load failed: " + (outcome.error or ""))
@@ -870,6 +1072,9 @@ class MasterWindow:
                                      parent=self.root)
                 self._set_status(self._waiting_status_line())
                 return
+            # MT-15 (0.26): successful load feeds the rolling recent
+            # list (same rule as the _start_load path).
+            self.app.remember_recent_table(rel)
             self._enter_trainer(outcome.plan, entry)
             return
         self._start_load(entry, chosen,
@@ -1058,6 +1263,9 @@ class MasterWindow:
                                  parent=self.root)
             self._set_status(self._waiting_status_line())
             return
+        # MT-15 (0.26): successful load feeds the rolling recent list
+        # (same rule as the _start_load path).
+        self.app.remember_recent_table(rel)
         entry = next(t for t in self.app.orchestrator.choice.tables
                      if t.relative_path == rel) if self.app.orchestrator.choice \
             else None
