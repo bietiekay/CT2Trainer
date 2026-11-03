@@ -486,6 +486,41 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- 0.28 Master Trainer pinned/favorite tables MT-18 (2026-11-03,
+  root-direct on `main`; online-evaluated in
+  `master_trainer/ROADMAP.md`, the 0.27 follow-up research - VGC
+  Shelf "sort, pin, archive"; the adopted 0.28 candidate).
+  `master-settings.json` schema 4 -> 5 (`pinned_tables` - relative
+  table paths, most recent pin first, capped at
+  `PINNED_TABLES_LIMIT` = 25, each a non-empty string within the
+  table-path length bound); schema-4 documents promote on load
+  with `pinned_tables=[]`, a schema-4 document carrying the field
+  is refused as an unknown field (the same discipline as
+  MT-11/15/16); the pure `table_filter.pin_tables` reshaping of
+  the already-sorted-and-filtered row set (never adds or drops
+  tables: pinned rows first in pin order, casefolded comparison,
+  the remainder keeps the input order, pin paths not in the row
+  set ignored); the row context menu "Pin to top" / "Unpin"
+  (`MasterApp.set_table_pinned` validates with named `ValueError`s
+  - cap / already pinned / not pinned - and re-persists
+  immediately); a pinned table floats to the top of the list view
+  and to the top of its process group in the grouped view (pin
+  applied after filter + sort, before the MT-17 grouping); the pin
+  marker lives in the detail column, the first column stays the
+  bare relative path (row identity). +15 tests
+  (`test_native_master_state.py` +4,
+  `test_native_master_table_filter.py` +4,
+  `tests/test_native_master_ui_mt18.py` new +7). Full main suite
+  4,357 OK / 30 expected skips. Catalog remeasure
+  `blocked-catalog-028-pin` (chunked 64x3 audit over the 151
+  reference tables, 2026-11-03): 151/151 loaded, 0 load errors,
+  117,809 total / 116,756 supported / 60,161 staged / 103,607
+  actionable / 12,974 headings / 1,053 blocked - zero delta vs
+  `blocked-catalog-027-view` (per-table count/reason/sha
+  changes: 0); feature matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. The 0.28 build is
+  cut from this content (0.27 remains the latest verified
+  release).
 - Latest verified release: 0.27, build
   `native-20261103T145543Z-b29b3688` (cut from `main` @ `8aa0815`,
   2026-11-03), in-build suite 4,342 OK / 30 expected skips,

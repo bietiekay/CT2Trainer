@@ -5,10 +5,10 @@ byte-stable serialization, strict checksum-bound load, every fail-closed
 refusal (malformed JSON, invalid shape, tampered checksum, foreign schema,
 unknown fields, out-of-bounds last_folder, size limit), tolerant
 ``load_master_state`` (absent / refused -> None), and
-``save_master_state`` directory creation.  Schema 4 (0.27) carries the
-MT-10/11/15/16 preferences (last_table, attach_mode, recent_tables,
-waiting-view settings); schema-1/2/3 documents are promoted on load
-with the documented defaults.
+``save_master_state`` directory creation.  Schema 5 (0.28) carries the
+MT-10/11/15/16/18 preferences (last_table, attach_mode, recent_tables,
+waiting-view settings, pinned tables); schema-1/2/3/4 documents are
+promoted on load with the documented defaults.
 """
 from __future__ import annotations
 
@@ -50,7 +50,8 @@ class MasterStateSerializeTests(unittest.TestCase):
                           "recent_tables": [],
                           "view_filter": "",
                           "view_sort": "name",
-                          "view_mode": "list"})
+                          "view_mode": "list",
+                          "pinned_tables": []})
         canonical = json.dumps(document["payload"], sort_keys=True,
                                separators=(",", ":"), allow_nan=False,
                                ensure_ascii=True).encode("utf-8")
@@ -252,6 +253,58 @@ class MasterStateSerializeTests(unittest.TestCase):
         with self.assertRaises(MasterStateRefusal) as ctx:
             master_state_from_bytes(self._document(not_a_string))
         self.assertIn("view_filter", str(ctx.exception))
+
+    # -- schema 5 (0.28) pinned tables (MT-18) ----------------------------------
+
+    def test_pinned_tables_roundtrip(self):
+        state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
+                            pinned_tables=("sub\\zeta.ct", "alpha.ct"))
+        raw = master_state_to_bytes(state)
+        self.assertEqual(master_state_from_bytes(raw), state)
+
+    def test_schema4_document_promotes_on_load(self):
+        payload = {"schema": 4, "last_folder": "C:\\tables",
+                   "last_table": "sub\\gamea.ct",
+                   "attach_mode": ATTACH_MODE_ASK,
+                   "recent_tables": [{"path": "sub\\gamea.ct",
+                                      "at": "2026-11-03T12:00:00Z"}],
+                   "view_filter": "", "view_sort": "name",
+                   "view_mode": "list"}
+        state = master_state_from_bytes(self._document(payload))
+        self.assertEqual(state.schema, MASTER_STATE_SCHEMA)
+        self.assertEqual(state.pinned_tables, ())
+
+    def test_from_bytes_refuses_schema4_with_pinned_field(self):
+        payload = {"schema": 4, "last_folder": None,
+                   "pinned_tables": ["sub\\gamea.ct"]}
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(payload))
+        self.assertIn("unknown fields", str(ctx.exception))
+        self.assertIn("pinned_tables", str(ctx.exception))
+
+    def test_from_bytes_refuses_bad_pinned_tables(self):
+        base = {"schema": MASTER_STATE_SCHEMA, "last_folder": None}
+        not_a_list = dict(base, pinned_tables="sub\\gamea.ct")
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(not_a_list))
+        self.assertIn("pinned_tables", str(ctx.exception))
+        bad_item = dict(base, pinned_tables=[7])
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(bad_item))
+        self.assertIn("malformed", str(ctx.exception))
+        empty_item = dict(base, pinned_tables=[""])
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(empty_item))
+        self.assertIn("malformed", str(ctx.exception))
+        long_item = dict(base, pinned_tables=["x" * 4097])
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(long_item))
+        self.assertIn("malformed", str(ctx.exception))
+        over_cap = dict(base,
+                        pinned_tables=["t%02d.ct" % i for i in range(26)])
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(over_cap))
+        self.assertIn("limit", str(ctx.exception))
 
 
 class MasterStateFileTests(unittest.TestCase):

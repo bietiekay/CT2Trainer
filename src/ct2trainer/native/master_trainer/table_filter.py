@@ -121,3 +121,34 @@ def group_tables_by_process(entries) -> list[tuple[str, list]]:
         ordered.append((UNBOUND_PROCESS_LABEL,
                         groups[UNBOUND_PROCESS_LABEL]))
     return ordered
+
+
+# MT-18 (0.28): the persisted waiting-view pin set (relative paths,
+# most recent pin first; the master-state document, schema 5, carries
+# it).  A pinned table floats to the top of the waiting view; the
+# pure layer below reshapes the row set only, it never adds or drops
+# tables.
+def pin_tables(entries, pinned) -> list:
+    """MT-18 (0.28): float pinned tables to the top of an ordered row set.
+
+    ``entries`` is the waiting-view row set the caller already sorted
+    and filtered; ``pinned`` is the persisted pin order (relative
+    paths, most recent pin first).  Pinned rows come first, in pin
+    order (casefolded comparison, so a pin survives on-disk case
+    drift); the remainder keeps the input order.  Pin paths that are
+    not part of ``entries`` (table gone, filtered out) are ignored.
+    Row identity stays the relative path, so a path appears at most
+    once.
+    """
+    order = {}
+    for i, path in enumerate(pinned):
+        key = path.casefold()
+        if key not in order:
+            order[key] = i
+    top = []
+    rest = []
+    for entry in entries:
+        key = entry.relative_path.casefold()
+        (top if key in order else rest).append(entry)
+    top.sort(key=lambda e: order[e.relative_path.casefold()])
+    return top + rest

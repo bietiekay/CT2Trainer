@@ -54,11 +54,12 @@ from .orchestrator import (MasterOrchestrator, STATE_ACTIVE,
                            ExplicitLoadRefusal)
 from .master_state import (MASTER_STATE_SCHEMA, MASTER_STATE_FILENAME,
                            ATTACH_MODE_ASK, ATTACH_MODE_AUTO,
-                           RECENT_TABLES_LIMIT, VIEW_FILTER_MAX, MasterState,
+                           PINNED_TABLES_LIMIT, RECENT_TABLES_LIMIT,
+                           VIEW_FILTER_MAX, MasterState,
                            load_master_state, save_master_state)
 from .table_filter import (SORT_MODES, VIEW_MODES, UNBOUND_PROCESS_LABEL,
                            filter_tables, group_tables_by_process,
-                           sort_tables)
+                           pin_tables, sort_tables)
 from .process_picker import (DECISION_PICK, attach_decision,
                              candidate_processes,
                              make_pinned_memory_factory)
@@ -134,6 +135,11 @@ class MasterApp:
                           else SORT_MODES[0])
         self.view_mode = (state.view_mode if state is not None
                           else VIEW_MODES[0])
+        # MT-18 (0.28): the persisted waiting-view pin set (schema 5):
+        # relative table paths, most recent pin first; a fresh or
+        # refused state home takes the documented default (no pins).
+        self.pinned_tables = (tuple(state.pinned_tables) if state is not None
+                              else ())
         self.lister = lister if lister is not None else default_process_lister()
         self.plan_compiler = plan_compiler
         self.state_dir_factory = state_dir_factory
@@ -170,10 +176,10 @@ class MasterApp:
         return Path(self.state_home) / MASTER_STATE_FILENAME
 
     def persist_state(self) -> None:
-        """Remember the current table folder plus the MT-10/11/15/16
+        """Remember the current table folder plus the MT-10/11/15/16/18
         preferences (last explicit table, attach mode, rolling recent
-        tables, waiting-view filter/sort/display mode) for the next
-        start (best effort, like the index persistence)."""
+        tables, waiting-view filter/sort/display mode, pin set) for the
+        next start (best effort, like the index persistence)."""
         try:
             save_master_state(MasterState(
                 MASTER_STATE_SCHEMA, self.folder,
@@ -182,7 +188,8 @@ class MasterApp:
                 recent_tables=tuple(self.recent_tables),
                 view_filter=self.view_filter,
                 view_sort=self.view_sort,
-                view_mode=self.view_mode),
+                view_mode=self.view_mode,
+                pinned_tables=tuple(self.pinned_tables)),
                 self.state_path())
         except Exception:
             pass
@@ -221,6 +228,43 @@ class MasterApp:
         self.view_sort = sort_mode
         self.view_mode = view_mode
         self.persist_state()
+
+    def set_table_pinned(self, relative_path: str, pinned: bool) -> None:
+        """MT-18 (0.28): pin/unpin one waiting-view table (schema 5)
+        and re-persist the pin set.
+
+        A pinned table floats to the top of the waiting view (list
+        view) and to the top of its process group (process view); the
+        pin order is the persistence order, most recent pin first.
+        Invalid state raises the named ValueError, so the UI never
+        persists what it would not render.
+        """
+        if not isinstance(relative_path, str) or not relative_path:
+            raise ValueError("table path must be a non-empty string")
+        current = {p.casefold() for p in self.pinned_tables}
+        if pinned:
+            if relative_path.casefold() in current:
+                raise ValueError("table is already pinned")
+            if len(self.pinned_tables) >= PINNED_TABLES_LIMIT:
+                raise ValueError("pinned tables limit reached ("
+                                 + str(PINNED_TABLES_LIMIT) + ")")
+            self.pinned_tables = (relative_path,) + tuple(
+                p for p in self.pinned_tables
+                if p.casefold() != relative_path.casefold())
+        else:
+            if relative_path.casefold() not in current:
+                raise ValueError("table is not pinned")
+            self.pinned_tables = tuple(
+                p for p in self.pinned_tables
+                if p.casefold() != relative_path.casefold())
+        self.persist_state()
+
+    def is_table_pinned(self, relative_path: str) -> bool:
+        """MT-18 (0.28): True when this relative path is in the
+        persisted pin set (casefolded comparison, so the row identity
+        and the stored pins compare the same on every platform)."""
+        return relative_path.casefold() in {
+            p.casefold() for p in self.pinned_tables}
 
     def remember_last_table(self, relative_path: str | None) -> None:
         """Remember the last explicitly loaded table (MT-10) and
@@ -596,6 +640,11 @@ class MasterWindow:
         else:
             status = "unreadable"
             detail = entry.detail or ""
+        # MT-18 (0.28): the pin marker lives in the detail column -
+        # the first column (the relative path) stays the bare row
+        # identity the load paths key off.
+        if self.app.is_table_pinned(entry.relative_path):
+            detail = "pinned" + (" - " + detail if detail else "")
         self._table_tree.insert(parent, "end", values=(
             entry.relative_path, names, status, detail,
             self._format_size(entry.size),
@@ -603,12 +652,15 @@ class MasterWindow:
             recent_at.get(entry.relative_path, "")))
 
     def _visible_tables(self) -> list:
-        """MT-13 (0.26): the waiting-view row set - the full index,
-        sorted per the current mode, then filtered per the current
-        query.  Row identity stays the relative path; the load picker
-        and the auto-load path keep using the full index."""
+        """MT-13/18 (0.26/0.28): the waiting-view row set - the full
+        index, sorted per the current mode, filtered per the current
+        query, then the persisted pin set floated to the top (MT-18;
+        pinned rows not in the filtered set are ignored).  Row
+        identity stays the relative path; the load picker and the
+        auto-load path keep using the full index."""
         entries = sort_tables(self.app.index.tables(), self._sort_mode)
-        return filter_tables(entries, self._filter_query)
+        return pin_tables(filter_tables(entries, self._filter_query),
+                          self.app.pinned_tables)
 
     @staticmethod
     def _format_size(size: int) -> str:
@@ -1079,8 +1131,8 @@ class MasterWindow:
         self._table_load_entries = ()
 
     def _table_context_menu(self, event):
-        """The MT-10 row menu: right-click a table row to load it
-        (group rows are display-only, MT-17)."""
+        """The MT-10/18 row menu: right-click a table row to load it
+        or pin/unpin it (group rows are display-only, MT-17)."""
         item = self._table_tree.identify_row(event.y)
         if not item or not self._is_table_row(item):
             return
@@ -1091,10 +1143,30 @@ class MasterWindow:
         menu = tk.Menu(self.root, tearoff=0)
         menu.add_command(label="Load this table",
                          command=lambda: self._load_selected_table(rel))
+        if self.app.is_table_pinned(rel):
+            menu.add_command(label="Unpin",
+                             command=lambda: self._toggle_table_pin(rel,
+                                                                    False))
+        else:
+            menu.add_command(label="Pin to top",
+                             command=lambda: self._toggle_table_pin(rel,
+                                                                    True))
         try:
             menu.tk_popup(event.x_root, event.y_root)
         finally:
             menu.destroy()
+
+    def _toggle_table_pin(self, rel: str, pinned: bool):
+        """MT-18 (0.28): the row-menu pin toggle - re-renders on
+        success, surfaces the named refusal in the status line on
+        failure (no crash, no state change)."""
+        try:
+            self.app.set_table_pinned(rel, pinned)
+        except ValueError as exc:
+            self._set_status(str(exc))
+            return
+        self._render_tables()
+        self._set_status(("Pinned " if pinned else "Unpinned ") + rel)
 
     def _open_process_picker(self, entry, candidates, origin):
         """The MT-11 process picker: one row per running candidate

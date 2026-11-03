@@ -1,13 +1,23 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-03. **0.27 released** (build
-`native-20261103T145543Z-b29b3688`, cut from `main` @ `8aa0815`,
-2026-11-03) - Master Trainer waiting-view settings
-persistence MT-16 (`master-settings.json` schema 3 → 4: the filter
-query, sort mode and view mode restored at start and persisted on
-every change) + the process-grouped waiting view MT-17 (group-by-
-bound-process tree, display-only group rows); +22 tests; full main
-suite 4,342 OK / 30 expected skips; catalog zero delta
+**Updated:** 2026-11-03. **0.28 content on main** - the 0.28 build
+is cut from this content; 0.27 remains the latest verified release
+(build `native-20261103T145543Z-b29b3688`, cut from `main` @
+`8aa0815`, 2026-11-03) - Master Trainer pinned/favorite tables MT-18
+(`master-settings.json` schema 4 → 5: the pin set - relative
+paths, most recent pin first, cap 25 - persisted and restored at
+start; the row context menu toggle, pinned tables float to the top
+of the list view and to the top of their process group, the pin
+marker in the detail column); +15 tests; full main suite 4,357 OK /
+30 expected skips; catalog zero delta `blocked-catalog-028-pin`;
+see the 0.28 section below.
+Superseded 0.27 (build `native-20261103T145543Z-b29b3688`, cut from
+`main` @ `8aa0815`, 2026-11-03) - Master Trainer waiting-view
+settings persistence MT-16 (`master-settings.json` schema 3 → 4:
+the filter query, sort mode and view mode restored at start and
+persisted on every change) + the process-grouped waiting view MT-17
+(group-by-bound-process tree, display-only group rows); +22 tests;
+full main suite 4,342 OK / 30 expected skips; catalog zero delta
 `blocked-catalog-027-view`; see the 0.27 section below.
 Superseded 0.26 (build `native-20261103T112811Z-59a6b3d5`, cut from
 `main` @ `c114ec2`, 2026-11-03) - Master Trainer waiting-view
@@ -421,6 +431,48 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.28 content on main (2026-11-03, root-direct; the 0.28 build is
+cut from this content - 0.27 remains the latest verified release):
+Master Trainer pinned/favorite tables (MT-18).** The 0.28 feature
+set was evaluated against online table/list UX patterns (VGC Shelf
+"sort, pin, archive"; see the Master Trainer ROADMAP "0.27
+waiting-view settings + process groups" follow-up research and the
+adopted candidate). Adopted: MT-18. Deliberately deferred
+(documented): entry-count / blocked-count columns, per-table
+status / color-coding.
+- **MT-18 pinned / favorite tables:**
+  `master-settings.json` schema 4 → 5: `pinned_tables` (relative
+  table paths, most recent pin first, capped at
+  `PINNED_TABLES_LIMIT` = 25, each a non-empty string within the
+  table-path length bound). Schema-4 documents promote on load
+  with `pinned_tables=[]`; a schema-4 document carrying the field
+  is refused as an unknown field (foreign schema, never silently
+  promoted - the same discipline as MT-11/15/16). The pure
+  `table_filter.pin_tables` reshaping of the already-sorted-and-
+  filtered row set (never adds or drops tables): pinned rows first
+  in pin order (casefolded comparison), the remainder keeps the
+  input order, pin paths not in the row set (filtered out or
+  gone) ignored. The row context menu offers "Pin to top" /
+  "Unpin" (`MasterApp.set_table_pinned` validates - named
+  `ValueError`s for cap / already pinned / not pinned - and
+  re-persists immediately); a pinned table floats to the top of
+  the list view and to the top of its process group in the
+  grouped view (the pin set is applied after filter + sort,
+  before the MT-17 grouping); the pin marker lives in the detail
+  column ("pinned" / "pinned - PID …"), the first column stays
+  the bare relative path (the row identity the load paths key
+  off); a named refusal lands in the status line without a state
+  change or a crash. +15 tests (4 schema-5 state + 4 pure pin +
+  7 MT-18 UI).
+- Full main suite 4,357 OK / 30 expected skips; catalog zero
+  delta `blocked-catalog-028-pin` (151/151 loaded, 0 load errors,
+  117,809 total / 116,756 supported / 1,053 blocked, zero delta
+  vs `blocked-catalog-027-view`); feature matrix unchanged
+  (42/42, 7,475/7,475 over `w4b4-case30-20261020081722Z`);
+  AP-11 0/6,143. VERSION bumped to 0.28 with the changelog entry
+  in the same change; the 0.28 build is cut from this content
+  (0.27 remains the latest verified release).
 
 **0.27 released (build `native-20261103T145543Z-b29b3688`, cut from
 `main` @ `8aa0815`, 2026-11-03): Master Trainer waiting-view

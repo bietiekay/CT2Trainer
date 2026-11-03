@@ -1,7 +1,7 @@
 """Master Trainer state document (last-used folder, preferences).
 
 The state home holds one small document, ``master-settings.json``, next to
-the tables index.  Schema 4 (0.27) carries:
+the tables index.  Schema 5 (0.28) carries:
 
 - ``last_folder``  - the last-used table folder ("ask on first start");
 - ``last_table``   - the last explicitly loaded table (MT-10), relative
@@ -18,15 +18,21 @@ the tables index.  Schema 4 (0.27) carries:
   :data:`VIEW_SORT_MODES` (mirrors ``table_filter.SORT_MODES``);
 - ``view_mode``    - the persisted waiting-view display mode (MT-16 /
   MT-17): one of :data:`VIEW_MODES` ("list" flat rows, "process"
-  grouped by bound process name).
+  grouped by bound process name);
+- ``pinned_tables``- the persisted waiting-view pin set (MT-18, 0.28):
+  most recent pin first, capped at ``PINNED_TABLES_LIMIT``, each item
+  the table's relative path; a pinned table floats to the top of the
+  waiting view (list view) and to the top of its process group
+  (process view).
 
-Schema 3 (0.26) documents carry the first five fields; schema 2 (0.25)
-documents the first three; schema 1 documents (last_folder only) are
-schema-2 ancestors.  All are promoted on load: the missing fields take
-their documented defaults (last_table=None, attach_mode "auto",
-recent_tables=[], view_filter "", view_sort "name", view_mode "list"),
-so existing state homes keep working unchanged.  A schema-3 document
-carrying a view_* field is refused as an unknown field (foreign schema,
+Schema 4 (0.27) documents carry the first seven fields; schema 3 (0.26)
+documents the first six; schema 2 (0.25) documents the first four;
+schema 1 documents (last_folder only) are schema-2 ancestors.  All are
+promoted on load: the missing fields take their documented defaults
+(last_table=None, attach_mode "auto", recent_tables=[], view_filter "",
+view_sort "name", view_mode "list", pinned_tables=[]), so existing
+state homes keep working unchanged.  A schema-4 document carrying a
+pinned_tables field is refused as an unknown field (foreign schema,
 never silently promoted).
 
 Persistence discipline mirrors the table index (``table_index.py``):
@@ -42,9 +48,10 @@ import hashlib
 import json
 from pathlib import Path
 
-MASTER_STATE_SCHEMA = 4
-MASTER_STATE_SCHEMA_PREVIOUS = 3
-MASTER_STATE_SCHEMA_PREVIOUS2 = 2
+MASTER_STATE_SCHEMA = 5
+MASTER_STATE_SCHEMA_PREVIOUS = 4
+MASTER_STATE_SCHEMA_PREVIOUS2 = 3
+MASTER_STATE_SCHEMA_PREVIOUS3 = 2
 MASTER_STATE_SCHEMA_LEGACY = 1
 MASTER_STATE_FILENAME = "master-settings.json"
 MAX_MASTER_STATE_BYTES = 1024 * 1024
@@ -52,6 +59,9 @@ ATTACH_MODE_AUTO = "auto"
 ATTACH_MODE_ASK = "ask"
 ATTACH_MODES = (ATTACH_MODE_AUTO, ATTACH_MODE_ASK)
 RECENT_TABLES_LIMIT = 10
+# MT-18 (0.28): the persisted waiting-view pin set cap (relative table
+# paths, most recent pin first).
+PINNED_TABLES_LIMIT = 25
 # MT-16 (0.27): format-level constants for the persisted waiting-view
 # settings.  They mirror ``table_filter.SORT_MODES`` / ``VIEW_MODES``
 # (the attach-mode pattern) and must stay in sync with them.
@@ -89,7 +99,7 @@ class MasterStateRefusal(ValueError):
 class MasterState:
     """One master-state document (schema-bound).
 
-    Only schema-4 documents may be written; schemas 1-3 are load-only
+    Only schema-5 documents may be written; schemas 1-4 are load-only
     (promoted on load, see the module docstring).
     """
 
@@ -101,6 +111,7 @@ class MasterState:
     view_filter: str = ""
     view_sort: str = VIEW_SORT_MODES[0]
     view_mode: str = VIEW_MODES[0]
+    pinned_tables: tuple[str, ...] = ()
 
 
 def empty_master_state() -> MasterState:
@@ -114,19 +125,26 @@ def _validate_state_dict(payload: dict) -> MasterState:
     schema = payload.get("schema")
     if type(schema) is not int or schema not in (
             MASTER_STATE_SCHEMA, MASTER_STATE_SCHEMA_PREVIOUS,
-            MASTER_STATE_SCHEMA_PREVIOUS2, MASTER_STATE_SCHEMA_LEGACY):
+            MASTER_STATE_SCHEMA_PREVIOUS2,
+            MASTER_STATE_SCHEMA_PREVIOUS3,
+            MASTER_STATE_SCHEMA_LEGACY):
         reasons.append(f"master-state schema {schema!r} is not supported "
                        f"(expected {MASTER_STATE_SCHEMA}, legacy "
                        f"{MASTER_STATE_SCHEMA_PREVIOUS} / "
                        f"{MASTER_STATE_SCHEMA_PREVIOUS2} / "
+                       f"{MASTER_STATE_SCHEMA_PREVIOUS3} / "
                        f"{MASTER_STATE_SCHEMA_LEGACY} are promoted on load)")
     allowed = {"schema", "last_folder"}
     if schema == MASTER_STATE_SCHEMA:
         allowed |= {"last_table", "attach_mode", "recent_tables",
-                    "view_filter", "view_sort", "view_mode"}
+                    "view_filter", "view_sort", "view_mode",
+                    "pinned_tables"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS:
-        allowed |= {"last_table", "attach_mode", "recent_tables"}
+        allowed |= {"last_table", "attach_mode", "recent_tables",
+                    "view_filter", "view_sort", "view_mode"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS2:
+        allowed |= {"last_table", "attach_mode", "recent_tables"}
+    elif schema == MASTER_STATE_SCHEMA_PREVIOUS3:
         allowed |= {"last_table", "attach_mode"}
     unknown = sorted(set(payload) - allowed)
     if unknown:
@@ -186,13 +204,33 @@ def _validate_state_dict(payload: dict) -> MasterState:
         reasons.append("view_mode must be one of "
                        + ", ".join(f"'{m}'" for m in VIEW_MODES)
                        + f" (got {view_mode!r})")
+    pinned_raw = payload.get("pinned_tables")
+    pinned: list[str] = []
+    if pinned_raw is not None:
+        if not isinstance(pinned_raw, list):
+            reasons.append("pinned_tables must be a list of non-empty "
+                           "table path strings or absent")
+        else:
+            if len(pinned_raw) > PINNED_TABLES_LIMIT:
+                reasons.append("pinned_tables exceeds its limit of "
+                               + str(PINNED_TABLES_LIMIT) + " entries")
+            for item in pinned_raw:
+                if (type(item) is not str or not item
+                        or len(item) > _MAX_TABLE_PATH):
+                    reasons.append("pinned_tables carries a malformed "
+                                   "entry (need non-empty table path "
+                                   "strings)")
+                    break
+            if not reasons:
+                pinned = list(pinned_raw)
     if reasons:
         raise MasterStateRefusal(reasons)
-    # Promote older documents (schema 3 / 2 / 1) to the current schema
-    # with the documented defaults; the stored document itself stays
-    # untouched.  (The per-schema field sets were validated above, so the
-    # values are well-formed; the view_* defaults cover schema 3 and
-    # older documents, schema 1 only ever carried last_folder.)
+    # Promote older documents (schema 4 / 3 / 2 / 1) to the current
+    # schema with the documented defaults; the stored document itself
+    # stays untouched.  (The per-schema field sets were validated above,
+    # so the values are well-formed; the view_* / pinned_tables
+    # defaults cover schema 3 and older documents, schema 1 only ever
+    # carried last_folder.)
     if schema == MASTER_STATE_SCHEMA_LEGACY:
         last_table = None
         attach_mode = ATTACH_MODE_AUTO
@@ -200,7 +238,7 @@ def _validate_state_dict(payload: dict) -> MasterState:
                        last_table=last_table, attach_mode=attach_mode,
                        recent_tables=tuple(recent),
                        view_filter=view_filter, view_sort=view_sort,
-                       view_mode=view_mode)
+                       view_mode=view_mode, pinned_tables=tuple(pinned))
 
 
 def master_state_to_bytes(state: MasterState) -> bytes:
@@ -222,7 +260,8 @@ def master_state_to_bytes(state: MasterState) -> bytes:
                               for path, at in state.recent_tables],
                           "view_filter": state.view_filter,
                           "view_sort": state.view_sort,
-                          "view_mode": state.view_mode})
+                          "view_mode": state.view_mode,
+                          "pinned_tables": list(state.pinned_tables)})
     payload = {"schema": state.schema, "last_folder": state.last_folder,
                "last_table": state.last_table, "attach_mode": state.attach_mode,
                "recent_tables": [
@@ -230,7 +269,8 @@ def master_state_to_bytes(state: MasterState) -> bytes:
                    for path, at in state.recent_tables],
                "view_filter": state.view_filter,
                "view_sort": state.view_sort,
-               "view_mode": state.view_mode}
+               "view_mode": state.view_mode,
+               "pinned_tables": list(state.pinned_tables)}
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
                            allow_nan=False, ensure_ascii=True).encode("utf-8")
     digest = hashlib.sha256(canonical).hexdigest()
@@ -242,7 +282,7 @@ def master_state_to_bytes(state: MasterState) -> bytes:
 def master_state_from_bytes(raw: bytes) -> MasterState:
     """Strict, checksum-bound load of one master-state document.
 
-    Schema-1 / 2 / 3 documents are accepted and promoted to the
+    Schema-1 / 2 / 3 / 4 documents are accepted and promoted to the
     current schema (see module docstring); every other foreign
     schema, malformed shape or tampered checksum raises the named
     :class:`MasterStateRefusal`.

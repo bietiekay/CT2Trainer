@@ -3,9 +3,11 @@
 The waiting view of ~151 indexed tables needs search and sort; the
 decision layer is pure (no OS access, no index mutation).  These tests
 pin the filter contract (casefolded substring over the table name AND
-any bound process name, input order preserved) and the sort contract
+any bound process name, input order preserved), the sort contract
 (name / process / status modes, casefolded relative path as the
-universal tie-breaker, unknown modes refused).
+universal tie-breaker, unknown modes refused) and the pin contract
+(MT-18: pinned rows first in pin order, the remainder keeps the input
+order, unknown pin paths ignored, casefolded comparison).
 """
 from __future__ import annotations
 
@@ -21,6 +23,7 @@ from ct2trainer.native.master_trainer.table_filter import (
     VIEW_MODES,
     filter_tables,
     group_tables_by_process,
+    pin_tables,
     sort_tables,
 )
 
@@ -241,6 +244,38 @@ class GroupByProcessTests(unittest.TestCase):
         # pure layer (the attach-mode pattern).
         self.assertEqual(VIEW_MODES, STATE_VIEW_MODES)
         self.assertEqual(SORT_MODES, STATE_VIEW_SORT_MODES)
+
+    # -- MT-18 (0.28) pinned tables ----------------------------------------------
+
+    def test_pin_order_floats_pinned_rows_to_the_top(self):
+        rows = [_Entry("a.ct"), _Entry("b.ct"), _Entry("c.ct")]
+        self.assertEqual([e.relative_path
+                          for e in pin_tables(rows, ["b.ct"])],
+                         ["b.ct", "a.ct", "c.ct"])
+        self.assertEqual([e.relative_path
+                          for e in pin_tables(rows, ["c.ct", "b.ct"])],
+                         ["c.ct", "b.ct", "a.ct"])
+
+    def test_unknown_pin_paths_are_ignored(self):
+        rows = [_Entry("a.ct"), _Entry("b.ct")]
+        out = pin_tables(rows, ["zz.ct", "a.ct"])
+        self.assertEqual([e.relative_path for e in out], ["a.ct", "b.ct"])
+
+    def test_empty_pin_set_is_the_identity(self):
+        rows = [_Entry("a.ct"), _Entry("b.ct"), _Entry("c.ct")]
+        self.assertEqual(pin_tables(rows, ()), rows)
+        self.assertEqual(pin_tables(rows, []), rows)
+
+    def test_pins_compare_casefolded_and_never_duplicate_rows(self):
+        rows = [_Entry("GameA.ct"), _Entry("GameB.ct")]
+        # Case drift between the stored pin and the row identity.
+        self.assertEqual([e.relative_path
+                          for e in pin_tables(rows, ["gamea.ct"])],
+                         ["GameA.ct", "GameB.ct"])
+        # A duplicated pin path must not duplicate the row.
+        out = pin_tables(rows, ["GameB.ct", "gameb.ct"])
+        self.assertEqual([e.relative_path for e in out],
+                         ["GameB.ct", "GameA.ct"])
 
 
 if __name__ == "__main__":

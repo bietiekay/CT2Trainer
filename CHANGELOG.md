@@ -2,6 +2,38 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.28 (2026-11-03)
+
+Master Trainer pinned/favorite tables (MT-18) - the first
+candidate documented in the 0.27 follow-up online evaluation is
+adopted (VGC Shelf "sort, pin, archive": pinning as a first-class
+feature - see the Master Trainer ROADMAP "0.27 waiting-view
+settings + process groups" section):
+
+- **MT-18 pinned / favorite tables**: `master-settings.json`
+  schema 4 → 5 - the pin set (`pinned_tables`, relative table
+  paths, most recent pin first, capped at 25) is part of the
+  persisted state document: restored at start, re-persisted on
+  every toggle. The row context menu offers "Pin to top" /
+  "Unpin"; a pinned table floats to the top of the waiting view
+  (list view) and to the top of its process group (process view),
+  and carries a "pinned" marker in the detail column - the first
+  column stays the bare relative path, the row identity the load
+  paths key off. Schema-4 documents promote on load; a schema-4
+  document carrying the field is refused as an unknown field
+  (foreign schema, never silently promoted - the same discipline
+  as the attach mode, the recent list and the view settings).
+  Named refusals (pin cap, already pinned, not pinned) land in
+  the status line without a state change or a crash.
+- Deliberately deferred (documented): entry-count / blocked-count
+  columns and per-table status / color-coding (remaining
+  candidates, evaluated in the ROADMAP).
+- Test totals: +15 over 0.27 (4 schema-5 state tests, 4 pure pin
+  tests, 7 MT-18 UI tests); full main suite 4,357 OK / 30
+  expected skips; catalog remeasure `blocked-catalog-028-pin`:
+  zero delta (151/151 loaded, 0 load errors, 117,809 total /
+  116,756 supported / 1,053 blocked).
+
 ## 0.27 (2026-11-03)
 
 Master Trainer waiting-view settings persistence (MT-16) +

@@ -8,8 +8,9 @@ on `main` with the 0.25 release (2026-11-02); MT-13..MT-15
 (waiting-view usability: search/filter/sort, keyboard flow, recent
 tables + Size/Modified/Last-used columns) with the 0.26 release
 (2026-11-03); MT-16..MT-17 (persisted waiting-view settings +
-process-grouped view) with the 0.27 release (2026-11-03). Design and
-implementation notes; the working plan is [ROADMAP.md](ROADMAP.md).
+process-grouped view) with the 0.27 release (2026-11-03); MT-18
+(pinned / favorite tables) with the 0.28 release (2026-11-03). Design
+and implementation notes; the working plan is [ROADMAP.md](ROADMAP.md).
 
 ## What it is
 
@@ -299,6 +300,24 @@ usability”):
   double-click, Enter and the row context menu are gated by
   `_is_table_row`, so a group row never loads; the children
   load through the ordinary MT-10 path.
+- **MT-18 pinned / favorite tables (0.28).** With ~151 indexed
+  tables the ones the user touches daily deserve a permanent place
+  at the top: the row context menu offers "Pin to top" / "Unpin",
+  the pin set persists in `master-settings.json` (schema 4 → 5:
+  `pinned_tables`, relative paths, most recent pin first, capped at
+  `PINNED_TABLES_LIMIT` = 25; schema-4 documents promote on load
+  with `pinned_tables=[]`, a schema-4 document carrying the field
+  is refused as an unknown field). The pure `table_filter.pin_tables`
+  reshapes the already-sorted-and-filtered row set (never adds or
+  drops tables: pinned rows first in pin order, casefolded
+  comparison, the remainder keeps the input order; pin paths not in
+  the row set — filtered out or gone — are ignored). A pinned table
+  floats to the top of the list view and to the top of its process
+  group in the grouped view; the marker lives in the detail column
+  ("pinned" / "pinned - PID …"), the first column stays the bare
+  relative path (the row identity the load paths key off). Named
+  refusals (cap, already pinned, not pinned) land in the status
+  line without a state change or a crash.
 
 ## CLI
 

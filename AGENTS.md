@@ -48,8 +48,21 @@ the process groups - and portable ZIP
 (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` (sha256
 `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
 16,929,639 bytes) ships next to the converter); superseded 0.26
-(build `native-20261103T112811Z-59a6b3d5`). The 0.16 Wave-4
-feature work is complete; RT-4.1 (symbol provider fidelity) landed on
+(build `native-20261103T112811Z-59a6b3d5`). 0.28 content on main
+(2026-11-03, root-direct): the Master Trainer pinned/favorite tables
+(MT-18: `master-settings.json` schema 4 → 5 - `pinned_tables`
+persisted, most recent pin first, cap `PINNED_TABLES_LIMIT` = 25,
+schema-4 documents promote, a schema-4 document carrying the field
+is refused as an unknown field; the row context menu "Pin to top" /
+"Unpin" toggle with immediate persist and named refusals; the pure
+`table_filter.pin_tables` reshaping - pinned rows first in pin
+order, the remainder keeps the input order, unknown pin paths
+ignored; a pinned table floats to the top of the list view and to
+the top of its process group, the pin marker lives in the detail
+column); +15 tests, full main suite 4,357 OK / 30 expected skips;
+catalog zero delta `blocked-catalog-028-pin`; the 0.28 build is cut
+from this content (0.27 remains the latest verified release). The
+0.16 Wave-4 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
 now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
 (value semantics), RT-4.6 (input legacy & authoring gaps) and RT-4.5
@@ -162,10 +175,20 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-03, 0.27 released - build
+**CT2Trainer (status 2026-11-03, 0.28 content on main - the 0.28
+build is cut from this content; 0.27 remains the latest verified
+release, build `native-20261103T145543Z-b29b3688` cut from `main` @
+`8aa0815`, 2026-11-03, in-build suite 4,342 OK / 30 expected skips,
+`ce_inputs: []`) - 0.28 Master Trainer pinned/favorite tables
+(MT-18: `master-settings.json` schema 4 → 5 - `pinned_tables`
+persisted, most recent pin first, cap 25; the row context menu
+"Pin to top" / "Unpin" toggle, pinned tables float to the top of the
+list view and to the top of their process group, pin marker in the
+detail column, pure `pin_tables` layer); +15 tests, full main suite
+4,357 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-028-pin`), 0.27 released (build
 `native-20261103T145543Z-b29b3688` cut from `main` @ `8aa0815`,
-2026-11-03, in-build suite 4,342 OK / 30 expected skips,
-`ce_inputs: []`) - 0.27 Master Trainer waiting-view settings
+2026-11-03) - the 0.27 Master Trainer waiting-view settings
 persistence (MT-16: `master-settings.json` schema 3 → 4 - the filter
 query, sort mode and view mode restored at start and persisted on
 every change) + the process-grouped waiting view (MT-17: group-
