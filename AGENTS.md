@@ -14,8 +14,9 @@ synthetic matrix or carry stale counts into this overview.
 
 **Active outcome (2026-10-26): 100% of the 151 local-only reference-table
 paths (143 distinct hashes) must load and support their intended behavior
-through an independent clean-room implementation.** 0.26 content on
-main (2026-11-03): the Master Trainer waiting-view usability
+through an independent clean-room implementation.** 0.26 released
+(build `native-20261103T112811Z-59a6b3d5` cut from `main` @
+`c114ec2`, 2026-11-03): the Master Trainer waiting-view usability
 MT-13/14/15 - search/filter/sort through the new pure
 `table_filter.py` layer, keyboard load flow, rolling recent tables in
 `master-settings.json` schema 3 + Size/Modified/Last-used columns -
@@ -23,9 +24,9 @@ plus the live-target takeover field fix (stale-lock recovery now
 attaches to the still-running game behind one user-confirmed prompt
 when the owner is proven dead and only target-side identities remain
 unproven); +61 tests, full main suite 4,320 OK / 30 expected skips,
-catalog zero delta `blocked-catalog-026-master-ui`; the 0.25 build
-`native-20261103T062439Z-f4c16be9` remains the latest verified
-release until the 0.26 build is cut. The 0.16 Wave-4
+catalog zero delta `blocked-catalog-026-master-ui`; in-build suite
+4,320 OK / 30 expected skips, `ce_inputs: []`; superseded 0.25
+(build `native-20261103T062439Z-f4c16be9`). The 0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
 now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
@@ -139,10 +140,9 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-03, 0.26 content on main - the 0.26
-build is cut from this content; 0.25 remains the latest verified
-release, build `native-20261103T062439Z-f4c16be9` cut from `main` @
-`a861bfb`, 2026-11-03, in-build suite 4,259 OK / 30 expected skips,
+**CT2Trainer (status 2026-11-03, 0.26 released - build
+`native-20261103T112811Z-59a6b3d5` cut from `main` @ `c114ec2`,
+2026-11-03, in-build suite 4,320 OK / 30 expected skips,
 `ce_inputs: []`) - 0.26 Master Trainer waiting-view usability
 MT-13/14/15 (search/filter/sort through the new pure
 `table_filter.py` layer, keyboard load flow, rolling recent tables in
@@ -189,7 +189,19 @@ dependency skip 28c9b57 +10 tests; SC2 hotkey-bridge field fix
 `native-0.23-load-gate` @ 98a9226, main @ 6e3ec98, +115 tests, full
 main suite 4,176 OK / 30 expected skips, zero catalog delta
 `blocked-catalog-023-field-fixes`); latest
-verified release 0.25 (build
+verified release 0.26 (build
+`native-20261103T112811Z-59a6b3d5` cut from `main` @ `c114ec2`,
+2026-11-03 - the 0.26 Master Trainer waiting-view usability
+release, in-build suite 4,320 OK / 30 expected skips,
+`ce_inputs: []`, source ZIP `CT2Trainer-0.26-source.zip` sha256
+3d62f80cdfb95d8439d4a2f2150002976795faad313fa75d47aeb4fb92bb49bd
+(14,348,462 bytes), portable ZIP
+`CT2Trainer-0.26-windows-portable.zip` sha256
+49be1d286999ed175737edb073c5ab83533c40cccc7e636685a256a0b07004b3
+(49,653,968 bytes), frozen `CT2Trainer-Master.exe` (sha256
+895f937ed5c228c09b97edba28aa9dc4ad228abd58585f73080f40ab265bc031,
+16,925,677 bytes) in the run folder, the payload inventory and the
+portable ZIP); superseded 0.25 (build
 `native-20261103T062439Z-f4c16be9` cut from `main` @ `a861bfb`,
 2026-11-03 - the 0.25 Master Trainer user-control release, in-build
 suite 4,259 OK / 30 expected skips, `ce_inputs: []`, source ZIP
@@ -402,7 +414,21 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261103T062439Z-f4c16be9` (0.25,
+**Latest verified build:** `native-20261103T112811Z-59a6b3d5` (0.26,
+cut from `main` @ `c114ec2`, 2026-11-03; in-build suite 4,320 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.26-source.zip` sha256
+`3d62f80cdfb95d8439d4a2f2150002976795faad313fa75d47aeb4fb92bb49bd`
+(14,348,462 bytes) - carries the MT-13/14/15 waiting-view usability
+and the live-target takeover field fix - and portable ZIP
+`CT2Trainer-0.26-windows-portable.zip` sha256
+`49be1d286999ed175737edb073c5ab83533c40cccc7e636685a256a0b07004b3`
+(49,653,968 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `895f937ed5c228c09b97edba28aa9dc4ad228abd58585f73080f40ab265bc031`,
+16,925,677 bytes) ships next to the converter)).
+0.26 ships the Master Trainer waiting-view usability
+(MT-13/14/15) and the live-target takeover field fix.
+Superseded 0.25 build: `native-20261103T062439Z-f4c16be9` (0.25,
 cut from `main` @ `a861bfb`, 2026-11-03; in-build suite 4,259 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
 kept per gate; source ZIP `CT2Trainer-0.25-source.zip` sha256

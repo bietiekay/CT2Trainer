@@ -1,7 +1,8 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-03. **0.26 content on `main`** (2026-11-03;
-the 0.26 build is cut from this content) - Master Trainer
+**Updated:** 2026-11-03. **0.26 released** (build
+`native-20261103T112811Z-59a6b3d5`, cut from `main` @ `c114ec2`,
+2026-11-03) - Master Trainer
 waiting-view usability MT-13/14/15 (user request 2026-11-02/03,
 online-evaluated: search/filter/sort through the new pure
 `table_filter.py` layer, keyboard load flow, rolling recent tables
@@ -12,7 +13,7 @@ user-confirmed prompt when the owner is proven dead and only
 target-side identities remain unproven); +61 tests; full main suite
 4,320 OK / 30 expected skips; catalog zero delta
 `blocked-catalog-026-master-ui`; see the 0.26 section below.
-0.25 released (build `native-20261103T062439Z-f4c16be9`, cut from
+Superseded 0.25 (build `native-20261103T062439Z-f4c16be9`, cut from
 `main` @ `a861bfb`, 2026-11-03) - Master Trainer user control
 MT-10/11/12 (user request 2026-11-02: explicit table load, process
 picker + persisted attach mode, detach/user attach), plus the online
@@ -28,7 +29,20 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.25, build
+**Latest verified release:** 0.26, build
+`native-20261103T112811Z-59a6b3d5` (cut from `main` @ `c114ec2`,
+2026-11-03): the 0.26 Master Trainer waiting-view usability release
+(MT-13/14/15 + live-target takeover field fix) - in-build suite
+4,320 OK / 30 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.26-source.zip` sha256
+`3d62f80cdfb95d8439d4a2f2150002976795faad313fa75d47aeb4fb92bb49bd`
+(14,348,462 bytes), portable ZIP
+`CT2Trainer-0.26-windows-portable.zip` sha256
+`49be1d286999ed175737edb073c5ab83533c40cccc7e636685a256a0b07004b3`
+(49,653,968 bytes), frozen `CT2Trainer-Master.exe` (sha256
+`895f937ed5c228c09b97edba28aa9dc4ad228abd58585f73080f40ab265bc031`)
+next to the converter. Superseded 0.25, build
 `native-20261103T062439Z-f4c16be9` (cut from `main` @ `a861bfb`,
 2026-11-03): the 0.25 Master Trainer user-control release
 (MT-10/11/12 + Tcl test-harness hardening + in-build reliability fix)
@@ -387,9 +401,10 @@ CE asset bytes are copied.
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
 
-**0.26 content on main (2026-11-03, root-direct on `main`): Master
-Trainer waiting-view usability MT-13/14/15 (user request
-2026-11-02/03) + live-target takeover field fix.** With ~151
+**0.26 released (build `native-20261103T112811Z-59a6b3d5`, cut from
+`main` @ `c114ec2`, 2026-11-03): Master Trainer waiting-view
+usability MT-13/14/15 (user request 2026-11-02/03) + live-target
+takeover field fix.** With ~151
 indexed tables (143 distinct hashes) the waiting view needed real
 navigation; the feature set was evaluated against online table/list
 UX patterns and recorded in `master_trainer/ROADMAP.md` ("0.26
@@ -453,9 +468,18 @@ entry-count / blocked-count columns.
   1,053 blocked, zero delta vs `blocked-catalog-026-live-target`);
   feature matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION bumped to
-  0.26 with the changelog entry in the same change; the 0.26 build
-  is not cut yet - the latest verified build remains 0.25
-  (`native-20261103T062439Z-f4c16be9`).
+  0.26 with the changelog entry in the same change. The 0.26 build
+  `native-20261103T112811Z-59a6b3d5` was cut from `main` @ `c114ec2`
+  (2026-11-03): in-build suite 4,320 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.26-source.zip` sha256
+  `3d62f80cdfb95d8439d4a2f2150002976795faad313fa75d47aeb4fb92bb49bd`
+  (14,348,462 bytes), portable ZIP
+  `CT2Trainer-0.26-windows-portable.zip` sha256
+  `49be1d286999ed175737edb073c5ab83533c40cccc7e636685a256a0b07004b3`
+  (49,653,968 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `895f937ed5c228c09b97edba28aa9dc4ad228abd58585f73080f40ab265bc031`,
+  16,925,677 bytes, ships next to the converter).
 
 **0.25 content on main (2026-11-02, root-direct on `main`): Master
 Trainer user control MT-10/11/12 (user request 2026-11-02).** The
