@@ -1,9 +1,8 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-03. **0.27 content on main** - the 0.27 build
-is cut from this content; 0.26 remains the latest verified release
-(build `native-20261103T112811Z-59a6b3d5`, cut from `main` @
-`c114ec2`, 2026-11-03) - Master Trainer waiting-view settings
+**Updated:** 2026-11-03. **0.27 released** (build
+`native-20261103T145543Z-b29b3688`, cut from `main` @ `8aa0815`,
+2026-11-03) - Master Trainer waiting-view settings
 persistence MT-16 (`master-settings.json` schema 3 → 4: the filter
 query, sort mode and view mode restored at start and persisted on
 every change) + the process-grouped waiting view MT-17 (group-by-
@@ -38,7 +37,20 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.26, build
+**Latest verified release:** 0.27, build
+`native-20261103T145543Z-b29b3688` (cut from `main` @ `8aa0815`,
+2026-11-03): the 0.27 Master Trainer waiting-view settings release
+(MT-16/17) - in-build suite
+4,342 OK / 30 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.27-source.zip` sha256
+`264b42d6c42dac1bb434c1d0591e82ac0bec69e61e1a1c75047c6aa58126f40e`
+(14,357,294 bytes), portable ZIP
+`CT2Trainer-0.27-windows-portable.zip` sha256
+`bfcf2abc885122dfa8653fcfd0046323e7112f59c0850958688e36e014ebc135`
+(49,654,613 bytes), frozen `CT2Trainer-Master.exe` (sha256
+`9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`)
+next to the converter. Superseded 0.26, build
 `native-20261103T112811Z-59a6b3d5` (cut from `main` @ `c114ec2`,
 2026-11-03): the 0.26 Master Trainer waiting-view usability release
 (MT-13/14/15 + live-target takeover field fix) - in-build suite
@@ -410,9 +422,9 @@ CE asset bytes are copied.
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
 
-**0.27 content on main (2026-11-03, root-direct; the 0.27 build is
-cut from this content - 0.26 remains the latest verified release):
-Master Trainer waiting-view settings persistence (MT-16) +
+**0.27 released (build `native-20261103T145543Z-b29b3688`, cut from
+`main` @ `8aa0815`, 2026-11-03): Master Trainer waiting-view
+settings persistence (MT-16) +
 process-grouped waiting view (MT-17).** The 0.27 feature set was
 evaluated against online table/list UX patterns (playR, Universal
 Game Launcher, GamesList Manager, Game Cheats Manager) and
@@ -463,9 +475,18 @@ status / color-coding.
   zero delta vs `blocked-catalog-026-master-ui`); feature matrix
   unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION bumped
-  to 0.27 with the changelog entry in the same change; the 0.27
-  build is cut from this content (0.26 remains the latest
-  verified release).
+  to 0.27 with the changelog entry in the same change. The 0.27 build
+  `native-20261103T145543Z-b29b3688` was cut from `main` @ `8aa0815`
+  (2026-11-03): in-build suite 4,342 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.27-source.zip` sha256
+  `264b42d6c42dac1bb434c1d0591e82ac0bec69e61e1a1c75047c6aa58126f40e`
+  (14,357,294 bytes), portable ZIP
+  `CT2Trainer-0.27-windows-portable.zip` sha256
+  `bfcf2abc885122dfa8653fcfd0046323e7112f59c0850958688e36e014ebc135`
+  (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
+  16,929,639 bytes, ships next to the converter).
 
 **0.26 released (build `native-20261103T112811Z-59a6b3d5`, cut from
 `main` @ `c114ec2`, 2026-11-03): Master Trainer waiting-view

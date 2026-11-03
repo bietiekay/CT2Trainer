@@ -26,8 +26,9 @@ when the owner is proven dead and only target-side identities remain
 unproven); +61 tests, full main suite 4,320 OK / 30 expected skips,
 catalog zero delta `blocked-catalog-026-master-ui`; in-build suite
 4,320 OK / 30 expected skips, `ce_inputs: []`; superseded 0.25
-(build `native-20261103T062439Z-f4c16be9`). 0.27 content on main
-(2026-11-03, root-direct): the Master Trainer waiting-view settings
+(build `native-20261103T062439Z-f4c16be9`). 0.27 released (build
+`native-20261103T145543Z-b29b3688` cut from `main` @ `8aa0815`,
+2026-11-03): the Master Trainer waiting-view settings
 persistence (MT-16: `master-settings.json` schema 3 → 4 -
 `view_filter` / `view_sort` / `view_mode` restored at start and
 persisted on every change; schema-1/2/3 documents promote, a
@@ -36,8 +37,18 @@ field) + the process-grouped waiting view (MT-17: the pure
 `group_tables_by_process` reshaping, the "View: list/process" cycle
 button, display-only group rows); +22 tests, full main suite 4,342
 OK / 30 expected skips, catalog zero delta
-`blocked-catalog-027-view`; the 0.27 build is cut from this content
-(0.26 remains the latest verified release). The 0.16 Wave-4
+`blocked-catalog-027-view`; in-build suite 4,342
+OK / 30 expected skips, `ce_inputs: []`, `runtime_unverified`
+deliberately kept per gate; source ZIP `CT2Trainer-0.27-source.zip`
+sha256 `264b42d6c42dac1bb434c1d0591e82ac0bec69e61e1a1c75047c6aa58126f40e`
+(14,357,294 bytes) - carries the MT-16/17 waiting-view settings and
+the process groups - and portable ZIP
+`CT2Trainer-0.27-windows-portable.zip` sha256
+`bfcf2abc885122dfa8653fcfd0046323e7112f59c0850958688e36e014ebc135`
+(49,654,613 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
+16,929,639 bytes) ships next to the converter); superseded 0.26
+(build `native-20261103T112811Z-59a6b3d5`). The 0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
 now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
@@ -151,10 +162,9 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-03, 0.27 content on main - the 0.27
-build is cut from this content; 0.26 remains the latest verified
-release, build `native-20261103T112811Z-59a6b3d5` cut from `main` @
-`c114ec2`, 2026-11-03, in-build suite 4,320 OK / 30 expected skips,
+**CT2Trainer (status 2026-11-03, 0.27 released - build
+`native-20261103T145543Z-b29b3688` cut from `main` @ `8aa0815`,
+2026-11-03, in-build suite 4,342 OK / 30 expected skips,
 `ce_inputs: []`) - 0.27 Master Trainer waiting-view settings
 persistence (MT-16: `master-settings.json` schema 3 → 4 - the filter
 query, sort mode and view mode restored at start and persisted on
@@ -434,7 +444,21 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261103T112811Z-59a6b3d5` (0.26,
+**Latest verified build:** `native-20261103T145543Z-b29b3688` (0.27,
+cut from `main` @ `8aa0815`, 2026-11-03; in-build suite 4,342 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.27-source.zip` sha256
+`264b42d6c42dac1bb434c1d0591e82ac0bec69e61e1a1c75047c6aa58126f40e`
+(14,357,294 bytes) - carries the MT-16/17 waiting-view settings and
+the process groups - and portable ZIP
+`CT2Trainer-0.27-windows-portable.zip` sha256
+`bfcf2abc885122dfa8653fcfd0046323e7112f59c0850958688e36e014ebc135`
+(49,654,613 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
+16,929,639 bytes) ships next to the converter)).
+0.27 ships the Master Trainer waiting-view settings persistence
+(MT-16) and the process-grouped waiting view (MT-17). Superseded
+0.26 build: `native-20261103T112811Z-59a6b3d5` (0.26,
 cut from `main` @ `c114ec2`, 2026-11-03; in-build suite 4,320 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
 kept per gate; source ZIP `CT2Trainer-0.26-source.zip` sha256

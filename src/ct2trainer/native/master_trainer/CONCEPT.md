@@ -250,7 +250,8 @@ usability”):
   pure `table_filter.py`; the waiting view renders
   `filter_tables(sort_tables(index.tables(), mode), query)`. Row
   identity stays the relative path; the load picker and the auto-load
-  path keep using the full index (separate decision surfaces). Both values are persisted in the master-state
+  path keep using the full index (separate decision surfaces). Both
+  values are persisted in the master-state
   document (schema 4, MT-16) and restored at start; they also
   survive the trainer round-trip. Deliberately out (0.26):
   entry-count / blocked-count columns; the group-by-process tree

@@ -85,6 +85,18 @@ waiting view) and per-table status / color-coding (the indexed Status
 column plus the running-PID markers already carry the state; a status
 taxonomy would be a feature in its own right).
 
+Follow-up research (2026-11-03): Cheat Happens Trainer Manager (a
+"Last Used Trainer" pinned above the list - the MT-15 recent list
+already covers this), GameTrainerLauncher (a sortable local trainer
+library with status feedback - covered by the MT-13/15/17 feature
+set), GamesList Manager ("sortable columns, color-coded status" -
+corroborates the deferred status / color-coding item) and VGC Shelf
+("sort, pin, archive" - pinning as a first-class feature). 0.28
+candidates (evaluated, not yet adopted): pinned/favorite tables (a
+persisted pin set plus pinning to the top of the waiting view),
+entry-count / blocked-count columns and per-table status /
+color-coding (already deferred in 0.26/0.27).
+
 ## Merge & release plan (historical + current)
 
 1. MT-1..MT-5 shipped on `main` with the 0.21 release (2026-10-31);

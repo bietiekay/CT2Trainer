@@ -474,12 +474,33 @@ game-facing action.
   actionable / 12,974 headings / 1,053 blocked - zero delta vs
   `blocked-catalog-026-master-ui` (per-table count/reason/sha
   changes: 0); feature matrix unchanged (42/42, 7,475/7,475 over
-  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. The 0.27 build is
-  cut from this content (0.26 remains the latest verified
-  release).
-- Latest verified release: 0.26, build
-  `native-20261103T112811Z-59a6b3d5` (cut from `main` @ `c114ec2`,
-  2026-11-03), in-build suite 4,320 OK / 30 expected skips,
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. The 0.27 build
+  `native-20261103T145543Z-b29b3688` cut from `main` @ `8aa0815`
+  (2026-11-03): in-build suite 4,342 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.27-source.zip` sha256
+  `264b42d6c42dac1bb434c1d0591e82ac0bec69e61e1a1c75047c6aa58126f40e`
+  (14,357,294 bytes), portable ZIP
+  `CT2Trainer-0.27-windows-portable.zip` sha256
+  `bfcf2abc885122dfa8653fcfd0046323e7112f59c0850958688e36e014ebc135`
+  (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
+  16,929,639 bytes, ships next to the converter).
+- Latest verified release: 0.27, build
+  `native-20261103T145543Z-b29b3688` (cut from `main` @ `8aa0815`,
+  2026-11-03), in-build suite 4,342 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.27-source.zip` sha256
+  `264b42d6c42dac1bb434c1d0591e82ac0bec69e61e1a1c75047c6aa58126f40e`
+  (14,357,294 bytes), portable ZIP
+  `CT2Trainer-0.27-windows-portable.zip` sha256
+  `bfcf2abc885122dfa8653fcfd0046323e7112f59c0850958688e36e014ebc135`
+  (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
+  16,929,639 bytes, ships next to the converter); superseded 0.26,
+  build `native-20261103T112811Z-59a6b3d5` (cut from `main` @
+  `c114ec2`, 2026-11-03), in-build suite 4,320 OK / 30 expected
+  skips,
   `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
   source ZIP `CT2Trainer-0.26-source.zip` sha256
   `3d62f80cdfb95d8439d4a2f2150002976795faad313fa75d47aeb4fb92bb49bd`
