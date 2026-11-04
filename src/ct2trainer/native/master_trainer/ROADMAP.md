@@ -30,6 +30,7 @@ main-branch libraries; none adds trainer functionality.
 | MT-18 | Pinned / favorite tables | done (2026-11-03) | `master-settings.json` schema 4 → 5: `pinned_tables` (relative table paths, most recent pin first, capped at `PINNED_TABLES_LIMIT` = 25, each a non-empty string within the table-path length bound). Schema-4 documents promote on load with `pinned_tables=[]`; a schema-4 document carrying the field is refused as an unknown field (same discipline as MT-11/15/16). The pure `table_filter.pin_tables` reshaping of the already-sorted-and-filtered row set (never adds or drops tables): pinned rows first in pin order, casefolded comparison, the remainder keeps the input order, pin paths not in the row set (filtered out or gone) ignored. UI: the row context menu offers "Pin to top" / "Unpin" (`_toggle_table_pin` → `MasterApp.set_table_pinned`, named `ValueError`s for cap / already pinned / not pinned, immediate persist); a pinned table floats to the top of the list view and to the top of its process group in the grouped view (the pin set is applied after filter + sort, before the MT-17 grouping); the pin marker lives in the detail column ("pinned" / "pinned - PID …"), the first column stays the bare relative path (the row identity the load paths key off). +4 state tests (`tests/test_native_master_state.py`), +4 pure tests (`tests/test_native_master_table_filter.py`), +7 UI tests in `tests/test_native_master_ui_mt18.py`. |
 | MT-19 | Trainer-focus mode (waiting view collapses on attach) | done (2026-11-04) | `master_ui.py`: the whole waiting view now lives in one container frame (`MasterWindow._waiting_frame`, `fill=both expand=True` on the shared root) — the header (title, filter, sort/view cycles, repo link, Load table / Change folder / Rescan / UI flow / Close), the folder / meta / running lines, the table-tree frame and the status bar are all its children. `_enter_trainer()` destroys the container immediately after the engine is up (before the `TrainerWindow` is built) and drops every waiting-view widget reference, so the trainer row grid owns the full window instead of sharing it with the table list, and the poll loop / handlers never touch a destroyed widget (the poll tick already early-returns in trainer mode). The trainer-constructor failure path rebuilds the waiting view before `_fail_trainer_start()` so the waiting loop and its loop guard stay consistent; `_back_to_master()` is unchanged (destroy-all + rebuild). The open UI-flow Toplevel is closed with the teardown. +6 UI tests in `tests/test_native_master_ui_mt19.py` (container parenting, the collapse through the patched handoff, the constructor-failure rebuild, the back-to-master fresh frame, one real-`TrainerWindow` case). |
 | MT-20 | Discoverability: in-app UI-flow reference + keyboard map | done (2026-11-04) | `master_ui.py`: the module function `ui_flow_text()` (headless-testable) is the plain-language UI-flow document — the same content as the reviewable `UI.md` in the package (ships in the source ZIP through the existing `.md` allowlist); the new "UI flow" header button opens it in a read-only Toplevel (single window: a second click lifts + focuses the open window instead of duplicating; the window is transient to the root and closed on trainer entry). **F5** re-scans the folder from anywhere in the waiting view (root binding, guarded no-op in trainer mode exactly like the existing "/" binding). The table tree takes the **initial focus** on build (`focus_set` at the end of `_build_waiting_view`), so arrow keys and Enter work immediately without a first click. The "Retry load" re-arm moves out of the root-level button below the status strip into the status bar next to the attach toggle and the Recent button. +7 UI tests in `tests/test_native_master_ui_mt19.py` (document content, the read-only Toplevel + lift-on-second-click, the trainer-entry close, the F5 contract in both modes, the initial-focus spy, the retry-bar placement). |
+| MT-22 | Table details + live load-gate preview (waiting view) | done (2026-11-04) | `table_details.py` (new pure builder - the ordered (label, value) rows of the read-only details window: Table / Folder / Size / Modified / Bound process(es) / Index status / Pinned / Last used / Running now / Content sha256 (last scan, first 12 hex + "...") / Load gate (live re-check); `format_size` / `format_mtime` / `gate_line` formatters with named fallbacks). `master_ui.py`: the row context menu offers **"Table details"** first - one read-only Toplevel with the indexed facts for the row plus the on-demand `gate_table_for_load` re-check (the same pass MT-9 runs at load time; refusal = stable named code + displayable detail), so a table can be inspected and its current loadability checked before loading it; single window (a second open lifts + focuses instead of duplicating), transient, non-resizable, closed on trainer entry with the rest of the waiting view; the only I/O is the bounded gate re-check under the load limit. +16 tests (pure builder coverage + the Tk wiring: menu order through a recording `tk.Menu` subclass, window rows incl. the live gate line, lift on second open, trainer-entry close, named refusal display - all in `tests/test_native_master_ui_mt22.py`). |
 
 ## Online feature evaluation (2026-11-02)
 
@@ -133,6 +134,34 @@ with the standalone trainer); a column layout rewrites the pure row
 model, the pagination and the 2-D hit-testing and changes the
 standalone trainer as well. Remaining candidates (unchanged):
 entry-count / blocked-count columns and per-table status /
+color-coding.
+
+### 0.30 table details + load-gate preview (evaluated 2026-11-04)
+
+The 0.30 evaluation (web research over trainer front-end and
+trainer-manager UX patterns - FLiNG's per-trainer version /
+"Last Updated" metadata (per-table freshness facts surfaced in the
+list are a recognized pattern), game-trainer-manager
+(Karasukaigan) (organize / search / import workflows around a
+trainer table list), Game Cheats Manager's .ct handling FAQ (what a
+table is, how it binds to a process - inspection before use),
+Cheat Happens Trainer Manager v2 (portable front end, last-used /
+pinned table ordering - corroborated by the MT-15/18 recents +
+pins)) adopts: the read-only table details window with the live
+load-gate preview (MT-22). Rationale: before loading a table the
+user can now see every indexed fact for it (path, folder, size,
+modified, bound processes, index status, pin, last used, running
+PIDs, content sha) and its **current loadability** - the same
+`gate_table_for_load` pass MT-9 runs at load time, with the same
+named refusal code + displayable detail - so a stale / changed /
+unreadable table is explained at inspection time, not only at load
+time (reliability + reviewability; zero new behavior in the load
+path itself, zero catalog effect). The row builder is pure in
+`table_details.py` (headless-testable), consistent with the 0.18
+row-details window, the `describe` CLI subcommand and the MT-20
+discoverability lineage. Deliberately deferred (unchanged
+candidates): the MT-21 multi-column trainer grid, and the
+entry-count / blocked-count columns + per-table status /
 color-coding.
 
 ## Merge & release plan (historical + current)

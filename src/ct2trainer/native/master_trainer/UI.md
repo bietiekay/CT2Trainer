@@ -74,6 +74,17 @@ display-only):
 The tree takes the **initial focus** on build (0.29, MT-20), so arrow
 keys and Enter work immediately without a first click.
 
+**Row context menu (right-click):** `Table details` (0.30, MT-22)
+leads the menu — a read-only Toplevel with the indexed facts for the
+row (table path, folder, size, modified, bound processes, index
+status, pin state, last used, running PIDs, content sha) plus the
+**on-demand load-gate re-check** — the same `gate_table_for_load`
+pass MT-9 runs at load time, named refusal code + displayable
+detail — so a table can be inspected and its current loadability
+checked before loading it.  Then `Load this table` (the explicit
+load path) and the `Pin to top` / `Unpin` toggle (0.28, MT-18).
+Group rows (process view) are display-only: no context menu.
+
 ### Status bar
 
 Left to right: the live status line (waiting for which process, the
@@ -192,7 +203,7 @@ as a saved wish on the next attach.
 | `↑/↓/←/→`, `PgUp/PgDn` | Navigate the table list (initial focus on build, 0.29) | Grid navigation (trainer UI) |
 | `Enter` / `KP_Enter` | Load the selected row (explicit path, named refusals included) | — |
 | Double-click | Load the clicked row | Value-row expansion (trainer UI) |
-| Right-click | Row context menu: `Load this table`, `Pin to top` / `Unpin` | Row context menu (trainer UI) |
+| Right-click | Row context menu: `Table details` (0.30), `Load this table`, `Pin to top` / `Unpin` | Row context menu (trainer UI) |
 
 ## 7) Failure states
 

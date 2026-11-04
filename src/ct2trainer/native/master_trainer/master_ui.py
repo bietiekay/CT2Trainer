@@ -43,6 +43,15 @@ an F5 re-scan shortcut, the initial table-list focus (arrow keys and
 Enter work immediately), and the "Retry load" re-arm moves into the
 status bar next to the other waiting controls.
 
+0.30 table details + load-gate preview (MT-22): right-clicking a
+waiting-view row offers "Table details" first - the read-only
+Toplevel with the indexed facts for that table (path, folder, size,
+modified, bound processes, index status, pin, last used, running
+PIDs, content sha) plus the on-demand load-gate re-check (the same
+gate_table_for_load pass MT-9 runs at load time, named refusal code +
+displayable detail) so the user can inspect a table before loading
+it; the row builder is pure in ``table_details.py``.
+
 All waiting-mode logic lives in the pure orchestrator; this module is
 Tk wiring plus the picker Toplevel.
 """
@@ -130,7 +139,8 @@ def ui_flow_text() -> str:
         "focus to the list; F5 re-scans the folder; arrow keys navigate "
         "the list (it takes the initial focus); Enter or double-click "
         "loads the selected row; right-click a row for the context menu "
-        "(load, pin to top / unpin).\n"
+        "(table details - the read-only inspection window with the "
+        "live load-gate preview, load, pin to top / unpin).\n"
         "   Auto-load: the poll tick asks the orchestrator.  A unique "
         "table-for-process match loads by itself (the documented "
         "default).  A multi-table match opens the picker.  Nothing "
@@ -480,6 +490,9 @@ class MasterWindow:
         # MT-20 (0.29): the read-only in-app UI-flow Toplevel (at most
         # one at a time).
         self._ui_flow_win = None
+        # MT-22 (0.30): the read-only table-details Toplevel (at most
+        # one at a time).
+        self._details_win = None
         # Live bound-process feedback of the latest waiting tick.
         self._running: tuple = ()
         self._running_keys: frozenset = frozenset()
@@ -684,6 +697,13 @@ class MasterWindow:
             except tk.TclError:
                 pass
             self._ui_flow_win = None
+        if self._details_win is not None:
+            try:
+                if self._details_win.winfo_exists():
+                    self._details_win.destroy()
+            except tk.TclError:
+                pass
+            self._details_win = None
         if self._waiting_frame is not None:
             self._waiting_frame.destroy()
             self._waiting_frame = None
@@ -1375,6 +1395,11 @@ class MasterWindow:
             return
         rel = values[0]
         menu = tk.Menu(self.root, tearoff=0)
+        # MT-22 (0.30): the read-only details lead the row menu (the
+        # inspection window with the live load-gate preview), then the
+        # explicit load, then the pin toggle.
+        menu.add_command(label="Table details",
+                         command=lambda: self._open_table_details(rel))
         menu.add_command(label="Load this table",
                          command=lambda: self._load_selected_table(rel))
         if self.app.is_table_pinned(rel):
@@ -1401,6 +1426,70 @@ class MasterWindow:
             return
         self._render_tables()
         self._set_status(("Pinned " if pinned else "Unpinned ") + rel)
+
+    def _open_table_details(self, rel: str):
+        """MT-22 (0.30): the read-only table details window.
+
+        One Toplevel shows the indexed facts for the table (path,
+        folder, size, modified, bound processes, index status, pin
+        state, last used, running PIDs, content sha) plus the
+        on-demand load-gate re-check - the same
+        ``gate_table_for_load`` pass MT-9 runs at load time, named
+        refusal code + displayable detail - so the user can inspect a
+        table before loading it.  A second open lifts the window
+        instead of duplicating it; the window closes on trainer entry
+        with the rest of the waiting view.  The row builder is pure in
+        ``table_details.py`` (the only I/O is the bounded gate
+        re-check, which reads the file under the load limit)."""
+        if self._details_win is not None:
+            try:
+                if self._details_win.winfo_exists():
+                    self._details_win.lift()
+                    self._details_win.focus_set()
+                    return
+            except tk.TclError:
+                pass
+            self._details_win = None
+        entry = self.app.index.get(rel)
+        if entry is None:
+            self._set_status("No index entry for " + rel)
+            return
+        from pathlib import Path
+        from .table_details import table_detail_lines
+        from .table_gate import gate_table_for_load
+        gate = gate_table_for_load(str(Path(self.app.folder) / rel), entry)
+        pids = [e.pid for e in self._running
+                for n in entry.process_names
+                if e.name.casefold() == n.casefold()]
+        last_used = dict(self.app.recent_tables).get(rel)
+        lines = table_detail_lines(entry, root=self.app.folder,
+                                   pinned=self.app.is_table_pinned(rel),
+                                   last_used=last_used,
+                                   running_pids=pids, gate=gate)
+        win = tk.Toplevel(self.root)
+        self._details_win = win
+        win.title("Table details - " + rel)
+        win.configure(bg=BG, padx=16, pady=16)
+        win.transient(self.root)
+        win.resizable(False, False)
+        tk.Label(win, text="Table details (read-only)", bg=BG, fg=FG,
+                 font=("Segoe UI", 13, "bold"),
+                 anchor="w").pack(fill="x")
+        body = tk.Frame(win, bg=BG)
+        body.pack(fill="x", pady=(8, 8))
+        for label, value in lines:
+            tk.Label(body, text=label, bg=BG, fg=FG_DIM, anchor="w",
+                     justify="left", font=("Segoe UI", 11, "bold"),
+                     width=22).pack(side="left", anchor="n", pady=2)
+            tk.Label(body, text=value, bg=BG, fg=FG, anchor="w",
+                     justify="left", font=("Segoe UI", 11),
+                     wraplength=520).pack(side="left", fill="x",
+                                          expand=True, padx=(12, 0),
+                                          pady=2)
+        tk.Button(win, text="Close", command=win.destroy,
+                  bg="#2a3547", fg=FG, activebackground="#3a4a63",
+                  activeforeground=FG, font=("Segoe UI", 12)
+                  ).pack(fill="x", pady=(4, 0))
 
     def _open_process_picker(self, entry, candidates, origin):
         """The MT-11 process picker: one row per running candidate

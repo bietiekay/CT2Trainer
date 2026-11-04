@@ -1,15 +1,25 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-04. **0.29 released** (build
+**Updated:** 2026-11-04. **0.30 content on main** - the 0.30 build
+is cut from this content; 0.29 remains the latest verified release
+(build `native-20261104T094808Z-50af0517`, cut from `main` @
+`de3e4ff`, 2026-11-04) - Master Trainer table details + live
+load-gate preview MT-22 (right-clicking a waiting-view row offers
+"Table details" first - the read-only inspection window with the
+indexed facts for the table plus the on-demand load-gate re-check,
+the same pass MT-9 runs at load time; the pure `table_details.py`
+row builder); +16 tests; full main suite 4,386 OK / 30 expected
+skips; catalog zero delta `blocked-catalog-030-details`; see the
+0.30 section below. Superseded 0.29 (build
 `native-20261104T094808Z-50af0517`, cut from `main` @ `de3e4ff`,
-2026-11-04) - Master Trainer UI/UX revamp MT-19/20
-(MT-19 trainer-focus mode: the whole waiting view lives in one
-container frame destroyed on trainer entry - the trainer row grid
-owns the full window, rebuilt whole on the way back; MT-20
-discoverability: the read-only "UI flow" header button - the
-in-app copy of the reviewable UI.md, F5 re-scan, initial
-table-list focus, "Retry load" in the status bar); +13 tests; full
-main suite 4,370 OK / 30 expected skips; catalog zero delta
+2026-11-04) - Master Trainer UI/UX revamp MT-19/20 (MT-19
+trainer-focus mode: the whole waiting view lives in one container
+frame destroyed on trainer entry - the trainer row grid owns the
+full window, rebuilt whole on the way back; MT-20 discoverability:
+the read-only "UI flow" header button - the in-app copy of the
+reviewable UI.md, F5 re-scan, initial table-list focus, "Retry
+load" in the status bar); +13 tests; full main suite 4,370 OK / 30
+expected skips; catalog zero delta
 `blocked-catalog-029-trainer-focus`; see the 0.29 section below.
 Superseded 0.28 (build `native-20261103T161621Z-ea8fde2f`, cut from
 `main` @ `d7f4cf0`, 2026-11-03) - Master Trainer
@@ -465,6 +475,55 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.30 content on main (2026-11-04, root-direct; the 0.30 build is
+cut from this content - 0.29 remains the latest verified release):
+Master Trainer table details + live load-gate preview (MT-22).**
+The 0.30 feature was evaluated against online trainer front-end and
+trainer-manager UX patterns (FLiNG per-trainer version / "Last
+Updated" metadata, game-trainer-manager organize/search workflows,
+Game Cheats Manager .ct handling FAQ, Cheat Happens Trainer Manager
+v2 portable + last-used pinning - see the Master Trainer ROADMAP
+"0.30 table details + load-gate preview" section). Adopted: MT-22.
+Deliberately deferred (documented): the MT-21 multi-column trainer
+grid, the entry-count / blocked-count columns and the per-table
+status / color-coding.
+- **MT-22 table details + live load-gate preview:** right-clicking
+  a waiting-view row offers "Table details" first - a read-only
+  Toplevel (title "Table details - <rel>", transient, non-resizable,
+  Close button) with the indexed facts for the table: path,
+  folder, size, modified, bound processes, index status (ok /
+  unreadable: <reason>), pin state, last used (the persisted UTC
+  timestamp or "never"), running PIDs (deduped, sorted, "not
+  running" when none), content sha256 (last scan - first 12 hex +
+  "...") - plus the on-demand `gate_table_for_load` re-check: the
+  same pass MT-9 runs at load time, so a refusal shows the stable
+  named code + displayable detail (a stale / changed / unreadable
+  table is explained at inspection time, not only at load time); a
+  passing gate proves the file matches the last scan. One window (a
+  second open lifts + focuses instead of duplicating); closed on
+  trainer entry with the rest of the waiting view; no index entry
+  leaves a named status line instead of a window. The row builder
+  is pure in `master_trainer/table_details.py` (`format_size` /
+  `format_mtime` / `gate_line` - "not checked" / "OK (loadable -
+  the file matches the last scan)" / "<code>: <detail>" with named
+  fallbacks; `table_detail_lines` - the 11 ordered (label, value)
+  rows); the only I/O is the bounded gate re-check under the load
+  limit. The in-app `ui_flow_text()` and the reviewable
+  `master_trainer/UI.md` document the new row-menu entry
+  (keyboard map + table-tree section).
+- +16 tests (`tests/test_native_master_ui_mt22.py`); full main
+  suite 4,386 OK / 30 expected skips (4,370 from the 0.29 content +
+  16 new); catalog remeasure `blocked-catalog-030-details`
+  (chunked 64x3 audit over the 151 reference tables, 2026-11-04):
+  151/151 loaded, 0 load errors, 117,809 total / 116,756 supported
+  / 60,161 staged / 103,607 actionable / 12,974 headings / 1,053
+  blocked - **zero delta** vs `blocked-catalog-029-trainer-focus`
+  (per-table count/reason/sha changes: 0); feature matrix unchanged
+  (42/42, 7,475/7,475 over `w4b4-case30-20261020081722Z`); AP-11
+  0/6,143. VERSION bumped to 0.30 with the changelog entry in the
+  same change; the 0.30 build is cut from this content (0.29
+  remains the latest verified release).
 
 **0.29 released (build `native-20261104T094808Z-50af0517`, cut from
 `main` @ `de3e4ff`, 2026-11-04): Master Trainer UI/UX revamp (MT-19

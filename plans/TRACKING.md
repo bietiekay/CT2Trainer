@@ -486,6 +486,43 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- 0.30 Master Trainer table details + live load-gate preview
+  MT-22 (2026-11-04, root-direct on `main`; online-evaluated in
+  `master_trainer/ROADMAP.md`, the "0.30 table details + load-gate
+  preview" section - FLiNG per-trainer version / "Last Updated"
+  metadata, game-trainer-manager organize/search workflows, Game
+  Cheats Manager .ct handling FAQ, Cheat Happens Trainer Manager v2
+  portable + last-used pinning). MT-22: the waiting-view row
+  context menu offers "Table details" first - a read-only Toplevel
+  with the indexed facts for the table (path, folder, size,
+  modified, bound processes, index status, pin, last used, running
+  PIDs, content sha - first 12 hex + "...") plus the on-demand
+  `gate_table_for_load` re-check (the same pass MT-9 runs at load
+  time; refusal = stable named code + displayable detail - a stale
+  / changed / unreadable table is explained at inspection time, not
+  only at load time); the pure `table_details.py` row builder
+  (`format_size` / `format_mtime` / `gate_line` /
+  `table_detail_lines`, named fallbacks); single window (lift on
+  second open), transient, non-resizable, closed on trainer entry;
+  the only I/O is the bounded gate re-check under the load limit;
+  the in-app `ui_flow_text()` and the reviewable
+  `master_trainer/UI.md` document the new row-menu entry.
+  Deliberately deferred (unchanged candidates): the MT-21
+  multi-column trainer grid, the entry-count / blocked-count
+  columns, the per-table status / color-coding. +16 tests
+  (`tests/test_native_master_ui_mt22.py` new: the pure builder -
+  all facts in order, the unreadable entry + named fallbacks, the
+  no-bound-processes label, the deduped/sorted PIDs, the size /
+  mtime / gate-line formatters with boundaries; the Tk wiring -
+  the menu order through a recording `tk.Menu` subclass, the
+  details command opening the window for the row, the indexed
+  facts incl. the live "OK (loadable...)" gate line, lift on
+  second open, trainer-entry close, the named refusal display, the
+  last-used timestamp); full main suite 4,386 OK / 30 expected
+  skips; catalog zero delta `blocked-catalog-030-details`. VERSION
+  0.30 + CHANGELOG entry in the same change; the 0.30 build is
+  cut from this content (0.29 remains the latest verified
+  release).
 - 0.29 Master Trainer UI/UX revamp MT-19/20 (2026-11-04,
   root-direct on `main`; online-evaluated in
   `master_trainer/ROADMAP.md`, the "0.29 trainer-focus +

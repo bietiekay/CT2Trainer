@@ -79,6 +79,13 @@ auto-load/handoff loop around that existing engine.
   **initial focus** (arrow keys and Enter work immediately without a
   first click); the “Retry load” re-arm moves into the status bar
   next to the attach toggle and the Recent button.
+- 0.30 (MT-22): right-clicking a row offers **“Table details”**
+  first — a read-only window with the indexed facts for the table
+  (path, folder, size, modified, bound processes, index status, pin,
+  last used, running PIDs, content sha) plus the on-demand load-gate
+  re-check — the same gate the load path runs (MT-9), named refusal
+  code + detail — so a table's current loadability is checked at
+  inspection time, not only at load time.
 - The table folder is taken from a CLI parameter, or from the
   last-used folder persisted in the state home (`master-settings.json`);
   only a genuinely first start (or a stale stored folder) shows the
