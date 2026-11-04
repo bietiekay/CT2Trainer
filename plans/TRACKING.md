@@ -520,9 +520,18 @@ game-facing action.
   second open, trainer-entry close, the named refusal display, the
   last-used timestamp); full main suite 4,386 OK / 30 expected
   skips; catalog zero delta `blocked-catalog-030-details`. VERSION
-  0.30 + CHANGELOG entry in the same change; the 0.30 build is
-  cut from this content (0.29 remains the latest verified
-  release).
+  0.30 + CHANGELOG entry in the same change. The 0.30 build
+  `native-20261104T131114Z-11522f68` cut from `main` @ `2fbca94`
+  (2026-11-04): in-build suite 4,386 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.30-source.zip` sha256
+  `091b379c132e277c19f519705dcccc4c0817e8e7e614e5baf2f14bbe3fe414a3`
+  (14,387,690 bytes), portable ZIP
+  `CT2Trainer-0.30-windows-portable.zip` sha256
+  `f4476bb08e3e65e6db9cd35bfe7a72408a555b8525bd6a10f8b794f943083d54`
+  (49,669,933 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `9d0a525a78dfbfffb906261ad42e435c5414cb6cb0189dd78c73910063f67643`,
+  16,940,058 bytes, ships next to the converter).
 - 0.29 Master Trainer UI/UX revamp MT-19/20 (2026-11-04,
   root-direct on `main`; online-evaluated in
   `master_trainer/ROADMAP.md`, the "0.29 trainer-focus +
@@ -612,9 +621,21 @@ game-facing action.
   (49,658,473 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `c12dcea5bb8a609dae4df36f44827ab5269c9e1015cb723067ed98dc100bf99b`,
   16,929,732 bytes, ships next to the converter).
-- Latest verified release: 0.29, build
-  `native-20261104T094808Z-50af0517` (cut from `main` @ `de3e4ff`,
-  2026-11-04), in-build suite 4,370 OK / 30 expected skips,
+- Latest verified release: 0.30, build
+  `native-20261104T131114Z-11522f68` (cut from `main` @ `2fbca94`,
+  2026-11-04), in-build suite 4,386 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.30-source.zip` sha256
+  `091b379c132e277c19f519705dcccc4c0817e8e7e614e5baf2f14bbe3fe414a3`
+  (14,387,690 bytes), portable ZIP
+  `CT2Trainer-0.30-windows-portable.zip` sha256
+  `f4476bb08e3e65e6db9cd35bfe7a72408a555b8525bd6a10f8b794f943083d54`
+  (49,669,933 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `9d0a525a78dfbfffb906261ad42e435c5414cb6cb0189dd78c73910063f67643`,
+  16,940,058 bytes, ships next to the converter); superseded 0.29,
+  build `native-20261104T094808Z-50af0517` (cut from `main` @
+  `de3e4ff`, 2026-11-04), in-build suite 4,370 OK / 30 expected
+  skips,
   `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
   source ZIP `CT2Trainer-0.29-source.zip` sha256
   `2f5ce6e446f8d9885cd653580b5e194a2a0fc524eba7b5f684fe1f1a0e1da3d4`

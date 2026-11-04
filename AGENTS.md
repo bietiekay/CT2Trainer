@@ -97,8 +97,9 @@ portable ZIP `CT2Trainer-0.29-windows-portable.zip` sha256
 (49,667,528 bytes; the frozen `CT2Trainer-Master.exe` (sha256
 `88e6ee99aa4c46973945e462ca956977e9942a1e8b30630aa2570107540f2de8`,
 16,937,063 bytes) ships next to the converter); superseded 0.28
-(build `native-20261103T161621Z-ea8fde2f`). 0.30 content on main
-(2026-11-04, root-direct): the Master Trainer table details + live
+(build `native-20261103T161621Z-ea8fde2f`). 0.30 released
+(build `native-20261104T131114Z-11522f68` cut from `main` @
+`2fbca94`, 2026-11-04): the Master Trainer table details + live
 load-gate preview (MT-22: right-clicking a waiting-view row offers
 "Table details" first - the read-only Toplevel with the indexed
 facts for the table (path, folder, size, modified, bound processes,
@@ -108,8 +109,19 @@ at load time, named refusal code + displayable detail; the pure
 `table_details.py` row builder; single window, lift on second
 open, closed on trainer entry); +16 tests, full main suite 4,386
 OK / 30 expected skips, catalog zero delta
-`blocked-catalog-030-details`; the 0.30 build is cut from this
-content (0.29 remains the latest verified release). The
+`blocked-catalog-030-details`; in-build suite 4,386
+OK / 30 expected skips, `ce_inputs: []`, `runtime_unverified`
+deliberately kept per gate; source ZIP
+`CT2Trainer-0.30-source.zip` sha256
+`091b379c132e277c19f519705dcccc4c0817e8e7e614e5baf2f14bbe3fe414a3`
+(14,387,690 bytes) - carries the MT-22 table details +
+load-gate preview and the reviewable `master_trainer/UI.md` - and
+portable ZIP `CT2Trainer-0.30-windows-portable.zip` sha256
+`f4476bb08e3e65e6db9cd35bfe7a72408a555b8525bd6a10f8b794f943083d54`
+(49,669,933 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`9d0a525a78dfbfffb906261ad42e435c5414cb6cb0189dd78c73910063f67643`,
+16,940,058 bytes) ships next to the converter); superseded 0.29
+(build `native-20261104T094808Z-50af0517`). The
 0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
@@ -224,10 +236,9 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-04, 0.30 content on main - the 0.30
-build is cut from this content; 0.29 remains the latest verified
-release, build `native-20261104T094808Z-50af0517` cut from `main` @
-`de3e4ff`, 2026-11-04, in-build suite 4,370 OK / 30 expected skips,
+**CT2Trainer (status 2026-11-04, 0.30 released - build
+`native-20261104T131114Z-11522f68` cut from `main` @ `2fbca94`,
+2026-11-04, in-build suite 4,386 OK / 30 expected skips,
 `ce_inputs: []`) - 0.30 Master Trainer table details + live
 load-gate preview (MT-22: right-clicking a waiting-view row offers
 "Table details" first - the read-only Toplevel with the indexed
@@ -542,7 +553,21 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261104T094808Z-50af0517` (0.29,
+**Latest verified build:** `native-20261104T131114Z-11522f68` (0.30,
+cut from `main` @ `2fbca94`, 2026-11-04; in-build suite 4,386 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.30-source.zip` sha256
+`091b379c132e277c19f519705dcccc4c0817e8e7e614e5baf2f14bbe3fe414a3`
+(14,387,690 bytes) - carries the MT-22 table details +
+load-gate preview and the reviewable `master_trainer/UI.md` - and
+portable ZIP `CT2Trainer-0.30-windows-portable.zip` sha256
+`f4476bb08e3e65e6db9cd35bfe7a72408a555b8525bd6a10f8b794f943083d54`
+(49,669,933 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `9d0a525a78dfbfffb906261ad42e435c5414cb6cb0189dd78c73910063f67643`,
+16,940,058 bytes) ships next to the converter)).
+0.30 ships the Master Trainer table details + live load-gate
+preview (MT-22). Superseded 0.29 build:
+`native-20261104T094808Z-50af0517` (0.29,
 cut from `main` @ `de3e4ff`, 2026-11-04; in-build suite 4,370 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
 kept per gate; source ZIP `CT2Trainer-0.29-source.zip` sha256
@@ -554,8 +579,7 @@ portable ZIP `CT2Trainer-0.29-windows-portable.zip` sha256
 (49,667,528 bytes; the frozen `CT2Trainer-Master.exe`
 (sha256 `88e6ee99aa4c46973945e462ca956977e9942a1e8b30630aa2570107540f2de8`,
 16,937,063 bytes) ships next to the converter)).
-0.29 ships the Master Trainer UI/UX revamp (MT-19 trainer-focus
-mode + MT-20 discoverability). Superseded 0.28 build:
+Superseded 0.28 build:
 `native-20261103T161621Z-ea8fde2f` (0.28,
 cut from `main` @ `d7f4cf0`, 2026-11-03; in-build suite 4,357 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately

@@ -1,9 +1,8 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-04. **0.30 content on main** - the 0.30 build
-is cut from this content; 0.29 remains the latest verified release
-(build `native-20261104T094808Z-50af0517`, cut from `main` @
-`de3e4ff`, 2026-11-04) - Master Trainer table details + live
+**Updated:** 2026-11-04. **0.30 released** (build
+`native-20261104T131114Z-11522f68`, cut from `main` @
+`2fbca94`, 2026-11-04) - Master Trainer table details + live
 load-gate preview MT-22 (right-clicking a waiting-view row offers
 "Table details" first - the read-only inspection window with the
 indexed facts for the table plus the on-demand load-gate re-check,
@@ -66,7 +65,20 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.29, build
+**Latest verified release:** 0.30, build
+`native-20261104T131114Z-11522f68` (cut from `main` @ `2fbca94`,
+2026-11-04): the 0.30 Master Trainer table details + live
+load-gate preview release (MT-22) - in-build
+suite 4,386 OK / 30 expected skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+source ZIP `CT2Trainer-0.30-source.zip` sha256
+`091b379c132e277c19f519705dcccc4c0817e8e7e614e5baf2f14bbe3fe414a3`
+(14,387,690 bytes), portable ZIP
+`CT2Trainer-0.30-windows-portable.zip` sha256
+`f4476bb08e3e65e6db9cd35bfe7a72408a555b8525bd6a10f8b794f943083d54`
+(49,669,933 bytes), frozen `CT2Trainer-Master.exe` (sha256
+`9d0a525a78dfbfffb906261ad42e435c5414cb6cb0189dd78c73910063f67643`)
+next to the converter. Superseded 0.29, build
 `native-20261104T094808Z-50af0517` (cut from `main` @ `de3e4ff`,
 2026-11-04): the 0.29 Master Trainer UI/UX revamp release
 (MT-19 trainer-focus mode + MT-20 discoverability) - in-build
@@ -476,9 +488,9 @@ CE asset bytes are copied.
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
 
-**0.30 content on main (2026-11-04, root-direct; the 0.30 build is
-cut from this content - 0.29 remains the latest verified release):
-Master Trainer table details + live load-gate preview (MT-22).**
+**0.30 released (build `native-20261104T131114Z-11522f68`, cut from
+`main` @ `2fbca94`, 2026-11-04): Master Trainer table details + live
+load-gate preview (MT-22).**
 The 0.30 feature was evaluated against online trainer front-end and
 trainer-manager UX patterns (FLiNG per-trainer version / "Last
 Updated" metadata, game-trainer-manager organize/search workflows,
@@ -522,8 +534,18 @@ status / color-coding.
   (per-table count/reason/sha changes: 0); feature matrix unchanged
   (42/42, 7,475/7,475 over `w4b4-case30-20261020081722Z`); AP-11
   0/6,143. VERSION bumped to 0.30 with the changelog entry in the
-  same change; the 0.30 build is cut from this content (0.29
-  remains the latest verified release).
+  same change. The 0.30 build
+  `native-20261104T131114Z-11522f68` was cut from `main` @
+  `2fbca94` (2026-11-04): in-build suite 4,386 OK / 30 expected
+  skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+  per gate; source ZIP `CT2Trainer-0.30-source.zip` sha256
+  `091b379c132e277c19f519705dcccc4c0817e8e7e614e5baf2f14bbe3fe414a3`
+  (14,387,690 bytes), portable ZIP
+  `CT2Trainer-0.30-windows-portable.zip` sha256
+  `f4476bb08e3e65e6db9cd35bfe7a72408a555b8525bd6a10f8b794f943083d54`
+  (49,669,933 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `9d0a525a78dfbfffb906261ad42e435c5414cb6cb0189dd78c73910063f67643`,
+  16,940,058 bytes, ships next to the converter).
 
 **0.29 released (build `native-20261104T094808Z-50af0517`, cut from
 `main` @ `de3e4ff`, 2026-11-04): Master Trainer UI/UX revamp (MT-19
