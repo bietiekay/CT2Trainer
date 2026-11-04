@@ -1,9 +1,8 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-03. **0.28 content on main** - the 0.28 build
-is cut from this content; 0.27 remains the latest verified release
-(build `native-20261103T145543Z-b29b3688`, cut from `main` @
-`8aa0815`, 2026-11-03) - Master Trainer pinned/favorite tables MT-18
+**Updated:** 2026-11-03. **0.28 released** (build
+`native-20261103T161621Z-ea8fde2f`, cut from `main` @ `d7f4cf0`,
+2026-11-03) - Master Trainer pinned/favorite tables MT-18
 (`master-settings.json` schema 4 → 5: the pin set - relative
 paths, most recent pin first, cap 25 - persisted and restored at
 start; the row context menu toggle, pinned tables float to the top
@@ -47,7 +46,19 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.27, build
+**Latest verified release:** 0.28, build
+`native-20261103T161621Z-ea8fde2f` (cut from `main` @ `d7f4cf0`,
+2026-11-03): the 0.28 Master Trainer pinned/favorite tables release
+(MT-18) - in-build suite 4,357 OK / 30 expected skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+source ZIP `CT2Trainer-0.28-source.zip` sha256
+`13f4b2222a83f9e4588d388b4120beaf8018a091a05364029ae2a950c0dabb1a`
+(14,363,765 bytes), portable ZIP
+`CT2Trainer-0.28-windows-portable.zip` sha256
+`d656835a69ece75ff6adaa5ce766385327fb9ec08d89837ad772425dafe91ce3`
+(49,658,473 bytes), frozen `CT2Trainer-Master.exe` (sha256
+`c12dcea5bb8a609dae4df36f44827ab5269c9e1015cb723067ed98dc100bf99b`)
+next to the converter. Superseded 0.27, build
 `native-20261103T145543Z-b29b3688` (cut from `main` @ `8aa0815`,
 2026-11-03): the 0.27 Master Trainer waiting-view settings release
 (MT-16/17) - in-build suite
@@ -432,9 +443,9 @@ CE asset bytes are copied.
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
 
-**0.28 content on main (2026-11-03, root-direct; the 0.28 build is
-cut from this content - 0.27 remains the latest verified release):
-Master Trainer pinned/favorite tables (MT-18).** The 0.28 feature
+**0.28 released (build `native-20261103T161621Z-ea8fde2f`, cut from
+`main` @ `d7f4cf0`, 2026-11-03): Master Trainer
+pinned/favorite tables (MT-18).** The 0.28 feature
 set was evaluated against online table/list UX patterns (VGC Shelf
 "sort, pin, archive"; see the Master Trainer ROADMAP "0.27
 waiting-view settings + process groups" follow-up research and the
@@ -471,8 +482,18 @@ status / color-coding.
   vs `blocked-catalog-027-view`); feature matrix unchanged
   (42/42, 7,475/7,475 over `w4b4-case30-20261020081722Z`);
   AP-11 0/6,143. VERSION bumped to 0.28 with the changelog entry
-  in the same change; the 0.28 build is cut from this content
-  (0.27 remains the latest verified release).
+  in the same change. The 0.28 build
+  `native-20261103T161621Z-ea8fde2f` was cut from `main` @ `d7f4cf0`
+  (2026-11-03): in-build suite 4,357 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept
+  per gate; source ZIP `CT2Trainer-0.28-source.zip` sha256
+  `13f4b2222a83f9e4588d388b4120beaf8018a091a05364029ae2a950c0dabb1a`
+  (14,363,765 bytes), portable ZIP
+  `CT2Trainer-0.28-windows-portable.zip` sha256
+  `d656835a69ece75ff6adaa5ce766385327fb9ec08d89837ad772425dafe91ce3`
+  (49,658,473 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `c12dcea5bb8a609dae4df36f44827ab5269c9e1015cb723067ed98dc100bf99b`,
+  16,929,732 bytes, ships next to the converter).
 
 **0.27 released (build `native-20261103T145543Z-b29b3688`, cut from
 `main` @ `8aa0815`, 2026-11-03): Master Trainer waiting-view
