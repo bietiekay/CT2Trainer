@@ -28,6 +28,8 @@ main-branch libraries; none adds trainer functionality.
 | MT-16 | Persisted waiting-view settings | done (2026-11-03) | `master-settings.json` schema 3 → 4: `view_filter` (the raw filter entry text, at most `VIEW_FILTER_MAX` = 200 characters, "" = no filter), `view_sort` (one of `VIEW_SORT_MODES` — mirrors `table_filter.SORT_MODES`) and `view_mode` (one of `VIEW_MODES`: "list" flat rows / "process" grouped by bound process name). Schema-1/2/3 documents promote on load with the documented defaults ("" / "name" / "list"); a schema-3 document carrying a view_* field is refused as an unknown field (foreign schema, never silently promoted — the same discipline as MT-11/MT-15). The format-level constants live in `master_state` (the attach-mode pattern); a test pins the mirror against the pure layer. `MasterApp.set_view_settings(filter_query, sort_mode, view_mode)` validates (named `ValueError`s) and re-persists immediately; the window restores all three from the app at construction, and every UI change point calls it (filter `<KeyRelease>`, sort cycle, view cycle, Esc clear). +4 state tests (`tests/test_native_master_state.py`), +5 UI tests in `tests/test_native_master_ui_mt16.py`. |
 | MT-17 | Process-grouped waiting view | done (2026-11-03) | `table_filter.group_tables_by_process` (pure reshaping of the already-sorted-and-filtered row set — never adds or drops tables): one parent row per casefolded bound process name (a table with several bound names appears once under EACH of them), the tables without a bound name under `UNBOUND_PROCESS_LABEL` ("(no process binding)") last; within a group the caller's sort order is preserved; group labels are casefolded, i.e. the same identity the running-PID markers key on. UI: a "View: list/process" cycle button between the sort button and the filter entry (persisted through MT-16); the tree (`show="headings"`) renders the group label + "N table(s)" count into `values[0]` of the parent row (the `text` item is invisible), the children through `_insert_table_row`; group rows are display-only — `_is_table_row` gates the double-click, the Enter/`_table_selected_rel` and the row context menu, so a group row never loads. +8 pure tests (`tests/test_native_master_table_filter.py`), +5 UI tests in `tests/test_native_master_ui_mt16.py`. |
 | MT-18 | Pinned / favorite tables | done (2026-11-03) | `master-settings.json` schema 4 → 5: `pinned_tables` (relative table paths, most recent pin first, capped at `PINNED_TABLES_LIMIT` = 25, each a non-empty string within the table-path length bound). Schema-4 documents promote on load with `pinned_tables=[]`; a schema-4 document carrying the field is refused as an unknown field (same discipline as MT-11/15/16). The pure `table_filter.pin_tables` reshaping of the already-sorted-and-filtered row set (never adds or drops tables): pinned rows first in pin order, casefolded comparison, the remainder keeps the input order, pin paths not in the row set (filtered out or gone) ignored. UI: the row context menu offers "Pin to top" / "Unpin" (`_toggle_table_pin` → `MasterApp.set_table_pinned`, named `ValueError`s for cap / already pinned / not pinned, immediate persist); a pinned table floats to the top of the list view and to the top of its process group in the grouped view (the pin set is applied after filter + sort, before the MT-17 grouping); the pin marker lives in the detail column ("pinned" / "pinned - PID …"), the first column stays the bare relative path (the row identity the load paths key off). +4 state tests (`tests/test_native_master_state.py`), +4 pure tests (`tests/test_native_master_table_filter.py`), +7 UI tests in `tests/test_native_master_ui_mt18.py`. |
+| MT-19 | Trainer-focus mode (waiting view collapses on attach) | done (2026-11-04) | `master_ui.py`: the whole waiting view now lives in one container frame (`MasterWindow._waiting_frame`, `fill=both expand=True` on the shared root) — the header (title, filter, sort/view cycles, repo link, Load table / Change folder / Rescan / UI flow / Close), the folder / meta / running lines, the table-tree frame and the status bar are all its children. `_enter_trainer()` destroys the container immediately after the engine is up (before the `TrainerWindow` is built) and drops every waiting-view widget reference, so the trainer row grid owns the full window instead of sharing it with the table list, and the poll loop / handlers never touch a destroyed widget (the poll tick already early-returns in trainer mode). The trainer-constructor failure path rebuilds the waiting view before `_fail_trainer_start()` so the waiting loop and its loop guard stay consistent; `_back_to_master()` is unchanged (destroy-all + rebuild). The open UI-flow Toplevel is closed with the teardown. +6 UI tests in `tests/test_native_master_ui_mt19.py` (container parenting, the collapse through the patched handoff, the constructor-failure rebuild, the back-to-master fresh frame, one real-`TrainerWindow` case). |
+| MT-20 | Discoverability: in-app UI-flow reference + keyboard map | done (2026-11-04) | `master_ui.py`: the module function `ui_flow_text()` (headless-testable) is the plain-language UI-flow document — the same content as the reviewable `UI.md` in the package (ships in the source ZIP through the existing `.md` allowlist); the new "UI flow" header button opens it in a read-only Toplevel (single window: a second click lifts + focuses the open window instead of duplicating; the window is transient to the root and closed on trainer entry). **F5** re-scans the folder from anywhere in the waiting view (root binding, guarded no-op in trainer mode exactly like the existing "/" binding). The table tree takes the **initial focus** on build (`focus_set` at the end of `_build_waiting_view`), so arrow keys and Enter work immediately without a first click. The "Retry load" re-arm moves out of the root-level button below the status strip into the status bar next to the attach toggle and the Recent button. +7 UI tests in `tests/test_native_master_ui_mt19.py` (document content, the read-only Toplevel + lift-on-second-click, the trainer-entry close, the F5 contract in both modes, the initial-focus spy, the retry-bar placement). |
 
 ## Online feature evaluation (2026-11-02)
 
@@ -98,6 +100,40 @@ plus pinning to the top of the waiting view. Remaining candidates
 (evaluated, not yet adopted): entry-count / blocked-count columns
 and per-table status / color-coding (already deferred in
 0.26/0.27).
+
+### 0.29 trainer-focus + discoverability (evaluated 2026-11-04)
+
+User field request (2026-11-04): when a process is identified and the
+trainer attaches, the waiting table list must shrink/collapse so the
+trainer items get maximum space; the UI should be generally more
+accessible; and the UI flow should be documented for review. The
+0.29 evaluation (local code audit of the shared-root trainer handoff
+plus web research over trainer-manager UI patterns - Trinity
+("hotkeys, profiles, an in-game overlay" - saved per-game
+configurations, corroborated by the standing user requirement "merkt
+sich das einmal eingestellte", already covered by MT-6/11/15/16/18),
+Cheat Happens AURORA ("easily accessible for the games you are
+currently playing" - discoverability), the keyboard-shortcut
+databases (a documented shortcut map is a recognized app-UX
+baseline), and the WCAG / platform accessibility guidance (descriptive
+labels, keyboard operability, no reliance on a single input path))
+adopts: the trainer-focus mode (MT-19 - the root cause is that the
+waiting-view widgets are packed directly on the shared root and are
+never destroyed on trainer entry; the single container frame fixes
+the space sharing) and the discoverability set (MT-20 - the in-app
+"UI flow" reference dialog, the F5 re-scan, the initial table-list
+focus, and the Retry-load re-arm moved into the status bar). The
+reviewable full-flow document ships as `master_trainer/UI.md`
+(in-package, in the source ZIP) mirroring the in-app dialog.
+Deliberately deferred (documented candidate MT-21, separate cycle):
+the multi-column trainer grid - the single-column canvas grid is the
+validated touch-first design (`ui_rows.py` pure row model +
+`ui_layout.py` + the 1-D hit-testing, exhaustively tested and shared
+with the standalone trainer); a column layout rewrites the pure row
+model, the pagination and the 2-D hit-testing and changes the
+standalone trainer as well. Remaining candidates (unchanged):
+entry-count / blocked-count columns and per-table status /
+color-coding.
 
 ## Merge & release plan (historical + current)
 

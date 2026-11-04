@@ -33,6 +33,16 @@ feeds the meta line, the "Recent:" one-click load button and the
 Last-used column; the indexed Size / Modified columns join the
 tree).
 
+0.29 trainer-focus + discoverability (MT-19/20): entering the trainer
+collapses the whole waiting view (one container frame holds every
+waiting widget; it is destroyed on trainer entry and rebuilt on the
+way back) so the trainer row grid owns the full window instead of
+sharing it with the table list; the waiting view gains the read-only
+"UI flow" header button (the in-app copy of the UI.md flow document),
+an F5 re-scan shortcut, the initial table-list focus (arrow keys and
+Enter work immediately), and the "Retry load" re-arm moves into the
+status bar next to the other waiting controls.
+
 All waiting-mode logic lives in the pure orchestrator; this module is
 Tk wiring plus the picker Toplevel.
 """
@@ -78,6 +88,105 @@ def _utc_now() -> str:
 
 def master_title() -> str:
     return "CT2Trainer " + __version__ + " — Master Trainer"
+
+
+def ui_flow_text() -> str:
+    """MT-20 (0.29): the read-only in-app UI-flow reference.
+
+    The same plain-language flow document as the reviewable UI.md next
+    to this module, so the user can read, review and improve the flow
+    from inside the app (the "UI flow" header button opens it).  Keep
+    this text aligned with UI.md: a change to the flow updates both."""
+    return (
+        "CT2Trainer Master Trainer - UI flow\n"
+        "====================================\n\n"
+        "One long-lived window with two modes.  Waiting mode shows the "
+        "table index; trainer mode runs the exact standalone-trainer row "
+        "grid.  They share one Tk root: entering the trainer collapses "
+        "the whole waiting view (the table list no longer competes for "
+        "window space), and going back rebuilds it.\n\n"
+        "1) WAITING MODE\n"
+        "   Header, left to right: title; filter box (casefolded "
+        "substring over table name AND bound process name); View "
+        "cycle (list <-> process groups); Sort cycle (name / process / "
+        "status); the project link; Load table; Change folder...; "
+        "Rescan; UI flow (this window); Close.\n"
+        "   Below the header: the folder line (with any scan problem), "
+        "the meta line (table counts, state home, and the attach route "
+        "on non-Windows), and the live 'Running now' line (which bound "
+        "processes are visible right now, with PIDs).\n"
+        "   The table tree, one row per table: Table (relative path, the "
+        "row identity), Process name(s), Status (ok / running / "
+        "unreadable), Detail (PID, 'pinned' marker, or the unreadable "
+        "reason), Size, Modified, Last used.  In 'process' view the "
+        "tables group under their bound process name (unbound last); "
+        "group rows are display-only.\n"
+        "   Status bar, left to right: the status line (waiting for "
+        "which process, last error); Attach mode toggle (auto/ask, "
+        "persisted); Retry load (re-arm auto-load after a deferred "
+        "choice); Recent: <table> (one-click re-load, only when a "
+        "recent table exists).\n"
+        "   Keyboard: '/' focuses the filter; Esc clears it and returns "
+        "focus to the list; F5 re-scans the folder; arrow keys navigate "
+        "the list (it takes the initial focus); Enter or double-click "
+        "loads the selected row; right-click a row for the context menu "
+        "(load, pin to top / unpin).\n"
+        "   Auto-load: the poll tick asks the orchestrator.  A unique "
+        "table-for-process match loads by itself (the documented "
+        "default).  A multi-table match opens the picker.  Nothing "
+        "matches and the line keeps ticking.\n\n"
+        "2) LOADING A TABLE\n"
+        "   Any of these starts a load through the same path (named "
+        "refusals included, never a crash): the auto-load above; the "
+        "Load table header button; right-click / Enter / double-click a "
+        "row; the Recent button.  The explicit paths also work while "
+        "the bound process is not running yet - the engine then waits "
+        "for it.\n"
+        "   Attach mode: 'auto' attaches to the documented smallest-PID "
+        "process; 'ask' opens the process picker first (even for a "
+        "single running candidate).  The choice is persisted and "
+        "applies to the next load.  When several instances of the "
+        "bound process run, the picker lists them and the chosen PID is "
+        "pinned for the session (falling back to the name-based attach "
+        "once that PID exits).\n"
+        "   Startup recovery: if a previous session left a stale state "
+        "lock or unfinished receipts, the trainer offers to recover "
+        "(archive the old state byte-for-byte) - decline and the load "
+        "fails with the state preserved; accept and it archives and "
+        "starts.  If a live session conflict is detected (another "
+        "trainer still owns the state), the load is refused and the "
+        "other trainer must be closed first.\n\n"
+        "3) TRAINER MODE\n"
+        "   The exact standalone-trainer row grid, now owning the full "
+        "window (the waiting list is hidden).  Rows: switch rows (tap "
+        "toggles), value rows (tap the value to expand the inline "
+        "editor), group section headers (chevron + counter + group "
+        "toggle where one exists), and dim info rows (blocked or "
+        "unselected records).  The header gains 'Detach' (detach the "
+        "live target and re-attach to a user-chosen process) and "
+        "'< Master' (below).\n\n"
+        "4) BACK TO MASTER\n"
+        "   The '< Master' button closes the engine cleanly and "
+        "rebuilds the waiting view, so the same process keeps watching "
+        "the folder.  The per-table settings sidecar is saved on the "
+        "way out.  An unclean close keeps the state journals and shows "
+        "the cleanup warning.\n"
+        "   Detach: keeps the trainer window open, releases the live "
+        "target, and - in 'ask' mode - re-attaches to a user-chosen "
+        "process.\n\n"
+        "5) WHAT IS REMEMBERED (persisted)\n"
+        "   Waiting-view settings (filter, sort, view mode), the pinned "
+        "/favorite tables, the rolling recent list, the attach mode, "
+        "the table folder, and the per-table settings sidecar (keyed by "
+        "the table content hash, never the path) all survive restarts "
+        "under the state home.  Only confirmed ON toggles are persisted "
+        "as saved wishes; a failed enable stays visibly inactive.\n\n"
+        "6) FAILURE STATES\n"
+        "   Every refusal is named and lands in the status line (plus a "
+        "dialog where the context needs it) - never a crash.  An "
+        "unrecoverable startup leaves the state folder preserved for "
+        "manual recovery.  'Retry load' re-arms a deferred auto-load.\n"
+    )
 
 
 def _default_state_home() -> str:
@@ -355,10 +464,22 @@ class MasterWindow:
         self._attach_pin = {"pid": None}
         self._attach_mode_btn = None
         self._table_frame = None
+        # MT-19 (0.29): the single container that owns every
+        # waiting-view widget.  It is torn down when the trainer takes
+        # over the shared root, so the trainer row grid owns the full
+        # window instead of sharing it with the table list.
+        self._waiting_frame = None
         self._folder_label = None
         self._meta_label = None
         self._running_label = None
         self._status_var = None
+        self._retry_btn = None
+        self._filter_entry = None
+        self._sort_btn = None
+        self._view_btn = None
+        # MT-20 (0.29): the read-only in-app UI-flow Toplevel (at most
+        # one at a time).
+        self._ui_flow_win = None
         # Live bound-process feedback of the latest waiting tick.
         self._running: tuple = ()
         self._running_keys: frozenset = frozenset()
@@ -388,7 +509,16 @@ class MasterWindow:
         # columns, so the waiting view starts wider.
         self.root.geometry("1160x600")
         self.root.minsize(900, 420)
-        header = tk.Frame(self.root, bg=BG_HEADER, height=44, padx=12)
+        # MT-19 (0.29): every waiting-view widget lives in this single
+        # container.  Entering the trainer destroys the container, so
+        # the table list and its chrome stop competing for window
+        # space with the trainer row grid (the trainer then owns the
+        # full root); the waiting view is rebuilt whole on the way
+        # back.
+        self._waiting_frame = tk.Frame(self.root, bg=BG)
+        self._waiting_frame.pack(fill="both", expand=True)
+        header = tk.Frame(self._waiting_frame, bg=BG_HEADER, height=44,
+                          padx=12)
         header.pack(fill="x")
         header.pack_propagate(False)
         tk.Label(header, text=master_title(), bg=BG_HEADER, fg=FG,
@@ -403,6 +533,10 @@ class MasterWindow:
             return tk.Button(parent, text=label, command=action, **style)
 
         button(header, "Close", self.close).pack(side="right")
+        # MT-20 (0.29): the read-only in-app UI-flow reference (the
+        # same content as the reviewable UI.md next to this module).
+        button(header, "UI flow", self._open_ui_flow).pack(
+            side="right", padx=(0, 8))
         button(header, "Rescan", self._rescan).pack(side="right", padx=(0, 8))
         button(header, "Change folder…", self._change_folder).pack(side="right", padx=(0, 8))
         # MT-10 (0.25): explicit table load (loads even while the bound
@@ -449,21 +583,27 @@ class MasterWindow:
         # waiting view (a no-op in trainer mode, where keys belong to
         # the trainer UI).
         self.root.bind("<KeyPress>/", self._on_slash)
-        self._folder_label = tk.Label(self.root, text=self._folder_text(),
+        # MT-20 (0.29): F5 re-scans the folder from anywhere in the
+        # waiting view (a no-op in trainer mode, where the keys belong
+        # to the trainer UI).
+        self.root.bind("<F5>", self._on_f5)
+        self._folder_label = tk.Label(self._waiting_frame,
+                                      text=self._folder_text(),
                                       bg=BG, fg=FG_DIM, font=("Segoe UI", 11),
                                       anchor="w", padx=12)
         self._folder_label.pack(fill="x")
-        self._meta_label = tk.Label(self.root, text=self._meta_text(),
+        self._meta_label = tk.Label(self._waiting_frame,
+                                    text=self._meta_text(),
                                     bg=BG, fg=FG_DIM, font=("Segoe UI", 9),
                                     anchor="w", padx=12)
         self._meta_label.pack(fill="x")
-        self._running_label = tk.Label(self.root,
+        self._running_label = tk.Label(self._waiting_frame,
                                        text=self._running_text(self._running),
                                        bg=BG, fg=FG, font=("Segoe UI", 10),
                                        anchor="w", padx=12)
         self._running_label.pack(fill="x")
 
-        frame = ttk.Frame(self.root, padding=8)
+        frame = ttk.Frame(self._waiting_frame, padding=8)
         frame.pack(fill="both", expand=True)
         # MT-15 (0.26): the waiting-view tree carries the indexed size /
         # modified columns plus the Last-used feed of the recent list.
@@ -495,7 +635,7 @@ class MasterWindow:
         scroll.pack(side="right", fill="y")
 
         self._status_var = tk.StringVar(self.root, value="Scanning…")
-        status = tk.Frame(self.root, bg=BG, height=40, padx=12)
+        status = tk.Frame(self._waiting_frame, bg=BG, height=40, padx=12)
         status.pack(fill="x")
         status.pack_propagate(False)
         tk.Label(status, textvariable=self._status_var, anchor="w",
@@ -506,6 +646,11 @@ class MasterWindow:
                                        + self.app.attach_mode,
                                        self._toggle_attach_mode, width=14)
         self._attach_mode_btn.pack(side="right")
+        # MT-20 (0.29): the retry-load re-arm moves into the status bar
+        # next to the other waiting controls (it used to be a separate
+        # root-level button below the status strip, easy to miss).
+        self._retry_btn = button(status, "Retry load", self._retry, width=12)
+        self._retry_btn.pack(side="right", padx=(0, 8))
         # MT-15 (0.26): one-click re-load of the most recent table
         # (built per waiting-view build; the list only changes while a
         # trainer session runs, i.e. while this view is not visible).
@@ -516,10 +661,84 @@ class MasterWindow:
             self._recent_btn.pack(side="right", padx=(0, 8))
         else:
             self._recent_btn = None
-        button(self.root, "Retry load", self._retry, width=12).pack(
-            anchor="e", padx=12)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
         self._render_tables()
+        # MT-20 (0.29): the table list takes the initial focus, so the
+        # arrow keys and Enter work immediately without a first click.
+        self._table_tree.focus_set()
+
+    def _teardown_waiting_view(self):
+        """MT-19 (0.29): remove the waiting view from the shared root.
+
+        Called on trainer entry, once the engine is up: the single
+        container is destroyed (which takes every waiting-view
+        widget - header, folder/meta/running lines, the table tree,
+        the status bar - with it) and the widget references are
+        dropped, so the poll loop and the handlers never touch a
+        destroyed widget.  ``_back_to_master`` rebuilds the waiting
+        view from scratch."""
+        if self._ui_flow_win is not None:
+            try:
+                if self._ui_flow_win.winfo_exists():
+                    self._ui_flow_win.destroy()
+            except tk.TclError:
+                pass
+            self._ui_flow_win = None
+        if self._waiting_frame is not None:
+            self._waiting_frame.destroy()
+            self._waiting_frame = None
+        self._table_tree = None
+        self._folder_label = None
+        self._meta_label = None
+        self._running_label = None
+        self._status_var = None
+        self._attach_mode_btn = None
+        self._retry_btn = None
+        self._recent_btn = None
+        self._filter_entry = None
+        self._sort_btn = None
+        self._view_btn = None
+
+    def _open_ui_flow(self):
+        """MT-20 (0.29): the read-only in-app UI-flow reference.
+
+        One Toplevel shows the full waiting/trainer flow (the same
+        content as the reviewable UI.md next to this module) so the
+        user can read, review and improve the flow without leaving the
+        app.  A second click lifts the open window instead of opening
+        a duplicate."""
+        if self._ui_flow_win is not None:
+            try:
+                if self._ui_flow_win.winfo_exists():
+                    self._ui_flow_win.lift()
+                    self._ui_flow_win.focus_set()
+                    return
+            except tk.TclError:
+                pass
+            self._ui_flow_win = None
+        win = tk.Toplevel(self.root)
+        self._ui_flow_win = win
+        win.title("CT2Trainer Master Trainer — UI flow")
+        win.configure(bg=BG, padx=16, pady=16)
+        win.transient(self.root)
+        tk.Label(win, text="UI flow (read-only reference)",
+                 bg=BG, fg=FG, font=("Segoe UI", 13, "bold"),
+                 anchor="w").pack(fill="x")
+        paned = tk.Frame(win, bg=BG)
+        paned.pack(fill="both", expand=True, pady=(8, 8))
+        box = tk.Text(paned, wrap="word", bg=BG, fg=FG,
+                      font=("Segoe UI", 11), relief="flat",
+                      highlightthickness=0, padx=10, pady=10)
+        box.pack(side="left", fill="both", expand=True)
+        scroll = ttk.Scrollbar(paned, orient="vertical", command=box.yview)
+        box.configure(yscrollcommand=scroll.set)
+        scroll.pack(side="right", fill="y")
+        box.insert("1.0", ui_flow_text())
+        box.configure(state="disabled")
+        tk.Button(win, text="Close", command=win.destroy,
+                  bg="#2a3547", fg=FG, activebackground="#3a4a63",
+                  activeforeground=FG, font=("Segoe UI", 12),
+                  height=2, padx=12, pady=4).pack(anchor="e")
 
     def _folder_text(self) -> str:
         error = self.app.scan_error
@@ -730,6 +949,14 @@ class MasterWindow:
         if self.engine is not None:
             return
         self._filter_entry.focus_set()
+
+    def _on_f5(self, _event):
+        """MT-20 (0.29): F5 re-scans the folder (the documented
+        refresh shortcut); a no-op in trainer mode (the trainer UI
+        owns the keys)."""
+        if self.engine is not None:
+            return
+        self._rescan()
 
     def _is_table_row(self, item: str) -> bool:
         """MT-17 (0.27): True for loadable table rows - group children
@@ -948,13 +1175,19 @@ class MasterWindow:
                 self._fail_trainer_start(str(exc))
                 return False
         self.engine = engine
+        # MT-19 (0.29): the engine is up - collapse the waiting view so
+        # the trainer row grid owns the full window (the waiting list no
+        # longer competes for space next to the trainer rows).  The
+        # waiting view is rebuilt whole on the way back.
+        self._teardown_waiting_view()
         try:
             self.trainer_window = TrainerWindow(
                 self.root, engine, master_back=self._back_to_master,
                 detach_cb=self._detach_or_attach)
         except Exception as exc:
             # The engine is up but the trainer view could not be built:
-            # close the engine again and fail the load so the waiting
+            # close the engine again, restore the waiting view (torn
+            # down for trainer entry) and fail the load so the waiting
             # loop (and its loop guard) stay consistent.
             self.engine = None
             try:
@@ -962,6 +1195,7 @@ class MasterWindow:
             except Exception:
                 pass
             self.trainer_window = None
+            self._build_waiting_view()
             messagebox.showerror("Trainer cannot start", str(exc),
                                  parent=self.root)
             self._fail_trainer_start(str(exc))

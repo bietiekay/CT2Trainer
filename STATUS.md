@@ -1,15 +1,26 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-03. **0.28 released** (build
-`native-20261103T161621Z-ea8fde2f`, cut from `main` @ `d7f4cf0`,
-2026-11-03) - Master Trainer pinned/favorite tables MT-18
-(`master-settings.json` schema 4 → 5: the pin set - relative
-paths, most recent pin first, cap 25 - persisted and restored at
-start; the row context menu toggle, pinned tables float to the top
-of the list view and to the top of their process group, the pin
-marker in the detail column); +15 tests; full main suite 4,357 OK /
-30 expected skips; catalog zero delta `blocked-catalog-028-pin`;
-see the 0.28 section below.
+**Updated:** 2026-11-04. **0.29 content on main** - the 0.29 build
+is cut from this content; 0.28 remains the latest verified release
+(build `native-20261103T161621Z-ea8fde2f`, cut from `main` @
+`d7f4cf0`, 2026-11-03) - Master Trainer UI/UX revamp MT-19/20
+(MT-19 trainer-focus mode: the whole waiting view lives in one
+container frame destroyed on trainer entry - the trainer row grid
+owns the full window, rebuilt whole on the way back; MT-20
+discoverability: the read-only "UI flow" header button - the
+in-app copy of the reviewable UI.md, F5 re-scan, initial
+table-list focus, "Retry load" in the status bar); +13 tests; full
+main suite 4,370 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-029-trainer-focus`; see the 0.29 section below.
+Superseded 0.28 (build `native-20261103T161621Z-ea8fde2f`, cut from
+`main` @ `d7f4cf0`, 2026-11-03) - Master Trainer
+pinned/favorite tables MT-18 (`master-settings.json` schema 4 → 5:
+the pin set - relative paths, most recent pin first, cap 25 -
+persisted and restored at start; the row context menu toggle,
+pinned tables float to the top of the list view and to the top of
+their process group, the pin marker in the detail column); +15
+tests; full main suite 4,357 OK / 30 expected skips; catalog zero
+delta `blocked-catalog-028-pin`; see the 0.28 section below.
 Superseded 0.27 (build `native-20261103T145543Z-b29b3688`, cut from
 `main` @ `8aa0815`, 2026-11-03) - Master Trainer waiting-view
 settings persistence MT-16 (`master-settings.json` schema 3 → 4:
@@ -442,6 +453,67 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.29 content on main (2026-11-04, root-direct; the 0.29 build is
+cut from this content - 0.28 remains the latest verified release):
+Master Trainer UI/UX revamp (MT-19 trainer-focus mode + MT-20
+discoverability).** The user field request of 2026-11-04 (the
+waiting table list must shrink/collapse so the trainer items get
+maximum space once a process is identified and the trainer
+attaches; generally more accessible UI; the UI flow documented so
+it can be reviewed/improved) was evaluated against the local
+shared-root trainer handoff plus the standing trainer-manager UI
+evaluations (Trinity profiles, Cheat Happens AURORA accessibility,
+keyboard-shortcut databases, WCAG/platform accessibility guidance -
+see the Master Trainer ROADMAP "0.29 trainer-focus + discoverability"
+section). Adopted: MT-19, MT-20. Deliberately deferred (documented
+candidate MT-21, separate cycle): the multi-column trainer grid -
+the single-column canvas grid is the validated touch-first design
+(`ui_rows.py` pure row model + `ui_layout.py` + the 1-D hit-testing,
+exhaustively tested and shared with the standalone trainer); a
+column layout rewrites the pure row model, the pagination and the
+2-D hit-testing and changes the standalone trainer as well.
+- **MT-19 trainer-focus mode:** the whole waiting view now lives in
+  one container frame (`MasterWindow._waiting_frame`,
+  `fill=both expand=True` on the shared root) - the header, the
+  folder/meta/running lines, the table-tree frame and the status
+  bar are all its children. `_enter_trainer()` destroys the
+  container immediately after the engine is up (before the
+  `TrainerWindow` is built) and drops every waiting-view widget
+  reference, so the trainer row grid owns the full window instead
+  of sharing it with the table list, and the poll loop / handlers
+  never touch a destroyed widget (the poll tick already
+  early-returns in trainer mode). The trainer-constructor failure
+  path rebuilds the waiting view before `_fail_trainer_start()` so
+  the waiting loop and its loop guard stay consistent;
+  `_back_to_master()` is unchanged (destroy-all + rebuild). The
+  open UI-flow Toplevel is closed with the teardown. +6 UI tests in
+  `tests/test_native_master_ui_mt19.py`.
+- **MT-20 discoverability:** the module function `ui_flow_text()`
+  (headless-testable) is the plain-language UI-flow document - the
+  same content as the reviewable `master_trainer/UI.md` in the
+  package (ships in the source ZIP through the existing `.md`
+  allowlist); the new "UI flow" header button opens it in a
+  read-only Toplevel (single window: a second click lifts +
+  focuses the open window instead of duplicating; closed on
+  trainer entry). F5 re-scans the folder from anywhere in the
+  waiting view (root binding, guarded no-op in trainer mode like
+  the existing "/" binding). The table tree takes the initial
+  focus on build (`focus_set` at the end of
+  `_build_waiting_view`), so arrow keys and Enter work immediately
+  without a first click. The "Retry load" re-arm moves out of the
+  root-level button below the status strip into the status bar
+  next to the attach toggle and the Recent button. +7 UI tests in
+  `tests/test_native_master_ui_mt19.py`.
+- Full main suite 4,370 OK / 30 expected skips; catalog zero
+  delta `blocked-catalog-029-trainer-focus` (151/151 loaded, 0
+  load errors, 117,809 total / 116,756 supported / 1,053 blocked,
+  zero delta vs `blocked-catalog-028-pin`); feature matrix
+  unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION bumped to
+  0.29 with the changelog entry in the same change; the 0.29 build
+  is cut from this content (0.28 remains the latest verified
+  release).
 
 **0.28 released (build `native-20261103T161621Z-ea8fde2f`, cut from
 `main` @ `d7f4cf0`, 2026-11-03): Master Trainer

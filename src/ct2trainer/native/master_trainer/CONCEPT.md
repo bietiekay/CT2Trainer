@@ -9,8 +9,13 @@ on `main` with the 0.25 release (2026-11-02); MT-13..MT-15
 tables + Size/Modified/Last-used columns) with the 0.26 release
 (2026-11-03); MT-16..MT-17 (persisted waiting-view settings +
 process-grouped view) with the 0.27 release (2026-11-03); MT-18
-(pinned / favorite tables) with the 0.28 release (2026-11-03). Design
-and implementation notes; the working plan is [ROADMAP.md](ROADMAP.md).
+(pinned / favorite tables) with the 0.28 release (2026-11-03);
+MT-19..MT-20 (trainer-focus mode: the waiting view collapses on
+trainer entry; discoverability: the in-app UI-flow reference, the F5
+re-scan, the initial table-list focus, retry-load in the status bar)
+with the 0.29 release (2026-11-04). Design and implementation notes;
+the working plan is [ROADMAP.md](ROADMAP.md) and the reviewable UI-flow
+document is [UI.md](UI.md).
 
 ## What it is
 
@@ -55,6 +60,25 @@ auto-load/handoff loop around that existing engine.
   The rolling recent list (master-state schema 3: most recent first,
   capped at ten, UTC timestamps) feeds the meta line, the “Recent:
   <path>” one-click load button and the tree's Last-used column.
+- 0.27 (MT-16/17): the waiting-view settings (filter / sort / view
+  mode) persist in the master-state document (schema 4) and the tree
+  can display the process-grouped view (one parent row per bound
+  process name, unbound last; group rows display-only).
+- 0.28 (MT-18): the row context menu offers “Pin to top” / “Unpin” —
+  the persisted pin set (schema 5) floats the pinned tables to the top
+  of the list and of their process group, with the pin marker in the
+  detail column.
+- 0.29 (MT-19/20): the whole waiting view lives in one container that
+  **collapses on trainer entry** — the table list and its chrome no
+  longer share the window with the trainer rows (the trainer grid owns
+  the full window; the waiting view is rebuilt whole on the way back,
+  filter / sort / view / pins / recents included). The header gains
+  the read-only **“UI flow”** button (the in-app copy of the
+  reviewable [UI.md](UI.md) flow document); **F5** re-scans the folder
+  from anywhere in the waiting view; the table list takes the
+  **initial focus** (arrow keys and Enter work immediately without a
+  first click); the “Retry load” re-arm moves into the status bar
+  next to the attach toggle and the Recent button.
 - The table folder is taken from a CLI parameter, or from the
   last-used folder persisted in the state home (`master-settings.json`);
   only a genuinely first start (or a stale stored folder) shows the
@@ -97,6 +121,16 @@ differences from the standalone trainer are two extra header buttons:
 and — 0.25 (MT-12) — the “Detach” / “Attach” button, which holds the
 live target (no auto re-attach; see User control below) and re-attaches
 to a user-chosen process in “ask” mode.
+
+— 0.29 (MT-19) — and the trainer-focus mode: on trainer entry the
+whole waiting view (header, table list, status bar) is destroyed with
+its single container frame, so the trainer rows get the full window
+instead of sharing it with the table list. “⬅ Master” rebuilds the
+waiting view from scratch (the waiting-view state — filter, sort,
+view mode, pins, recents — lives on the window/app and survives the
+round trip). If the trainer view cannot be built after the engine is
+up, the engine is closed again and the waiting view is restored before
+the load fails (the waiting loop and its loop guard stay consistent).
 
 Closing the window (X) in either mode closes the whole app: in trainer
 mode it first runs the engine close, so no state is orphaned.

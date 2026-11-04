@@ -2,6 +2,61 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.29 (2026-11-04)
+
+Master Trainer UI/UX revamp: trainer-focus mode (MT-19) +
+discoverability (MT-20) — the user field request of 2026-11-04 (when
+a process is identified and the trainer attaches, the waiting table
+list must shrink/collapse so the trainer items get maximum space;
+make the UI generally more accessible; document the UI flow so it can
+be reviewed/improved — see the Master Trainer ROADMAP "0.29
+trainer-focus + discoverability" section):
+
+- **MT-19 trainer-focus mode**: the whole waiting view now lives in
+  one container frame that is destroyed on trainer entry — the table
+  list and its chrome (header, folder/meta/running lines, status bar)
+  no longer share the window with the trainer rows; the trainer row
+  grid owns the full window. "⬅ Master" rebuilds the waiting view
+  from scratch (filter, sort, view mode, pins and recents are window/
+  app state and survive the round trip). If the engine is up but the
+  trainer view cannot be built, the engine is closed again, the
+  waiting view is restored and the load fails with the named error —
+  the waiting loop and its loop guard stay consistent.
+- **MT-20 discoverability**: the read-only "UI flow" header button
+  (the in-app copy of the reviewable `master_trainer/UI.md` flow
+  document — one Toplevel, a second click lifts the open window, the
+  window closes on trainer entry); **F5** re-scans the folder from
+  anywhere in the waiting view (a no-op in trainer mode, like the
+  existing "/" binding); the table list takes the initial focus
+  (arrow keys and Enter work immediately without a first click); the
+  "Retry load" re-arm moves out of the root-level button below the
+  status strip into the status bar next to the attach toggle and the
+  Recent button.
+- **Reviewable UI-flow document**: `master_trainer/UI.md` — the full
+  flow (waiting-mode controls, tree columns, status bar, poll-tick
+  behavior, every load path, the attach decision, the startup
+  recovery dialogs, the platform gate, trainer-mode rows, back /
+  detach, what is persisted, the keyboard map, the failure states)
+  ships in the source ZIP with the package docs.
+- Deliberately deferred (documented candidate MT-21, separate
+  cycle): the multi-column trainer grid — the single-column canvas
+  grid is the validated touch-first design (`ui_rows.py` pure row
+  model + `ui_layout.py` + the 1-D hit-testing, exhaustively tested
+  and shared with the standalone trainer); a column layout rewrites
+  the pure row model, the pagination and the 2-D hit-testing and
+  changes the standalone trainer as well.
+- Test totals: +13 over 0.28 (the new
+  `tests/test_native_master_ui_mt19.py`: container parenting, the
+  collapse through the patched handoff, the constructor-failure
+  rebuild, the back-to-master fresh frame, one real-`TrainerWindow`
+  case, the flow-document content, the read-only Toplevel +
+  lift-on-second-click, the trainer-entry close, the F5 contract in
+  both modes, the initial-focus spy, the retry-bar placement); full
+  main suite 4,370 OK / 30 expected skips; catalog remeasure
+  `blocked-catalog-029-trainer-focus`: zero delta (151/151 loaded,
+  0 load errors, 117,809 total / 116,756 supported / 1,053
+  blocked).
+
 ## 0.28 (2026-11-03)
 
 Master Trainer pinned/favorite tables (MT-18) - the first

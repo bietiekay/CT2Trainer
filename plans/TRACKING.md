@@ -486,6 +486,41 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- 0.29 Master Trainer UI/UX revamp MT-19/20 (2026-11-04,
+  root-direct on `main`; online-evaluated in
+  `master_trainer/ROADMAP.md`, the "0.29 trainer-focus +
+  discoverability" section - the user field request of 2026-11-04:
+  the waiting table list must shrink/collapse so the trainer items
+  get maximum space once a process is identified and the trainer
+  attaches, generally more accessible UI, the UI flow documented
+  for review). MT-19 trainer-focus mode: the whole waiting view
+  lives in one container frame (`MasterWindow._waiting_frame`)
+  destroyed on trainer entry - the trainer row grid owns the full
+  window, rebuilt whole on the way back; the trainer-constructor
+  failure path rebuilds the waiting view before failing the load.
+  MT-20 discoverability: the read-only "UI flow" header button
+  (the in-app copy of the reviewable `master_trainer/UI.md`, single
+  Toplevel, lift on second click, closed on trainer entry), F5
+  re-scan from anywhere in the waiting view (no-op in trainer
+  mode), the initial table-list focus (arrow keys / Enter work
+  immediately), the "Retry load" re-arm in the status bar. The
+  reviewable full-flow document `master_trainer/UI.md` ships in the
+  source ZIP. Deliberately deferred (documented candidate MT-21,
+  separate cycle): the multi-column trainer grid (the single-column
+  canvas grid is the validated touch-first design; `ui_rows.py` +
+  `ui_layout.py` are pure, exhaustively tested and shared with the
+  standalone trainer; a column layout rewrites the pure row model,
+  the pagination and the 2-D hit-testing). +13 tests
+  (`tests/test_native_master_ui_mt19.py` new: container parenting,
+  the collapse through the patched handoff, the constructor-
+  failure rebuild, the back-to-master fresh frame, one real-
+  `TrainerWindow` case, the flow-document content, the read-only
+  Toplevel + lift-on-second-click, the trainer-entry close, the F5
+  contract in both modes, the initial-focus spy, the retry-bar
+  placement); full main suite 4,370 OK / 30 expected skips;
+  catalog zero delta `blocked-catalog-029-trainer-focus`. VERSION
+  0.29 + CHANGELOG entry in the same change; the 0.29 build is cut
+  from this content (0.28 remains the latest verified release).
 - 0.28 Master Trainer pinned/favorite tables MT-18 (2026-11-03,
   root-direct on `main`; online-evaluated in
   `master_trainer/ROADMAP.md`, the 0.27 follow-up research - VGC

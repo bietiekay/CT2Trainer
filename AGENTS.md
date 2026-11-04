@@ -72,7 +72,21 @@ portable ZIP `CT2Trainer-0.28-windows-portable.zip` sha256
 (49,658,473 bytes; the frozen `CT2Trainer-Master.exe` (sha256
 `c12dcea5bb8a609dae4df36f44827ab5269c9e1015cb723067ed98dc100bf99b`,
 16,929,732 bytes) ships next to the converter); superseded 0.27
-(build `native-20261103T145543Z-b29b3688`). The 0.16 Wave-4
+(build `native-20261103T145543Z-b29b3688`). 0.29 content on main
+(2026-11-04, root-direct): the Master Trainer UI/UX revamp
+(MT-19 trainer-focus mode: the whole waiting view lives in one
+container frame destroyed on trainer entry - the table list no
+longer shares the window with the trainer rows, the trainer row
+grid owns the full window, rebuilt whole on the way back; MT-20
+discoverability: the read-only "UI flow" header button - the
+in-app copy of the reviewable UI.md, F5 re-scan from anywhere in
+the waiting view, initial table-list focus, "Retry load" moved
+into the status bar; the reviewable full-flow document ships as
+master_trainer/UI.md in the source ZIP); +13 tests, full main
+suite 4,370 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-029-trainer-focus`; the 0.29 build is cut from
+this content (0.28 remains the latest verified release). The
+0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
 now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
@@ -186,10 +200,24 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-03, 0.28 released - build
+**CT2Trainer (status 2026-11-04, 0.29 content on main - the 0.29
+build is cut from this content; 0.28 remains the latest verified
+release, build `native-20261103T161621Z-ea8fde2f` cut from `main` @
+`d7f4cf0`, 2026-11-03, in-build suite 4,357 OK / 30 expected skips,
+`ce_inputs: []`) - 0.29 Master Trainer UI/UX revamp (MT-19
+trainer-focus mode: the whole waiting view lives in one container
+frame destroyed on trainer entry - the table list no longer shares
+the window with the trainer rows, the trainer row grid owns the
+full window, rebuilt whole on the way back; MT-20 discoverability:
+the read-only "UI flow" header button - the in-app copy of the
+reviewable UI.md, F5 re-scan from anywhere in the waiting view,
+initial table-list focus, "Retry load" moved into the status bar;
+the reviewable full-flow document ships as master_trainer/UI.md in
+the source ZIP); +13 tests, full main suite 4,370 OK / 30 expected
+skips; catalog zero delta
+`blocked-catalog-029-trainer-focus`), 0.28 released (build
 `native-20261103T161621Z-ea8fde2f` cut from `main` @ `d7f4cf0`,
-2026-11-03, in-build suite 4,357 OK / 30 expected skips,
-`ce_inputs: []`) - 0.28 Master Trainer pinned/favorite tables
+2026-11-03) - 0.28 Master Trainer pinned/favorite tables
 (MT-18: `master-settings.json` schema 4 → 5 - `pinned_tables`
 persisted, most recent pin first, cap 25; the row context menu
 "Pin to top" / "Unpin" toggle, pinned tables float to the top of the
