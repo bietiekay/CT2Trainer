@@ -121,8 +121,9 @@ portable ZIP `CT2Trainer-0.30-windows-portable.zip` sha256
 (49,669,933 bytes; the frozen `CT2Trainer-Master.exe` (sha256
 `9d0a525a78dfbfffb906261ad42e435c5414cb6cb0189dd78c73910063f67643`,
 16,940,058 bytes) ships next to the converter); superseded 0.29
-(build `native-20261104T094808Z-50af0517`). 0.31 content on main
-(2026-11-05, root-direct): the Master Trainer per-table live status
+(build `native-20261104T094808Z-50af0517`). 0.31 released (build
+`native-20261105T080853Z-2e7f50a5` cut from `main` @ `2def12f`,
+2026-11-05): the Master Trainer per-table live status
 + color coding + status filter (MT-23: the waiting-view Status
 column shows the table's state right now - one bounded stat per
 visible row per render against the index entry - ok / running /
@@ -132,9 +133,20 @@ row color coding amber for changed / red for missing-unreadable;
 persisted "Status: all / ok / attention" header cycle, master-state
 schema 5 to 6, view_status; the pure `table_status.py` decision
 layer); +28 tests, full main suite 4,414 OK / 30 expected skips,
-catalog zero delta `blocked-catalog-031-status`; the 0.31 build is
-cut from this content (0.30 remains the latest verified release). The
-0.16 Wave-4
+catalog zero delta `blocked-catalog-031-status`; in-build suite
+4,414 OK / 30 expected skips, `ce_inputs: []`, `runtime_unverified`
+deliberately kept per gate; source ZIP
+`CT2Trainer-0.31-source.zip` sha256
+`3bab9648208f6ed4cbafa919991cab19c7921597ac2075c5c8b964e17258c0f9`
+(14,398,817 bytes) - carries the MT-23 per-table live status +
+color coding + status filter and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.31-windows-portable.zip` sha256
+`df5581ec5e8b0c0b99abdf35b914f08ec138b4470234b48c615304419a970839`
+(49,679,202 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`811c0f85c143b632dd182646282ddb32c3293513a665eb62c8055f74f9c89dcb`,
+16,948,380 bytes) ships next to the converter); superseded 0.30
+(build `native-20261104T131114Z-11522f68`). The 0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
 now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
@@ -248,10 +260,9 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-05, 0.31 content on main - the 0.31
-build is cut from this content; 0.30 remains the latest verified
-release, build `native-20261104T131114Z-11522f68` cut from `main` @
-`2fbca94`, 2026-11-04, in-build suite 4,386 OK / 30 expected skips,
+**CT2Trainer (status 2026-11-05, 0.31 released - build
+`native-20261105T080853Z-2e7f50a5` cut from `main` @ `2def12f`,
+2026-11-05, in-build suite 4,414 OK / 30 expected skips,
 `ce_inputs: []`) - 0.31 Master Trainer per-table live status +
 color coding + status filter (MT-23: the waiting-view Status column
 shows the table's state right now - one bounded stat per visible row
@@ -579,7 +590,22 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261104T131114Z-11522f68` (0.30,
+**Latest verified build:** `native-20261105T080853Z-2e7f50a5` (0.31,
+cut from `main` @ `2def12f`, 2026-11-05; in-build suite 4,414 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.31-source.zip` sha256
+`3bab9648208f6ed4cbafa919991cab19c7921597ac2075c5c8b964e17258c0f9`
+(14,398,817 bytes) - carries the MT-23 per-table live status +
+color coding + status filter and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.31-windows-portable.zip` sha256
+`df5581ec5e8b0c0b99abdf35b914f08ec138b4470234b48c615304419a970839`
+(49,679,202 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `811c0f85c143b632dd182646282ddb32c3293513a665eb62c8055f74f9c89dcb`,
+16,948,380 bytes) ships next to the converter)).
+0.31 ships the Master Trainer per-table live status + color
+coding + status filter (MT-23). Superseded 0.30 build:
+`native-20261104T131114Z-11522f68` (0.30,
 cut from `main` @ `2fbca94`, 2026-11-04; in-build suite 4,386 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
 kept per gate; source ZIP `CT2Trainer-0.30-source.zip` sha256

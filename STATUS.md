@@ -1,9 +1,8 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-05. **0.31 content on main** - the 0.31 build
-is cut from this content; 0.30 remains the latest verified release
-(build `native-20261104T131114Z-11522f68`, cut from `main` @
-`2fbca94`, 2026-11-04) - Master Trainer per-table live status +
+**Updated:** 2026-11-05. **0.31 released** (build
+`native-20261105T080853Z-2e7f50a5`, cut from `main` @ `2def12f`,
+2026-11-05) - Master Trainer per-table live status +
 color coding + status filter MT-23 (the waiting-view Status column
 shows the table's state right now - one bounded stat per visible row
 per render against the index entry: ok / running / changed / missing
@@ -76,7 +75,20 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.30, build
+**Latest verified release:** 0.31, build
+`native-20261105T080853Z-2e7f50a5` (cut from `main` @ `2def12f`,
+2026-11-05): the 0.31 Master Trainer per-table live status +
+color coding + status filter release (MT-23) - in-build
+suite 4,414 OK / 30 expected skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+source ZIP `CT2Trainer-0.31-source.zip` sha256
+`3bab9648208f6ed4cbafa919991cab19c7921597ac2075c5c8b964e17258c0f9`
+(14,398,817 bytes), portable ZIP
+`CT2Trainer-0.31-windows-portable.zip` sha256
+`df5581ec5e8b0c0b99abdf35b914f08ec138b4470234b48c615304419a970839`
+(49,679,202 bytes), frozen `CT2Trainer-Master.exe` (sha256
+`811c0f85c143b632dd182646282ddb32c3293513a665eb62c8055f74f9c89dcb`)
+next to the converter. Superseded 0.30, build
 `native-20261104T131114Z-11522f68` (cut from `main` @ `2fbca94`,
 2026-11-04): the 0.30 Master Trainer table details + live
 load-gate preview release (MT-22) - in-build
@@ -499,10 +511,9 @@ CE asset bytes are copied.
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
 
-**0.31 content on main (2026-11-05, root-direct; the 0.31 build is
-cut from this content - 0.30 remains the latest verified release):
-Master Trainer per-table live status + color coding + status filter
-(MT-23).**
+**0.31 released (build `native-20261105T080853Z-2e7f50a5`, cut from
+`main` @ `2def12f`, 2026-11-05): Master Trainer per-table live
+status + color coding + status filter (MT-23).**
 The 0.31 feature was evaluated against online trainer front-end and
 trainer-manager UX patterns (FLiNG per-trainer "Game Version" /
 "Last Updated" / option-count metadata - per-table freshness and
@@ -572,8 +583,18 @@ background plan-analysis infrastructure).
   (per-table count/reason/sha changes: 0); feature matrix unchanged
   (42/42, 7,475/7,475 over `w4b4-case30-20261020081722Z`); AP-11
   0/6,143. VERSION bumped to 0.31 with the changelog entry in the
-  same change; the 0.31 build is cut from this content (0.30
-  remains the latest verified release).
+  same change. The 0.31 build
+  `native-20261105T080853Z-2e7f50a5` was cut from `main` @
+  `2def12f` (2026-11-05): in-build suite 4,414 OK / 30 expected
+  skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+  per gate; source ZIP `CT2Trainer-0.31-source.zip` sha256
+  `3bab9648208f6ed4cbafa919991cab19c7921597ac2075c5c8b964e17258c0f9`
+  (14,398,817 bytes), portable ZIP
+  `CT2Trainer-0.31-windows-portable.zip` sha256
+  `df5581ec5e8b0c0b99abdf35b914f08ec138b4470234b48c615304419a970839`
+  (49,679,202 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `811c0f85c143b632dd182646282ddb32c3293513a665eb62c8055f74f9c89dcb`,
+  16,948,380 bytes, ships next to the converter).
 
 **0.30 released (build `native-20261104T131114Z-11522f68`, cut from
 `main` @ `2fbca94`, 2026-11-04): Master Trainer table details + live
