@@ -13,9 +13,12 @@ process-grouped view) with the 0.27 release (2026-11-03); MT-18
 MT-19..MT-20 (trainer-focus mode: the waiting view collapses on
 trainer entry; discoverability: the in-app UI-flow reference, the F5
 re-scan, the initial table-list focus, retry-load in the status bar)
-with the 0.29 release (2026-11-04). Design and implementation notes;
-the working plan is [ROADMAP.md](ROADMAP.md) and the reviewable UI-flow
-document is [UI.md](UI.md).
+with the 0.29 release (2026-11-04); MT-22 (table details + live
+load-gate preview) with the 0.30 release (2026-11-04); MT-23 (per-table
+live status + color coding + status filter) with the 0.31 release
+(2026-11-04). Design and implementation notes; the working plan is
+[ROADMAP.md](ROADMAP.md) and the reviewable UI-flow document is
+[UI.md](UI.md).
 
 ## What it is
 
@@ -86,6 +89,17 @@ auto-load/handoff loop around that existing engine.
   re-check — the same gate the load path runs (MT-9), named refusal
   code + detail — so a table's current loadability is checked at
   inspection time, not only at load time.
+- 0.31 (MT-23): the Status column shows the table's state **right
+  now**, not only the cached state of the last scan — one bounded
+  `stat` per visible row per render against the index entry: `ok` /
+  `running` / `changed` / `missing` / `unreadable` (cheapest fact
+  first, live facts outrank the cached scan state — the same order
+  the MT-9 gate proves at load time). Rows are color coded (the
+  default colors for ok / running, amber for changed, red for
+  missing / unreadable), and the persisted **“Status: all / ok /
+  attention”** header cycle (schema 6, `view_status`) filters the
+  list to the loadable rows or to the rows the gate would refuse
+  right now; the meta line carries the live `attention: N` count.
 - The table folder is taken from a CLI parameter, or from the
   last-used folder persisted in the state home (`master-settings.json`);
   only a genuinely first start (or a stale stored folder) shows the

@@ -1,6 +1,6 @@
 # CT2Trainer Master Trainer — UI flow (reviewable)
 
-Status: 0.29 (2026-11-04). This document is the reviewable copy of the
+Status: 0.31 (2026-11-04). This document is the reviewable copy of the
 in-app "UI flow" dialog (the `ui_flow_text()` function in
 `master_ui.py`; keep both aligned when the flow changes). It describes
 the complete user flow of the Master Trainer so it can be reviewed and
@@ -23,8 +23,8 @@ the whole waiting view. The waiting view is a single container frame;
 it is destroyed on trainer entry, so the table list and its chrome no
 longer compete for window space with the trainer rows — the trainer
 grid owns the full window. Going back rebuilds the waiting view from
-scratch (filter, sort, view mode, pins and recents all survive — they
-are window/app state, not widget state).
+scratch (filter, sort, view mode, status filter, pins and recents all
+survive — they are window/app state, not widget state).
 
 ## 1) Waiting mode
 
@@ -34,6 +34,7 @@ are window/app state, not widget state).
 | --- | --- |
 | Title | `CT2Trainer <version> — Master Trainer` (label only) |
 | Filter entry | Live casefolded substring filter over table name AND any bound process name; the meta line shows `filtered: N/M` while a query is active; persisted (schema 4) |
+| `Status: all/ok/attention` | Cycles the live status filter (0.31, MT-23): all rows / only the loadable rows / only the rows the MT-9 gate would refuse right now (changed / missing / unreadable); persisted (schema 6) |
 | `View: list/process` | Cycles the display mode: flat list vs. grouped by bound process name; persisted (schema 4) |
 | `Sort: name/process/status` | Cycles the sort mode; persisted (schema 4) |
 | Project link | Opens the repository page |
@@ -49,7 +50,10 @@ are window/app state, not widget state).
   inline.
 - **Meta line** — table counts, last scan time, state home location,
   the last loaded table, the attach mode, the recent list (`recent:
-  a, b, c (N more)`), and — on non-Windows — the permanent MT-7 route
+  a, b, c (N more)`), the active status filter (`status filter: X`,
+  0.31, MT-23) and the live attention count (`attention: N` — how
+  many indexed tables the MT-9 gate would refuse right now; shown
+  only when N > 0), and — on non-Windows — the permanent MT-7 route
   hint (attach unavailable; the documented Proton-wrapped trainer
   route).
 - **Running now** — which bound processes are visible in the latest
@@ -65,8 +69,8 @@ display-only):
 | --- | --- |
 | Table | The relative path — the row identity every load path keys off |
 | Process name(s) | The bound process names, or `(none found)` |
-| Status | `ok` / `running` (a bound process is up) / `unreadable` |
-| Detail | The running PID(s), the `pinned` marker (0.28, MT-18), or the unreadable reason |
+| Status | Live right now (0.31, MT-23): `ok` / `running` (a bound process is up) / `changed` (the file drifted since the last scan — amber row) / `missing` (the file is gone — red row) / `unreadable` (red row); one bounded stat per visible row per render |
+| Detail | The running PID(s), the `pinned` marker (0.28, MT-18), or the attention / unreadable reason |
 | Size | Indexed file size (compact B/KB/MB) |
 | Modified | Local `YYYY-MM-DD HH:MM` |
 | Last used | The persisted UTC timestamp from the recent list |
@@ -186,6 +190,7 @@ offers the re-attach target) and `⬅ Master` (the return below).
 | Recent tables (≤ 10, UTC) | `master-settings.json` (schema 3+) |
 | Waiting-view settings (filter / sort / view) | `master-settings.json` (schema 4+) |
 | Pinned tables (≤ 25) | `master-settings.json` (schema 5+) |
+| Status filter (all / ok / attention) | `master-settings.json` (schema 6+, 0.31 MT-23) |
 | Per-table settings sidecar | `settings/<table-sha256>.ct2trainer.json` (keyed by content hash, never the path) |
 | Enabled toggles (per table) | the engine state store; only confirmed ON toggles persist |
 | Table index | `tables-index.json` (checksum-bound) |

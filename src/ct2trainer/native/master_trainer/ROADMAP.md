@@ -31,6 +31,7 @@ main-branch libraries; none adds trainer functionality.
 | MT-19 | Trainer-focus mode (waiting view collapses on attach) | done (2026-11-04) | `master_ui.py`: the whole waiting view now lives in one container frame (`MasterWindow._waiting_frame`, `fill=both expand=True` on the shared root) — the header (title, filter, sort/view cycles, repo link, Load table / Change folder / Rescan / UI flow / Close), the folder / meta / running lines, the table-tree frame and the status bar are all its children. `_enter_trainer()` destroys the container immediately after the engine is up (before the `TrainerWindow` is built) and drops every waiting-view widget reference, so the trainer row grid owns the full window instead of sharing it with the table list, and the poll loop / handlers never touch a destroyed widget (the poll tick already early-returns in trainer mode). The trainer-constructor failure path rebuilds the waiting view before `_fail_trainer_start()` so the waiting loop and its loop guard stay consistent; `_back_to_master()` is unchanged (destroy-all + rebuild). The open UI-flow Toplevel is closed with the teardown. +6 UI tests in `tests/test_native_master_ui_mt19.py` (container parenting, the collapse through the patched handoff, the constructor-failure rebuild, the back-to-master fresh frame, one real-`TrainerWindow` case). |
 | MT-20 | Discoverability: in-app UI-flow reference + keyboard map | done (2026-11-04) | `master_ui.py`: the module function `ui_flow_text()` (headless-testable) is the plain-language UI-flow document — the same content as the reviewable `UI.md` in the package (ships in the source ZIP through the existing `.md` allowlist); the new "UI flow" header button opens it in a read-only Toplevel (single window: a second click lifts + focuses the open window instead of duplicating; the window is transient to the root and closed on trainer entry). **F5** re-scans the folder from anywhere in the waiting view (root binding, guarded no-op in trainer mode exactly like the existing "/" binding). The table tree takes the **initial focus** on build (`focus_set` at the end of `_build_waiting_view`), so arrow keys and Enter work immediately without a first click. The "Retry load" re-arm moves out of the root-level button below the status strip into the status bar next to the attach toggle and the Recent button. +7 UI tests in `tests/test_native_master_ui_mt19.py` (document content, the read-only Toplevel + lift-on-second-click, the trainer-entry close, the F5 contract in both modes, the initial-focus spy, the retry-bar placement). |
 | MT-22 | Table details + live load-gate preview (waiting view) | done (2026-11-04) | `table_details.py` (new pure builder - the ordered (label, value) rows of the read-only details window: Table / Folder / Size / Modified / Bound process(es) / Index status / Pinned / Last used / Running now / Content sha256 (last scan, first 12 hex + "...") / Load gate (live re-check); `format_size` / `format_mtime` / `gate_line` formatters with named fallbacks). `master_ui.py`: the row context menu offers **"Table details"** first - one read-only Toplevel with the indexed facts for the row plus the on-demand `gate_table_for_load` re-check (the same pass MT-9 runs at load time; refusal = stable named code + displayable detail), so a table can be inspected and its current loadability checked before loading it; single window (a second open lifts + focuses instead of duplicating), transient, non-resizable, closed on trainer entry with the rest of the waiting view; the only I/O is the bounded gate re-check under the load limit. +16 tests (pure builder coverage + the Tk wiring: menu order through a recording `tk.Menu` subclass, window rows incl. the live gate line, lift on second open, trainer-entry close, named refusal display - all in `tests/test_native_master_ui_mt22.py`). |
+| MT-23 | Per-table live status + color coding + status filter (waiting view) | done (2026-11-04) | `table_status.py` (new pure decision layer - no OS access, no index mutation, no orchestrator or state access): `row_file_status(entry, fingerprint)` derives the live file state of one indexed table from the index entry (last-scan `(size, mtime_ns)` + cached status/detail) and the current on-disk fingerprint - `missing` (file gone / stat fails) / `changed` (fingerprint drift) / `unreadable` (the last scan could not read/parse it, the named detail surfaces) / `ok`; cheapest fact first, live facts outrank the cached scan state - the same order the MT-9 gate proves at load time. `row_status` adds the process state: a running bound process shows `running` only for a loadable file (a live process cannot make a changed / missing / unreadable table loadable). `row_tag` maps code → tree color tag ("" default for ok / running, "attention-warn" for changed, "attention-error" for missing / unreadable; unknown codes fall back to the default). `filter_rows_by_status` reshapes the ordered row set per the persisted mode - "" (all, the identity), "ok" (the loadable rows), "attention" (the rows the gate would refuse right now); input order preserved, an unknown mode raises the named `ValueError`. `master_state.py`: `master-settings.json` schema 5 → 6 - `view_status` (one of `VIEW_STATUS_FILTERS`, mirrored by `table_status.VIEW_STATUS_FILTERS`); schema-5 documents promote with `view_status=""`, a schema-5 document carrying the field is refused as an unknown field (the MT-11/15/16/18 discipline). `master_ui.py`: one bounded `stat` per visible row per render (`_live_fingerprint` / `_row_status`) feeds the live Status column (ok / running / changed / missing / unreadable) + the row color coding (the two tree tags configured in `_build_waiting_view`: amber `#e5c07b` for changed, red `#ff7b72` for missing / unreadable); the persisted "Status: all/ok/attention" header cycle button (between the view button and the filter entry; `MasterApp.set_view_settings` gains the 4th parameter `status_filter` - validated + re-persisted, and every existing change point passes the current mode through); `_visible_tables()` applies the status filter between the query filter and the pin float; the meta line gains the active `status filter: X` part and the live `attention: N` count (how many indexed tables the MT-9 gate would refuse right now). Zero new load-path behavior, zero catalog effect. +4 state tests (`tests/test_native_master_state.py`: schema-6 round trip, schema-5 promotion, the unknown-field refusal, the named value refusals), +24 tests in `tests/test_native_master_ui_mt23.py` (the pure layer + the Tk wiring: cycle / persist / restore, the other UI changes keeping the mode, the live changed / missing flags + tags, the ok / attention row shaping, the running-loses-to-attention contract, the meta line). |
 
 ## Online feature evaluation (2026-11-02)
 
@@ -163,6 +164,36 @@ discoverability lineage. Deliberately deferred (unchanged
 candidates): the MT-21 multi-column trainer grid, and the
 entry-count / blocked-count columns + per-table status /
 color-coding.
+
+### 0.31 per-table live status + color coding + status filter
+(evaluated 2026-11-04)
+
+The 0.31 evaluation (web research over trainer front-end and
+trainer-manager UX patterns - FLiNG's per-trainer "Game Version" /
+"Last Updated" / option-count metadata (per-table freshness and state
+facts surfaced in the list are a recognized pattern), Game Cheats
+Manager (dyang886) (the "smart launcher": drop tables + trainers,
+detect the installed games, associate trainer ↔ game, auto-update -
+the detection + the trainer↔game association are already covered by
+MT-2 / MT-17; the auto-update is out of scope by the offline,
+hash-verified build policy; the Python + Tkinter implementation
+corroborates the Master's stack), game-trainer-manager (Karasukaigan)
+(download / import / organize / search around a trainer list),
+CheatDeck (SheffeyG) (Steam Deck launch options - the documented
+MT-7 route)) adopts: the per-table live status + color coding +
+status filter (MT-23) - the candidate deliberately deferred in
+0.26/0.27/0.29/0.30 ("per-table status / color-coding"). Rationale:
+the indexed Status column carried the cached state of the last scan;
+the folder content may have drifted in between (a table edited,
+replaced or deleted), and the MT-9 gate would refuse such a table
+with a named code at load time - MT-23 surfaces that at a glance
+(one bounded `stat` per visible row per render, cheapest fact first,
+live facts outranking the cached scan state - the same order the
+gate proves), with row color coding (amber for changed, red for
+missing / unreadable) and the persisted "Status: all / ok /
+attention" filter. Remaining candidates (unchanged): the MT-21
+multi-column trainer grid and the entry-count / blocked-count
+columns (they need background plan-analysis infrastructure).
 
 ## Merge & release plan (historical + current)
 

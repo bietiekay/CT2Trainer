@@ -1,15 +1,26 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-04. **0.30 released** (build
-`native-20261104T131114Z-11522f68`, cut from `main` @
-`2fbca94`, 2026-11-04) - Master Trainer table details + live
-load-gate preview MT-22 (right-clicking a waiting-view row offers
-"Table details" first - the read-only inspection window with the
-indexed facts for the table plus the on-demand load-gate re-check,
-the same pass MT-9 runs at load time; the pure `table_details.py`
-row builder); +16 tests; full main suite 4,386 OK / 30 expected
-skips; catalog zero delta `blocked-catalog-030-details`; see the
-0.30 section below. Superseded 0.29 (build
+**Updated:** 2026-11-05. **0.31 content on main** - the 0.31 build
+is cut from this content; 0.30 remains the latest verified release
+(build `native-20261104T131114Z-11522f68`, cut from `main` @
+`2fbca94`, 2026-11-04) - Master Trainer per-table live status +
+color coding + status filter MT-23 (the waiting-view Status column
+shows the table's state right now - one bounded stat per visible row
+per render against the index entry: ok / running / changed / missing
+/ unreadable; row color coding; the persisted "Status: all / ok /
+attention" header cycle, master-state schema 5 -> 6, `view_status`;
+the pure `table_status.py` decision layer); +28 tests; full main
+suite 4,414 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-031-status`; see the 0.31 section below.
+Superseded 0.30 (build `native-20261104T131114Z-11522f68`, cut from
+`main` @ `2fbca94`, 2026-11-04) - Master Trainer table details +
+live load-gate preview MT-22 (right-clicking a waiting-view row
+offers "Table details" first - the read-only inspection window with
+the indexed facts for the table plus the on-demand load-gate
+re-check, the same pass MT-9 runs at load time; the pure
+`table_details.py` row builder); +16 tests; full main suite 4,386 OK
+/ 30 expected skips; catalog zero delta `blocked-catalog-030-details`;
+see the 0.30 section below. Superseded 0.29 (build
 `native-20261104T094808Z-50af0517`, cut from `main` @ `de3e4ff`,
 2026-11-04) - Master Trainer UI/UX revamp MT-19/20 (MT-19
 trainer-focus mode: the whole waiting view lives in one container
@@ -487,6 +498,82 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.31 content on main (2026-11-05, root-direct; the 0.31 build is
+cut from this content - 0.30 remains the latest verified release):
+Master Trainer per-table live status + color coding + status filter
+(MT-23).**
+The 0.31 feature was evaluated against online trainer front-end and
+trainer-manager UX patterns (FLiNG per-trainer "Game Version" /
+"Last Updated" / option-count metadata - per-table freshness and
+state facts surfaced in the list are a recognized pattern; Game
+Cheats Manager (dyang886) "smart launcher" - drop tables +
+trainers, detect the installed games, associate trainer to game,
+auto-update: the detection + trainer-to-game association are already
+covered by MT-2/MT-17, auto-update is out of scope per the
+offline/hash-verified build policy, and the Python + Tkinter
+implementation corroborates the Master's stack; game-trainer-manager
+(Karasukaigan) download/import/organize/search around a trainer
+list; CheatDeck (SheffeyG) Steam Deck launch options - the
+documented MT-7 route). Adopted: MT-23, the candidate deliberately
+deferred in 0.26/0.27/0.29/0.30 ("per-table status / color-coding").
+Remaining candidates (unchanged): the MT-21 multi-column trainer
+grid and the entry-count / blocked-count columns (they need
+background plan-analysis infrastructure).
+- **MT-23 per-table live status + color coding + status filter:**
+  the waiting-view Status column shows the table's state RIGHT NOW,
+  not only the cached state of the last scan - one bounded `stat`
+  per visible row per render against the index entry: `ok` /
+  `running` (a bound process is up, the table loadable) / `changed`
+  (the file drifted since the last scan) / `missing` (the file is
+  gone) / `unreadable` (the last scan could not read/parse it, the
+  named detail surfaces); cheapest fact first, live facts outrank
+  the cached scan state - the same order the MT-9 gate proves at
+  load time. Rows are color coded (the default colors for ok /
+  running, amber `#e5c07b` for changed, red `#ff7b72` for missing /
+  unreadable - the two tree tags configured in the waiting view),
+  and the persisted "Status: all / ok / attention" header cycle
+  (between the view button and the filter entry) filters the list
+  to the loadable rows or to the rows the gate would refuse right
+  now. `master-settings.json` schema 5 -> 6: `view_status` (one of
+  `VIEW_STATUS_FILTERS`, mirrored by
+  `table_status.VIEW_STATUS_FILTERS`); schema-5 documents promote
+  with `view_status=""`, a schema-5 document carrying the field is
+  refused as an unknown field (the MT-11/15/16/18 discipline).
+  `MasterApp.set_view_settings` gains the 4th parameter
+  `status_filter` (validated + re-persisted; every existing change
+  point passes the current mode through, so sort/view/filter
+  changes never reset the status filter); `_visible_tables()`
+  applies the status filter between the query filter and the pin
+  float; the meta line gains the active `status filter: X` part and
+  the live `attention: N` count (how many indexed tables the MT-9
+  gate would refuse right now - shown only when N > 0). The pure
+  decision layer is `master_trainer/table_status.py`
+  (`row_file_status` / `row_status` / `row_tag` /
+  `filter_rows_by_status`, `ATTENTION_STATUSES`,
+  `VIEW_STATUS_FILTERS` - no OS access, no index mutation); the
+  in-app `ui_flow_text()` and the reviewable `master_trainer/UI.md`
+  document the new header control, the live Status column and the
+  persistence row.
+- +28 tests (4 schema-6 state in `tests/test_native_master_state.py`
+  + 24 in `tests/test_native_master_ui_mt23.py` new: the pure layer
+  - the live file state per fingerprint, the running-loses-to-
+  attention contract, the tag per code, the filter reshaping per
+  mode + the named refusal, the constant mirror against the state
+  schema; the Tk wiring - the cycle / persist / restore, the other
+  UI changes keeping the mode, the live changed / missing flags +
+  tags, the ok / attention row shaping, the meta line); full main
+  suite 4,414 OK / 30 expected skips (4,386 from the 0.30 content +
+  28 new); catalog remeasure `blocked-catalog-031-status` (3-chunk
+  deep-equal audit over the 151 reference tables, 2026-11-05):
+  151/151 loaded, 0 load errors, 117,809 total / 116,756 supported
+  / 60,161 staged / 103,607 actionable / 12,974 headings / 1,053
+  blocked - **zero delta** vs `blocked-catalog-030-details`
+  (per-table count/reason/sha changes: 0); feature matrix unchanged
+  (42/42, 7,475/7,475 over `w4b4-case30-20261020081722Z`); AP-11
+  0/6,143. VERSION bumped to 0.31 with the changelog entry in the
+  same change; the 0.31 build is cut from this content (0.30
+  remains the latest verified release).
 
 **0.30 released (build `native-20261104T131114Z-11522f68`, cut from
 `main` @ `2fbca94`, 2026-11-04): Master Trainer table details + live

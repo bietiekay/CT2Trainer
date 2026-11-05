@@ -52,6 +52,20 @@ gate_table_for_load pass MT-9 runs at load time, named refusal code +
 displayable detail) so the user can inspect a table before loading
 it; the row builder is pure in ``table_details.py``.
 
+0.31 per-table live status + color coding + status filter
+(MT-23): the waiting-view Status column shows the table's state
+RIGHT NOW, not only the cached state of the last scan - one bounded
+stat per visible row per render (the folder content may have drifted
+in between) against the index entry: ok / running / changed /
+missing / unreadable, cheapest fact first, live facts outranking the
+cached scan state (the same order the MT-9 load gate proves at load
+time); the rows are color coded (the default colors for ok /
+running, an amber warning for changed, an error red for missing /
+unreadable), and the persisted "Status: all / ok / attention"
+header cycle filters the list to the loadable rows or to the rows
+the gate would refuse right now (master-state schema 6,
+view_status); the pure decision layer is ``table_status.py``.
+
 All waiting-mode logic lives in the pure orchestrator; this module is
 Tk wiring plus the picker Toplevel.
 """
@@ -74,11 +88,14 @@ from .orchestrator import (MasterOrchestrator, STATE_ACTIVE,
 from .master_state import (MASTER_STATE_SCHEMA, MASTER_STATE_FILENAME,
                            ATTACH_MODE_ASK, ATTACH_MODE_AUTO,
                            PINNED_TABLES_LIMIT, RECENT_TABLES_LIMIT,
-                           VIEW_FILTER_MAX, MasterState,
-                           load_master_state, save_master_state)
+                           VIEW_FILTER_MAX, VIEW_STATUS_FILTERS,
+                           MasterState, load_master_state,
+                           save_master_state)
 from .table_filter import (SORT_MODES, VIEW_MODES, UNBOUND_PROCESS_LABEL,
                            filter_tables, group_tables_by_process,
                            pin_tables, sort_tables)
+from .table_status import (ATTENTION_STATUSES, filter_rows_by_status,
+                           row_file_status, row_status, row_tag)
 from .process_picker import (DECISION_PICK, attach_decision,
                              candidate_processes,
                              make_pinned_memory_factory)
@@ -116,20 +133,25 @@ def ui_flow_text() -> str:
         "window space), and going back rebuilds it.\n\n"
         "1) WAITING MODE\n"
         "   Header, left to right: title; filter box (casefolded "
-        "substring over table name AND bound process name); View "
-        "cycle (list <-> process groups); Sort cycle (name / process / "
-        "status); the project link; Load table; Change folder...; "
-        "Rescan; UI flow (this window); Close.\n"
+        "substring over table name AND bound process name); Status "
+        "cycle (all / ok / attention - the live loadability filter, "
+        "persisted); View cycle (list <-> process groups); Sort cycle "
+        "(name / process / status); the project link; Load table; "
+        "Change folder...; Rescan; UI flow (this window); Close.\n"
         "   Below the header: the folder line (with any scan problem), "
-        "the meta line (table counts, state home, and the attach route "
-        "on non-Windows), and the live 'Running now' line (which bound "
-        "processes are visible right now, with PIDs).\n"
+        "the meta line (table counts, the live attention count, state "
+        "home, and the attach route on non-Windows), and the live "
+        "'Running now' line (which bound processes are visible right "
+        "now, with PIDs).\n"
         "   The table tree, one row per table: Table (relative path, the "
-        "row identity), Process name(s), Status (ok / running / "
-        "unreadable), Detail (PID, 'pinned' marker, or the unreadable "
-        "reason), Size, Modified, Last used.  In 'process' view the "
-        "tables group under their bound process name (unbound last); "
-        "group rows are display-only.\n"
+        "row identity), Process name(s), Status (live right now: "
+        "ok / running / changed / missing / unreadable - the same "
+        "facts the load gate proves at load time; changed is an "
+        "amber warning, missing / unreadable are red), Detail (PID, "
+        "'pinned' marker, or the attention / unreadable reason), "
+        "Size, Modified, Last used.  In 'process' view the tables "
+        "group under their bound process name (unbound last); group "
+        "rows are display-only.\n"
         "   Status bar, left to right: the status line (waiting for "
         "which process, last error); Attach mode toggle (auto/ask, "
         "persisted); Retry load (re-arm auto-load after a deferred "
@@ -185,7 +207,8 @@ def ui_flow_text() -> str:
         "target, and - in 'ask' mode - re-attaches to a user-chosen "
         "process.\n\n"
         "5) WHAT IS REMEMBERED (persisted)\n"
-        "   Waiting-view settings (filter, sort, view mode), the pinned "
+        "   Waiting-view settings (filter, sort, view mode, status "
+        "filter), the pinned "
         "/favorite tables, the rolling recent list, the attach mode, "
         "the table folder, and the per-table settings sidecar (keyed by "
         "the table content hash, never the path) all survive restarts "
@@ -259,6 +282,11 @@ class MasterApp:
         # refused state home takes the documented default (no pins).
         self.pinned_tables = (tuple(state.pinned_tables) if state is not None
                               else ())
+        # MT-23 (0.31): the persisted waiting-view status-filter mode
+        # (schema 6): "" (all) / "ok" (the loadable rows) / "attention"
+        # (the rows the MT-9 load gate would refuse right now); a fresh
+        # or refused state home takes the documented default "".
+        self.view_status = (state.view_status if state is not None else "")
         self.lister = lister if lister is not None else default_process_lister()
         self.plan_compiler = plan_compiler
         self.state_dir_factory = state_dir_factory
@@ -308,7 +336,8 @@ class MasterApp:
                 view_filter=self.view_filter,
                 view_sort=self.view_sort,
                 view_mode=self.view_mode,
-                pinned_tables=tuple(self.pinned_tables)),
+                pinned_tables=tuple(self.pinned_tables),
+                view_status=self.view_status),
                 self.state_path())
         except Exception:
             pass
@@ -321,13 +350,17 @@ class MasterApp:
         self.persist_state()
 
     def set_view_settings(self, filter_query: str | None, sort_mode: str,
-                          view_mode: str) -> None:
-        """MT-16 (0.27): persist the waiting-view settings (schema 4).
+                          view_mode: str, status_filter: str = "") -> None:
+        """MT-16 (0.27) + MT-23 (0.31): persist the waiting-view settings
+        (schema 4, + the status-filter mode, schema 6).
 
         ``filter_query`` is the raw filter entry text ("" means no
         filter); ``sort_mode`` / ``view_mode`` must be one of the
-        documented modes.  Invalid values raise the named ValueError,
-        so the UI never persists what it would not render.
+        documented modes; ``status_filter`` is one of
+        ``VIEW_STATUS_FILTERS`` ("" = all, "ok" = the loadable rows,
+        "attention" = the rows the MT-9 load gate would refuse right
+        now).  Invalid values raise the named ValueError, so the UI
+        never persists what it would not render.
         """
         if sort_mode not in SORT_MODES:
             raise ValueError("unknown view sort mode: " + repr(sort_mode)
@@ -336,6 +369,12 @@ class MasterApp:
         if view_mode not in VIEW_MODES:
             raise ValueError("unknown view mode: " + repr(view_mode)
                              + " (expected one of " + ", ".join(VIEW_MODES)
+                             + ")")
+        if status_filter not in VIEW_STATUS_FILTERS:
+            raise ValueError("unknown status filter mode: "
+                             + repr(status_filter)
+                             + " (expected one of "
+                             + ", ".join(repr(m) for m in VIEW_STATUS_FILTERS)
                              + ")")
         text = filter_query if filter_query is not None else ""
         if not isinstance(text, str):
@@ -346,6 +385,7 @@ class MasterApp:
         self.view_filter = text
         self.view_sort = sort_mode
         self.view_mode = view_mode
+        self.view_status = status_filter
         self.persist_state()
 
     def set_table_pinned(self, relative_path: str, pinned: bool) -> None:
@@ -487,6 +527,7 @@ class MasterWindow:
         self._filter_entry = None
         self._sort_btn = None
         self._view_btn = None
+        self._status_btn = None
         # MT-20 (0.29): the read-only in-app UI-flow Toplevel (at most
         # one at a time).
         self._ui_flow_win = None
@@ -503,6 +544,10 @@ class MasterWindow:
         self._filter_query = app.view_filter
         self._sort_mode = app.view_sort
         self._view_mode = app.view_mode
+        # MT-23 (0.31): the persisted status-filter mode (schema 6);
+        # restored like the other view settings and re-persisted on
+        # every change through app.set_view_settings.
+        self._status_filter = app.view_status
         try:
             icon = window_icon_path("master")
             if icon.is_file():
@@ -583,6 +628,20 @@ class MasterWindow:
                                    font=("Segoe UI", 11),
                                    relief="raised", padx=8, pady=2)
         self._view_btn.pack(side="right", padx=(0, 8))
+        # MT-23 (0.31): the waiting-view status-filter cycle (all /
+        # ok / attention), between the view button and the filter
+        # entry; persisted like the other view settings (MT-16,
+        # schema 6).  "" shows as "all".
+        self._status_btn = tk.Button(header,
+                                     text="Status: "
+                                     + (self._status_filter or "all"),
+                                     command=self._cycle_status_filter,
+                                     bg="#2a3547", fg=FG,
+                                     activebackground="#3a4a63",
+                                     activeforeground=FG,
+                                     font=("Segoe UI", 11),
+                                     relief="raised", padx=8, pady=2)
+        self._status_btn.pack(side="right", padx=(0, 8))
         self._filter_entry = tk.Entry(header, width=30,
                                       font=("Segoe UI", 11),
                                       bg="#10151f", fg=FG,
@@ -633,6 +692,14 @@ class MasterWindow:
                                   ("last_used", "Last used", 150)):
             self._table_tree.heading(name, text=text)
             self._table_tree.column(name, width=width, anchor="w")
+        # MT-23 (0.31): the live status color coding - the default
+        # colors for ok / running rows, an amber warning for a table
+        # that changed since the last scan, and an error red for a
+        # missing / unreadable one (the MT-9 gate would refuse it).
+        self._table_tree.tag_configure("attention-warn",
+                                       foreground="#e5c07b")
+        self._table_tree.tag_configure("attention-error",
+                                       foreground="#ff7b72")
         scroll = ttk.Scrollbar(frame, orient="vertical",
                                command=self._table_tree.yview)
         self._table_tree.configure(yscrollcommand=scroll.set)
@@ -718,6 +785,7 @@ class MasterWindow:
         self._filter_entry = None
         self._sort_btn = None
         self._view_btn = None
+        self._status_btn = None
 
     def _open_ui_flow(self):
         """MT-20 (0.29): the read-only in-app UI-flow reference.
@@ -800,6 +868,16 @@ class MasterWindow:
         if self._filter_query.strip():
             shown = len(self._visible_tables())
             parts.append(f"filtered: {shown}/{len(entries)}")
+        # MT-23 (0.31): the active status filter (when not "all") and
+        # the live attention count (how many indexed tables the MT-9
+        # gate would refuse right now - changed / missing / unreadable,
+        # one bounded stat per row per render).
+        if self._status_filter:
+            parts.append("status filter: " + self._status_filter)
+        attention = sum(1 for e in entries
+                        if self._row_status(e)[0] in ATTENTION_STATUSES)
+        if attention:
+            parts.append("attention: " + str(attention))
         parts.append("state: " + app.state_home)
         # MT-7: on non-Windows the attach gate is fail-closed; the
         # documented SteamOS/CheatDeck route stays visible in the waiting
@@ -852,9 +930,17 @@ class MasterWindow:
         # show="headings", so the group label lives in values[0], not
         # in the invisible text item.
         rows = list(self._visible_tables())
+        # MT-23 (0.31): one bounded stat per visible row per render -
+        # the live (code, detail) pairs feed the Status column, the
+        # row color tag and the attention detail.  A file that drifted
+        # since the last scan surfaces here with the same facts the
+        # MT-9 gate proves at load time.
+        statuses = {entry.relative_path: self._row_status(entry)
+                    for entry in rows}
         if self._view_mode != "process":
             for entry in rows:
-                self._insert_table_row("", entry, pids_by_key, recent_at)
+                self._insert_table_row("", entry, pids_by_key, recent_at,
+                                       statuses[entry.relative_path])
             return
         for label, group in group_tables_by_process(rows):
             parent = tree.insert("", "end", open=True, values=(
@@ -862,44 +948,83 @@ class MasterWindow:
                 "", "", "", "", ""))
             for entry in group:
                 self._insert_table_row(parent, entry, pids_by_key,
-                                       recent_at)
+                                       recent_at,
+                                       statuses[entry.relative_path])
 
     def _insert_table_row(self, parent: str, entry, pids_by_key: dict,
-                          recent_at: dict) -> None:
-        """One waiting-view table row (flat list or group child)."""
+                          recent_at: dict, status: tuple) -> None:
+        """One waiting-view table row (flat list or group child).
+
+        MT-23 (0.31): ``status`` is the live ``(code, detail)`` pair
+        from ``_row_status`` - the Status column shows the code (ok /
+        running / changed / missing / unreadable), the tree tag
+        carries the color coding (default for ok / running, amber for
+        changed, red for missing / unreadable), and the attention
+        detail is displayable (the same facts the MT-9 gate refuses
+        with at load time)."""
+        code, file_detail = status
         names = ", ".join(entry.process_names) or "(none found)"
-        if entry.status == "ok":
+        if code == "running":
             pids = sorted(set(p for n in entry.process_names
                               for p in pids_by_key.get(n.casefold(), ())))
-            if pids:
-                status = "running"
-                detail = "PID " + ", ".join(str(p) for p in pids)
-            else:
-                status, detail = "ok", ""
+            detail = "PID " + ", ".join(str(p) for p in pids)
+        elif code == "ok":
+            detail = ""
         else:
-            status = "unreadable"
-            detail = entry.detail or ""
+            detail = file_detail
         # MT-18 (0.28): the pin marker lives in the detail column -
         # the first column (the relative path) stays the bare row
         # identity the load paths key off.
         if self.app.is_table_pinned(entry.relative_path):
             detail = "pinned" + (" - " + detail if detail else "")
         self._table_tree.insert(parent, "end", values=(
-            entry.relative_path, names, status, detail,
+            entry.relative_path, names, code, detail,
             self._format_size(entry.size),
             self._format_mtime(entry.mtime_ns),
-            recent_at.get(entry.relative_path, "")))
+            recent_at.get(entry.relative_path, "")),
+            tags=(row_tag(code),))
+
+    def _live_fingerprint(self, entry):
+        """MT-23 (0.31): one bounded ``stat`` of the table file: the
+        live ``(size, mtime_ns)`` pair, or ``None`` when the file no
+        longer exists or cannot be stat'ed (the 'missing' fact)."""
+        from pathlib import Path
+        path = Path(self.app.folder) / entry.relative_path
+        try:
+            st = path.stat()
+        except OSError:
+            return None
+        return (st.st_size, st.st_mtime_ns)
+
+    def _row_status(self, entry):
+        """MT-23 (0.31): the live ``(code, detail)`` pair for one row -
+        the bounded stat plus the bound-process state of the latest
+        tick; the pure ``table_status`` layer decides (cheapest fact
+        first, live facts outrank the cached scan state - the same
+        order the MT-9 gate proves at load time)."""
+        fingerprint = self._live_fingerprint(entry)
+        code, detail = row_file_status(entry, fingerprint)
+        running = any(n.casefold() in
+                      {e.name.casefold() for e in self._running}
+                      for n in entry.process_names)
+        return row_status(entry, fingerprint, running), detail
 
     def _visible_tables(self) -> list:
-        """MT-13/18 (0.26/0.28): the waiting-view row set - the full
-        index, sorted per the current mode, filtered per the current
-        query, then the persisted pin set floated to the top (MT-18;
-        pinned rows not in the filtered set are ignored).  Row
-        identity stays the relative path; the load picker and the
-        auto-load path keep using the full index."""
+        """MT-13/18/23 (0.26/0.28/0.31): the waiting-view row set -
+        the full index, sorted per the current mode, filtered per the
+        current query, then the persisted status filter (MT-23; one
+        bounded stat per remaining row per render), then the
+        persisted pin set floated to the top (MT-18; pinned rows not
+        in the filtered set are ignored).  Row identity stays the
+        relative path; the load picker and the auto-load path keep
+        using the full index."""
         entries = sort_tables(self.app.index.tables(), self._sort_mode)
-        return pin_tables(filter_tables(entries, self._filter_query),
-                          self.app.pinned_tables)
+        filtered = filter_tables(entries, self._filter_query)
+        if self._status_filter:
+            codes = [self._row_status(entry)[0] for entry in filtered]
+            filtered = filter_rows_by_status(filtered, codes,
+                                             self._status_filter)
+        return pin_tables(filtered, self.app.pinned_tables)
 
     @staticmethod
     def _format_size(size: int) -> str:
@@ -925,7 +1050,7 @@ class MasterWindow:
                                 % len(order)]
         self._sort_btn.configure(text="Sort: " + self._sort_mode)
         self.app.set_view_settings(self._filter_query, self._sort_mode,
-                                   self._view_mode)
+                                   self._view_mode, self._status_filter)
         self._render_tables()
 
     def _cycle_view(self):
@@ -936,8 +1061,23 @@ class MasterWindow:
                                 % len(order)]
         self._view_btn.configure(text="View: " + self._view_mode)
         self.app.set_view_settings(self._filter_query, self._sort_mode,
-                                   self._view_mode)
+                                   self._view_mode, self._status_filter)
         self._render_tables()
+
+    def _cycle_status_filter(self):
+        """MT-23 (0.31): "" (all) -> ok -> attention -> "" (the choice
+        is persisted with the waiting-view settings, schema 6)."""
+        order = list(VIEW_STATUS_FILTERS)
+        self._status_filter = order[(order.index(self._status_filter) + 1)
+                                    % len(order)]
+        if self._status_btn is not None:
+            self._status_btn.configure(text="Status: "
+                                        + (self._status_filter or "all"))
+        self.app.set_view_settings(self._filter_query, self._sort_mode,
+                                   self._view_mode, self._status_filter)
+        self._render_tables()
+        if self._meta_label is not None:
+            self._meta_label.configure(text=self._meta_text())
 
     def _on_filter_edit(self, _event):
         """MT-13 (0.26): live filter - re-render plus the meta line
@@ -945,7 +1085,7 @@ class MasterWindow:
         is persisted with the other waiting-view settings (MT-16)."""
         self._filter_query = self._filter_entry.get()
         self.app.set_view_settings(self._filter_query, self._sort_mode,
-                                   self._view_mode)
+                                   self._view_mode, self._status_filter)
         self._render_tables()
         if self._meta_label is not None:
             self._meta_label.configure(text=self._meta_text())
@@ -956,7 +1096,7 @@ class MasterWindow:
         self._filter_entry.delete(0, "end")
         self._filter_query = ""
         self.app.set_view_settings(self._filter_query, self._sort_mode,
-                                   self._view_mode)
+                                   self._view_mode, self._status_filter)
         self._render_tables()
         if self._meta_label is not None:
             self._meta_label.configure(text=self._meta_text())

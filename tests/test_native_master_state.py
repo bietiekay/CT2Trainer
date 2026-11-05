@@ -5,10 +5,11 @@ byte-stable serialization, strict checksum-bound load, every fail-closed
 refusal (malformed JSON, invalid shape, tampered checksum, foreign schema,
 unknown fields, out-of-bounds last_folder, size limit), tolerant
 ``load_master_state`` (absent / refused -> None), and
-``save_master_state`` directory creation.  Schema 5 (0.28) carries the
-MT-10/11/15/16/18 preferences (last_table, attach_mode, recent_tables,
-waiting-view settings, pinned tables); schema-1/2/3/4 documents are
-promoted on load with the documented defaults.
+``save_master_state`` directory creation.  Schema 6 (0.31) carries the
+MT-10/11/15/16/18/23 preferences (last_table, attach_mode,
+recent_tables, waiting-view settings, pinned tables, status-filter
+mode); schema-1/2/3/4/5 documents are promoted on load with the
+documented defaults.
 """
 from __future__ import annotations
 
@@ -51,7 +52,8 @@ class MasterStateSerializeTests(unittest.TestCase):
                           "view_filter": "",
                           "view_sort": "name",
                           "view_mode": "list",
-                          "pinned_tables": []})
+                          "pinned_tables": [],
+                          "view_status": ""})
         canonical = json.dumps(document["payload"], sort_keys=True,
                                separators=(",", ":"), allow_nan=False,
                                ensure_ascii=True).encode("utf-8")
@@ -305,6 +307,44 @@ class MasterStateSerializeTests(unittest.TestCase):
         with self.assertRaises(MasterStateRefusal) as ctx:
             master_state_from_bytes(self._document(over_cap))
         self.assertIn("limit", str(ctx.exception))
+
+    # -- schema 6 (0.31) status filter (MT-23) ----------------------------------
+
+    def test_view_status_roundtrip(self):
+        state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
+                            view_status="attention")
+        raw = master_state_to_bytes(state)
+        self.assertEqual(master_state_from_bytes(raw), state)
+
+    def test_schema5_document_promotes_on_load(self):
+        payload = {"schema": 5, "last_folder": "C:\\tables",
+                   "last_table": "sub\\gamea.ct",
+                   "attach_mode": ATTACH_MODE_ASK,
+                   "recent_tables": [{"path": "sub\\gamea.ct",
+                                      "at": "2026-11-03T12:00:00Z"}],
+                   "view_filter": "", "view_sort": "name",
+                   "view_mode": "list",
+                   "pinned_tables": ["sub\\gamea.ct"]}
+        state = master_state_from_bytes(self._document(payload))
+        self.assertEqual(state.schema, MASTER_STATE_SCHEMA)
+        self.assertEqual(state.view_status, "")
+        self.assertEqual(state.pinned_tables, ("sub\\gamea.ct",))
+
+    def test_from_bytes_refuses_schema5_with_status_field(self):
+        payload = {"schema": 5, "last_folder": None,
+                   "view_status": "ok"}
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(payload))
+        self.assertIn("unknown fields", str(ctx.exception))
+        self.assertIn("view_status", str(ctx.exception))
+
+    def test_from_bytes_refuses_bad_view_status(self):
+        base = {"schema": MASTER_STATE_SCHEMA, "last_folder": None}
+        for bad in ("all", "OK", 7, None, ["ok"]):
+            with self.assertRaises(MasterStateRefusal) as ctx:
+                master_state_from_bytes(
+                    self._document(dict(base, view_status=bad)))
+            self.assertIn("view_status", str(ctx.exception))
 
 
 class MasterStateFileTests(unittest.TestCase):

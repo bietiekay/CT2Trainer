@@ -2,6 +2,63 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.31 (2026-11-05)
+
+Master Trainer per-table live status + color coding + status filter
+(MT-23) — the adopted 0.31 candidate from the online evaluation
+(FLiNG per-trainer "Game Version" / "Last Updated" / option-count
+metadata, Game Cheats Manager (dyang886) smart launcher,
+game-trainer-manager (Karasukaigan) organize/search workflows,
+CheatDeck (SheffeyG) Steam Deck launch options — see the Master
+Trainer ROADMAP "0.31 per-table live status + color coding + status
+filter" section):
+
+- **MT-23 per-table live status + color coding + status filter**:
+  the waiting-view Status column shows the table's state right now,
+  not only the cached state of the last scan — one bounded `stat`
+  per visible row per render against the index entry: `ok` /
+  `running` (a bound process is up, the table loadable) /
+  `changed` (the file drifted since the last scan) / `missing`
+  (the file is gone) / `unreadable` (the last scan could not
+  read/parse it, the named detail surfaces) — cheapest fact first,
+  live facts outrank the cached scan state, the same order the MT-9
+  gate proves at load time. Rows are color coded (the default
+  colors for ok / running, amber #e5c07b for changed, red #ff7b72
+  for missing / unreadable), and the persisted "Status: all / ok /
+  attention" header cycle (between the view button and the filter
+  entry) filters the list to the loadable rows or to the rows the
+  gate would refuse right now. `master-settings.json` schema 5 -> 6
+  (`view_status`): schema-5 documents promote, a schema-5 document
+  carrying the field is refused as an unknown field.
+  `set_view_settings` gains the 4th parameter `status_filter`
+  (validated + re-persisted; every existing change point passes the
+  current mode through, so sort/view/filter changes never reset the
+  status filter); the status filter applies between the query
+  filter and the pin float; the meta line gains the active
+  `status filter: X` part + the live `attention: N` count (shown
+  only when N > 0). The pure decision layer is
+  `master_trainer/table_status.py` (`row_file_status` / `row_status`
+  / `row_tag` / `filter_rows_by_status`, `ATTENTION_STATUSES`,
+  `VIEW_STATUS_FILTERS`); the in-app `ui_flow_text()` and the
+  reviewable `master_trainer/UI.md` document the new header control,
+  the live Status column and the persistence row.
+- Deliberately deferred (documented, unchanged candidates): the
+  MT-21 multi-column trainer grid, and the entry-count /
+  blocked-count columns (they need background plan-analysis
+  infrastructure).
+- Test totals: +28 over 0.30 (4 schema-6 state in
+  `tests/test_native_master_state.py` + the new
+  `tests/test_native_master_ui_mt23.py` — the pure layer: the live
+  file state per fingerprint, the running-loses-to-attention
+  contract, the tag per code, the filter reshaping per mode + the
+  named refusal, the constant mirror against the state schema; the
+  Tk wiring: the cycle / persist / restore, the other UI changes
+  keeping the mode, the live changed / missing flags + tags, the ok
+  / attention row shaping, the meta line); full main suite 4,414 OK
+  / 30 expected skips; catalog remeasure
+  `blocked-catalog-031-status`: zero delta (151/151 loaded, 0 load
+  errors, 117,809 total / 116,756 supported / 1,053 blocked).
+
 ## 0.30 (2026-11-04)
 
 Master Trainer table details + live load-gate preview (MT-22) — the

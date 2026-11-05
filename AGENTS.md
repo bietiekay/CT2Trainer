@@ -121,7 +121,19 @@ portable ZIP `CT2Trainer-0.30-windows-portable.zip` sha256
 (49,669,933 bytes; the frozen `CT2Trainer-Master.exe` (sha256
 `9d0a525a78dfbfffb906261ad42e435c5414cb6cb0189dd78c73910063f67643`,
 16,940,058 bytes) ships next to the converter); superseded 0.29
-(build `native-20261104T094808Z-50af0517`). The
+(build `native-20261104T094808Z-50af0517`). 0.31 content on main
+(2026-11-05, root-direct): the Master Trainer per-table live status
++ color coding + status filter (MT-23: the waiting-view Status
+column shows the table's state right now - one bounded stat per
+visible row per render against the index entry - ok / running /
+changed / missing / unreadable, cheapest fact first, live facts
+outrank the cached scan state, same order the MT-9 gate proves;
+row color coding amber for changed / red for missing-unreadable;
+persisted "Status: all / ok / attention" header cycle, master-state
+schema 5 to 6, view_status; the pure `table_status.py` decision
+layer); +28 tests, full main suite 4,414 OK / 30 expected skips,
+catalog zero delta `blocked-catalog-031-status`; the 0.31 build is
+cut from this content (0.30 remains the latest verified release). The
 0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
@@ -236,10 +248,24 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-04, 0.30 released - build
+**CT2Trainer (status 2026-11-05, 0.31 content on main - the 0.31
+build is cut from this content; 0.30 remains the latest verified
+release, build `native-20261104T131114Z-11522f68` cut from `main` @
+`2fbca94`, 2026-11-04, in-build suite 4,386 OK / 30 expected skips,
+`ce_inputs: []`) - 0.31 Master Trainer per-table live status +
+color coding + status filter (MT-23: the waiting-view Status column
+shows the table's state right now - one bounded stat per visible row
+per render against the index entry: ok / running / changed /
+missing / unreadable, cheapest fact first, live facts outrank the
+cached scan state, the same order the MT-9 gate proves at load time;
+row color coding (amber `#e5c07b` for changed, red `#ff7b72` for
+missing / unreadable); the persisted "Status: all / ok / attention"
+header cycle (master-state schema 5 -> 6, `view_status`); the pure
+`table_status.py` decision layer); +28 tests, full main suite 4,414
+OK / 30 expected skips; catalog zero delta
+`blocked-catalog-031-status`), superseded 0.30 released (build
 `native-20261104T131114Z-11522f68` cut from `main` @ `2fbca94`,
-2026-11-04, in-build suite 4,386 OK / 30 expected skips,
-`ce_inputs: []`) - 0.30 Master Trainer table details + live
+2026-11-04) - 0.30 Master Trainer table details + live
 load-gate preview (MT-22: right-clicking a waiting-view row offers
 "Table details" first - the read-only Toplevel with the indexed
 facts for the table (path, folder, size, modified, bound processes,
