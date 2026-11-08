@@ -1,10 +1,9 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-06. **0.32 content on main (build cut pending)**
-- the 0.32 build is cut from this content; 0.31 remains the latest
-verified release (build `native-20261105T080853Z-2e7f50a5`, cut from
-`main` @ `2def12f`, 2026-11-05) - Master Trainer per-table entry
-count + blocked count via background plan analysis MT-24 (the
+**Updated:** 2026-11-08. **0.32 released** (build
+`native-20261108T100731Z-a1d311e5`, cut from `main` @ `bfcc3a3`,
+2026-11-08) - Master Trainer per-table entry count +
+blocked count via background plan analysis MT-24 (the
 waiting-view Entries / Blocked columns - the actionable and blocked
 record counts of the plan compile, computed in one background daemon
 thread through the tested `compile_table` plan path, persisted in
@@ -12,7 +11,8 @@ thread through the tested `compile_table` plan path, persisted in
 LRU cap; the meta line shows the live "analyzing N table(s)" figure;
 the details window gains the analysis block; a named compile failure
 shows the failed marker); +69 tests; full main suite 4,483 OK / 30
-expected skips; catalog zero delta
+expected skips; in-build suite 4,483 OK / 30 expected skips,
+`ce_inputs: []`; catalog zero delta
 `blocked-catalog-032-analysis`; see the 0.32 section below.
 Superseded 0.31 (build
 `native-20261105T080853Z-2e7f50a5`, cut from `main` @ `2def12f`,
@@ -89,7 +89,20 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.31, build
+**Latest verified release:** 0.32, build
+`native-20261108T100731Z-a1d311e5` (cut from `main` @ `bfcc3a3`,
+2026-11-08): the 0.32 Master Trainer per-table entry count +
+blocked count (background plan analysis) release (MT-24) - in-build
+suite 4,483 OK / 30 expected skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+source ZIP `CT2Trainer-0.32-source.zip` sha256
+`f6cae57590d083e37308bc4a03b1046b8186617bdb0f98c88c9bc324404493d9`
+(14,426,224 bytes), portable ZIP
+`CT2Trainer-0.32-windows-portable.zip` sha256
+`3a7980ba04f60f7cb93edce3cf5c723ba609ff55a00b1f866079101d3b7bc986`
+(49,699,633 bytes), frozen `CT2Trainer-Master.exe` (sha256
+`6dc34408c8e5ecec1c2215c45da27ea22cc5c5ce5a9629267778b172d44d3485`,
+16,966,114 bytes) next to the converter. Superseded 0.31, build
 `native-20261105T080853Z-2e7f50a5` (cut from `main` @ `2def12f`,
 2026-11-05): the 0.31 Master Trainer per-table live status +
 color coding + status filter release (MT-23) - in-build
@@ -525,10 +538,9 @@ CE asset bytes are copied.
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
 
-**0.32 content on main (2026-11-06, root-direct; the 0.32 build is
-cut from this content - 0.31 remains the latest verified release):
-Master Trainer per-table entry count + blocked count (background plan
-analysis, MT-24).**
+**0.32 released (build `native-20261108T100731Z-a1d311e5`, cut from
+`main` @ `bfcc3a3`, 2026-11-08): Master Trainer per-table entry
+count + blocked count (background plan analysis, MT-24).**
 The 0.32 feature was evaluated against online trainer front-end and
 trainer-manager UX patterns (FLiNG per-trainer "N Options" /
 option-count metadata - per-table entry counts surfaced in the list
@@ -596,7 +608,28 @@ need background plan-analysis infrastructure"). Remaining candidate
   `blocked-catalog-031-status` (per-table count/reason/sha changes:
   0); feature matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION bumped to
-  0.32 with the changelog entry in the same change.
+  0.32 with the changelog entry in the same change. The 0.32 build
+  `native-20261108T100731Z-a1d311e5` was cut from `main` @
+  `bfcc3a3` (2026-11-08): in-build suite 4,483 OK / 30 expected
+  skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+  per gate; source ZIP `CT2Trainer-0.32-source.zip` sha256
+  `f6cae57590d083e37308bc4a03b1046b8186617bdb0f98c88c9bc324404493d9`
+  (14,426,224 bytes) - carries the MT-24 Entries / Blocked columns,
+  `table_analysis.py` + `analysis_worker.py` (incl. the
+  `active_workers()` live-worker registry), the two MT-24 test
+  files, the mt23 worker-guard test fix (`bfcc3a3`) and the
+  reviewable `master_trainer/UI.md` - and portable ZIP
+  `CT2Trainer-0.32-windows-portable.zip` sha256
+  `3a7980ba04f60f7cb93edce3cf5c723ba609ff55a00b1f866079101d3b7bc986`
+  (49,699,633 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `6dc34408c8e5ecec1c2215c45da27ea22cc5c5ce5a9629267778b172d44d3485`,
+  16,966,114 bytes, ships next to the converter). The first build
+  attempt `native-20261108T090044Z-5b70a3af` (preserved) failed the
+  in-build suite in `test_native_master_ui_mt23` with PermissionError
+  [WinError 32] on a fixture unlink while the MT-24 analysis worker
+  still held the file open; test fix `bfcc3a3` stopped the worker in
+  the affected window tests before fixture mutations, and the
+  re-run full main suite is green.
 
 **0.31 released (build `native-20261105T080853Z-2e7f50a5`, cut from
 `main` @ `2def12f`, 2026-11-05): Master Trainer per-table live

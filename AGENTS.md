@@ -146,9 +146,10 @@ color coding + status filter and the reviewable
 (49,679,202 bytes; the frozen `CT2Trainer-Master.exe` (sha256
 `811c0f85c143b632dd182646282ddb32c3293513a665eb62c8055f74f9c89dcb`,
 16,948,380 bytes) ships next to the converter); superseded 0.30
-(build `native-20261104T131114Z-11522f68`). 0.32 content on main
-(2026-11-06, root-direct): the Master Trainer per-table entry count
-+ blocked count via background plan analysis (MT-24: the
+(build `native-20261104T131114Z-11522f68`). 0.32 released (build
+`native-20261108T100731Z-a1d311e5` cut from `main` @ `bfcc3a3`,
+2026-11-08): the Master Trainer per-table entry count +
+blocked count via background plan analysis (MT-24: the
 waiting-view Entries / Blocked columns - the actionable and blocked
 record counts of the plan compile, computed in one background daemon
 thread through the tested `compile_table` plan path, no Lua
@@ -158,9 +159,21 @@ sha256, LRU-bounded; the meta line shows the live "analyzing N
 table(s)" figure; the MT-22 table-details window gains the analysis
 block; display-side only, never blocks / alters / delays the MT-9
 load gate); +69 tests, full main suite 4,483 OK / 30 expected
-skips, catalog zero delta `blocked-catalog-032-analysis`; the 0.32
-build is cut from this content (0.31 remains the latest verified
-release). The 0.16 Wave-4
+skips, catalog zero delta `blocked-catalog-032-analysis`; in-build
+suite 4,483 OK / 30 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.32-source.zip` sha256
+`f6cae57590d083e37308bc4a03b1046b8186617bdb0f98c88c9bc324404493d9`
+(14,426,224 bytes) - carries the MT-24 Entries / Blocked columns,
+`table_analysis.py` + `analysis_worker.py` (incl. the
+`active_workers()` live-worker registry), the mt23 worker-guard
+test fix and the reviewable `master_trainer/UI.md` - and portable
+ZIP `CT2Trainer-0.32-windows-portable.zip` sha256
+`3a7980ba04f60f7cb93edce3cf5c723ba609ff55a00b1f866079101d3b7bc986`
+(49,699,633 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`6dc34408c8e5ecec1c2215c45da27ea22cc5c5ce5a9629267778b172d44d3485`,
+16,966,114 bytes) ships next to the converter); superseded 0.31
+(build `native-20261105T080853Z-2e7f50a5`). The 0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
 now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
@@ -274,10 +287,12 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-06, 0.32 content on main - the 0.32
-build is cut from this content; 0.31 remains the latest verified
-release, build `native-20261105T080853Z-2e7f50a5` cut from `main` @
-`2def12f`, 2026-11-05, in-build suite 4,414 OK / 30 expected skips,
+**CT2Trainer (status 2026-11-08, 0.32 released - build
+`native-20261108T100731Z-a1d311e5` cut from `main` @ `bfcc3a3`,
+2026-11-08, in-build suite 4,483 OK / 30 expected skips,
+`ce_inputs: []`; superseded 0.31, build
+`native-20261105T080853Z-2e7f50a5` cut from `main` @ `2def12f`,
+2026-11-05, in-build suite 4,414 OK / 30 expected skips,
 `ce_inputs: []`) - 0.32 Master Trainer per-table entry count +
 blocked count via background plan analysis (MT-24: the waiting-view
 Entries / Blocked columns - the actionable and blocked record counts
@@ -620,7 +635,23 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261105T080853Z-2e7f50a5` (0.31,
+**Latest verified build:** `native-20261108T100731Z-a1d311e5` (0.32,
+cut from `main` @ `bfcc3a3`, 2026-11-08; in-build suite 4,483 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.32-source.zip` sha256
+`f6cae57590d083e37308bc4a03b1046b8186617bdb0f98c88c9bc324404493d9`
+(14,426,224 bytes) - carries the MT-24 Entries / Blocked columns,
+`table_analysis.py` + `analysis_worker.py` (incl. the
+`active_workers()` live-worker registry), the mt23 worker-guard
+test fix and the reviewable `master_trainer/UI.md` - and portable
+ZIP `CT2Trainer-0.32-windows-portable.zip` sha256
+`3a7980ba04f60f7cb93edce3cf5c723ba609ff55a00b1f866079101d3b7bc986`
+(49,699,633 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `6dc34408c8e5ecec1c2215c45da27ea22cc5c5ce5a9629267778b172d44d3485`,
+16,966,114 bytes) ships next to the converter)).
+0.32 ships the Master Trainer per-table entry count + blocked
+count via background plan analysis (MT-24). Superseded 0.31 build:
+`native-20261105T080853Z-2e7f50a5` (0.31,
 cut from `main` @ `2def12f`, 2026-11-05; in-build suite 4,414 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
 kept per gate; source ZIP `CT2Trainer-0.31-source.zip` sha256

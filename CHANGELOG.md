@@ -70,6 +70,27 @@ infrastructure:
   `blocked-catalog-031-status` (per-table count/reason/sha changes: 0).
   Docs in the same change: `master_trainer/ROADMAP.md` (0.32
   section), `CONCEPT.md`, `UI.md` (+ `ui_flow_text()`).
+- Build: 0.32 released as run
+  `native-20261108T100731Z-a1d311e5` (cut from `main` @ `bfcc3a3`,
+  2026-11-08): in-build suite 4,483 OK / 30 expected skips, 0
+  failures — fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.32-source.zip` sha256
+  `f6cae57590d083e37308bc4a03b1046b8186617bdb0f98c88c9bc324404493d9`
+  (14,426,224 bytes); portable ZIP
+  `CT2Trainer-0.32-windows-portable.zip` sha256
+  `3a7980ba04f60f7cb93edce3cf5c723ba609ff55a00b1f866079101d3b7bc986`
+  (49,699,633 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `6dc34408c8e5ecec1c2215c45da27ea22cc5c5ce5a9629267778b172d44d3485`,
+  16,966,114 bytes, ships next to the converter). The first build
+  attempt (`native-20261108T090044Z-5b70a3af`, preserved) failed the
+  in-build suite in `test_native_master_ui_mt23` — the MT-24
+  background worker still held a fixture table file open when the
+  test unlinked it (Windows refuses the delete while a reader holds
+  the file, WinError 32); the affected mt23 window tests now stop
+  the worker via the shared guard before fixture mutations (test-only
+  fix, no product code change), and the re-run full main suite on
+  the final tree is green (4,483 OK / 30 expected skips).
 
 ## 0.31 (2026-11-05)
 
