@@ -102,10 +102,14 @@ Group rows (process view) are display-only: no context menu.
 
 Left to right: the live status line (waiting for which process, the
 last error / tick detail) · `Attach: auto/ask` (the persisted attach
-mode) · **`Retry load`** (the re-arm; moved into the status bar in
-0.29 — it used to be a separate button below the status strip, easy to
-miss) · `Recent: <path>` (one-click re-load of the most recent table,
-only when a recent table exists).
+mode) · **`Auto-rescan: on/off`** (the persisted auto-rescan toggle,
+0.33 — while on, the tick re-runs the incremental folder scan every
+30 s so added / changed / removed tables show up without a manual
+F5; paused while a trainer is attached; a manual rescan or folder
+change restarts the 30 s clock) · **`Retry load`** (the re-arm; moved
+into the status bar in 0.29 — it used to be a separate button below
+the status strip, easy to miss) · `Recent: <path>` (one-click
+re-load of the most recent table, only when a recent table exists).
 
 ### What the poll tick does (visible behavior)
 
@@ -119,7 +123,14 @@ Every second the pure orchestrator decides:
   until the process exits, and **Retry load** re-arms it;
 - a load failure is named in the status line + an error dialog; the
   failed (name, PID) pair is remembered so the loop does not
-  hot-retry; Rescan / Retry load re-arm.
+  hot-retry; Rescan / Retry load re-arm;
+- while **Auto-rescan** is on (0.33, the persisted status-bar
+  toggle), the tick additionally re-runs the incremental folder scan
+  every 30 s — one stat pass with the manual Rescan's
+  `(size, mtime_ns)` + sha256 short-circuit — so added / changed /
+  removed tables show up in the list without a manual F5; the pass
+  has no status-line flash, it pauses while a trainer is attached,
+  and a manual rescan or folder change restarts the 30 s clock.
 
 ## 2) Loading a table
 

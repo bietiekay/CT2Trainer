@@ -81,11 +81,26 @@ its pure decision layer is ``table_analysis.py``; the worker
 pauses on trainer entry, resumes + re-queues with the waiting
 view, and the meta line shows "analyzing N table(s)".
 
+0.33 table folder auto-rescan (MT-25): the waiting view re-runs
+the existing incremental scan (the same ``(size, mtime_ns)`` + sha256
+short-circuit contract as the manual Rescan) on a bounded
+background interval (``AUTO_RESCAN_INTERVAL_SECONDS`` = 30 s) so
+added / changed / removed tables show up without a manual F5.
+The persisted on/off flag lives in the master state (schema 7,
+``auto_rescan``, default true) and is toggled by the status-bar
+"Auto-rescan: on/off" button.  The scan is one stat pass per
+interval (no OS file-watcher, cross-platform), pauses on trainer
+entry exactly like the MT-24 analysis worker, is restarted by a
+manual rescan or a folder change, and has zero effect on the load
+path (the MT-9 gate re-checks the table independently at load
+time).
+
 All waiting-mode logic lives in the pure orchestrator; this module is
 Tk wiring plus the picker Toplevel.
 """
 from __future__ import annotations
 
+import time
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
@@ -123,6 +138,14 @@ from .steamdeck_route import (attach_gate, require_engine_attach,
                               DeckAttachUnavailableError)
 
 WAIT_POLL_MS = 1000
+# MT-25 (0.33): the table-folder auto-rescan interval.  One bounded
+# incremental reconcile (the same (size, mtime_ns) + sha256 short-circuit
+# contract as the manual Rescan) per interval while the waiting view is
+# open and auto-rescan is enabled.  Deliberately conservative: the scan
+# is a single stat pass over the folder, so 30 s keeps the overhead
+# negligible while still surfacing added / changed / removed tables
+# quickly.  No OS file-watcher API - polling only, cross-platform.
+AUTO_RESCAN_INTERVAL_SECONDS = 30
 
 
 def _utc_now() -> str:
@@ -178,9 +201,13 @@ def ui_flow_text() -> str:
         "name (unbound last); group rows are display-only.\n"
         "   Status bar, left to right: the status line (waiting for "
         "which process, last error); Attach mode toggle (auto/ask, "
-        "persisted); Retry load (re-arm auto-load after a deferred "
-        "choice); Recent: <table> (one-click re-load, only when a "
-        "recent table exists).\n"
+        "persisted); Auto-rescan toggle (on/off, persisted - while "
+        "on the folder is re-scanned every 30 s so added / changed "
+        "/ removed tables show up without a manual F5; paused while "
+        "a trainer is attached, restarted by a manual rescan or "
+        "folder change); Retry load (re-arm auto-load after a "
+        "deferred choice); Recent: <table> (one-click re-load, only "
+        "when a recent table exists).\n"
         "   Keyboard: '/' focuses the filter; Esc clears it and returns "
         "focus to the list; F5 re-scans the folder; arrow keys navigate "
         "the list (it takes the initial focus); Enter or double-click "
@@ -191,7 +218,12 @@ def ui_flow_text() -> str:
         "   Auto-load: the poll tick asks the orchestrator.  A unique "
         "table-for-process match loads by itself (the documented "
         "default).  A multi-table match opens the picker.  Nothing "
-        "matches and the line keeps ticking.\n\n"
+        "matches and the line keeps ticking.\n"
+        "   Auto-rescan: while the toggle is on, the tick re-runs the "
+        "incremental folder scan every 30 s (one stat pass - added / "
+        "changed / removed tables show up automatically); a manual "
+        "rescan (F5) or a folder change restarts the interval.  "
+        "Paused while a trainer is attached.\n\n"
         "2) LOADING A TABLE\n"
         "   Any of these starts a load through the same path (named "
         "refusals included, never a crash): the auto-load above; the "
@@ -318,6 +350,10 @@ class MasterApp:
         # (the rows the MT-9 load gate would refuse right now); a fresh
         # or refused state home takes the documented default "".
         self.view_status = (state.view_status if state is not None else "")
+        # MT-25 (0.33): the persisted table-folder auto-rescan flag
+        # (schema 7); a fresh or refused state home takes the
+        # documented default True.
+        self.auto_rescan = (state.auto_rescan if state is not None else True)
         # MT-24 (0.32): the background plan-analysis cache under the
         # state home (table-analysis.json, schema 1, keyed by the
         # table content sha256).  The analysis worker is NOT started
@@ -376,7 +412,8 @@ class MasterApp:
                 view_sort=self.view_sort,
                 view_mode=self.view_mode,
                 pinned_tables=tuple(self.pinned_tables),
-                view_status=self.view_status),
+                view_status=self.view_status,
+                auto_rescan=self.auto_rescan),
                 self.state_path())
         except Exception:
             pass
@@ -386,6 +423,14 @@ class MasterApp:
         if mode not in (ATTACH_MODE_AUTO, ATTACH_MODE_ASK):
             raise ValueError("attach mode must be 'auto' or 'ask'")
         self.attach_mode = mode
+        self.persist_state()
+
+    def set_auto_rescan(self, enabled: bool) -> None:
+        """MT-25 (0.33): switch the persisted table-folder auto-rescan
+        flag and re-persist it."""
+        if type(enabled) is not bool:
+            raise ValueError("auto-rescan flag must be a boolean")
+        self.auto_rescan = enabled
         self.persist_state()
 
     def set_view_settings(self, filter_query: str | None, sort_mode: str,
@@ -580,6 +625,13 @@ class MasterWindow:
         self._choice_table_rel = None
         self._attach_pin = {"pid": None}
         self._attach_mode_btn = None
+        # MT-25 (0.33): the persisted auto-rescan toggle button + the
+        # interval clock (time.monotonic); a fresh waiting view arms the
+        # clock so the first auto pass is one interval after the view
+        # builds (the initial reconcile already happened in
+        # MasterApp.__init__).
+        self._auto_rescan_btn = None
+        self._last_auto_rescan = time.monotonic()
         self._table_frame = None
         # MT-19 (0.29): the single container that owns every
         # waiting-view widget.  It is torn down when the trainer takes
@@ -800,6 +852,18 @@ class MasterWindow:
                                        + self.app.attach_mode,
                                        self._toggle_attach_mode, width=14)
         self._attach_mode_btn.pack(side="right")
+        # MT-25 (0.33): the persisted auto-rescan toggle.  Packed after
+        # the attach button so it sits directly to its left.  While on,
+        # the waiting view re-runs the incremental scan every
+        # AUTO_RESCAN_INTERVAL_SECONDS (paused while a trainer is
+        # attached; a manual rescan or folder change restarts the
+        # interval clock).
+        self._auto_rescan_btn = button(status, "Auto-rescan: "
+                                        + ("on" if self.app.auto_rescan
+                                           else "off"),
+                                        self._toggle_auto_rescan,
+                                        width=16)
+        self._auto_rescan_btn.pack(side="right", padx=(0, 8))
         # MT-20 (0.29): the retry-load re-arm moves into the status bar
         # next to the other waiting controls (it used to be a separate
         # root-level button below the status strip, easy to miss).
@@ -1289,6 +1353,10 @@ class MasterWindow:
             self._status_var.set(text)
 
     def _rescan(self):
+        # MT-25 (0.33): a manual rescan restarts the auto-rescan
+        # interval clock, so the next automatic pass is a full interval
+        # away (no immediate double scan).
+        self._last_auto_rescan = time.monotonic()
         self._set_status("Rescanning…")
         self.app.rescan()
         self.app.save_index()
@@ -1296,11 +1364,25 @@ class MasterWindow:
         self._render_tables()
         self._set_status(self._waiting_status_line())
 
+    def _auto_rescan_tick(self):
+        """MT-25 (0.33): one interval re-scan - the same incremental
+        reconcile as the manual rescan (the (size, mtime_ns) + sha256
+        short-circuit) without the status-line flash (the line would
+        flap every interval).  rescan() also re-queues the MT-24
+        analysis for added or changed tables."""
+        self.app.rescan()
+        self.app.save_index()
+        self._meta_label.configure(text=self._meta_text())
+        self._render_tables()
+
     def _change_folder(self):
         folder = filedialog.askdirectory(
             parent=self.root, title="Choose the folder with your tables")
         if not folder:
             return
+        # MT-25 (0.33): der gewechselte Ordner wird neu gescannt; der
+        # Auto-Rescan-Zyklus startet damit ebenfalls neu.
+        self._last_auto_rescan = time.monotonic()
         self.app.set_folder(folder)
         self.app.save_index()
         self._folder_label.configure(text=self._folder_text())
@@ -1340,6 +1422,16 @@ class MasterWindow:
             # the loop keeps its cadence.
             self.root.after(self.app.poll_ms, self._poll)
             return
+        # MT-25 (0.33): the table-folder auto-rescan - one incremental
+        # reconcile per AUTO_RESCAN_INTERVAL_SECONDS while the waiting
+        # view is open and auto-rescan is enabled.  Trainer mode (early
+        # return above) and open pickers never reach this point, so the
+        # scan pauses on trainer entry exactly like the MT-24 worker.
+        if self.app.auto_rescan:
+            now = time.monotonic()
+            if now - self._last_auto_rescan >= AUTO_RESCAN_INTERVAL_SECONDS:
+                self._last_auto_rescan = now
+                self._auto_rescan_tick()
         try:
             outcome = self.app.orchestrator.tick()
             self._set_running(outcome.running)
@@ -1928,6 +2020,22 @@ class MasterWindow:
                           else " - auto-attach, smallest PID when "
                                "several instances run"))
 
+    def _toggle_auto_rescan(self):
+        """MT-25 (0.33): flip the persisted auto-rescan flag and refresh
+        the button."""
+        enabled = not self.app.auto_rescan
+        try:
+            self.app.set_auto_rescan(enabled)
+        except Exception as exc:
+            self._set_status("Auto-rescan change failed: " + str(exc))
+            return
+        if self._auto_rescan_btn is not None:
+            self._auto_rescan_btn.configure(text="Auto-rescan: "
+                                              + ("on" if enabled else "off"))
+        self._set_status("Auto-rescan: " + ("on" if enabled else "off")
+                         + " (every "
+                         + str(AUTO_RESCAN_INTERVAL_SECONDS) + " s)")
+
     def _detach_or_attach(self):
         """The MT-12 header action: detach the live target, or (while
         detached by the user) attach - in 'ask' mode via the process
@@ -2096,6 +2204,10 @@ class MasterWindow:
                 "restart the target before manual recovery.",
                 parent=self.root)
         self.app.orchestrator.deactivate()
+        # MT-25 (0.33): die neu gebaute Waiting-View armiert den
+        # Auto-Rescan-Zyklus frisch (erste Passage nach einem vollen
+        # Intervall; der Initial-Rescan lief schon beim Fensterbau).
+        self._last_auto_rescan = time.monotonic()
         # The MT-10/11 pickers are children of the root that is rebuilt
         # below; close them explicitly before the teardown.
         self._close_proc_picker()

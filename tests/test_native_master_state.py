@@ -53,7 +53,8 @@ class MasterStateSerializeTests(unittest.TestCase):
                           "view_sort": "name",
                           "view_mode": "list",
                           "pinned_tables": [],
-                          "view_status": ""})
+                          "view_status": "",
+                          "auto_rescan": True})
         canonical = json.dumps(document["payload"], sort_keys=True,
                                separators=(",", ":"), allow_nan=False,
                                ensure_ascii=True).encode("utf-8")
@@ -345,6 +346,48 @@ class MasterStateSerializeTests(unittest.TestCase):
                 master_state_from_bytes(
                     self._document(dict(base, view_status=bad)))
             self.assertIn("view_status", str(ctx.exception))
+
+    # -- schema 7 (0.33) auto-rescan flag (MT-25) --------------------------------
+
+    def test_auto_rescan_roundtrip(self):
+        state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
+                            auto_rescan=False)
+        raw = master_state_to_bytes(state)
+        self.assertEqual(master_state_from_bytes(raw), state)
+        # The document is byte-stable: same input, same bytes.
+        self.assertEqual(master_state_to_bytes(state), raw)
+
+    def test_schema6_document_promotes_on_load(self):
+        payload = {"schema": 6, "last_folder": "C:\\tables",
+                   "last_table": "sub\\gamea.ct",
+                   "attach_mode": ATTACH_MODE_ASK,
+                   "recent_tables": [{"path": "sub\\gamea.ct",
+                                      "at": "2026-11-08T12:00:00Z"}],
+                   "view_filter": "", "view_sort": "name",
+                   "view_mode": "list",
+                   "pinned_tables": ["sub\\gamea.ct"],
+                   "view_status": "ok"}
+        state = master_state_from_bytes(self._document(payload))
+        self.assertEqual(state.schema, MASTER_STATE_SCHEMA)
+        self.assertTrue(state.auto_rescan)
+        self.assertEqual(state.view_status, "ok")
+        self.assertEqual(state.pinned_tables, ("sub\\gamea.ct",))
+
+    def test_from_bytes_refuses_schema6_with_auto_rescan_field(self):
+        payload = {"schema": 6, "last_folder": None,
+                   "view_status": "ok", "auto_rescan": False}
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(payload))
+        self.assertIn("unknown fields", str(ctx.exception))
+        self.assertIn("auto_rescan", str(ctx.exception))
+
+    def test_from_bytes_refuses_bad_auto_rescan(self):
+        base = {"schema": MASTER_STATE_SCHEMA, "last_folder": None}
+        for bad in ("on", "off", 1, 0, None, [True]):
+            with self.assertRaises(MasterStateRefusal) as ctx:
+                master_state_from_bytes(
+                    self._document(dict(base, auto_rescan=bad)))
+            self.assertIn("auto_rescan", str(ctx.exception))
 
 
 class MasterStateFileTests(unittest.TestCase):

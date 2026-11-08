@@ -2,6 +2,37 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.33 (2026-11-08)
+
+Master Trainer table folder auto-rescan (MT-25) — the adopted 0.33
+candidate from the online evaluation (WeMod automatic game detection,
+game-trainer-manager (Karasukaigan) directory watching + auto-import,
+Cheat Happens Trainer Manager library-freshness lineage — see the
+Master Trainer ROADMAP "0.33 table folder auto-rescan" section):
+
+- **MT-25 table folder auto-rescan**: while the persisted
+  "Auto-rescan: on/off" status-bar toggle is on, the waiting view
+  re-runs the existing incremental scan every 30 s (one stat pass per
+  interval; the same `(size, mtime_ns)` + sha256 short-circuit
+  contract as the manual Rescan), so added / changed / removed tables
+  show up in the index and the view without a manual F5. No OS
+  file-watcher API — polling only, cross-platform. The toggle sits
+  next to the attach-mode toggle, re-persists on every change, and
+  raises the named `ValueError` for non-boolean values.
+  `master-settings.json` schema 6 → 7 (`auto_rescan`, strict bool,
+  documented default on); schema-6 documents promote on load, a
+  schema-6 document carrying the field is refused as an unknown
+  field. The 30 s interval clock restarts on a manual rescan, a
+  folder change, and the waiting-view rebuild (trainer round-trip);
+  the scan pauses while a trainer is attached (the tick early-
+  returns), exactly like the MT-24 analysis worker. The tick runs
+  through `rescan()`, so added / changed tables are also re-queued
+  for the MT-24 background analysis, and the tick carries no
+  status-line flash. Zero load-path effect (the MT-9 gate re-checks
+  the table independently at load time). +16 tests (4 state tests in
+  `tests/test_native_master_state.py`, 12 UI tests in
+  `tests/test_native_master_ui_mt25.py`).
+
 ## 0.32 (2026-11-06)
 
 Master Trainer per-table entry count + blocked count via background plan

@@ -1,6 +1,22 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-08. **0.32 released** (build
+**Updated:** 2026-11-08. **0.33 content on main (build cut
+pending)** - the 0.33 build is cut from this content; 0.32 remains
+the latest verified release (build `native-20261108T100731Z-a1d311e5`,
+cut from `main` @ `bfcc3a3`, 2026-11-08) - Master Trainer table
+folder auto-rescan MT-25 (the waiting view re-runs the existing
+incremental scan every 30 s while the persisted "Auto-rescan: on"
+status-bar toggle is on - added / changed / removed tables show up
+without a manual F5; the same (size, mtime_ns) + sha256 short-circuit
+contract as the manual Rescan, one stat pass per interval, polling
+only (no OS file-watcher), paused on trainer entry; the interval
+clock restarts on a manual rescan, a folder change, and the
+waiting-view rebuild; zero load-path effect - the MT-9 gate re-checks
+the table independently at load time; master-state schema 6 -> 7,
+`auto_rescan`, default on); +16 tests; full main suite 4,499 OK / 30
+expected skips; catalog zero delta
+`blocked-catalog-033-auto-rescan`; see the 0.33 section below.
+Superseded 0.32 (build
 `native-20261108T100731Z-a1d311e5`, cut from `main` @ `bfcc3a3`,
 2026-11-08) - Master Trainer per-table entry count +
 blocked count via background plan analysis MT-24 (the
@@ -537,6 +553,65 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.33 content on main (2026-11-08, root-direct; the 0.33 build is
+cut from this content, 0.32 remains the latest verified release):
+Master Trainer table folder auto-rescan (MT-25).**
+The 0.33 feature was evaluated against online trainer front-end and
+trainer-manager freshness patterns (WeMod automatic game detection -
+the front end keeps the found-game / content pairing current;
+game-trainer-manager (Karasukaigan) directory watching + auto-import
+of matching files; Cheat Happens Trainer Manager library-freshness
+lineage - see the Master Trainer ROADMAP "0.33 table folder
+auto-rescan" section). Adopted: MT-25, the table folder auto-rescan.
+Remaining candidates (evaluated, not yet adopted): per-table notes /
+tags (organize metadata) vs. the multi-root index (several table
+folders in one Master window) - the 0.34 candidate, decided at the
+next release; the MT-21 multi-column trainer grid; the game launch
+integration (needs install-path data).
+- **MT-25 table folder auto-rescan:** the waiting view re-runs the
+  existing incremental scan (the same `(size, mtime_ns)` + sha256
+  short-circuit contract as the manual Rescan) on a bounded
+  background interval (`AUTO_RESCAN_INTERVAL_SECONDS` = 30 s, one
+  stat pass per interval) so added / changed / removed tables show up
+  in the index and the view without a manual F5. No OS file-watcher
+  API - polling only, cross-platform. The persisted on/off flag lives
+  in the master state (`master-settings.json` schema 6 -> 7,
+  `auto_rescan`, strict bool, documented default on; schema-6
+  documents promote on load, a schema-6 document carrying the field
+  is refused as an unknown field) and is toggled by the status-bar
+  "Auto-rescan: on/off" button (next to the attach-mode toggle;
+  re-persists on every change; a non-bool change raises the named
+  `ValueError` and lands in the status line without a state change).
+  The scan pauses on trainer entry (the poll tick early-returns,
+  exactly like the MT-24 analysis worker) and while a picker is
+  open; the interval clock restarts on a manual rescan, a folder
+  change, and the waiting-view rebuild (trainer round-trip); the tick
+  runs through `rescan()`, so added / changed tables are also
+  re-queued for the MT-24 background analysis, and the tick carries
+  no status-line flash (the waiting line keeps its cadence). Zero
+  load-path effect - the MT-9 gate re-checks the table independently
+  at load time. Zero catalog effect (no table-parsing change).
+- +16 tests (4 in `tests/test_native_master_state.py`: the schema-7
+  `auto_rescan` round-trip, the schema-6 document promotion, the
+  schema-6-carries-the-field unknown-field refusal, the non-bool
+  refusal; 12 in `tests/test_native_master_ui_mt25.py` new: the
+  status-bar toggle (present + on/off text, flips the flag and
+  persists it, a failed change lands in the status line without a
+  state change), the interval clock (a poll after one interval
+  re-runs the incremental reconcile so a newly added table shows up,
+  without the "Rescanning…" flash; a disabled flag skips it; trainer
+  mode skips it; a manual rescan restarts the clock so no immediate
+  second pass)); full main suite 4,499 OK / 30 expected skips
+  (4,483 from the 0.32 content + 16 new); catalog remeasure
+  `blocked-catalog-033-auto-rescan` (3-chunk deep-equal audit over
+  the 151 reference tables, 2026-11-08): 151/151 loaded, 0 load
+  errors, 117,809 total / 116,756 supported / 60,161 staged /
+  103,607 actionable / 12,974 headings / 1,053 blocked - **zero
+  delta** vs `blocked-catalog-032-analysis` (per-table
+  count/reason/sha changes: 0); feature matrix unchanged (42/42,
+  7,475/7,475 over `w4b4-case30-20261020081722Z`); AP-11 0/6,143.
+  VERSION bumped to 0.33 with the changelog entry in the same change.
 
 **0.32 released (build `native-20261108T100731Z-a1d311e5`, cut from
 `main` @ `bfcc3a3`, 2026-11-08): Master Trainer per-table entry

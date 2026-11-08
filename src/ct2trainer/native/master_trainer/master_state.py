@@ -1,7 +1,7 @@
 """Master Trainer state document (last-used folder, preferences).
 
 The state home holds one small document, ``master-settings.json``, next to
-the tables index.  Schema 6 (0.31) carries:
+the tables index.  Schema 7 (0.33) carries:
 
 - ``last_folder``  - the last-used table folder ("ask on first start");
 - ``last_table``   - the last explicitly loaded table (MT-10), relative
@@ -28,18 +28,24 @@ the tables index.  Schema 6 (0.31) carries:
   (MT-23, 0.31): one of :data:`VIEW_STATUS_FILTERS` ("" = no filter,
   "ok" keeps the loadable rows, "attention" keeps the changed /
   missing / unreadable rows the MT-9 load gate would refuse right
-  now).
+  now);
+- ``auto_rescan``  - the persisted table-folder auto-rescan flag
+  (MT-25, 0.33): true (default) re-runs the incremental scan on a
+  bounded background interval while the waiting view is open, so
+  added / changed / removed tables show up without a manual rescan;
+  false keeps the manual-only behavior.
 
-Schema 5 (0.28) documents carry the first eight fields; schema 4
-(0.27) documents the first seven; schema 3 (0.26) documents the first
-six; schema 2 (0.25) documents the first four; schema 1 documents
-(last_folder only) are schema-2 ancestors.  All are promoted on load:
-the missing fields take their documented defaults (last_table=None,
-attach_mode "auto", recent_tables=[], view_filter "", view_sort
-"name", view_mode "list", pinned_tables=[], view_status ""), so
-existing state homes keep working unchanged.  A schema-5 document
-carrying a view_status field is refused as an unknown field (foreign
-schema, never silently promoted).
+Schema 6 (0.31/0.32) documents carry the first nine fields; schema 5
+(0.28) documents the first eight; schema 4 (0.27) documents the first
+seven; schema 3 (0.26) documents the first six; schema 2 (0.25)
+documents the first four; schema 1 documents (last_folder only) are
+schema-2 ancestors.  All are promoted on load: the missing fields take
+their documented defaults (last_table=None, attach_mode "auto",
+recent_tables=[], view_filter "", view_sort "name", view_mode "list",
+pinned_tables=[], view_status "", auto_rescan true), so existing state
+homes keep working unchanged.  A schema-6 document carrying an
+auto_rescan field is refused as an unknown field (foreign schema,
+never silently promoted).
 
 Persistence discipline mirrors the table index (``table_index.py``):
 canonical JSON payload with a sha256 checksum envelope, strict size bound,
@@ -54,11 +60,12 @@ import hashlib
 import json
 from pathlib import Path
 
-MASTER_STATE_SCHEMA = 6
-MASTER_STATE_SCHEMA_PREVIOUS = 5
-MASTER_STATE_SCHEMA_PREVIOUS2 = 4
-MASTER_STATE_SCHEMA_PREVIOUS3 = 3
-MASTER_STATE_SCHEMA_PREVIOUS4 = 2
+MASTER_STATE_SCHEMA = 7
+MASTER_STATE_SCHEMA_PREVIOUS = 6
+MASTER_STATE_SCHEMA_PREVIOUS2 = 5
+MASTER_STATE_SCHEMA_PREVIOUS3 = 4
+MASTER_STATE_SCHEMA_PREVIOUS4 = 3
+MASTER_STATE_SCHEMA_PREVIOUS5 = 2
 MASTER_STATE_SCHEMA_LEGACY = 1
 MASTER_STATE_FILENAME = "master-settings.json"
 MAX_MASTER_STATE_BYTES = 1024 * 1024
@@ -110,7 +117,7 @@ class MasterStateRefusal(ValueError):
 class MasterState:
     """One master-state document (schema-bound).
 
-    Only schema-6 documents may be written; schemas 1-5 are load-only
+    Only schema-7 documents may be written; schemas 1-6 are load-only
     (promoted on load, see the module docstring).
     """
 
@@ -124,6 +131,9 @@ class MasterState:
     view_mode: str = VIEW_MODES[0]
     pinned_tables: tuple[str, ...] = ()
     view_status: str = VIEW_STATUS_FILTERS[0]
+    # MT-25 (0.33): persisted table-folder auto-rescan flag; the
+    # documented default for fresh and promoted state homes is True.
+    auto_rescan: bool = True
 
 
 def empty_master_state() -> MasterState:
@@ -140,6 +150,7 @@ def _validate_state_dict(payload: dict) -> MasterState:
             MASTER_STATE_SCHEMA_PREVIOUS2,
             MASTER_STATE_SCHEMA_PREVIOUS3,
             MASTER_STATE_SCHEMA_PREVIOUS4,
+            MASTER_STATE_SCHEMA_PREVIOUS5,
             MASTER_STATE_SCHEMA_LEGACY):
         reasons.append(f"master-state schema {schema!r} is not supported "
                        f"(expected {MASTER_STATE_SCHEMA}, legacy "
@@ -147,22 +158,27 @@ def _validate_state_dict(payload: dict) -> MasterState:
                        f"{MASTER_STATE_SCHEMA_PREVIOUS2} / "
                        f"{MASTER_STATE_SCHEMA_PREVIOUS3} / "
                        f"{MASTER_STATE_SCHEMA_PREVIOUS4} / "
+                       f"{MASTER_STATE_SCHEMA_PREVIOUS5} / "
                        f"{MASTER_STATE_SCHEMA_LEGACY} are promoted on load)")
     allowed = {"schema", "last_folder"}
     if schema == MASTER_STATE_SCHEMA:
         allowed |= {"last_table", "attach_mode", "recent_tables",
                     "view_filter", "view_sort", "view_mode",
-                    "pinned_tables", "view_status"}
+                    "pinned_tables", "view_status", "auto_rescan"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS:
         allowed |= {"last_table", "attach_mode", "recent_tables",
                     "view_filter", "view_sort", "view_mode",
-                    "pinned_tables"}
+                    "pinned_tables", "view_status"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS2:
         allowed |= {"last_table", "attach_mode", "recent_tables",
-                    "view_filter", "view_sort", "view_mode"}
+                    "view_filter", "view_sort", "view_mode",
+                    "pinned_tables"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS3:
-        allowed |= {"last_table", "attach_mode", "recent_tables"}
+        allowed |= {"last_table", "attach_mode", "recent_tables",
+                    "view_filter", "view_sort", "view_mode"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS4:
+        allowed |= {"last_table", "attach_mode", "recent_tables"}
+    elif schema == MASTER_STATE_SCHEMA_PREVIOUS5:
         allowed |= {"last_table", "attach_mode"}
     unknown = sorted(set(payload) - allowed)
     if unknown:
@@ -227,6 +243,13 @@ def _validate_state_dict(payload: dict) -> MasterState:
         reasons.append("view_status must be one of "
                        + ", ".join(repr(m) for m in VIEW_STATUS_FILTERS)
                        + f" (got {view_status!r})")
+    # MT-25 (0.33): the auto-rescan flag.  Strict bool type (1/0 are
+    # not accepted); schema-6 documents never carry the field, so the
+    # documented default True applies on promotion.
+    auto_rescan = payload.get("auto_rescan", True)
+    if type(auto_rescan) is not bool:
+        reasons.append("auto_rescan must be a boolean (got "
+                       + repr(auto_rescan) + ")")
     pinned_raw = payload.get("pinned_tables")
     pinned: list[str] = []
     if pinned_raw is not None:
@@ -248,12 +271,13 @@ def _validate_state_dict(payload: dict) -> MasterState:
                 pinned = list(pinned_raw)
     if reasons:
         raise MasterStateRefusal(reasons)
-    # Promote older documents (schema 5 / 4 / 3 / 2 / 1) to the current
-    # schema with the documented defaults; the stored document itself
-    # stays untouched.  (The per-schema field sets were validated above,
-    # so the values are well-formed; the view_* defaults cover schema 3
-    # and older documents, the pinned_tables / view_status defaults
-    # cover schema 4 / 5 and older, schema 1 only ever carried
+    # Promote older documents (schema 6 / 5 / 4 / 3 / 2 / 1) to the
+    # current schema with the documented defaults; the stored document
+    # itself stays untouched.  (The per-schema field sets were validated
+    # above, so the values are well-formed; the view_* defaults cover
+    # schema 3 and older documents, the pinned_tables / view_status
+    # defaults cover schema 4 / 5 and older, the auto_rescan default
+    # covers schema 6 and older, schema 1 only ever carried
     # last_folder.)
     if schema == MASTER_STATE_SCHEMA_LEGACY:
         last_table = None
@@ -263,7 +287,7 @@ def _validate_state_dict(payload: dict) -> MasterState:
                        recent_tables=tuple(recent),
                        view_filter=view_filter, view_sort=view_sort,
                        view_mode=view_mode, pinned_tables=tuple(pinned),
-                       view_status=view_status)
+                       view_status=view_status, auto_rescan=auto_rescan)
 
 
 def master_state_to_bytes(state: MasterState) -> bytes:
@@ -287,7 +311,8 @@ def master_state_to_bytes(state: MasterState) -> bytes:
                           "view_sort": state.view_sort,
                           "view_mode": state.view_mode,
                           "pinned_tables": list(state.pinned_tables),
-                          "view_status": state.view_status})
+                          "view_status": state.view_status,
+                          "auto_rescan": state.auto_rescan})
     payload = {"schema": state.schema, "last_folder": state.last_folder,
                "last_table": state.last_table, "attach_mode": state.attach_mode,
                "recent_tables": [
@@ -297,7 +322,8 @@ def master_state_to_bytes(state: MasterState) -> bytes:
                "view_sort": state.view_sort,
                "view_mode": state.view_mode,
                "pinned_tables": list(state.pinned_tables),
-               "view_status": state.view_status}
+               "view_status": state.view_status,
+               "auto_rescan": state.auto_rescan}
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
                            allow_nan=False, ensure_ascii=True).encode("utf-8")
     digest = hashlib.sha256(canonical).hexdigest()

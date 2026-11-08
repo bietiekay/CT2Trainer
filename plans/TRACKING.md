@@ -486,6 +486,61 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- 0.33 Master Trainer table folder auto-rescan (MT-25)
+  (2026-11-08, root-direct on `main`; online-evaluated in
+  `master_trainer/ROADMAP.md`, the "0.33 table folder auto-rescan"
+  section - WeMod automatic game detection (the front end keeps the
+  found-game / content pairing current), game-trainer-manager
+  (Karasukaigan) directory watching + auto-import of matching files,
+  Cheat Happens Trainer Manager library-freshness lineage).
+  MT-25: the waiting view re-runs the existing incremental scan (the
+  same `(size, mtime_ns)` + sha256 short-circuit contract as the
+  manual Rescan, one stat pass per interval) on a bounded background
+  interval (`AUTO_RESCAN_INTERVAL_SECONDS` = 30 s) so added /
+  changed / removed tables show up in the index and the view without
+  a manual F5. No OS file-watcher API - polling only, cross-platform.
+  The persisted on/off flag lives in the master state
+  (`master-settings.json` schema 6 -> 7, `auto_rescan`, strict bool,
+  documented default on; schema-6 documents promote on load, a
+  schema-6 document carrying the field is refused as an unknown
+  field) and is toggled by the status-bar "Auto-rescan: on/off"
+  button (next to the attach-mode toggle; re-persists on every
+  change; a non-bool change raises the named `ValueError` and lands
+  in the status line without a state change). The scan pauses on
+  trainer entry (the poll tick early-returns, exactly like the MT-24
+  analysis worker) and while a picker is open; the interval clock
+  restarts on a manual rescan, a folder change, and the waiting-view
+  rebuild (trainer round-trip); the tick runs through `rescan()`, so
+  added / changed tables are also re-queued for the MT-24 background
+  analysis, and the tick carries no status-line flash (the waiting
+  line keeps its cadence). Zero load-path effect - the MT-9 gate
+  re-checks the table independently at load time. Zero catalog
+  effect (no table-parsing change). Remaining candidates
+  (evaluated, not yet adopted): per-table notes / tags (organize
+  metadata) vs. the multi-root index (several table folders in one
+  Master window) - the 0.34 candidate, decided at the next release;
+  the MT-21 multi-column trainer grid; the game launch integration
+  (needs install-path data). +16 tests (4 in
+  `tests/test_native_master_state.py`: the schema-7 `auto_rescan`
+  round-trip, the schema-6 document promotion, the
+  schema-6-carries-the-field unknown-field refusal, the non-bool
+  refusal; 12 in `tests/test_native_master_ui_mt25.py` new: the
+  status-bar toggle (present + on/off text, flips the flag and
+  persists it, a failed change lands in the status line without a
+  state change), the interval clock (a poll after one interval
+  re-runs the incremental reconcile so a newly added table shows up,
+  without the "Rescanning…" flash; a disabled flag skips it; trainer
+  mode skips it; a manual rescan restarts the clock so no immediate
+  second pass)); full main suite 4,499 OK / 30 expected skips
+  (4,483 from the 0.32 content + 16 new); catalog remeasure
+  `blocked-catalog-033-auto-rescan` (3-chunk deep-equal audit over
+  the 151 reference tables, 2026-11-08): 151/151 loaded, 0 load
+  errors, 117,809 total / 116,756 supported / 60,161 staged /
+  103,607 actionable / 12,974 headings / 1,053 blocked - **zero
+  delta** vs `blocked-catalog-032-analysis` (per-table
+  count/reason/sha changes: 0); feature matrix unchanged (42/42,
+  7,475/7,475 over `w4b4-case30-20261020081722Z`); AP-11 0/6,143.
+  VERSION 0.33 + CHANGELOG entry in the same change.
 - 0.32 Master Trainer per-table entry count + blocked count
   (background plan analysis) MT-24 (2026-11-06, root-direct on `main`;
   online-evaluated in `master_trainer/ROADMAP.md`, the "0.32

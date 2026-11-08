@@ -5,5 +5,5 @@ table parser and process snapshot helpers remain at the top level.
 Importing this package never executes table scripts or touches a game process.
 """
 
-__version__ = "0.32"
+__version__ = "0.33"
 REPO_URL = "https://github.com/bietiekay/CT2Trainer"

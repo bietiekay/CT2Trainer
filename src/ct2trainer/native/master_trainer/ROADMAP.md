@@ -35,6 +35,8 @@ main-branch libraries; none adds trainer functionality.
 
 | MT-24 | Per-table entry count + blocked count (background plan analysis) | done (2026-11-06) | `table_analysis.py` (new pure decision layer - no OS / index / state access): `counts_from_plan` (actionable = the supported script / value records of the compiled plan, i.e. the real cheat options; blocked = the blocked record count of the same analysis) + `blocked_reasons_from_plan` (top-8 stable named reasons with counts), `ok_analysis` / `failed_analysis` (bounded failure detail, 200 chars, the named `AnalysisRefusal`), `AnalysisStore` (`table-analysis.json`, schema 1, under the state home; keyed by the table content sha256, strict document validation - root / schema / key-set / checksum / timestamp / count - LRU-bounded to 1024 entries; a content change re-analyzes, an unchanged table reuses the cached entry). `analysis_worker.py` (one background daemon thread; queue bounded to 64, dedupe by content sha, only tables with a bound process name are queued; compiles through the tested `compile_table` plan path - no Lua execution, no target attach, no engine - the same static proof the corpus audit uses; a named compile failure is persisted as the failed entry). `master_ui.py`: the waiting view gains two columns between Detail and Size - Entries / Blocked (pending "…", failed "–", the counts once analyzed; a blocked count > 0 appends "N blocked" to the detail column after the pin marker); the meta line shows the live "analyzing N table(s)" figure while the queue has work; the worker lifecycle is owned by the waiting view (start + queue at the view build, pause on trainer entry after the attach gate, stop + clear on close) - display-side only, never blocks / alters / delays the MT-9 load gate, which re-checks the table independently at load time. `table_details.py`: the MT-22 details window gains the analysis block (entry count / blocked count / top blocked reasons / the failure detail). +69 tests (the pure-layer coverage in `tests/test_native_master_analysis.py` - incl. the `active_workers()` live-worker registry lifecycle - + the UI coverage in `tests/test_native_master_ui_mt24.py`; assertion updates in the existing master-UI test files for the two new columns; plus the cross-module test-isolation fix - the shared Tk test teardown stops every live plan-analysis worker, so window tests no longer leak worker threads into the later engine/timing modules). Catalog zero delta `blocked-catalog-032-analysis`. |
 
+| MT-25 | Table folder auto-rescan (waiting view) | done (2026-11-08) | `master_state.py`: `master-settings.json` schema 6 -> 7 - `auto_rescan` (strict bool, documented default true); schema-6 documents promote on load, a schema-6 document carrying the field is refused as an unknown field (the MT-11/15/16/18/23 discipline). `master_ui.py`: the persisted "Auto-rescan: on/off" status-bar toggle (next to the attach-mode toggle; a non-bool change raises the named `ValueError`, immediate persist); `MasterWindow._poll` re-runs the existing incremental reconcile every `AUTO_RESCAN_INTERVAL_SECONDS` (30 s) while the waiting view is open, auto-rescan is on, no trainer is attached, and no picker is open - one stat pass per interval, the same `(size, mtime_ns)` + sha256 short-circuit contract as the manual Rescan, no OS file-watcher API (polling only, cross-platform); added / changed / removed tables show up without a manual F5, and `rescan()` re-queues the MT-24 analysis for added / changed tables. The interval clock restarts on a manual rescan, a folder change, and the waiting-view rebuild (trainer round-trip); the tick has no status-line flash (the waiting line keeps its cadence). Zero load-path effect (the MT-9 gate re-checks the table independently at load time). +4 state tests (`tests/test_native_master_state.py`), +12 UI tests (`tests/test_native_master_ui_mt25.py`). |
+
 ## Online feature evaluation (2026-11-02)
 
 Web research (2026-11-02) evaluated all-in-one trainer front ends and
@@ -229,7 +231,8 @@ re-queues with the waiting view, and the meta line shows
 change), no new load-path behavior. Remaining candidates
 (unchanged): the MT-21 multi-column trainer grid.
 
-### 0.33 candidate: table folder auto-rescan (evaluated 2026-11-06)
+### 0.33 table folder auto-rescan (evaluated 2026-11-06, adopted +
+implemented 2026-11-08)
 
 The 0.33 evaluation (web research over trainer front-end and
 trainer-manager patterns - WeMod (automatic game detection: the
@@ -277,12 +280,26 @@ only)) maps onto the Master Trainer use case as follows:
   zero effect on the load path (the MT-9 gate re-checks the
   table independently at load time).
 
-Adopted for 0.33: the table folder auto-rescan (MT-25). Remaining
-candidates (evaluated, not yet adopted): the MT-21 multi-column
-trainer grid, per-table notes / tags (organize metadata - low
-value for the private 151-table corpus), the game launch
-integration (needs install-path data), the multi-root index
-(open design decision).
+Adopted for 0.33: the table folder auto-rescan (MT-25). Implemented
+as shipped (2026-11-08, 0.33 content on `main`): `master-settings.json`
+schema 6 -> 7 carries `auto_rescan` (strict bool, default true;
+schema-6 documents promote, a schema-6 document carrying the field
+is refused as an unknown field); the status-bar "Auto-rescan:
+on/off" toggle persists through `MasterApp.set_auto_rescan`; the
+poll tick re-runs the incremental reconcile every
+`AUTO_RESCAN_INTERVAL_SECONDS` (30 s, one stat pass, the manual
+Rescan's short-circuit contract) while the waiting view is open and
+no trainer is attached; the interval clock restarts on a manual
+rescan, a folder change, and the waiting-view rebuild; the tick has
+no status-line flash and re-queues the MT-24 analysis for added /
+changed tables; zero load-path effect (the MT-9 gate re-checks
+independently). +16 tests (4 state, 12 UI).
+
+0.34 candidate (next evaluation, not yet adopted): per-table notes
+/ tags (organize metadata) vs. the multi-root index (several table
+folders in one Master window) - decide at the next release.
+Remaining candidates (unchanged): the MT-21 multi-column trainer
+grid, the game launch integration (needs install-path data).
 
 ## Merge & release plan (historical + current)
 

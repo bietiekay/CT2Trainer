@@ -17,7 +17,8 @@ with the 0.29 release (2026-11-04); MT-22 (table details + live
 load-gate preview) with the 0.30 release (2026-11-04); MT-23 (per-table
 live status + color coding + status filter) with the 0.31 release
 (2026-11-05); MT-24 (per-table entry count + blocked count, background
-plan analysis) with the 0.32 release (2026-11-06). Design and
+plan analysis) with the 0.32 release (2026-11-06); MT-25 (table
+folder auto-rescan) with the 0.33 release (2026-11-08). Design and
 implementation notes; the working plan is [ROADMAP.md](ROADMAP.md) and
 the reviewable UI-flow document is [UI.md](UI.md).
 
@@ -118,6 +119,16 @@ auto-load/handoff loop around that existing engine.
   tables with a bound process name are analyzed; the worker
   pauses on trainer entry, resumes + re-queues with the waiting
   view, and the meta line shows "analyzing N table(s)".
+- 0.33 (MT-25): the **table folder auto-rescan** — while the
+  persisted **"Auto-rescan: on"** status-bar toggle is on, the poll
+  tick re-runs the incremental scan every 30 s (one stat pass; the
+  same `(size, mtime_ns)` + sha256 short-circuit as the manual
+  Rescan), so added / changed / removed tables show up in the list
+  without a manual F5. The flag persists in `master-settings.json`
+  (schema 7, `auto_rescan`, default on); the scan pauses while a
+  trainer is attached, is restarted by a manual rescan or a folder
+  change, and has zero effect on the load path (the MT-9 gate
+  re-checks the table independently at load time).
 - The table folder is taken from a CLI parameter, or from the
   last-used folder persisted in the state home (`master-settings.json`);
   only a genuinely first start (or a stale stored folder) shows the
