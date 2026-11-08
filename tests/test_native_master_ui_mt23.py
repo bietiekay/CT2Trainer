@@ -182,6 +182,20 @@ class _WaitingViewBase(unittest.TestCase):
                 (list(tree.item(r)["values"]), tree.item(r)["tags"])
                 for r in tree.get_children()}
 
+    def _stop_analysis(self, app):
+        # MT-24 (0.32) guard: the background plan-analysis worker reads
+        # the table files on its own thread (the real compile_table);
+        # Windows refuses to unlink a file a reader still holds
+        # (WinError 32 - observed in the 0.32 in-build suite), so stop
+        # the worker and reset the store before a test mutates or
+        # removes a table file (the MT-22 / MT-16 guard pattern).  The
+        # MT-23 status assertions are computed at render time and do
+        # not depend on the worker.
+        if app.analysis_worker is not None:
+            app.analysis_worker.stop()
+            app.analysis_worker = None
+        app.analysis_store.clear()
+
 
 @unittest.skipIf(tk is None, "tkinter not available")
 class StatusFilterWiringTests(_WaitingViewBase):
@@ -237,6 +251,7 @@ class StatusFilterWiringTests(_WaitingViewBase):
         (self.folder / "second.ct").write_text(CT_GAMEB, encoding="utf-8")
         app = self._app()
         self.window = self._window(app)
+        self._stop_analysis(app)
         (self.folder / "second.ct").write_bytes(b"x" * 500)
         self.window._status_filter = "attention"
         self.window._render_tables()
@@ -270,6 +285,7 @@ class LiveStatusWiringTests(_WaitingViewBase):
         (self.folder / "second.ct").write_text(CT_GAMEB, encoding="utf-8")
         app = self._app()
         self.window = self._window(app)
+        self._stop_analysis(app)
         (self.folder / "second.ct").write_bytes(b"x" * 500)
         self.window._render_tables()
         rows = self._rows()
@@ -286,6 +302,7 @@ class LiveStatusWiringTests(_WaitingViewBase):
         (self.folder / "second.ct").write_text(CT_GAMEB, encoding="utf-8")
         app = self._app()
         self.window = self._window(app)
+        self._stop_analysis(app)
         (self.folder / "second.ct").unlink()
         self.window._render_tables()
         values, tags = self._rows()["second.ct"]
@@ -301,6 +318,7 @@ class LiveStatusWiringTests(_WaitingViewBase):
         app = _make_app(self.folder, self.state_home, [process])
         app.orchestrator.suppress("gamea.exe", 7)
         self.window = self._window(app)
+        self._stop_analysis(app)
         self.window._poll()
         rows = self._rows()
         self.assertEqual(rows["zeta.ct"][0][2], "running")
@@ -314,6 +332,7 @@ class LiveStatusWiringTests(_WaitingViewBase):
         (self.folder / "second.ct").write_text(CT_GAMEB, encoding="utf-8")
         app = self._app()
         self.window = self._window(app)
+        self._stop_analysis(app)
         meta = self.window._meta_text()
         self.assertNotIn("attention:", meta)
         self.assertNotIn("status filter:", meta)
