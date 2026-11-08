@@ -1,9 +1,8 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-08. **0.33 content on main (build cut
-pending)** - the 0.33 build is cut from this content; 0.32 remains
-the latest verified release (build `native-20261108T100731Z-a1d311e5`,
-cut from `main` @ `bfcc3a3`, 2026-11-08) - Master Trainer table
+**Updated:** 2026-11-08. **0.33 released** (build
+`native-20261108T200230Z-b0167049`, cut from `main` @ `6e71739`,
+2026-11-08) - Master Trainer table
 folder auto-rescan MT-25 (the waiting view re-runs the existing
 incremental scan every 30 s while the persisted "Auto-rescan: on"
 status-bar toggle is on - added / changed / removed tables show up
@@ -14,7 +13,8 @@ clock restarts on a manual rescan, a folder change, and the
 waiting-view rebuild; zero load-path effect - the MT-9 gate re-checks
 the table independently at load time; master-state schema 6 -> 7,
 `auto_rescan`, default on); +16 tests; full main suite 4,499 OK / 30
-expected skips; catalog zero delta
+expected skips; in-build suite 4,499 OK / 30 expected skips,
+`ce_inputs: []`; catalog zero delta
 `blocked-catalog-033-auto-rescan`; see the 0.33 section below.
 Superseded 0.32 (build
 `native-20261108T100731Z-a1d311e5`, cut from `main` @ `bfcc3a3`,
@@ -105,9 +105,25 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.32, build
-`native-20261108T100731Z-a1d311e5` (cut from `main` @ `bfcc3a3`,
-2026-11-08): the 0.32 Master Trainer per-table entry count +
+**Latest verified release:** 0.33, build
+`native-20261108T200230Z-b0167049` (cut from `main` @ `6e71739`,
+2026-11-08): the 0.33 Master Trainer table folder auto-rescan
+release (MT-25) - in-build suite 4,499 OK / 30 expected
+skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; source ZIP `CT2Trainer-0.33-source.zip` sha256
+`4528d1d0f2ee269fb2ee7ec470d9e9711b3c284bffe6cf582f7dafa7431756f2`
+(14,433,388 bytes) - carries the MT-25 auto-rescan
+(`master_state.py` schema 7, the 30 s auto-rescan tick,
+`tests/test_native_master_ui_mt25.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.33-windows-portable.zip` sha256
+`5e0244791b6f31a2e2219d5c33541c978ca4c0d399c8e7a234cb0c16e8ccb3d7`
+(49,703,149 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
+16,968,879 bytes) ships next to the converter). Superseded 0.32,
+build `native-20261108T100731Z-a1d311e5` (cut from `main` @
+`bfcc3a3`, 2026-11-08): the 0.32 Master Trainer per-table entry
+count +
 blocked count (background plan analysis) release (MT-24) - in-build
 suite 4,483 OK / 30 expected skips,
 `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
@@ -554,9 +570,9 @@ CE asset bytes are copied.
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
 
-**0.33 content on main (2026-11-08, root-direct; the 0.33 build is
-cut from this content, 0.32 remains the latest verified release):
-Master Trainer table folder auto-rescan (MT-25).**
+**0.33 released (build `native-20261108T200230Z-b0167049`, cut from
+`main` @ `6e71739`, 2026-11-08): Master Trainer table folder
+auto-rescan (MT-25).**
 The 0.33 feature was evaluated against online trainer front-end and
 trainer-manager freshness patterns (WeMod automatic game detection -
 the front end keeps the found-game / content pairing current;
@@ -611,7 +627,22 @@ integration (needs install-path data).
   delta** vs `blocked-catalog-032-analysis` (per-table
   count/reason/sha changes: 0); feature matrix unchanged (42/42,
   7,475/7,475 over `w4b4-case30-20261020081722Z`); AP-11 0/6,143.
-  VERSION bumped to 0.33 with the changelog entry in the same change.
+  VERSION bumped to 0.33 with the changelog entry in the same
+  change. The 0.33 build `native-20261108T200230Z-b0167049` was
+  cut from `main` @ `6e71739` (2026-11-08): in-build suite 4,499
+  OK / 30 expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.33-source.zip` sha256
+  `4528d1d0f2ee269fb2ee7ec470d9e9711b3c284bffe6cf582f7dafa7431756f2`
+  (14,433,388 bytes) - carries the MT-25 auto-rescan
+  (`master_state.py` schema 7, the 30 s auto-rescan tick,
+  `tests/test_native_master_ui_mt25.py`) and the reviewable
+  `master_trainer/UI.md` - and portable ZIP
+  `CT2Trainer-0.33-windows-portable.zip` sha256
+  `5e0244791b6f31a2e2219d5c33541c978ca4c0d399c8e7a234cb0c16e8ccb3d7`
+  (49,703,149 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
+  16,968,879 bytes, ships next to the converter).
 
 **0.32 released (build `native-20261108T100731Z-a1d311e5`, cut from
 `main` @ `bfcc3a3`, 2026-11-08): Master Trainer per-table entry

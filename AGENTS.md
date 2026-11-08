@@ -173,8 +173,9 @@ ZIP `CT2Trainer-0.32-windows-portable.zip` sha256
 (49,699,633 bytes; the frozen `CT2Trainer-Master.exe` (sha256
 `6dc34408c8e5ecec1c2215c45da27ea22cc5c5ce5a9629267778b172d44d3485`,
 16,966,114 bytes) ships next to the converter); superseded 0.31
-(build `native-20261105T080853Z-2e7f50a5`). 0.33 content on main
-(2026-11-08, root-direct): the Master Trainer table folder
+(build `native-20261105T080853Z-2e7f50a5`). 0.33 released (build
+`native-20261108T200230Z-b0167049` cut from `main` @ `6e71739`,
+2026-11-08): the Master Trainer table folder
 auto-rescan (MT-25: the waiting view re-runs the existing
 incremental scan every 30 s while the persisted "Auto-rescan: on"
 status-bar toggle is on - added / changed / removed tables show up
@@ -183,10 +184,24 @@ contract as the manual Rescan, one stat pass per interval, polling
 only (no OS file-watcher), paused on trainer entry; the interval clock
 restarts on a manual rescan, a folder change, and the waiting-view
 rebuild; zero load-path effect - the MT-9 gate re-checks the table
-independently at load time; master-state schema 6 -> 7, auto_rescan);
-+16 tests, full main suite 4,499 OK / 30 expected skips, catalog zero
-delta `blocked-catalog-033-auto-rescan`; the 0.33 build is cut from
-this content (0.32 remains the latest verified release). The 0.16
+independently at load time; master-state schema 6 -> 7, auto_rescan,
+default on); +16 tests, full main suite 4,499 OK / 30 expected
+skips, catalog zero delta `blocked-catalog-033-auto-rescan`;
+in-build suite 4,499 OK / 30 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.33-source.zip` sha256
+`4528d1d0f2ee269fb2ee7ec470d9e9711b3c284bffe6cf582f7dafa7431756f2`
+(14,433,388 bytes) - carries the MT-25 auto-rescan
+(`master_state.py` schema 7, the 30 s auto-rescan tick,
+`tests/test_native_master_ui_mt25.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.33-windows-portable.zip` sha256
+`5e0244791b6f31a2e2219d5c33541c978ca4c0d399c8e7a234cb0c16e8ccb3d7`
+(49,703,149 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
+16,968,879 bytes) ships next to the converter); superseded 0.32
+(build `native-20261108T100731Z-a1d311e5` cut from `main` @
+`bfcc3a3`, 2026-11-08). The 0.16
 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
@@ -301,10 +316,12 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-08, 0.33 content on main - the 0.33
-build is cut from this content; 0.32 remains the latest verified
-release, build `native-20261108T100731Z-a1d311e5` cut from `main` @
-`bfcc3a3`, 2026-11-08, in-build suite 4,483 OK / 30 expected skips,
+**CT2Trainer (status 2026-11-08, 0.33 released - build
+`native-20261108T200230Z-b0167049` cut from `main` @ `6e71739`,
+2026-11-08, in-build suite 4,499 OK / 30 expected skips,
+`ce_inputs: []`; superseded 0.32, build
+`native-20261108T100731Z-a1d311e5` cut from `main` @ `bfcc3a3`,
+2026-11-08, in-build suite 4,483 OK / 30 expected skips,
 `ce_inputs: []`) - 0.33 Master Trainer table folder auto-rescan
 (MT-25: the waiting view re-runs the existing incremental scan every
 30 s while the persisted "Auto-rescan: on" status-bar toggle is on -
@@ -661,7 +678,22 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261108T100731Z-a1d311e5` (0.32,
+**Latest verified build:** `native-20261108T200230Z-b0167049` (0.33,
+cut from `main` @ `6e71739`, 2026-11-08; in-build suite 4,499 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.33-source.zip` sha256
+`4528d1d0f2ee269fb2ee7ec470d9e9711b3c284bffe6cf582f7dafa7431756f2`
+(14,433,388 bytes) - carries the MT-25 auto-rescan
+(`master_state.py` schema 7, the 30 s auto-rescan tick,
+`tests/test_native_master_ui_mt25.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.33-windows-portable.zip` sha256
+`5e0244791b6f31a2e2219d5c33541c978ca4c0d399c8e7a234cb0c16e8ccb3d7`
+(49,703,149 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
+16,968,879 bytes) ships next to the converter)).
+0.33 ships the Master Trainer table folder auto-rescan (MT-25).
+Superseded 0.32 build: `native-20261108T100731Z-a1d311e5` (0.32,
 cut from `main` @ `bfcc3a3`, 2026-11-08; in-build suite 4,483 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
 kept per gate; source ZIP `CT2Trainer-0.32-source.zip` sha256
@@ -674,9 +706,7 @@ ZIP `CT2Trainer-0.32-windows-portable.zip` sha256
 `3a7980ba04f60f7cb93edce3cf5c723ba609ff55a00b1f866079101d3b7bc986`
 (49,699,633 bytes; the frozen `CT2Trainer-Master.exe`
 (sha256 `6dc34408c8e5ecec1c2215c45da27ea22cc5c5ce5a9629267778b172d44d3485`,
-16,966,114 bytes) ships next to the converter)).
-0.32 ships the Master Trainer per-table entry count + blocked
-count via background plan analysis (MT-24). Superseded 0.31 build:
+16,966,114 bytes) ships next to the converter). Superseded 0.31 build:
 `native-20261105T080853Z-2e7f50a5` (0.31,
 cut from `main` @ `2def12f`, 2026-11-05; in-build suite 4,414 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately

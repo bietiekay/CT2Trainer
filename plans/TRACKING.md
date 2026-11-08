@@ -540,7 +540,18 @@ game-facing action.
   delta** vs `blocked-catalog-032-analysis` (per-table
   count/reason/sha changes: 0); feature matrix unchanged (42/42,
   7,475/7,475 over `w4b4-case30-20261020081722Z`); AP-11 0/6,143.
-  VERSION 0.33 + CHANGELOG entry in the same change.
+  VERSION 0.33 + CHANGELOG entry in the same change. The 0.33 build
+  `native-20261108T200230Z-b0167049` cut from `main` @ `6e71739`
+  (2026-11-08): in-build suite 4,499 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.33-source.zip` sha256
+  `4528d1d0f2ee269fb2ee7ec470d9e9711b3c284bffe6cf582f7dafa7431756f2`
+  (14,433,388 bytes), portable ZIP
+  `CT2Trainer-0.33-windows-portable.zip` sha256
+  `5e0244791b6f31a2e2219d5c33541c978ca4c0d399c8e7a234cb0c16e8ccb3d7`
+  (49,703,149 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
+  16,968,879 bytes, ships next to the converter).
 - 0.32 Master Trainer per-table entry count + blocked count
   (background plan analysis) MT-24 (2026-11-06, root-direct on `main`;
   online-evaluated in `master_trainer/ROADMAP.md`, the "0.32

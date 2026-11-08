@@ -32,6 +32,22 @@ Master Trainer ROADMAP "0.33 table folder auto-rescan" section):
   the table independently at load time). +16 tests (4 state tests in
   `tests/test_native_master_state.py`, 12 UI tests in
   `tests/test_native_master_ui_mt25.py`).
+  Docs in the same change: `master_trainer/ROADMAP.md` (0.33
+  section + the 0.34 candidate note), `CONCEPT.md`, `UI.md` (+ the
+  auto-rescan line in `ui_flow_text()`).
+- Build: 0.33 released as run
+  `native-20261108T200230Z-b0167049` (cut from `main` @ `6e71739`,
+  2026-11-08): in-build suite 4,499 OK / 30 expected skips, 0
+  failures — fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.33-source.zip` sha256
+  `4528d1d0f2ee269fb2ee7ec470d9e9711b3c284bffe6cf582f7dafa7431756f2`
+  (14,433,388 bytes); portable ZIP
+  `CT2Trainer-0.33-windows-portable.zip` sha256
+  `5e0244791b6f31a2e2219d5c33541c978ca4c0d399c8e7a234cb0c16e8ccb3d7`
+  (49,703,149 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
+  16,968,879 bytes, ships next to the converter).
 
 ## 0.32 (2026-11-06)
 
