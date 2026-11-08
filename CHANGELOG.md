@@ -19,7 +19,7 @@ Master Trainer ROADMAP "0.33 table folder auto-rescan" section):
   file-watcher API — polling only, cross-platform. The toggle sits
   next to the attach-mode toggle, re-persists on every change, and
   raises the named `ValueError` for non-boolean values.
-  `master-settings.json` schema 6 → 7 (`auto_rescan`, strict bool,
+  `master-settings.json` schema 6 -> 7 (`auto_rescan`, strict bool,
   documented default on); schema-6 documents promote on load, a
   schema-6 document carrying the field is refused as an unknown
   field. The 30 s interval clock restarts on a manual rescan, a
