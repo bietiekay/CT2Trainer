@@ -16,9 +16,10 @@ re-scan, the initial table-list focus, retry-load in the status bar)
 with the 0.29 release (2026-11-04); MT-22 (table details + live
 load-gate preview) with the 0.30 release (2026-11-04); MT-23 (per-table
 live status + color coding + status filter) with the 0.31 release
-(2026-11-04). Design and implementation notes; the working plan is
-[ROADMAP.md](ROADMAP.md) and the reviewable UI-flow document is
-[UI.md](UI.md).
+(2026-11-05); MT-24 (per-table entry count + blocked count, background
+plan analysis) with the 0.32 release (2026-11-06). Design and
+implementation notes; the working plan is [ROADMAP.md](ROADMAP.md) and
+the reviewable UI-flow document is [UI.md](UI.md).
 
 ## What it is
 
@@ -100,6 +101,23 @@ auto-load/handoff loop around that existing engine.
   attention”** header cycle (schema 6, `view_status`) filters the
   list to the loadable rows or to the rows the gate would refuse
   right now; the meta line carries the live `attention: N` count.
+- 0.32 (MT-24): the tree gains the **Entries** / **Blocked**
+  columns — the per-table entry counts of the plan compile,
+  computed in the background by one daemon thread
+  (`analysis_worker.py`) through the tested `compile_table` plan
+  path (no Lua execution, no target attach): Entries is the
+  actionable count (the supported script / value records — the
+  real cheat options), Blocked the blocked-record count. The
+  columns show "…" while the analysis is pending and "–" on a
+  named compile failure (the details window shows the reason); a
+  blocked count > 0 adds the bounded "N blocked" note to the
+  detail column (after the pin marker). The results persist in
+  `table-analysis.json` (schema 1, under the state home, keyed by
+  the table content sha256, LRU-bounded — `table_analysis.py`),
+  so a table is re-analyzed only after a content change; only
+  tables with a bound process name are analyzed; the worker
+  pauses on trainer entry, resumes + re-queues with the waiting
+  view, and the meta line shows "analyzing N table(s)".
 - The table folder is taken from a CLI parameter, or from the
   last-used folder persisted in the state home (`master-settings.json`);
   only a genuinely first start (or a stale stored folder) shows the

@@ -382,12 +382,17 @@ class MasterWindowTests(unittest.TestCase):
         values = list(window._table_tree.item(
             window._table_tree.get_children()[0])["values"])
         self.assertEqual(values[:4], ["a.ct", "GameZ.exe", "ok", ""])
+        # MT-24 (0.32): the Entries / Blocked columns sit between
+        # Detail and Size - pending "…" while the background plan
+        # analysis has not re-rendered yet (the MT-24 test module
+        # covers the count values themselves).
+        self.assertEqual(values[4:6], ["…", "…"])
         # MT-15 (0.26): the row gained Size / Modified / Last-used.
-        self.assertEqual(len(values), 7)
-        self.assertTrue(values[4].endswith((" B", " KB", " MB")), values[4])
+        self.assertEqual(len(values), 9)
+        self.assertTrue(values[6].endswith((" B", " KB", " MB")), values[6])
         self.assertTrue(re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}",
-                                     values[5]), values[5])
-        self.assertEqual(values[6], "")
+                                     values[7]), values[7])
+        self.assertEqual(values[8], "")
         # The status line is back on the (rebound) waiting line.
         self.assertEqual(window._status_var.get(),
                          window._waiting_status_line())

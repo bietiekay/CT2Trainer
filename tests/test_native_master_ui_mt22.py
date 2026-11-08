@@ -104,7 +104,10 @@ class DetailLinesTests(unittest.TestCase):
             "Table", "Folder", "Size", "Modified",
             "Bound process(es)", "Index status", "Pinned",
             "Last used", "Running now", "Content sha256 (last scan)",
-            "Load gate (live re-check)"])
+            "Load gate (live re-check)",
+            # MT-24 (0.32): the entry-analysis block (pending marker
+            # when no analysis entry is passed).
+            "Entry analysis"])
         values = dict(lines)
         self.assertEqual(values["Table"], "a/b.ct")
         self.assertEqual(values["Folder"], "C:\\tables")
@@ -119,6 +122,9 @@ class DetailLinesTests(unittest.TestCase):
             values["Content sha256 (last scan)"], "0123456789ab" + "...")
         self.assertEqual(values["Load gate (live re-check)"],
                          "OK (loadable - the file matches the last scan)")
+        self.assertEqual(values["Entry analysis"],
+                         "not analyzed yet (the background analysis "
+                         "is pending)")
 
     def test_unreadable_entry_shows_the_named_reason(self):
         lines = table_details.table_detail_lines(
@@ -259,6 +265,13 @@ class DetailsWindowTests(_DetailsBase):
     def test_window_opens_with_the_indexed_facts(self):
         app = self._app()
         window = self._window(app)
+        # MT-24 (0.32): keep the background plan analysis from racing
+        # the assertion - stop the worker and reset the store, so the
+        # entry is deterministically pending.
+        if app.analysis_worker is not None:
+            app.analysis_worker.stop()
+            app.analysis_worker = None
+        app.analysis_store.clear()
         window._running = (self.process,)
         window._open_table_details("zeta.ct")
         win = window._details_win
@@ -267,7 +280,7 @@ class DetailsWindowTests(_DetailsBase):
         self.addCleanup(win.destroy)
         self.assertEqual(win.title(), "Table details - zeta.ct")
         values = self._value_rows(win)
-        self.assertEqual(len(values), 11)
+        self.assertEqual(len(values), 12)
         entry = app.index.get("zeta.ct")
         self.assertEqual(values[0], "zeta.ct")
         self.assertEqual(values[1], app.folder)
@@ -281,6 +294,10 @@ class DetailsWindowTests(_DetailsBase):
         self.assertEqual(values[9], entry.sha256[:12] + "...")
         self.assertEqual(
             values[10], "OK (loadable - the file matches the last scan)")
+        # MT-24 (0.32): the pending analysis entry is displayed.
+        self.assertEqual(values[11],
+                         "not analyzed yet (the background analysis "
+                         "is pending)")
 
     def test_window_lifts_on_second_open(self):
         app = self._app()

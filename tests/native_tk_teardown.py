@@ -45,6 +45,31 @@ else:
     TclError = tk.TclError
 
 
+def release_master_analysis_workers():
+    """Stop every live Master-Trainer plan-analysis worker.
+
+    MT-24 (0.32): window tests build the waiting view (which starts
+    the background ``AnalysisWorker``) but never call ``close()``.  A
+    leaked worker thread keeps doing plan-compiles (and its
+    allocations run cyclic GC on a foreign thread - the same
+    wrong-thread finalization hazard this module exists to avoid,
+    cf. the 0.25 fault dump) and destabilizes later tests in the
+    same process.  ``stop()`` is idempotent and bounded, so calling
+    this from every Tk teardown is safe; non-Master tests find no
+    live workers and it is a no-op.
+    """
+    try:
+        from ct2trainer.native.master_trainer.analysis_worker import (
+            active_workers)
+    except ImportError:
+        return
+    for worker in active_workers():
+        try:
+            worker.stop()
+        except Exception:
+            pass
+
+
 def force_root_release(box, clear=()):
     """Tear the root in ``box`` down on the calling (creator) thread.
 
@@ -56,6 +81,7 @@ def force_root_release(box, clear=()):
     collection, so no test-side reference keeps the root/interpreter
     cycle alive past the test.
     """
+    release_master_analysis_workers()
     root = box[0]
     box[0] = None
     if root is None:

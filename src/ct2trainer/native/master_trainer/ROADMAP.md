@@ -33,6 +33,8 @@ main-branch libraries; none adds trainer functionality.
 | MT-22 | Table details + live load-gate preview (waiting view) | done (2026-11-04) | `table_details.py` (new pure builder - the ordered (label, value) rows of the read-only details window: Table / Folder / Size / Modified / Bound process(es) / Index status / Pinned / Last used / Running now / Content sha256 (last scan, first 12 hex + "...") / Load gate (live re-check); `format_size` / `format_mtime` / `gate_line` formatters with named fallbacks). `master_ui.py`: the row context menu offers **"Table details"** first - one read-only Toplevel with the indexed facts for the row plus the on-demand `gate_table_for_load` re-check (the same pass MT-9 runs at load time; refusal = stable named code + displayable detail), so a table can be inspected and its current loadability checked before loading it; single window (a second open lifts + focuses instead of duplicating), transient, non-resizable, closed on trainer entry with the rest of the waiting view; the only I/O is the bounded gate re-check under the load limit. +16 tests (pure builder coverage + the Tk wiring: menu order through a recording `tk.Menu` subclass, window rows incl. the live gate line, lift on second open, trainer-entry close, named refusal display - all in `tests/test_native_master_ui_mt22.py`). |
 | MT-23 | Per-table live status + color coding + status filter (waiting view) | done (2026-11-04) | `table_status.py` (new pure decision layer - no OS access, no index mutation, no orchestrator or state access): `row_file_status(entry, fingerprint)` derives the live file state of one indexed table from the index entry (last-scan `(size, mtime_ns)` + cached status/detail) and the current on-disk fingerprint - `missing` (file gone / stat fails) / `changed` (fingerprint drift) / `unreadable` (the last scan could not read/parse it, the named detail surfaces) / `ok`; cheapest fact first, live facts outrank the cached scan state - the same order the MT-9 gate proves at load time. `row_status` adds the process state: a running bound process shows `running` only for a loadable file (a live process cannot make a changed / missing / unreadable table loadable). `row_tag` maps code → tree color tag ("" default for ok / running, "attention-warn" for changed, "attention-error" for missing / unreadable; unknown codes fall back to the default). `filter_rows_by_status` reshapes the ordered row set per the persisted mode - "" (all, the identity), "ok" (the loadable rows), "attention" (the rows the gate would refuse right now); input order preserved, an unknown mode raises the named `ValueError`. `master_state.py`: `master-settings.json` schema 5 → 6 - `view_status` (one of `VIEW_STATUS_FILTERS`, mirrored by `table_status.VIEW_STATUS_FILTERS`); schema-5 documents promote with `view_status=""`, a schema-5 document carrying the field is refused as an unknown field (the MT-11/15/16/18 discipline). `master_ui.py`: one bounded `stat` per visible row per render (`_live_fingerprint` / `_row_status`) feeds the live Status column (ok / running / changed / missing / unreadable) + the row color coding (the two tree tags configured in `_build_waiting_view`: amber `#e5c07b` for changed, red `#ff7b72` for missing / unreadable); the persisted "Status: all/ok/attention" header cycle button (between the view button and the filter entry; `MasterApp.set_view_settings` gains the 4th parameter `status_filter` - validated + re-persisted, and every existing change point passes the current mode through); `_visible_tables()` applies the status filter between the query filter and the pin float; the meta line gains the active `status filter: X` part and the live `attention: N` count (how many indexed tables the MT-9 gate would refuse right now). Zero new load-path behavior, zero catalog effect. +4 state tests (`tests/test_native_master_state.py`: schema-6 round trip, schema-5 promotion, the unknown-field refusal, the named value refusals), +24 tests in `tests/test_native_master_ui_mt23.py` (the pure layer + the Tk wiring: cycle / persist / restore, the other UI changes keeping the mode, the live changed / missing flags + tags, the ok / attention row shaping, the running-loses-to-attention contract, the meta line). |
 
+| MT-24 | Per-table entry count + blocked count (background plan analysis) | done (2026-11-06) | `table_analysis.py` (new pure decision layer - no OS / index / state access): `counts_from_plan` (actionable = the supported script / value records of the compiled plan, i.e. the real cheat options; blocked = the blocked record count of the same analysis) + `blocked_reasons_from_plan` (top-8 stable named reasons with counts), `ok_analysis` / `failed_analysis` (bounded failure detail, 200 chars, the named `AnalysisRefusal`), `AnalysisStore` (`table-analysis.json`, schema 1, under the state home; keyed by the table content sha256, strict document validation - root / schema / key-set / checksum / timestamp / count - LRU-bounded to 1024 entries; a content change re-analyzes, an unchanged table reuses the cached entry). `analysis_worker.py` (one background daemon thread; queue bounded to 64, dedupe by content sha, only tables with a bound process name are queued; compiles through the tested `compile_table` plan path - no Lua execution, no target attach, no engine - the same static proof the corpus audit uses; a named compile failure is persisted as the failed entry). `master_ui.py`: the waiting view gains two columns between Detail and Size - Entries / Blocked (pending "…", failed "–", the counts once analyzed; a blocked count > 0 appends "N blocked" to the detail column after the pin marker); the meta line shows the live "analyzing N table(s)" figure while the queue has work; the worker lifecycle is owned by the waiting view (start + queue at the view build, pause on trainer entry after the attach gate, stop + clear on close) - display-side only, never blocks / alters / delays the MT-9 load gate, which re-checks the table independently at load time. `table_details.py`: the MT-22 details window gains the analysis block (entry count / blocked count / top blocked reasons / the failure detail). +69 tests (the pure-layer coverage in `tests/test_native_master_analysis.py` - incl. the `active_workers()` live-worker registry lifecycle - + the UI coverage in `tests/test_native_master_ui_mt24.py`; assertion updates in the existing master-UI test files for the two new columns; plus the cross-module test-isolation fix - the shared Tk test teardown stops every live plan-analysis worker, so window tests no longer leak worker threads into the later engine/timing modules). Catalog zero delta `blocked-catalog-032-analysis`. |
+
 ## Online feature evaluation (2026-11-02)
 
 Web research (2026-11-02) evaluated all-in-one trainer front ends and
@@ -194,6 +196,93 @@ missing / unreadable) and the persisted "Status: all / ok /
 attention" filter. Remaining candidates (unchanged): the MT-21
 multi-column trainer grid and the entry-count / blocked-count
 columns (they need background plan-analysis infrastructure).
+
+### 0.32 per-table entry count + blocked count (background plan
+analysis) (evaluated 2026-11-05)
+
+The 0.32 evaluation (web research over trainer front-end and
+trainer-manager UX patterns - FLiNG's per-trainer "N Options" /
+option-count metadata (per-table entry counts surfaced in the list
+are a recognized pattern - the list tells the user what a table
+actually offers, and what cannot run in it, before loading),
+game-trainer-manager (Karasukaigan) (organize / search / import
+workflows around a trainer table list), Cheat Happens Trainer
+Manager v2 (portable front end, the inspect-before-load lineage of
+MT-22)) adopts: the per-table entry count + blocked count columns
+(MT-24) - the candidate deliberately deferred in 0.26/0.27/0.29/
+0.30/0.31 ("the entry-count / blocked-count columns ... need
+background plan-analysis infrastructure"). Rationale: the waiting
+view now shows, per table, what it will actually run (the
+actionable script / value records - the real cheat options) and
+what it cannot (the blocked records), computed in the background by
+one daemon thread through the tested `compile_table` plan path (no
+Lua execution, no target attach - the same proof the corpus audit
+uses). A failed compile is a named, persisted failure (the columns
+show the failed marker, the details window shows the reason and
+the top blocked reasons); the persisted `table-analysis.json`
+document (schema 1, under the state home, keyed by the table
+content sha256, LRU-bounded entries + reasons) with its pure
+decision layer lives in `table_analysis.py`; the worker
+(`analysis_worker.py`) pauses on trainer entry, resumes +
+re-queues with the waiting view, and the meta line shows
+"analyzing N table(s)". Zero catalog effect (no table-parsing
+change), no new load-path behavior. Remaining candidates
+(unchanged): the MT-21 multi-column trainer grid.
+
+### 0.33 candidate: table folder auto-rescan (evaluated 2026-11-06)
+
+The 0.33 evaluation (web research over trainer front-end and
+trainer-manager patterns - WeMod (automatic game detection: the
+front end scans the machine and pairs the found games with the
+available content; the "Play/Playing" button state reflects the
+running game; "save your mod selections for next time without
+enabling them every time"; in-game overlay + smartphone remote
+app), game-trainer-manager (Karasukaigan) (a .exe/.zip trainer
+library: import, organize, search, pin, delete, one-click launch;
+watches a download directory and auto-imports matching files),
+Cheat Happens Trainer Manager (the central library that keeps the
+trainer collection organized and up to date), FLiNG Downloader
+(search a game, review the trainer's options - offline research
+only)) maps onto the Master Trainer use case as follows:
+
+- Automatic game detection / content pairing: already covered by
+  MT-1/MT-2/MT-3 (the folder-scanned table index + the
+  cross-platform process watch + the unique-match auto-load).
+- "Save your selections for next time": already covered by the
+  MT-5/MT-6 on/off persistence + the per-table settings sidecar.
+- Pin / search / organize: already covered by
+  MT-13/MT-15/MT-17/MT-18.
+- Delete / import / download: out of scope (the tables are strict
+  read-only inputs; the tooling never deletes or modifies user
+  files; no download surface under the offline, hash-verified
+  build policy).
+- Launch the game from the front end (the WeMod Play button; the
+  CE-forum "run the game's EXE from the trainer" pattern):
+  deferred - the index binds process names, not install paths;
+  without path data a launch integration cannot be proven
+  fail-closed.
+- In-game overlay / smartphone remote / telemetry: out of scope
+  (local-only, offline, single-window model).
+- Watch the watched folder for new / changed content and pick it
+  up automatically: **the adopted 0.33 candidate** - the table
+  folder auto-rescan (MT-25): the waiting view re-runs the
+  existing incremental scan (the same `(size, mtime_ns)` + sha256
+  short-circuit contract as the manual Rescan) on a bounded
+  background interval, so added / changed / removed tables show
+  up in the index and the view without a manual F5; the setting
+  persists in the master state (default on, bounded interval,
+  the same schema-promotion discipline), paused on trainer entry
+  exactly like the MT-24 analysis worker; no OS file-watcher API
+  - polling only, cross-platform, one stat pass per interval,
+  zero effect on the load path (the MT-9 gate re-checks the
+  table independently at load time).
+
+Adopted for 0.33: the table folder auto-rescan (MT-25). Remaining
+candidates (evaluated, not yet adopted): the MT-21 multi-column
+trainer grid, per-table notes / tags (organize metadata - low
+value for the private 151-table corpus), the game launch
+integration (needs install-path data), the multi-root index
+(open design decision).
 
 ## Merge & release plan (historical + current)
 

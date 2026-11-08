@@ -1,6 +1,6 @@
 # CT2Trainer Master Trainer — UI flow (reviewable)
 
-Status: 0.31 (2026-11-04). This document is the reviewable copy of the
+Status: 0.32 (2026-11-05). This document is the reviewable copy of the
 in-app "UI flow" dialog (the `ui_flow_text()` function in
 `master_ui.py`; keep both aligned when the flow changes). It describes
 the complete user flow of the Master Trainer so it can be reviewed and
@@ -53,7 +53,9 @@ survive — they are window/app state, not widget state).
   a, b, c (N more)`), the active status filter (`status filter: X`,
   0.31, MT-23) and the live attention count (`attention: N` — how
   many indexed tables the MT-9 gate would refuse right now; shown
-  only when N > 0), and — on non-Windows — the permanent MT-7 route
+  only when N > 0) and the live `analyzing N table(s)` figure
+  (0.32, MT-24 — shown only while the background plan
+  analysis has work), and — on non-Windows — the permanent MT-7 route
   hint (attach unavailable; the documented Proton-wrapped trainer
   route).
 - **Running now** — which bound processes are visible in the latest
@@ -70,7 +72,9 @@ display-only):
 | Table | The relative path — the row identity every load path keys off |
 | Process name(s) | The bound process names, or `(none found)` |
 | Status | Live right now (0.31, MT-23): `ok` / `running` (a bound process is up) / `changed` (the file drifted since the last scan — amber row) / `missing` (the file is gone — red row) / `unreadable` (red row); one bounded stat per visible row per render |
-| Detail | The running PID(s), the `pinned` marker (0.28, MT-18), or the attention / unreadable reason |
+| Detail | The running PID(s), the `pinned` marker (0.28, MT-18), the bounded `N blocked` note when the background analysis found blocked records (0.32, MT-24 — appended after the pin marker), or the attention / unreadable reason |
+| Entries | Actionable record count (supported script / value records — the real cheat options) from the background plan analysis (0.32, MT-24): `…` while pending, `–` on a named compile failure, the number once analyzed |
+| Blocked | Blocked record count from the same analysis (0.32, MT-24): `…` pending, `–` failed, the number once analyzed |
 | Size | Indexed file size (compact B/KB/MB) |
 | Modified | Local `YYYY-MM-DD HH:MM` |
 | Last used | The persisted UTC timestamp from the recent list |
@@ -85,8 +89,13 @@ status, pin state, last used, running PIDs, content sha) plus the
 **on-demand load-gate re-check** — the same `gate_table_for_load`
 pass MT-9 runs at load time, named refusal code + displayable
 detail — so a table can be inspected and its current loadability
-checked before loading it.  Then `Load this table` (the explicit
-load path) and the `Pin to top` / `Unpin` toggle (0.28, MT-18).
+checked before loading it. It also shows the background plan-analysis
+result for the table (0.32, MT-24): `pending` while the analysis is
+still queued/running, `N entries (M blocked) of T records` + the top
+blocked reasons (up to 8, `reason × count`) once analyzed, or
+`failed: <reason>` for a named compile refusal. Then `Load this
+table` (the explicit load path) and the `Pin to top` / `Unpin`
+toggle (0.28, MT-18).
 Group rows (process view) are display-only: no context menu.
 
 ### Status bar
@@ -192,6 +201,7 @@ offers the re-attach target) and `⬅ Master` (the return below).
 | Pinned tables (≤ 25) | `master-settings.json` (schema 5+) |
 | Status filter (all / ok / attention) | `master-settings.json` (schema 6+, 0.31 MT-23) |
 | Per-table settings sidecar | `settings/<table-sha256>.ct2trainer.json` (keyed by content hash, never the path) |
+| Per-table plan analysis (0.32, MT-24) | `table-analysis.json` (schema 1; keyed by table content sha256, LRU-bounded to 1024 entries — a content change re-analyzes, an unchanged table reuses the cached counts) |
 | Enabled toggles (per table) | the engine state store; only confirmed ON toggles persist |
 | Table index | `tables-index.json` (checksum-bound) |
 
@@ -229,3 +239,10 @@ where the context needs it) — never a crash.
   view cannot be built, the engine is closed again, the waiting view
   is restored, and the load fails with the named error — the waiting
   loop and its loop guard stay consistent.
+- **Analysis failure** (0.32, MT-24): a table whose plan compile raises
+  is recorded as a named, persisted failure (`failed: <ExcType>:
+  <message>`, bounded to 200 chars) — the row's Entries / Blocked
+  columns show the failed marker and the table is excluded from the
+  queue until its content changes. This is a display-side observation
+  only: it never blocks, alters, or delays the MT-9 load gate, which
+  re-checks the table independently at load time.

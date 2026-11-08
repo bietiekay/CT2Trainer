@@ -2,6 +2,75 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.32 (2026-11-06)
+
+Master Trainer per-table entry count + blocked count via background plan
+analysis (MT-24) — the adopted 0.32 candidate from the online
+evaluation (FLiNG per-trainer "N Options" / option-count metadata —
+per-table entry counts surfaced in the list are a recognized pattern,
+game-trainer-manager (Karasukaigan) organize/search workflows, Cheat
+Happens Trainer Manager v2 inspect-before-load lineage — see the
+Master Trainer ROADMAP "0.32 per-table entry count + blocked count"
+section). The entry-count / blocked-count columns were the candidate
+deliberately deferred in 0.26/0.27/0.29/0.30/0.31 ("they need
+background plan-analysis infrastructure"); this release ships that
+infrastructure:
+
+- **MT-24 per-table entry count + blocked count (background plan
+  analysis)**: the waiting-view tree gains two columns between Detail
+  and Size — **Entries** (the actionable record count of the plan
+  compile: supported script / value records, i.e. the real cheat
+  options) and **Blocked** (the blocked record count of the same
+  analysis). The analysis runs in the background: one daemon thread
+  (`analysis_worker.py`, queue limit 64, dedupe by table content sha,
+  only tables with ≥1 bound process name are queued) through the
+  tested `compile_table` plan path — no Lua execution, no target
+  attach, the same static proof the corpus audit uses. The columns
+  show `…` while pending and `–` on a named compile failure, the
+  counts once analyzed; a blocked count > 0 appends the bounded
+  "N blocked" note to the detail column after the pin marker. Results
+  persist in `table-analysis.json` (schema 1, under the state home,
+  keyed by table content sha256, LRU-bounded to 1024 entries, top-8
+  blocked reasons per table, 200-char error detail) — a content
+  change re-analyzes, an unchanged table reuses the cached entry; the
+  pure decision layer is `master_trainer/table_analysis.py`
+  (`counts_from_plan` / `blocked_reasons_from_plan` / `ok_analysis` /
+  `failed_analysis` / `AnalysisStore` with strict key-set + checksum +
+  timestamp + count validation, `AnalysisRefusal`). The worker is not
+  auto-started: the waiting view owns the lifecycle (start / resume +
+  queue at the end of the view build, pause on trainer entry after the
+  attach gate, stop + clear on close); the meta line shows the live
+  `analyzing N table(s)` figure while the queue has work. The MT-22
+  table-details window gains the analysis block (`table_details.py`
+  `analysis` kwarg): pending / `N entries (M blocked) of T records` +
+  top blocked reasons / `failed: <reason>`. Display-side observation
+  only — it never blocks, alters, or delays the MT-9 load gate, which
+  re-checks the table independently at load time. Zero catalog effect
+  (no table-parsing change).
+- +69 tests (57 in `tests/test_native_master_analysis.py` new: the
+  pure counts / reasons builders, the ok / failed analysis builders,
+  the store's strict validation (unknown fields, wrong sha, bad
+  counts, checksum mismatch), LRU eviction by `analyzed_at` with sha
+  tie-break, the refusal codes, and the `active_workers()` live-worker
+  registry lifecycle; 12 in `tests/test_native_master_ui_mt24.py`
+  new: the column wiring + pending / failed / pinned / group-row
+  shaping, the queue discipline (unbound tables never queued, rescan
+  re-queue on content change only), the details-window analysis rows,
+  the trainer-entry pause, the close stop + reference clear, the
+  window-created default worker with the real compile path); plus the
+  cross-module test-isolation fix (the shared Tk test teardown now
+  stops every live plan-analysis worker, so window tests no longer
+  leak worker threads into the later engine/timing modules); full
+  main suite 4,483 OK / 30 expected skips (4,414 from the 0.31
+  content + 69 new MT-24 tests); catalog zero delta
+  `blocked-catalog-032-analysis` (3-chunk deep-equal audit over the
+  151 reference tables, 2026-11-06): 151/151 loaded, 0 load errors,
+  117,809 total / 116,756 supported / 60,161 staged / 103,607
+  actionable / 12,974 headings / 1,053 blocked — **zero delta** vs
+  `blocked-catalog-031-status` (per-table count/reason/sha changes: 0).
+  Docs in the same change: `master_trainer/ROADMAP.md` (0.32
+  section), `CONCEPT.md`, `UI.md` (+ `ui_flow_text()`).
+
 ## 0.31 (2026-11-05)
 
 Master Trainer per-table live status + color coding + status filter

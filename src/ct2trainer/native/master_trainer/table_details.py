@@ -6,7 +6,11 @@ status, pin state, last-used timestamp, running PIDs, content sha)
 plus the on-demand load-gate re-check - the same
 ``table_gate.gate_table_for_load`` pass MT-9 runs at load time - so
 the user can inspect a table and see its current loadability (named
-refusal code + displayable detail) before loading it.
+refusal code + displayable detail) before loading it.  MT-24 (0.32)
+adds the entry-analysis block (the persisted background plan-analysis
+entry for the table's content sha: the entry count, the blocked
+count, the top blocked reasons, or the named failure) below the
+load-gate row.
 
 The builder is pure: every fact is an argument (the gate result is
 computed by the UI layer and passed in), so this module is
@@ -50,7 +54,8 @@ def gate_line(gate) -> str:
 def table_detail_lines(entry, *, root: str, pinned: bool,
                        last_used: str | None,
                        running_pids,
-                       gate) -> list:
+                       gate,
+                       analysis=None) -> list:
     """Ordered ``(label, value)`` rows for the read-only details
     window of one indexed table.
 
@@ -59,7 +64,11 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
     the rolling recent list (or None when the table was never loaded
     in a remembered session); ``running_pids`` are the PIDs of the
     bound processes currently visible in the process watch; ``gate``
-    is the on-demand gate result (see :func:`gate_line`).
+    is the on-demand gate result (see :func:`gate_line`);
+    ``analysis`` (MT-24, 0.32) is the persisted background
+    plan-analysis entry for the table's content sha from
+    ``table_analysis.AnalysisStore`` (or None while pending) - it
+    adds the entry-analysis rows below the load-gate row.
     """
     names = ", ".join(entry.process_names) or "(none found)"
     if entry.status == "ok":
@@ -71,7 +80,7 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
         running = "PID " + ", ".join(str(p) for p in pids)
     else:
         running = "not running"
-    return [
+    lines = [
         ("Table", entry.relative_path),
         ("Folder", root),
         ("Size", format_size(entry.size)),
@@ -84,3 +93,9 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
         ("Content sha256 (last scan)", entry.sha256[:12] + "..."),
         ("Load gate (live re-check)", gate_line(gate)),
     ]
+    # MT-24 (0.32): the entry-analysis block (the persisted
+    # background plan-analysis entry for the table's content sha,
+    # or None while pending).
+    from .table_analysis import details_analysis_lines
+    lines.extend(details_analysis_lines(analysis))
+    return lines

@@ -486,6 +486,66 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- 0.32 Master Trainer per-table entry count + blocked count
+  (background plan analysis) MT-24 (2026-11-06, root-direct on `main`;
+  online-evaluated in `master_trainer/ROADMAP.md`, the "0.32
+  per-table entry count + blocked count (background plan analysis)"
+  section - FLiNG per-trainer "N Options" / option-count metadata,
+  game-trainer-manager (Karasukaigan) organize/search workflows,
+  Cheat Happens Trainer Manager v2 inspect-before-load lineage).
+  MT-24: the waiting-view tree gains two columns between Detail and
+  Size - Entries (the actionable record count of the plan compile:
+  the supported script / value records, i.e. the real cheat options)
+  and Blocked (the blocked record count of the same analysis). The
+  analysis runs in the background: one daemon thread
+  (`master_trainer/analysis_worker.py`, queue limit 64, dedupe by
+  table content sha, only tables with a bound process name are
+  queued) through the tested `compile_table` plan path - no Lua
+  execution, no target attach, the same static proof the corpus audit
+  uses. The columns show "..." while pending and "-" on a named
+  compile failure, the counts once analyzed; a blocked count > 0
+  appends the bounded "N blocked" note to the detail column after the
+  pin marker. Results persist in `table-analysis.json` (schema 1,
+  under the state home, keyed by table content sha256, LRU-bounded to
+  1024 entries, top-8 blocked reasons per table, 200-char error
+  detail) - a content change re-analyzes, an unchanged table reuses
+  the cached entry; the pure decision layer is
+  `master_trainer/table_analysis.py` (`counts_from_plan` /
+  `blocked_reasons_from_plan` / `ok_analysis` / `failed_analysis` /
+  `AnalysisStore` with strict key-set + checksum + timestamp + count
+  validation, `AnalysisRefusal`). The worker is not auto-started: the
+  waiting view owns the lifecycle (start / resume + queue at the end
+  of the view build, pause on trainer entry after the attach gate,
+  stop + clear on close); the meta line shows the live "analyzing N
+  table(s)" figure while the queue has work; the MT-22 table-details
+  window gains the analysis block (`table_details.py` `analysis`
+  kwarg). Display-side observation only - it never blocks, alters, or
+  delays the MT-9 load gate, which re-checks the table independently
+  at load time. Zero catalog effect (no table-parsing change).
+  Remaining candidate (unchanged): the MT-21 multi-column trainer
+  grid. +69 tests (57 in `tests/test_native_master_analysis.py` new:
+  the pure counts / reasons builders, the ok / failed analysis
+  builders, the store's strict validation (unknown fields, wrong
+  sha, bad counts, checksum mismatch), LRU eviction by `analyzed_at`
+  with sha tie-break, the refusal codes, and the `active_workers()`
+  live-worker registry lifecycle; 12 in
+  `tests/test_native_master_ui_mt24.py` new: the column wiring +
+  pending / failed / pinned / group-row shaping, the queue discipline
+  (unbound tables never queued, rescan re-queues on content change
+  only), the details-window analysis rows, the trainer-entry pause,
+  the close stop + reference clear, the window-created default worker
+  with the real compile path); plus the cross-module test-isolation
+  fix (the shared Tk test teardown now stops every live
+  plan-analysis worker before releasing the root, so window tests no
+  longer leak worker threads into the later engine/timing modules);
+  full main suite 4,483 OK / 30 expected skips; catalog zero delta
+  `blocked-catalog-032-analysis`
+  (3-chunk deep-equal audit over the 151 reference tables,
+  2026-11-06): 151/151 loaded, 0 load errors, 117,809 total /
+  116,756 supported / 60,161 staged / 103,607 actionable / 12,974
+  headings / 1,053 blocked - zero delta vs `blocked-catalog-031-status`
+  (per-table count/reason/sha changes: 0). VERSION 0.32 + CHANGELOG
+  entry in the same change.
 - 0.31 Master Trainer per-table live status + color coding +
   status filter MT-23 (2026-11-05, root-direct on `main`;
   online-evaluated in `master_trainer/ROADMAP.md`, the "0.31

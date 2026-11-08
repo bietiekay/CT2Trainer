@@ -146,7 +146,21 @@ color coding + status filter and the reviewable
 (49,679,202 bytes; the frozen `CT2Trainer-Master.exe` (sha256
 `811c0f85c143b632dd182646282ddb32c3293513a665eb62c8055f74f9c89dcb`,
 16,948,380 bytes) ships next to the converter); superseded 0.30
-(build `native-20261104T131114Z-11522f68`). The 0.16 Wave-4
+(build `native-20261104T131114Z-11522f68`). 0.32 content on main
+(2026-11-06, root-direct): the Master Trainer per-table entry count
++ blocked count via background plan analysis (MT-24: the
+waiting-view Entries / Blocked columns - the actionable and blocked
+record counts of the plan compile, computed in one background daemon
+thread through the tested `compile_table` plan path, no Lua
+execution, no target attach, the same static proof the corpus audit
+uses; persisted in `table-analysis.json` keyed by table content
+sha256, LRU-bounded; the meta line shows the live "analyzing N
+table(s)" figure; the MT-22 table-details window gains the analysis
+block; display-side only, never blocks / alters / delays the MT-9
+load gate); +69 tests, full main suite 4,483 OK / 30 expected
+skips, catalog zero delta `blocked-catalog-032-analysis`; the 0.32
+build is cut from this content (0.31 remains the latest verified
+release). The 0.16 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
 now loads, table load 151/151) landed on `main` 2026-10-23; RT-4.4
@@ -260,10 +274,26 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-05, 0.31 released - build
+**CT2Trainer (status 2026-11-06, 0.32 content on main - the 0.32
+build is cut from this content; 0.31 remains the latest verified
+release, build `native-20261105T080853Z-2e7f50a5` cut from `main` @
+`2def12f`, 2026-11-05, in-build suite 4,414 OK / 30 expected skips,
+`ce_inputs: []`) - 0.32 Master Trainer per-table entry count +
+blocked count via background plan analysis (MT-24: the waiting-view
+Entries / Blocked columns - the actionable and blocked record counts
+of the plan compile, computed in one background daemon thread through
+the tested `compile_table` plan path - no Lua execution, no target
+attach, the same static proof the corpus audit uses; persisted in
+`table-analysis.json` keyed by table content sha256, LRU-bounded to
+1024 entries, top-8 blocked reasons per table; the meta line shows
+the live "analyzing N table(s)" figure; the MT-22 table-details
+window gains the analysis block; display-side only - never blocks,
+alters, or delays the MT-9 load gate, which re-checks the table
+independently at load time); +69 tests, full main suite 4,483 OK /
+30 expected skips; catalog zero delta
+`blocked-catalog-032-analysis`), superseded 0.31 released (build
 `native-20261105T080853Z-2e7f50a5` cut from `main` @ `2def12f`,
-2026-11-05, in-build suite 4,414 OK / 30 expected skips,
-`ce_inputs: []`) - 0.31 Master Trainer per-table live status +
+2026-11-05) - 0.31 Master Trainer per-table live status +
 color coding + status filter (MT-23: the waiting-view Status column
 shows the table's state right now - one bounded stat per visible row
 per render against the index entry: ok / running / changed /

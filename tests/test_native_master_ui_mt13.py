@@ -229,11 +229,16 @@ class KeyboardLoadFlowTests(unittest.TestCase):
                    ".TrainerEngine") as engine_cls, \
                  patch("ct2trainer.native.master_trainer.master_ui"
                        ".TrainerWindow"):
-            child = self.window._table_tree.get_children()[0]
-            self.window._table_tree.selection_set(child)
+            self.window._table_tree.selection_set(
+                self.window._table_tree.get_children()[0])
             # Allocate the real geometry so identify_row(event.y)
             # resolves to the clicked row.
             self.root.update()
+            # MT-24 (0.32): the update pump may have fired a waiting
+            # tick that re-rendered the table rows (the background plan
+            # analysis finished) - re-resolve the row identity.
+            child = self.window._table_tree.get_children()[0]
+            self.window._table_tree.selection_set(child)
             bbox = self.window._table_tree.bbox(child)
             self.assertIsNotNone(bbox)
             event = MagicMock()
@@ -272,15 +277,19 @@ class RecentAndMetadataColumnsTests(unittest.TestCase):
         tree = window._table_tree
         child = tree.get_children()[0]
         values = tree.item(child, "values")
-        self.assertEqual(len(values), 7)
+        # MT-24 (0.32): the Entries / Blocked columns sit between
+        # Detail and Size (pending "…" until the background plan
+        # analysis re-renders the row).
+        self.assertEqual(values[4:6], ("…", "…"))
+        self.assertEqual(len(values), 9)
         # Size is the compact human-readable byte size.
-        self.assertTrue(values[4].endswith((" B", " KB", " MB")))
+        self.assertTrue(values[6].endswith((" B", " KB", " MB")))
         # Modified is a local timestamp of the documented shape.
         import re
         self.assertTrue(re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}",
-                                     values[5]), values[5])
+                                     values[7]), values[7])
         # Last used starts empty (no recent entry yet).
-        self.assertEqual(values[6], "")
+        self.assertEqual(values[8], "")
 
     def test_recent_button_and_last_used_column_feed_the_recent_list(self):
         app = self._app()
@@ -294,8 +303,10 @@ class RecentAndMetadataColumnsTests(unittest.TestCase):
         tree = window._table_tree
         by_name = {tree.item(i, "values")[0]: tree.item(i, "values")
                    for i in tree.get_children()}
-        self.assertTrue(by_name["a.ct"][6].endswith("Z"))
-        self.assertEqual(by_name["b.ct"][6], "")
+        # MT-15/MT-24 (0.26/0.32): Last used is the last column (after
+        # the Entries / Blocked columns).
+        self.assertTrue(by_name["a.ct"][8].endswith("Z"))
+        self.assertEqual(by_name["b.ct"][8], "")
         # The meta line lists the recent table.
         self.assertIn("recent: a.ct", str(window._meta_label.cget("text")))
 

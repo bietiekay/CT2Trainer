@@ -174,7 +174,15 @@ class ProcessGroupViewTests(_WaitingViewBase):
         self.assertIn("rdr2.ct", groups["rdr2legacy.exe"])
 
     def test_group_rows_are_display_only_children_load(self):
-        _, window = self._grouped_window()
+        app, window = self._grouped_window()
+        # MT-24 (0.32): keep the background plan analysis from racing
+        # the row-identity assertions - stop the worker and reset the
+        # store, so no completion-driven re-render can replace the
+        # row iids this test holds (the MT-22 details-window guard).
+        if app.analysis_worker is not None:
+            app.analysis_worker.stop()
+            app.analysis_worker = None
+        app.analysis_store.clear()
         tree = window._table_tree
         parent = tree.get_children("")[0]
         child = tree.get_children(parent)[0]

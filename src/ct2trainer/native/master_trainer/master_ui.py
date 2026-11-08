@@ -66,6 +66,21 @@ header cycle filters the list to the loadable rows or to the rows
 the gate would refuse right now (master-state schema 6,
 view_status); the pure decision layer is ``table_status.py``.
 
+0.32 per-table entry count + blocked count (MT-24): the waiting
+view gains the Entries / Blocked columns - the per-table entry
+counts of the plan compile (the actionable script / value records,
+i.e. the real cheat options, and the blocked records), computed in
+the background by one daemon thread (``analysis_worker.py``)
+through the tested ``compile_table`` plan path (no Lua execution,
+no target attach; a failed compile is a named, persisted failure -
+the columns show the failed marker, the details window shows the
+reason and the top blocked reasons).  The persisted
+``table-analysis.json`` document (schema 1, under the state home,
+keyed by the table content sha256, bounded entries / reasons) with
+its pure decision layer is ``table_analysis.py``; the worker
+pauses on trainer entry, resumes + re-queues with the waiting
+view, and the meta line shows "analyzing N table(s)".
+
 All waiting-mode logic lives in the pure orchestrator; this module is
 Tk wiring plus the picker Toplevel.
 """
@@ -101,6 +116,9 @@ from .process_picker import (DECISION_PICK, attach_decision,
                              make_pinned_memory_factory)
 from .process_watch import names_match
 from .settings_sidecar import MasterSettingsStore
+from .table_analysis import (AnalysisStore, blocked_column_text,
+                             entries_column_text)
+from .analysis_worker import AnalysisWorker
 from .steamdeck_route import (attach_gate, require_engine_attach,
                               DeckAttachUnavailableError)
 
@@ -139,8 +157,10 @@ def ui_flow_text() -> str:
         "(name / process / status); the project link; Load table; "
         "Change folder...; Rescan; UI flow (this window); Close.\n"
         "   Below the header: the folder line (with any scan problem), "
-        "the meta line (table counts, the live attention count, state "
-        "home, and the attach route on non-Windows), and the live "
+        "the meta line (table counts, the live attention count, the "
+        "live 'analyzing N table(s)' figure while the background plan "
+        "analysis has work, state home, and the attach route on "
+        "non-Windows), and the live "
         "'Running now' line (which bound processes are visible right "
         "now, with PIDs).\n"
         "   The table tree, one row per table: Table (relative path, the "
@@ -148,10 +168,14 @@ def ui_flow_text() -> str:
         "ok / running / changed / missing / unreadable - the same "
         "facts the load gate proves at load time; changed is an "
         "amber warning, missing / unreadable are red), Detail (PID, "
-        "'pinned' marker, or the attention / unreadable reason), "
-        "Size, Modified, Last used.  In 'process' view the tables "
-        "group under their bound process name (unbound last); group "
-        "rows are display-only.\n"
+        "'pinned' marker, the 'N blocked' note, or the attention / "
+        "unreadable reason), Entries (the actionable entries of the "
+        "background plan analysis - the supported script / value "
+        "records, i.e. the real cheat options; '…' while analyzing, "
+        "'–' on a named failure), Blocked (the blocked records of "
+        "the same analysis), Size, Modified, Last used.  In "
+        "'process' view the tables group under their bound process "
+        "name (unbound last); group rows are display-only.\n"
         "   Status bar, left to right: the status line (waiting for "
         "which process, last error); Attach mode toggle (auto/ask, "
         "persisted); Retry load (re-arm auto-load after a deferred "
@@ -162,7 +186,8 @@ def ui_flow_text() -> str:
         "the list (it takes the initial focus); Enter or double-click "
         "loads the selected row; right-click a row for the context menu "
         "(table details - the read-only inspection window with the "
-        "live load-gate preview, load, pin to top / unpin).\n"
+        "live load-gate preview and the entry analysis, load, pin to "
+        "top / unpin).\n"
         "   Auto-load: the poll tick asks the orchestrator.  A unique "
         "table-for-process match loads by itself (the documented "
         "default).  A multi-table match opens the picker.  Nothing "
@@ -210,15 +235,21 @@ def ui_flow_text() -> str:
         "   Waiting-view settings (filter, sort, view mode, status "
         "filter), the pinned "
         "/favorite tables, the rolling recent list, the attach mode, "
-        "the table folder, and the per-table settings sidecar (keyed by "
-        "the table content hash, never the path) all survive restarts "
-        "under the state home.  Only confirmed ON toggles are persisted "
+        "the table folder, the per-table plan-analysis results "
+        "(keyed by the table content hash, LRU-bounded), and the "
+        "per-table settings sidecar (keyed by the table content hash, "
+        "never the path) all survive restarts under the state home.  "
+        "Only confirmed ON toggles are persisted "
         "as saved wishes; a failed enable stays visibly inactive.\n\n"
         "6) FAILURE STATES\n"
         "   Every refusal is named and lands in the status line (plus a "
         "dialog where the context needs it) - never a crash.  An "
         "unrecoverable startup leaves the state folder preserved for "
-        "manual recovery.  'Retry load' re-arms a deferred auto-load.\n"
+        "manual recovery.  'Retry load' re-arms a deferred auto-load.  "
+        "A table whose background plan analysis fails is shown with the "
+        "failed marker and the named reason (in the row and in the "
+        "details window) - display-side only, the load gate re-checks "
+        "the table independently at load time.\n"
     )
 
 
@@ -287,6 +318,14 @@ class MasterApp:
         # (the rows the MT-9 load gate would refuse right now); a fresh
         # or refused state home takes the documented default "".
         self.view_status = (state.view_status if state is not None else "")
+        # MT-24 (0.32): the background plan-analysis cache under the
+        # state home (table-analysis.json, schema 1, keyed by the
+        # table content sha256).  The analysis worker is NOT started
+        # here - the window starts it with the waiting view
+        # (deterministic tests); until then the Entries / Blocked
+        # columns show the pending marker.
+        self.analysis_store = AnalysisStore(self.state_home)
+        self.analysis_worker = None
         self.lister = lister if lister is not None else default_process_lister()
         self.plan_compiler = plan_compiler
         self.state_dir_factory = state_dir_factory
@@ -455,6 +494,34 @@ class MasterApp:
         # live from self.index each tick, so nothing else to refresh.
         self.orchestrator.index = self.index
         self.orchestrator.retry()
+        # MT-24 (0.32): re-queue the background plan analysis - a
+        # changed table content has a new sha (its old document entry
+        # no longer matches), added tables have none.
+        self._queue_analysis()
+
+    def _queue_analysis(self) -> int:
+        """MT-24 (0.32): enqueue the unanalyzed bound tables.
+
+        Every indexed table with at least one bound process name and
+        no persisted analysis entry yet (the content sha is the key)
+        is queued for the background plan compile - an unbound table
+        has nothing to compile against, so its columns keep the
+        pending marker.  Returns the number of newly queued tables
+        (0 when no worker is running yet - the window starts the
+        worker at the waiting-view build).
+        """
+        worker = self.analysis_worker
+        if worker is None:
+            return 0
+        known = self.analysis_store.document()["tables"]
+        queued = 0
+        for entry in self.index.tables():
+            if not entry.process_names or entry.sha256 in known:
+                continue
+            if worker.enqueue(entry.relative_path, entry.sha256,
+                              entry.process_names[0]):
+                queued += 1
+        return queued
 
     def set_folder(self, folder) -> None:
         from pathlib import Path
@@ -679,7 +746,12 @@ class MasterWindow:
         frame.pack(fill="both", expand=True)
         # MT-15 (0.26): the waiting-view tree carries the indexed size /
         # modified columns plus the Last-used feed of the recent list.
+        # MT-24 (0.32): the Entries / Blocked columns carry the
+        # background plan-analysis counts (pending "…" until the
+        # analysis finishes, the failed marker "–" on a named
+        # refusal, the counts otherwise).
         cols = ("table", "processes", "status", "detail",
+                "entries", "blocked",
                 "size", "modified", "last_used")
         self._table_tree = ttk.Treeview(frame, columns=cols, show="headings",
                                         height=16)
@@ -687,6 +759,8 @@ class MasterWindow:
                                   ("processes", "Process name(s)", 170),
                                   ("status", "Status", 70),
                                   ("detail", "Detail", 170),
+                                  ("entries", "Entries", 70),
+                                  ("blocked", "Blocked", 70),
                                   ("size", "Size", 80),
                                   ("modified", "Modified", 130),
                                   ("last_used", "Last used", 150)):
@@ -746,6 +820,20 @@ class MasterWindow:
         # MT-20 (0.29): the table list takes the initial focus, so the
         # arrow keys and Enter work immediately without a first click.
         self._table_tree.focus_set()
+        # MT-24 (0.32): the background plan analysis starts with the
+        # waiting view (deterministic: the window, not the app, owns
+        # the worker lifecycle) and resumes after a trainer
+        # round-trip, re-queueing the unanalyzed bound tables.
+        app = self.app
+        if app.analysis_worker is None:
+            app.analysis_worker = AnalysisWorker(app)
+            app.analysis_worker.start()
+        app.analysis_worker.resume()
+        app._queue_analysis()
+        # The meta line was built before the queue pass; refresh it so
+        # the "analyzing N table(s)" figure is visible at a glance.
+        if self._meta_label is not None:
+            self._meta_label.configure(text=self._meta_text())
 
     def _teardown_waiting_view(self):
         """MT-19 (0.29): remove the waiting view from the shared root.
@@ -878,6 +966,13 @@ class MasterWindow:
                         if self._row_status(e)[0] in ATTENTION_STATUSES)
         if attention:
             parts.append("attention: " + str(attention))
+        # MT-24 (0.32): the background plan analysis is visible at a
+        # glance (how many tables are queued / in flight right now).
+        worker = app.analysis_worker
+        if worker is not None:
+            pending = worker.pending_count()
+            if pending:
+                parts.append("analyzing " + str(pending) + " table(s)")
         parts.append("state: " + app.state_home)
         # MT-7: on non-Windows the attach gate is fail-closed; the
         # documented SteamOS/CheatDeck route stays visible in the waiting
@@ -930,6 +1025,10 @@ class MasterWindow:
         # show="headings", so the group label lives in values[0], not
         # in the invisible text item.
         rows = list(self._visible_tables())
+        # MT-24 (0.32): the background plan-analysis entries for the
+        # visible rows (one document load per render; the pending
+        # rows keep the "…" marker until the worker finishes them).
+        analysis_by_sha = self.app.analysis_store.document()["tables"]
         # MT-23 (0.31): one bounded stat per visible row per render -
         # the live (code, detail) pairs feed the Status column, the
         # row color tag and the attention detail.  A file that drifted
@@ -940,19 +1039,24 @@ class MasterWindow:
         if self._view_mode != "process":
             for entry in rows:
                 self._insert_table_row("", entry, pids_by_key, recent_at,
-                                       statuses[entry.relative_path])
+                                       statuses[entry.relative_path],
+                                       analysis_by_sha)
             return
         for label, group in group_tables_by_process(rows):
+            # MT-24 (0.32): the display-only group row carries the two
+            # extra (empty) Entries / Blocked values of the new columns.
             parent = tree.insert("", "end", open=True, values=(
                 label, str(len(group)) + " table(s)",
-                "", "", "", "", ""))
+                "", "", "", "", "", "", ""))
             for entry in group:
                 self._insert_table_row(parent, entry, pids_by_key,
                                        recent_at,
-                                       statuses[entry.relative_path])
+                                       statuses[entry.relative_path],
+                                       analysis_by_sha)
 
     def _insert_table_row(self, parent: str, entry, pids_by_key: dict,
-                          recent_at: dict, status: tuple) -> None:
+                          recent_at: dict, status: tuple,
+                          analysis_by_sha: dict) -> None:
         """One waiting-view table row (flat list or group child).
 
         MT-23 (0.31): ``status`` is the live ``(code, detail)`` pair
@@ -961,9 +1065,19 @@ class MasterWindow:
         carries the color coding (default for ok / running, amber for
         changed, red for missing / unreadable), and the attention
         detail is displayable (the same facts the MT-9 gate refuses
-        with at load time)."""
+        with at load time).
+
+        MT-24 (0.32): ``analysis_by_sha`` maps the table content sha
+        to its persisted background plan-analysis entry (or the row
+        stays pending) - the Entries / Blocked columns show the
+        counts ("…" pending, "–" failed) and a blocked count > 0
+        adds the "N blocked" note to the detail column (the parts
+        join with " - ", the pin marker keeps its place)."""
         code, file_detail = status
         names = ", ".join(entry.process_names) or "(none found)"
+        # MT-24 (0.32): the persisted analysis entry for this table's
+        # content sha (None = pending, the "…" marker).
+        analysis = analysis_by_sha.get(entry.sha256)
         if code == "running":
             pids = sorted(set(p for n in entry.process_names
                               for p in pids_by_key.get(n.casefold(), ())))
@@ -977,8 +1091,17 @@ class MasterWindow:
         # identity the load paths key off.
         if self.app.is_table_pinned(entry.relative_path):
             detail = "pinned" + (" - " + detail if detail else "")
+        # MT-24 (0.32): a table with blocked records gets the bounded
+        # "N blocked" note in the detail column (after the pin
+        # marker; the counts themselves live in the columns).
+        if analysis is not None and analysis.get("status") == "ok" \
+                and analysis["counts"]["blocked"]:
+            note = str(analysis["counts"]["blocked"]) + " blocked"
+            detail = (detail + " - " + note if detail else note)
         self._table_tree.insert(parent, "end", values=(
             entry.relative_path, names, code, detail,
+            entries_column_text(analysis),
+            blocked_column_text(analysis),
             self._format_size(entry.size),
             self._format_mtime(entry.mtime_ns),
             recent_at.get(entry.relative_path, "")),
@@ -1229,6 +1352,16 @@ class MasterWindow:
             # Fail-closed tick: name the problem, keep the loop alive.
             self._set_status("Waiting tick failed: " + exc.__class__.__name__
                              + ": " + str(exc))
+        # MT-24 (0.32): finished background analyses re-render the
+        # waiting view (the store already carries the facts; the
+        # worker wrote them from its own thread - the drain only
+        # triggers the render, plus the meta line's "analyzing N").
+        worker = self.app.analysis_worker
+        if worker is not None and self._table_tree is not None \
+                and worker.drain_results():
+            self._render_tables()
+            if self._meta_label is not None:
+                self._meta_label.configure(text=self._meta_text())
         if not self.app.closed and self.engine is None:
             self.root.after(self.app.poll_ms, self._poll)
 
@@ -1267,6 +1400,11 @@ class MasterWindow:
                                  str(exc), parent=self.root)
             self._fail_trainer_start(str(exc))
             return False
+        # MT-24 (0.32): the background plan analysis pauses while a
+        # trainer session runs (the window owns the CPU then); the
+        # waiting-view rebuild resumes + re-queues.
+        if self.app.analysis_worker is not None:
+            self.app.analysis_worker.pause()
         # MT-6: restore the per-table settings sidecar (keyed by the table
         # content sha, never by path) for this session. A stored document
         # the settings model refuses is shown with its named reasons; the
@@ -1602,10 +1740,15 @@ class MasterWindow:
                 for n in entry.process_names
                 if e.name.casefold() == n.casefold()]
         last_used = dict(self.app.recent_tables).get(rel)
+        # MT-24 (0.32): the details window shows the persisted
+        # background plan-analysis entry for the table's content sha
+        # (None while pending - the row says so).
+        analysis = self.app.analysis_store.get(entry.sha256)
         lines = table_detail_lines(entry, root=self.app.folder,
                                    pinned=self.app.is_table_pinned(rel),
                                    last_used=last_used,
-                                   running_pids=pids, gate=gate)
+                                   running_pids=pids, gate=gate,
+                                   analysis=analysis)
         win = tk.Toplevel(self.root)
         self._details_win = win
         win.title("Table details - " + rel)
@@ -1967,6 +2110,12 @@ class MasterWindow:
         self.root.after(self.app.poll_ms, self._poll)
 
     def close(self):
+        # MT-24 (0.32): stop the background plan analysis first
+        # (bounded join; the thread is a daemon anyway, so a stuck
+        # compile can never block the process exit).
+        if self.app.analysis_worker is not None:
+            self.app.analysis_worker.stop()
+            self.app.analysis_worker = None
         if self.engine is not None:
             self._persist_sidecar()
             clean = self.engine.close()
