@@ -1,10 +1,8 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-09. **0.34 content on main (build cut
-pending)** - the 0.34 build is cut from this content; 0.33 remains
-the latest verified release (build
-`native-20261108T200230Z-b0167049`, cut from `main` @ `6e71739`,
-2026-11-08) - Master Trainer multi-root
+**Updated:** 2026-11-09. **0.34 released** (build
+`native-20261109T024143Z-a5457911`, cut from `main` @ `dc00343`,
+2026-11-09) - Master Trainer multi-root
 table index MT-26 (the Master indexes several table folders at once -
 every root keeps the same (size, mtime_ns) + sha256 short-circuit
 reconcile contract; the merged surface distinguishes tables by the
@@ -25,7 +23,8 @@ shows the picker (cancel exits 0), an explicit missing folder is
 the documented exit-2 refusal; zero load-path effect - the MT-9
 gate re-checks the table under its index root independently at load
 time); +44 tests; full main suite 4,543 OK / 30
-expected skips; catalog zero delta
+expected skips; in-build suite 4,543 OK / 30 expected skips,
+`ce_inputs: []`; catalog zero delta
 `blocked-catalog-034-mt26`; see the 0.34 section below.
 Superseded 0.33 (build
 `native-20261108T200230Z-b0167049`, cut from `main` @ `6e71739`,
@@ -132,12 +131,27 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.33, build
-`native-20261108T200230Z-b0167049` (cut from `main` @ `6e71739`,
-2026-11-08): the 0.33 Master Trainer table folder auto-rescan
-release (MT-25) - in-build suite 4,499 OK / 30 expected
+**Latest verified release:** 0.34, build
+`native-20261109T024143Z-a5457911` (cut from `main` @ `dc00343`,
+2026-11-09): the 0.34 Master Trainer multi-root table index
+release (MT-26) - in-build suite 4,543 OK / 30 expected
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
-gate; source ZIP `CT2Trainer-0.33-source.zip` sha256
+gate; source ZIP `CT2Trainer-0.34-source.zip` sha256
+`0d0a0849a90171f64eaf5b55ec06ec1d9117d02d5330895dcb4279e26f73b0f5`
+(14,455,170 bytes) - carries the MT-26 multi-root table index
+(`table_index.py` `RootIndexSet` + schema-2 index set,
+`master_state.py` schema 8, `tests/test_native_master_ui_mt26.py`)
+and the reviewable `master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.34-windows-portable.zip` sha256
+`ade1ecc520ddbeaf6886e1b195fc6e2886a5f9cbeaa64b15f9ac5679420f5054`
+(49,719,386 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`606ea2287eb9f787308d862c18209076ee42e4f7a4ae88fcb93bf8f22edcb6f6`,
+16,983,514 bytes) ships next to the converter). Superseded 0.33,
+build `native-20261108T200230Z-b0167049` (cut from `main` @
+`6e71739`, 2026-11-08): the 0.33 Master Trainer table folder
+auto-rescan release (MT-25) - in-build suite 4,499 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.33-source.zip` sha256
 `4528d1d0f2ee269fb2ee7ec470d9e9711b3c284bffe6cf582f7dafa7431756f2`
 (14,433,388 bytes) - carries the MT-25 auto-rescan
 (`master_state.py` schema 7, the 30 s auto-rescan tick,
@@ -597,9 +611,9 @@ CE asset bytes are copied.
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
 
-**0.34 content on main (2026-11-09, root-direct; the 0.34 build is
-cut from this content, 0.33 remains the latest verified release):
-Master Trainer multi-root table index (MT-26).**
+**0.34 released (build `native-20261109T024143Z-a5457911`, cut from
+`main` @ `dc00343`, 2026-11-09): Master Trainer multi-root table
+index (MT-26).**
 The 0.34 feature was evaluated against online table / trainer
 manager patterns (the Cheat Engine Table Manager (2026) feature
 set, whose core capability is the multi-folder table index; the
@@ -690,8 +704,21 @@ data).
   unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION bumped to
   0.34 with the changelog entry in the same change. The 0.34 build
-  is cut from this content (0.33 remains the latest verified
-  release).
+  `native-20261109T024143Z-a5457911` was cut from `main` @
+  `dc00343` (2026-11-09): in-build suite 4,543 OK / 30 expected
+  skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+  per gate; source ZIP `CT2Trainer-0.34-source.zip` sha256
+  `0d0a0849a90171f64eaf5b55ec06ec1d9117d02d5330895dcb4279e26f73b0f5`
+  (14,455,170 bytes) - carries the MT-26 multi-root table index
+  (`table_index.py` `RootIndexSet` + schema-2 index set,
+  `master_state.py` schema 8,
+  `tests/test_native_master_ui_mt26.py`) and the reviewable
+  `master_trainer/UI.md` - and portable ZIP
+  `CT2Trainer-0.34-windows-portable.zip` sha256
+  `ade1ecc520ddbeaf6886e1b195fc6e2886a5f9cbeaa64b15f9ac5679420f5054`
+  (49,719,386 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `606ea2287eb9f787308d862c18209076ee42e4f7a4ae88fcb93bf8f22edcb6f6`,
+  16,983,514 bytes, ships next to the converter).
 
 **0.33 released (build `native-20261108T200230Z-b0167049`, cut from
 `main` @ `6e71739`, 2026-11-08): Master Trainer table folder

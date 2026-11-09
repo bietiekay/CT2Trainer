@@ -574,8 +574,18 @@ game-facing action.
   (per-table count/reason/sha changes: 0); feature matrix
   unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION 0.34 +
-  CHANGELOG entry in the same change. The 0.34 build is cut from
-  this content (0.33 remains the latest verified release).
+  CHANGELOG entry in the same change. The 0.34 build
+  `native-20261109T024143Z-a5457911` cut from `main` @ `dc00343`
+  (2026-11-09): in-build suite 4,543 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.34-source.zip` sha256
+  `0d0a0849a90171f64eaf5b55ec06ec1d9117d02d5330895dcb4279e26f73b0f5`
+  (14,455,170 bytes), portable ZIP
+  `CT2Trainer-0.34-windows-portable.zip` sha256
+  `ade1ecc520ddbeaf6886e1b195fc6e2886a5f9cbeaa64b15f9ac5679420f5054`
+  (49,719,386 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `606ea2287eb9f787308d862c18209076ee42e4f7a4ae88fcb93bf8f22edcb6f6`,
+  16,983,514 bytes, ships next to the converter).
 - 0.33 Master Trainer table folder auto-rescan (MT-25)
   (2026-11-08, root-direct on `main`; online-evaluated in
   `master_trainer/ROADMAP.md`, the "0.33 table folder auto-rescan"

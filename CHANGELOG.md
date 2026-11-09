@@ -71,6 +71,19 @@ Master Trainer ROADMAP "0.34 multi-root table index" section):
   in the same change: `master_trainer/ROADMAP.md` (0.34 section +
   the 0.35 candidate note — per-table notes / tags), `CONCEPT.md`,
   `UI.md` (+ the multi-root lines in `ui_flow_text()`).
+- Build: 0.34 released as run
+  `native-20261109T024143Z-a5457911` (cut from `main` @ `dc00343`,
+  2026-11-09): in-build suite 4,543 OK / 30 expected skips, 0
+  failures — fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.34-source.zip` sha256
+  `0d0a0849a90171f64eaf5b55ec06ec1d9117d02d5330895dcb4279e26f73b0f5`
+  (14,455,170 bytes); portable ZIP
+  `CT2Trainer-0.34-windows-portable.zip` sha256
+  `ade1ecc520ddbeaf6886e1b195fc6e2886a5f9cbeaa64b15f9ac5679420f5054`
+  (49,719,386 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `606ea2287eb9f787308d862c18209076ee42e4f7a4ae88fcb93bf8f22edcb6f6`,
+  16,983,514 bytes, ships next to the converter).
 
 ## 0.33 (2026-11-08)
 
