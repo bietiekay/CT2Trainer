@@ -123,7 +123,35 @@ def group_tables_by_process(entries) -> list[tuple[str, list]]:
     return ordered
 
 
-# MT-18 (0.28): the persisted waiting-view pin set (relative paths,
+def _table_key_of(entry) -> str:
+    """MT-26 (0.34): the row's global identity key.
+
+    Mirrors ``table_index.table_key`` without the cross-module import
+    (this layer stays pure / duck-typed): the absolute path (root joined
+    with the relative path) when the entry carries a root, otherwise the
+    relative path.
+    """
+    root = getattr(entry, "root", "") or ""
+    if not root:
+        return entry.relative_path
+    from pathlib import Path
+    return str(Path(root) / entry.relative_path)
+
+
+def _pin_target(entry) -> set:
+    """The casefolded keys one persisted pin can match this row under.
+
+    A pin is matched against BOTH the global table key (absolute in a
+    multi-root session) and the relative path (single-root callers and
+    promoted legacy pins), so relative and absolute pins both resolve.
+    """
+    return {
+        _table_key_of(entry).casefold(),
+        entry.relative_path.casefold(),
+    }
+
+
+# MT-18 (0.28): the persisted waiting-view pin set (table keys,
 # most recent pin first; the master-state document, schema 5, carries
 # it).  A pinned table floats to the top of the waiting view; the
 # pure layer below reshapes the row set only, it never adds or drops
@@ -132,13 +160,15 @@ def pin_tables(entries, pinned) -> list:
     """MT-18 (0.28): float pinned tables to the top of an ordered row set.
 
     ``entries`` is the waiting-view row set the caller already sorted
-    and filtered; ``pinned`` is the persisted pin order (relative
-    paths, most recent pin first).  Pinned rows come first, in pin
-    order (casefolded comparison, so a pin survives on-disk case
-    drift); the remainder keeps the input order.  Pin paths that are
-    not part of ``entries`` (table gone, filtered out) are ignored.
-    Row identity stays the relative path, so a path appears at most
-    once.
+    and filtered; ``pinned`` is the persisted pin order (table keys,
+    most recent pin first).  Pinned rows come first, in pin order
+    (casefolded comparison, so a pin survives on-disk case drift); the
+    remainder keeps the input order.  Pins that are not part of
+    ``entries`` (table gone, filtered out) are ignored.  MT-26 (0.34):
+    a pin matches a row when it equals the row's global table key
+    (absolute in a multi-root session) or its relative path (single-root
+    / legacy relative pins), so relative and absolute pins both resolve.
+    Row identity stays the table key, so a row appears at most once.
     """
     order = {}
     for i, path in enumerate(pinned):
@@ -148,7 +178,10 @@ def pin_tables(entries, pinned) -> list:
     top = []
     rest = []
     for entry in entries:
-        key = entry.relative_path.casefold()
-        (top if key in order else rest).append(entry)
-    top.sort(key=lambda e: order[e.relative_path.casefold()])
+        if _pin_target(entry) & order.keys():
+            top.append(entry)
+        else:
+            rest.append(entry)
+    top.sort(key=lambda e: min(order[k] for k in _pin_target(e)
+                               if k in order))
     return top + rest

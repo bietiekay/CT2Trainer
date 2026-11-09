@@ -46,10 +46,14 @@ def _envelope(payload):
 
 class RecentStateDocumentTests(unittest.TestCase):
     def test_schema3_round_trip(self):
+        # MT-26 (0.34): a consistent schema-8 state carries the folder
+        # list (load self-heals an empty list to it, so the roundtrip
+        # stays exact).
         state = MasterState(MASTER_STATE_SCHEMA, "/tables",
                             last_table="a.ct", attach_mode=ATTACH_MODE_ASK,
                             recent_tables=(("a.ct", "2026-11-03T10:00:00Z"),
-                                           ("b.ct", "2026-11-02T09:30:00Z")))
+                                           ("b.ct", "2026-11-02T09:30:00Z")),
+                            table_folders=("/tables",))
         loaded = master_state_from_bytes(master_state_to_bytes(state))
         self.assertEqual(loaded, state)
         self.assertEqual(loaded.schema, MASTER_STATE_SCHEMA)
@@ -61,9 +65,15 @@ class RecentStateDocumentTests(unittest.TestCase):
                          "attach_mode": "ask"})
         loaded = master_state_from_bytes(raw)
         self.assertEqual(loaded.schema, MASTER_STATE_SCHEMA)
-        self.assertEqual(loaded.last_table, "a.ct")
+        # MT-26 (0.34): promotion re-anchors the relative table
+        # reference to an absolute table key under the stored folder
+        # (same Path join the implementation uses - platform-stable).
+        from pathlib import Path
+        self.assertEqual(loaded.last_table,
+                         str(Path("/t") / "a.ct"))
         self.assertEqual(loaded.attach_mode, ATTACH_MODE_ASK)
         self.assertEqual(loaded.recent_tables, ())
+        self.assertEqual(loaded.table_folders, ("/t",))
 
     def test_schema1_promotion_defaults_everything(self):
         raw = _envelope({"schema": 1, "last_folder": "/t"})

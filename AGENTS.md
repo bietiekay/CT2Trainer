@@ -201,7 +201,29 @@ in-build suite 4,499 OK / 30 expected skips, `ce_inputs: []`,
 `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
 16,968,879 bytes) ships next to the converter); superseded 0.32
 (build `native-20261108T100731Z-a1d311e5` cut from `main` @
-`bfcc3a3`, 2026-11-08). The 0.16
+`bfcc3a3`, 2026-11-08). 0.34 content on main
+(2026-11-09, root-direct): the Master Trainer multi-root table
+index (MT-26: the Master indexes several table folders at once -
+every root keeps the same (size, mtime_ns) + sha256 short-circuit
+reconcile contract; the merged surface distinguishes tables by the
+absolute table key (index root + relative path) with the
+documented relative-path fallback; the "Folders..." header button
+opens the folder manager (add / remove / set primary, the primary
+marked with a star); the waiting view gains the Folder column; the
+persisted folder list, master-state schema 7 -> 8, table_folders,
+primary first, cap 8; the tables index document schema 1 -> 2 - one
+checksum-bound root block per indexed folder; run_master
+multi-root folder resolution: an explicit folder argument wins as
+the primary root with the stored folders indexed behind it
+(casefold-deduped), a parameterless start keeps the stored list (a
+missing stored folder stays visible as a scan problem), only a
+genuinely first start shows the picker (cancel exits 0), an
+explicit missing folder is the documented exit-2 refusal; zero
+load-path effect - the MT-9 gate re-checks the table under its
+index root independently at load time); +44 tests, full main suite
+4,543 OK / 30 expected skips, catalog zero delta
+`blocked-catalog-034-mt26`; the 0.34 build is cut from this content
+(0.33 remains the latest verified release). The 0.16
 Wave-4
 feature work is complete; RT-4.1 (symbol provider fidelity) landed on
 `main` 2026-10-22; RT-3 (legacy-binary CT loader; `SuperMeatBoy.CT`
@@ -316,13 +338,34 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-08, 0.33 released - build
+**CT2Trainer (status 2026-11-09, 0.34 content on main - the 0.34
+build is cut from this content; 0.33 remains the latest verified
+release, build `native-20261108T200230Z-b0167049` cut from `main` @
+`6e71739`, 2026-11-08, in-build suite 4,499 OK / 30 expected skips,
+`ce_inputs: []`) - 0.34 Master Trainer multi-root table index
+(MT-26: the Master indexes several table folders at once - every
+root keeps the same (size, mtime_ns) + sha256 short-circuit
+reconcile contract; the merged surface distinguishes tables by the
+absolute table key (index root + relative path) with the
+documented relative-path fallback; the "Folders..." header button
+opens the folder manager (add / remove / set primary, the primary
+marked with a star, every action re-scans the indexed roots, saves
+the index and restarts the auto-rescan clock); the waiting view
+gains the Folder column; the persisted folder list, master-state
+schema 7 -> 8, table_folders, primary first, cap 8; the tables
+index document schema 1 -> 2 - one checksum-bound root block per
+indexed folder; run_master multi-root folder resolution: an
+explicit folder argument wins as the primary root with the stored
+folders indexed behind it (casefold-deduped), a parameterless start
+keeps the stored list (a missing stored folder stays visible as a
+scan problem), only a genuinely first start shows the picker (cancel
+exits 0), an explicit missing folder is the documented exit-2
+refusal; zero load-path effect - the MT-9 gate re-checks the table
+under its index root independently at load time); +44 tests, full
+main suite 4,543 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-034-mt26`), superseded 0.33 released (build
 `native-20261108T200230Z-b0167049` cut from `main` @ `6e71739`,
-2026-11-08, in-build suite 4,499 OK / 30 expected skips,
-`ce_inputs: []`; superseded 0.32, build
-`native-20261108T100731Z-a1d311e5` cut from `main` @ `bfcc3a3`,
-2026-11-08, in-build suite 4,483 OK / 30 expected skips,
-`ce_inputs: []`) - 0.33 Master Trainer table folder auto-rescan
+2026-11-08) - 0.33 Master Trainer table folder auto-rescan
 (MT-25: the waiting view re-runs the existing incremental scan every
 30 s while the persisted "Auto-rescan: on" status-bar toggle is on -
 added / changed / removed tables show up without a manual F5; the

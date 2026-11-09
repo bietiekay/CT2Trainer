@@ -1,6 +1,6 @@
 # CT2Trainer Master Trainer — UI flow (reviewable)
 
-Status: 0.32 (2026-11-05). This document is the reviewable copy of the
+Status: 0.34 (2026-11-09). This document is the reviewable copy of the
 in-app "UI flow" dialog (the `ui_flow_text()` function in
 `master_ui.py`; keep both aligned when the flow changes). It describes
 the complete user flow of the Master Trainer so it can be reviewed and
@@ -39,25 +39,26 @@ survive — they are window/app state, not widget state).
 | `Sort: name/process/status` | Cycles the sort mode; persisted (schema 4) |
 | Project link | Opens the repository page |
 | `Load table` | Explicit load: a picker over the full index (works even while the bound process is not running yet — the engine then waits for it) |
-| `Change folder…` | Directory picker; switches the indexed root (the previous root's index is dropped) |
-| `Rescan` | Re-scans the folder now (same as **F5**) |
+| `Folders…` | The folder manager (0.34, MT-26): the indexed table folders in user order (the primary marked with a star); `Add folder…` / `Set primary` / `Remove` / `Close`; every action re-scans the indexed roots, saves the index, restarts the auto-rescan clock and refreshes the view; a failed change lands in the status line (fail-closed) |
+| `Rescan` | Re-scans the indexed folders now (same as **F5**) |
 | `UI flow` | Opens this flow document as a read-only in-app dialog (0.29, MT-20); a second click lifts the open window instead of duplicating it |
 | `Close` | Closes the app (an active trainer session is closed cleanly first) |
 
 ### The lines
 
-- **Folder line** — the configured folder; a scan problem is named
-  inline.
-- **Meta line** — table counts, last scan time, state home location,
-  the last loaded table, the attach mode, the recent list (`recent:
-  a, b, c (N more)`), the active status filter (`status filter: X`,
-  0.31, MT-23) and the live attention count (`attention: N` — how
-  many indexed tables the MT-9 gate would refuse right now; shown
-  only when N > 0) and the live `analyzing N table(s)` figure
-  (0.32, MT-24 — shown only while the background plan
-  analysis has work), and — on non-Windows — the permanent MT-7 route
-  hint (attach unavailable; the documented Proton-wrapped trainer
-  route).
+- **Folder line** — the primary folder; with several indexed folders
+  (0.34, MT-26) the total folder count; a scan problem (e.g. a
+  missing stored folder) is named inline.
+- **Meta line** — table counts across the indexed folders, last scan
+  time, state home location, the last loaded table, the attach mode,
+  the recent list (`recent: a, b, c (N more)`), the active status
+  filter (`status filter: X`, 0.31, MT-23) and the live attention
+  count (`attention: N` — how many indexed tables the MT-9 gate would
+  refuse right now; shown only when N > 0) and the live
+  `analyzing N table(s)` figure (0.32, MT-24 — shown only while the
+  background plan analysis has work), and — on non-Windows — the
+  permanent MT-7 route hint (attach unavailable; the documented
+  Proton-wrapped trainer route).
 - **Running now** — which bound processes are visible in the latest
   snapshot, with PIDs.
 
@@ -69,7 +70,8 @@ display-only):
 
 | Column | Content |
 | --- | --- |
-| Table | The relative path — the row identity every load path keys off |
+| Table | The relative path (the row label; in a multi-root session the absolute table key — index root + relative path — is the row identity every load path keys off, 0.34, MT-26) |
+| Folder | The indexed folder the table came from (0.34, MT-26) |
 | Process name(s) | The bound process names, or `(none found)` |
 | Status | Live right now (0.31, MT-23): `ok` / `running` (a bound process is up) / `changed` (the file drifted since the last scan — amber row) / `missing` (the file is gone — red row) / `unreadable` (red row); one bounded stat per visible row per render |
 | Detail | The running PID(s), the `pinned` marker (0.28, MT-18), the bounded `N blocked` note when the background analysis found blocked records (0.32, MT-24 — appended after the pin marker), or the attention / unreadable reason |
@@ -103,10 +105,11 @@ Group rows (process view) are display-only: no context menu.
 Left to right: the live status line (waiting for which process, the
 last error / tick detail) · `Attach: auto/ask` (the persisted attach
 mode) · **`Auto-rescan: on/off`** (the persisted auto-rescan toggle,
-0.33 — while on, the tick re-runs the incremental folder scan every
-30 s so added / changed / removed tables show up without a manual
-F5; paused while a trainer is attached; a manual rescan or folder
-change restarts the 30 s clock) · **`Retry load`** (the re-arm; moved
+0.33; 0.34: it covers every indexed folder — while on, the tick
+re-runs the incremental scan of every indexed folder every 30 s so
+added / changed / removed tables show up without a manual F5; paused
+while a trainer is attached; a manual rescan, a folder add / remove /
+set-primary, or the waiting-view rebuild restarts the 30 s clock) · **`Retry load`** (the re-arm; moved
 into the status bar in 0.29 — it used to be a separate button below
 the status strip, easy to miss) · `Recent: <path>` (one-click
 re-load of the most recent table, only when a recent table exists).
@@ -125,12 +128,14 @@ Every second the pure orchestrator decides:
   failed (name, PID) pair is remembered so the loop does not
   hot-retry; Rescan / Retry load re-arm;
 - while **Auto-rescan** is on (0.33, the persisted status-bar
-  toggle), the tick additionally re-runs the incremental folder scan
-  every 30 s — one stat pass with the manual Rescan's
+  toggle; 0.34: it covers every indexed folder), the tick
+  additionally re-runs the incremental scan of every indexed folder
+  every 30 s — one stat pass per folder with the manual Rescan's
   `(size, mtime_ns)` + sha256 short-circuit — so added / changed /
   removed tables show up in the list without a manual F5; the pass
   has no status-line flash, it pauses while a trainer is attached,
-  and a manual rescan or folder change restarts the 30 s clock.
+  and a manual rescan (F5), a folder add / remove / set-primary, or
+  the waiting-view rebuild restarts the 30 s clock.
 
 ## 2) Loading a table
 
@@ -138,7 +143,9 @@ All load paths run through the same explicit/auto pipeline (named
 refusals included — never a crash):
 
 1. **Auto-load** — the poll tick (unique match).
-2. **`Load table` header button** — the picker over the full index.
+2. **`Load table` header button** — the picker over the full index
+   (0.34, MT-26: the list rows are the table keys — the absolute path
+   in a multi-root session, the relative path in a single-root one).
 3. **Row** — right-click "Load this table", Enter, or double-click.
 4. **`Recent: <path>`** — the one-click re-load.
 
@@ -192,8 +199,8 @@ offers the re-attach target) and `⬅ Master` (the return below).
 ## 4) Back to Master / Detach
 
 - **`⬅ Master`** — closes the engine cleanly and rebuilds the waiting
-  view; the same process keeps watching the folder. The per-table
-  settings sidecar is saved on the way out. An unclean close keeps the
+  view; the same process keeps watching the indexed folders. The
+  per-table settings sidecar is saved on the way out. An unclean close keeps the
   state journals and shows the cleanup warning.
 - **`Detach`** — keeps the trainer window open, releases the live
   target (session state, journals and wishes untouched), and re-
@@ -204,7 +211,7 @@ offers the re-attach target) and `⬅ Master` (the return below).
 
 | Item | Where |
 | --- | --- |
-| Table folder (ask on first start) | `master-settings.json` |
+| Table folders (the indexed folder list, primary first, capped at 8; ask on first start; 0.34, MT-26) | `master-settings.json` (schema 8) |
 | Attach mode (auto/ask) | `master-settings.json` (schema 2+) |
 | Last explicit table | `master-settings.json` (schema 2+) |
 | Recent tables (≤ 10, UTC) | `master-settings.json` (schema 3+) |
@@ -214,7 +221,7 @@ offers the re-attach target) and `⬅ Master` (the return below).
 | Per-table settings sidecar | `settings/<table-sha256>.ct2trainer.json` (keyed by content hash, never the path) |
 | Per-table plan analysis (0.32, MT-24) | `table-analysis.json` (schema 1; keyed by table content sha256, LRU-bounded to 1024 entries — a content change re-analyzes, an unchanged table reuses the cached counts) |
 | Enabled toggles (per table) | the engine state store; only confirmed ON toggles persist |
-| Table index | `tables-index.json` (checksum-bound) |
+| Table index (0.34: one checksum-bound root block per indexed folder) | `tables-index.json` (schema 2, checksum-bound) |
 
 A failed enable attempt stays visibly inactive and is never repeated
 as a saved wish on the next attach.
@@ -225,7 +232,7 @@ as a saved wish on the next attach.
 | --- | --- | --- |
 | `/` | Focus the filter entry (from anywhere) | — (the trainer UI owns the keys) |
 | `Esc` | (in the filter) clear the query, focus returns to the list | — |
-| `F5` | Re-scan the folder (0.29) | — |
+| `F5` | Re-scan the indexed folders (0.29; 0.34: every indexed folder) | — |
 | `↑/↓/←/→`, `PgUp/PgDn` | Navigate the table list (initial focus on build, 0.29) | Grid navigation (trainer UI) |
 | `Enter` / `KP_Enter` | Load the selected row (explicit path, named refusals included) | — |
 | Double-click | Load the clicked row | Value-row expansion (trainer UI) |

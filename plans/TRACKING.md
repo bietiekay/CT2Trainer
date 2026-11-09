@@ -486,6 +486,96 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- 0.34 Master Trainer multi-root table index (MT-26)
+  (2026-11-09, root-direct on `main`; online-evaluated in
+  `master_trainer/ROADMAP.md`, the "0.34 multi-root table index"
+  section - the Cheat Engine Table Manager (2026) feature set, whose
+  core capability is the multi-folder table index, the
+  trainer-manager import / organize / search / pin patterns
+  (game-trainer-manager (Karasukaigan), Cheat Happens Trainer
+  Manager), the WeMod "save your selections for next time" pattern).
+  MT-26: the Master Trainer indexes several table folders at once.
+  Every root keeps the same incremental reconcile contract (the
+  `(size, mtime_ns)` + sha256 short-circuit per root; the MT-25
+  auto-rescan now covers every indexed folder), and the merged
+  surface distinguishes tables by the **absolute table key** (index
+  root + relative path, native separators; `table_key()`) - the
+  relative path remains the documented single-root identity, and key
+  lookups resolve casefolded with the documented relative-path
+  fallback (`TableIndex.get_by_key` / `RootIndexSet.get_by_key`).
+  The folder list persists in `master-settings.json` schema 7 -> 8
+  (`table_folders`, primary first, capped at `TABLE_FOLDERS_LIMIT`
+  = 8; strict non-empty unique casefolded strings; schema-7
+  documents promote on load - the list is filled from the single
+  stored last folder and the relative table references (last
+  table, recents, pins) are re-anchored to absolute table keys
+  under it, so pins / recents survive the upgrade; a schema-7
+  document carrying the field is refused as an unknown field; a
+  schema-8 document with a set last folder but an empty list
+  self-heals to the single folder). The tables index document
+  carries one checksum-bound root block per indexed folder (schema
+  1 -> 2; `save_index_set` / `load_index_set`; schema-1
+  single-root documents promote on load). The folder lifecycle is
+  `MasterApp.add_folder` / `remove_folder` / `move_folder_front`
+  (named `ValueError`s; `set_folder` keeps its replace-all
+  contract), managed by the "Folders..." header button - the
+  folder manager window (the indexed folders in user order, the
+  primary marked with a star; "Add folder..." / "Set primary" /
+  "Remove" / "Close"; every action re-scans the indexed roots,
+  saves the index, restarts the auto-rescan clock and refreshes
+  the view; a failed change lands in the status line, fail-closed).
+  The waiting view gains the **Folder column** (the entry's index
+  root), and the row key becomes the absolute key in a multi-root
+  session - picker, details, pins, recents and the MT-24 analysis
+  queue are all key-based. `run_master` multi-root folder
+  resolution: an explicit folder argument wins as the primary root
+  with the stored folders indexed behind it (casefold-deduped,
+  each printed as an "Also indexing stored folder:" line); a
+  parameterless start keeps the stored folder list as-is (a
+  missing stored folder stays visible as a scan problem, fixed
+  through the folder manager); only a genuinely first start / no
+  stored folders shows the directory picker (a cancelled first
+  start exits 0); every stored folder gone shows the picker (the
+  pick is prepended as the new primary, a cancel keeps the missing
+  list); an explicit missing folder is the documented exit-2
+  refusal. Zero load-path effect - the MT-9 gate re-checks the
+  table file under its index root independently at load time. Zero
+  catalog effect (no table-parsing change). Remaining candidates
+  (evaluated, not yet adopted): per-table notes / tags (organize
+  metadata) - the documented 0.35 candidate; the MT-21
+  multi-column trainer grid; the game launch integration (needs
+  install-path data). +44 tests (7 in
+  `tests/test_native_master_state.py`: the schema-8
+  `table_folders` round-trip, the schema-7 document promotion
+  (folder list from the stored last folder + the re-anchored
+  relative table references), the schema-7-carries-the-field
+  unknown-field refusal, the schema-8 self-heal, and the cap /
+  unique / non-empty named refusals; 37 in
+  `tests/test_native_master_ui_mt26.py` new: the `RootIndexSet`
+  pure surface (roots / add / remove / move-front, the
+  first-root-wins merged lookups, the key resolution with the
+  relative-path fallback, the read-only merged entries, the
+  `table_key` form), the multi-root `MasterApp` (the folder
+  lifecycle + named refusals, the persisted folder list, the
+  schema-2 index-set round trip, the per-root reconcile
+  independence, the missing-root scan problem), the key-based load
+  paths (`request_load` / `choose` across roots, the cross-root
+  same-relative-path disambiguation), the folder manager window
+  (primary marker, the add / set-primary / remove wiring, the
+  auto-rescan clock restart), the Folder column + the row key, the
+  table-load picker labels, the `run_master` multi-root folder
+  resolution, the multi-root auto-rescan); full main suite 4,543
+  OK / 30 expected skips (4,499 from the 0.33 content + 44 new);
+  catalog remeasure `blocked-catalog-034-mt26` (3-chunk deep-equal
+  audit over the 151 reference tables, 2026-11-09): 151/151
+  loaded, 0 load errors, 117,809 total / 116,756 supported /
+  60,161 staged / 103,607 actionable / 12,974 headings / 1,053
+  blocked - **zero delta** vs `blocked-catalog-033-auto-rescan`
+  (per-table count/reason/sha changes: 0); feature matrix
+  unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION 0.34 +
+  CHANGELOG entry in the same change. The 0.34 build is cut from
+  this content (0.33 remains the latest verified release).
 - 0.33 Master Trainer table folder auto-rescan (MT-25)
   (2026-11-08, root-direct on `main`; online-evaluated in
   `master_trainer/ROADMAP.md`, the "0.33 table folder auto-rescan"

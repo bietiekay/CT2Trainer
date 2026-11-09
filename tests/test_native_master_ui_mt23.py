@@ -290,11 +290,13 @@ class LiveStatusWiringTests(_WaitingViewBase):
         self.window._render_tables()
         rows = self._rows()
         values, tags = rows["second.ct"]
-        self.assertEqual(values[2], "changed")
-        self.assertIn("Rescan", values[3])
+        # MT-26 (0.34): the Status column shifted right of the new
+        # Folder column.
+        self.assertEqual(values[3], "changed")
+        self.assertIn("Rescan", values[4])
         self.assertIn("attention-warn", tags)
         values, tags = rows["zeta.ct"]
-        self.assertEqual(values[2], "ok")
+        self.assertEqual(values[3], "ok")
         self.assertNotIn("attention-warn", tags)
         self.assertNotIn("attention-error", tags)
 
@@ -306,8 +308,8 @@ class LiveStatusWiringTests(_WaitingViewBase):
         (self.folder / "second.ct").unlink()
         self.window._render_tables()
         values, tags = self._rows()["second.ct"]
-        self.assertEqual(values[2], "missing")
-        self.assertIn("Rescan", values[3])
+        self.assertEqual(values[3], "missing")
+        self.assertIn("Rescan", values[4])
         self.assertIn("attention-error", tags)
 
     def test_a_running_process_stays_running_only_when_loadable(self):
@@ -321,12 +323,12 @@ class LiveStatusWiringTests(_WaitingViewBase):
         self._stop_analysis(app)
         self.window._poll()
         rows = self._rows()
-        self.assertEqual(rows["zeta.ct"][0][2], "running")
+        self.assertEqual(rows["zeta.ct"][0][3], "running")
         # Drift the table: the running process cannot make it loadable.
         (self.folder / "zeta.ct").write_bytes(b"x" * 700)
         self.window._render_tables()
         rows = self._rows()
-        self.assertEqual(rows["zeta.ct"][0][2], "changed")
+        self.assertEqual(rows["zeta.ct"][0][3], "changed")
 
     def test_the_meta_line_carries_the_status_filter_and_count(self):
         (self.folder / "second.ct").write_text(CT_GAMEB, encoding="utf-8")

@@ -247,7 +247,7 @@ class ExplicitLoadUiTests(unittest.TestCase):
         self.assertIsNone(self.window._table_load_picker)
 
     def test_table_load_picker_no_ok_tables_warns(self):
-        self.app.index.entries = {rel: e for rel, e in
+        self.app.index.indexes[0].entries = {rel: e for rel, e in
                                   self.app.index.entries.items()
                                   if e.status != "ok"}
         with patch("ct2trainer.native.master_trainer.master_ui"

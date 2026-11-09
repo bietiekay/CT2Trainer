@@ -50,7 +50,7 @@ from ct2trainer.native.master_trainer.master_state import (MasterState,
                                                            load_master_state,
                                                            save_master_state)
 from ct2trainer.native.master_trainer.table_index import (TableIndexRefusal,
-                                                          load_index)
+                                                          load_index_set)
 from ct2trainer.native.master_trainer.table_gate import TableLoadGateRefusal
 
 CT_GAMEA = '''<CheatTable CheatEngineTableVersion="46"><CheatEntries>
@@ -172,10 +172,12 @@ class MasterAppTests(unittest.TestCase):
         app.save_index()
         path = app.index_path()
         raw = json.loads(path.read_bytes())
-        raw["payload"]["entries"]["a.ct"]["sha256"] = "00" * 32
+        # MT-26 (0.34): the stored document is the schema-2 set (the
+        # single root is one block in the ordered roots array).
+        raw["payload"]["roots"][0]["entries"]["a.ct"]["sha256"] = "00" * 32
         path.write_bytes(json.dumps(raw, sort_keys=True).encode("utf-8"))
         with self.assertRaises(TableIndexRefusal) as ctx:
-            load_index(path)
+            load_index_set(path)
         self.assertIn("checksum does not match", str(ctx.exception))
         app2 = _make_app(self.folder, self.state_home)
         self.assertEqual(sorted(app2.index.entries), ["a.ct", "sub/b.ct"])
@@ -203,7 +205,9 @@ class MasterAppTests(unittest.TestCase):
         path = app.index_path()
         self.assertTrue(path.is_file())
         self.assertEqual(path.parent, self.state_home)  # never in the folder
-        stored = load_index(path)
+        # MT-26 (0.34): the app persists the schema-2 set document
+        # (one root block per indexed folder).
+        stored = load_index_set(path)
         self.assertEqual(stored.entries, app.index.entries)
 
     def test_app_rescan_picks_up_changes(self):
@@ -227,7 +231,9 @@ class MasterAppTests(unittest.TestCase):
         app.set_folder(other)
         self.assertEqual(sorted(app.index.entries), ["d.ct"])
         self.assertEqual(app.orchestrator.bound_process_names, ["GameD.exe"])
-        stored = load_index(app.index_path())
+        # MT-26 (0.34): the schema-2 set carries the single replaced
+        # root; the compat surface keeps .root / .entries working.
+        stored = load_index_set(app.index_path())
         self.assertEqual(stored.root, app.folder)
         self.assertEqual(sorted(stored.entries), ["d.ct"])
 
@@ -305,8 +311,9 @@ class RunMasterTests(unittest.TestCase):
         app = window_cls.call_args[0][1]
         self.assertIsInstance(app, MasterApp)
         self.assertEqual(app.folder, str(folder.resolve()))
-        # The app persisted its index into the given state home.
-        stored = load_index(state_home / "tables-index.json")
+        # The app persisted its index into the given state home (the
+        # MT-26 schema-2 set document, single root).
+        stored = load_index_set(state_home / "tables-index.json")
         self.assertEqual(sorted(stored.entries), ["a.ct"])
 
 
@@ -347,9 +354,12 @@ class MasterWindowTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         values = list(window._table_tree.item(rows[0])["values"])
         self.assertEqual(values[0], "a.ct")
-        self.assertEqual(values[1], "GameA.exe")
-        self.assertEqual(values[2], "ok")
-        for text in ("Close", "Rescan", "Change folder\u2026", "Retry load"):
+        # MT-26 (0.34): the Folder column sits after Table; the
+        # header button is the folder manager now.
+        self.assertEqual(values[1], str(self.folder.resolve()))
+        self.assertEqual(values[2], "GameA.exe")
+        self.assertEqual(values[3], "ok")
+        for text in ("Close", "Rescan", "Folders\u2026", "Retry load"):
             self.assertTrue(_buttons(self.root, text), text)
         self.assertTrue(window._folder_label.cget("text").startswith("Folder: "))
         self.assertEqual(window._status_var.get(), "Scanning\u2026")
@@ -368,8 +378,10 @@ class MasterWindowTests(unittest.TestCase):
         rows = window._table_tree.get_children()
         by_path = {list(window._table_tree.item(r)["values"])[0]:
                    list(window._table_tree.item(r)["values"]) for r in rows}
-        self.assertEqual(by_path["empty.ct"][2], "unreadable")
-        self.assertEqual(by_path["empty.ct"][3], "empty file")
+        # MT-26 (0.34): Status / Detail shifted right of the Folder
+        # column.
+        self.assertEqual(by_path["empty.ct"][3], "unreadable")
+        self.assertEqual(by_path["empty.ct"][4], "empty file")
 
     def test_rescan_rerenders_after_content_change(self):
         app = _make_app(self.folder, self.state_home)
@@ -381,18 +393,22 @@ class MasterWindowTests(unittest.TestCase):
                          ("GameZ.exe",))
         values = list(window._table_tree.item(
             window._table_tree.get_children()[0])["values"])
-        self.assertEqual(values[:4], ["a.ct", "GameZ.exe", "ok", ""])
+        # MT-26 (0.34): the Folder column after Table shifts the row
+        # values right by one.
+        self.assertEqual(values[:5],
+                         ["a.ct", str(self.folder.resolve()),
+                          "GameZ.exe", "ok", ""])
         # MT-24 (0.32): the Entries / Blocked columns sit between
         # Detail and Size - pending "…" while the background plan
         # analysis has not re-rendered yet (the MT-24 test module
         # covers the count values themselves).
-        self.assertEqual(values[4:6], ["…", "…"])
+        self.assertEqual(values[5:7], ["…", "…"])
         # MT-15 (0.26): the row gained Size / Modified / Last-used.
-        self.assertEqual(len(values), 9)
-        self.assertTrue(values[6].endswith((" B", " KB", " MB")), values[6])
+        self.assertEqual(len(values), 10)
+        self.assertTrue(values[7].endswith((" B", " KB", " MB")), values[7])
         self.assertTrue(re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}",
-                                     values[7]), values[7])
-        self.assertEqual(values[8], "")
+                                     values[8]), values[8])
+        self.assertEqual(values[9], "")
         # The status line is back on the (rebound) waiting line.
         self.assertEqual(window._status_var.get(),
                          window._waiting_status_line())
@@ -1005,8 +1021,10 @@ class FirstStartAndWaitingViewTests(unittest.TestCase):
                       window._running_label.cget("text"))
         values = list(window._table_tree.item(
             window._table_tree.get_children()[0])["values"])
-        self.assertEqual(values[2], "running")
-        self.assertEqual(values[3], "PID 7")
+        # MT-26 (0.34): Status / Detail shifted right of the Folder
+        # column.
+        self.assertEqual(values[3], "running")
+        self.assertEqual(values[4], "PID 7")
         # The process exits: the next tick clears the line and the tree.
         app.lister.entries.clear()
         window._poll()
@@ -1014,8 +1032,8 @@ class FirstStartAndWaitingViewTests(unittest.TestCase):
                       window._running_label.cget("text"))
         values = list(window._table_tree.item(
             window._table_tree.get_children()[0])["values"])
-        self.assertEqual(values[2], "ok")
-        self.assertEqual(values[3], "")
+        self.assertEqual(values[3], "ok")
+        self.assertEqual(values[4], "")
 
     def _schedule_spy(self, window):
         window.root.after = lambda ms, cb=None: None

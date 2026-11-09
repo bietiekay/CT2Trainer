@@ -178,16 +178,22 @@ def ui_flow_text() -> str:
         "cycle (all / ok / attention - the live loadability filter, "
         "persisted); View cycle (list <-> process groups); Sort cycle "
         "(name / process / status); the project link; Load table; "
-        "Change folder...; Rescan; UI flow (this window); Close.\n"
-        "   Below the header: the folder line (with any scan problem), "
-        "the meta line (table counts, the live attention count, the "
+        "Folders... (the folder manager: add / remove / set primary "
+        "among the indexed table folders - several folders can be "
+        "indexed at once, primary first); Rescan; UI flow (this "
+        "window); Close.\n"
+        "   Below the header: the folder line (the primary folder, "
+        "the total folder count with several indexed, and any scan "
+        "problem), the meta line (table counts across the indexed "
+        "folders, the live attention count, the "
         "live 'analyzing N table(s)' figure while the background plan "
         "analysis has work, state home, and the attach route on "
         "non-Windows), and the live "
         "'Running now' line (which bound processes are visible right "
         "now, with PIDs).\n"
-        "   The table tree, one row per table: Table (relative path, the "
-        "row identity), Process name(s), Status (live right now: "
+        "   The table tree, one row per table: Table (relative path), "
+        "Folder (the indexed folder the table came from), Process "
+        "name(s), Status (live right now: "
         "ok / running / changed / missing / unreadable - the same "
         "facts the load gate proves at load time; changed is an "
         "amber warning, missing / unreadable are red), Detail (PID, "
@@ -209,7 +215,8 @@ def ui_flow_text() -> str:
         "deferred choice); Recent: <table> (one-click re-load, only "
         "when a recent table exists).\n"
         "   Keyboard: '/' focuses the filter; Esc clears it and returns "
-        "focus to the list; F5 re-scans the folder; arrow keys navigate "
+        "focus to the list; F5 re-scans the indexed folders; arrow keys "
+        "navigate "
         "the list (it takes the initial focus); Enter or double-click "
         "loads the selected row; right-click a row for the context menu "
         "(table details - the read-only inspection window with the "
@@ -220,10 +227,11 @@ def ui_flow_text() -> str:
         "default).  A multi-table match opens the picker.  Nothing "
         "matches and the line keeps ticking.\n"
         "   Auto-rescan: while the toggle is on, the tick re-runs the "
-        "incremental folder scan every 30 s (one stat pass - added / "
-        "changed / removed tables show up automatically); a manual "
-        "rescan (F5) or a folder change restarts the interval.  "
-        "Paused while a trainer is attached.\n\n"
+        "incremental scan of every indexed folder every 30 s (one stat "
+        "pass per folder - added / changed / removed tables show up "
+        "automatically); a manual rescan (F5), a folder add / remove / "
+        "set-primary, or the waiting-view rebuild restarts the "
+        "interval.  Paused while a trainer is attached.\n\n"
         "2) LOADING A TABLE\n"
         "   Any of these starts a load through the same path (named "
         "refusals included, never a crash): the auto-load above; the "
@@ -267,7 +275,8 @@ def ui_flow_text() -> str:
         "   Waiting-view settings (filter, sort, view mode, status "
         "filter), the pinned "
         "/favorite tables, the rolling recent list, the attach mode, "
-        "the table folder, the per-table plan-analysis results "
+        "the table folders (the indexed folder list, primary first), "
+        "the per-table plan-analysis results "
         "(keyed by the table content hash, LRU-bounded), and the "
         "per-table settings sidecar (keyed by the table content hash, "
         "never the path) all survive restarts under the state home.  "
@@ -294,16 +303,42 @@ def _default_state_home() -> str:
     return str(Path.home() / ".local" / "state" / "CT2Trainer" / "native" / "master-trainer")
 
 
+def _dedupe_folders(folders: list[str]) -> list[str]:
+    """MT-26 (0.34): unique resolved folder list, casefold-deduped,
+    order preserved (the first occurrence wins)."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for folder in folders:
+        if not folder:
+            continue
+        key = folder.casefold()
+        if key not in seen:
+            seen.add(key)
+            out.append(folder)
+    return out
+
+
 class MasterApp:
-    """Owns folder + index + orchestrator for one Master window."""
+    """Owns the table folders + multi-root index + orchestrator for one
+    Master window (MT-26, 0.34)."""
 
     def __init__(self, folder, *, state_home: str | None = None,
                  debug_log: bool = False, poll_ms: int = WAIT_POLL_MS,
-                 lister=None, plan_compiler=None, state_dir_factory=None):
+                 lister=None, plan_compiler=None, state_dir_factory=None,
+                 folders=None):
         from pathlib import Path
-        from .table_index import TableIndex, load_index, reconcile
+        from .table_index import RootIndexSet, load_index_set, reconcile
         from .process_watch import default_process_lister
-        self.folder = str(Path(folder).expanduser().resolve())
+        # MT-26 (0.34): the Master indexes several table folders at once.
+        # ``folder`` is the primary (first) root; ``folders`` are the extra
+        # roots, appended in order.  Every root keeps the same incremental
+        # reconcile contract (one stored per-root index, (size, mtime_ns) +
+        # sha256 short-circuit); the merged RootIndexSet orders them in user
+        # order (first = primary) and exposes one merged surface.
+        primary = str(Path(folder).expanduser().resolve())
+        extra = [str(Path(f).expanduser().resolve()) for f in (folders or [])]
+        self.folders: list[str] = _dedupe_folders([primary] + extra)
+        self.folder = self.folders[0] if self.folders else ""
         self.state_home = str(Path(state_home or _default_state_home()))
         self.debug_log = debug_log
         self.poll_ms = poll_ms
@@ -311,13 +346,24 @@ class MasterApp:
         self.last_scan_at: str | None = None
         index_path = Path(self.state_home) / "tables-index.json"
         try:
-            stored = load_index(index_path)
+            stored_set = load_index_set(index_path)
         except Exception:
-            stored = None
-        result = reconcile(self.folder, stored)
-        self.index = result.index
-        self.last_changes = result.changes
-        self.scan_error = result.scan_error
+            stored_set = RootIndexSet()
+        stored_by_root = {ix.root.casefold(): ix for ix in stored_set.indexes}
+        indexes: list = []
+        changes: list = []
+        errors: dict[str, str] = {}
+        for root in self.folders:
+            prior = stored_by_root.get(root.casefold())
+            result = reconcile(root, prior)
+            indexes.append(result.index)
+            changes.extend(result.changes)
+            if result.scan_error:
+                errors[root] = result.scan_error
+        self.index = RootIndexSet(indexes)
+        self.last_changes = tuple(changes)
+        self.scan_errors = errors
+        self.scan_error = errors.get(self.folder) if self.folder else None
         self.last_scan_at = _utc_now()
         # MT-10/11 (0.25): stored preferences (last explicitly loaded
         # table, attach mode) from the master-state document; an absent
@@ -368,7 +414,7 @@ class MasterApp:
         if plan_compiler is None:
             from ..compiler import compile_table
             from .table_gate import TableLoadGateRefusal, gate_table_for_load
-            folder = self.folder
+            app = self
 
             def plan_compiler(entry, process_name):
                 # MT-9 load gate: re-prove the table file (compatibility +
@@ -378,7 +424,12 @@ class MasterApp:
                 # exact (name, PID) pair: no crash and no hot-retry even
                 # when the target process was found (visible in the
                 # status line + error dialog; Rescan/Retry load re-arm).
-                path = Path(folder) / entry.relative_path
+                # MT-26 (0.34): the table file lives under the entry's
+                # index root (multi-root), falling back to the primary
+                # folder for root-less entries.
+                base = (getattr(entry, "root", "")
+                        or (app.folders[0] if app.folders else ""))
+                path = Path(base) / entry.relative_path
                 result = gate_table_for_load(path, entry)
                 if not result.ok:
                     raise TableLoadGateRefusal(result.code, result.detail)
@@ -398,13 +449,16 @@ class MasterApp:
         return Path(self.state_home) / MASTER_STATE_FILENAME
 
     def persist_state(self) -> None:
-        """Remember the current table folder plus the MT-10/11/15/16/18
+        """Remember the current table folders plus the MT-10/11/15/16/18
         preferences (last explicit table, attach mode, rolling recent
         tables, waiting-view filter/sort/display mode, pin set) for the
-        next start (best effort, like the index persistence)."""
+        next start (best effort, like the index persistence).  MT-26
+        (0.34): ``table_folders`` carries the indexed folders in user
+        order (primary first); ``last_folder`` mirrors the primary."""
         try:
             save_master_state(MasterState(
-                MASTER_STATE_SCHEMA, self.folder,
+                MASTER_STATE_SCHEMA,
+                self.folders[0] if self.folders else None,
                 last_table=self.last_table,
                 attach_mode=self.attach_mode,
                 recent_tables=tuple(self.recent_tables),
@@ -413,7 +467,8 @@ class MasterApp:
                 view_mode=self.view_mode,
                 pinned_tables=tuple(self.pinned_tables),
                 view_status=self.view_status,
-                auto_rescan=self.auto_rescan),
+                auto_rescan=self.auto_rescan,
+                table_folders=tuple(self.folders)),
                 self.state_path())
         except Exception:
             pass
@@ -472,7 +527,7 @@ class MasterApp:
         self.view_status = status_filter
         self.persist_state()
 
-    def set_table_pinned(self, relative_path: str, pinned: bool) -> None:
+    def set_table_pinned(self, table_key: str, pinned: bool) -> None:
         """MT-18 (0.28): pin/unpin one waiting-view table (schema 5)
         and re-persist the pin set.
 
@@ -482,58 +537,71 @@ class MasterApp:
         Invalid state raises the named ValueError, so the UI never
         persists what it would not render.
         """
-        if not isinstance(relative_path, str) or not relative_path:
+        if not isinstance(table_key, str) or not table_key:
             raise ValueError("table path must be a non-empty string")
         current = {p.casefold() for p in self.pinned_tables}
         if pinned:
-            if relative_path.casefold() in current:
+            if table_key.casefold() in current:
                 raise ValueError("table is already pinned")
             if len(self.pinned_tables) >= PINNED_TABLES_LIMIT:
                 raise ValueError("pinned tables limit reached ("
                                  + str(PINNED_TABLES_LIMIT) + ")")
-            self.pinned_tables = (relative_path,) + tuple(
+            self.pinned_tables = (table_key,) + tuple(
                 p for p in self.pinned_tables
-                if p.casefold() != relative_path.casefold())
+                if p.casefold() != table_key.casefold())
         else:
-            if relative_path.casefold() not in current:
+            if table_key.casefold() not in current:
                 raise ValueError("table is not pinned")
             self.pinned_tables = tuple(
                 p for p in self.pinned_tables
-                if p.casefold() != relative_path.casefold())
+                if p.casefold() != table_key.casefold())
         self.persist_state()
 
-    def is_table_pinned(self, relative_path: str) -> bool:
+    def is_table_pinned(self, table_key: str) -> bool:
         """MT-18 (0.28): True when this relative path is in the
         persisted pin set (casefolded comparison, so the row identity
         and the stored pins compare the same on every platform)."""
-        return relative_path.casefold() in {
+        return table_key.casefold() in {
             p.casefold() for p in self.pinned_tables}
 
-    def remember_last_table(self, relative_path: str | None) -> None:
+    def remember_last_table(self, table_key: str | None) -> None:
         """Remember the last explicitly loaded table (MT-10) and
         re-persist the master-state document."""
-        self.last_table = relative_path
+        self.last_table = table_key
         self.persist_state()
 
-    def remember_recent_table(self, relative_path: str) -> None:
+    def remember_recent_table(self, table_key: str) -> None:
         """Record a successful table load in the rolling recent list
         (MT-15): most recent first, deduplicated by relative path,
         capped at ``RECENT_TABLES_LIMIT``, re-persisted immediately."""
-        if not isinstance(relative_path, str) or not relative_path:
+        if not isinstance(table_key, str) or not table_key:
             return
         at = _utc_now()
         remaining = [item for item in self.recent_tables
-                     if item[0] != relative_path]
-        self.recent_tables = ((relative_path, at),) \
+                     if item[0] != table_key]
+        self.recent_tables = ((table_key, at),) \
             + tuple(remaining)[:RECENT_TABLES_LIMIT - 1]
         self.persist_state()
 
     def rescan(self) -> None:
-        from .table_index import reconcile
-        result = reconcile(self.folder, self.index)
-        self.index = result.index
-        self.last_changes = result.changes
-        self.scan_error = result.scan_error
+        # MT-26 (0.34): reconcile EVERY indexed root (the same
+        # incremental (size, mtime_ns) + sha256 short-circuit per root);
+        # the merged set keeps the user order (primary first).
+        from .table_index import RootIndexSet, reconcile
+        indexes: list = []
+        changes: list = []
+        errors: dict[str, str] = {}
+        for root in self.folders:
+            prior = self.index.index_for_root(root)
+            result = reconcile(root, prior)
+            indexes.append(result.index)
+            changes.extend(result.changes)
+            if result.scan_error:
+                errors[root] = result.scan_error
+        self.index = RootIndexSet(indexes)
+        self.last_changes = tuple(changes)
+        self.scan_errors = errors
+        self.scan_error = errors.get(self.folder) if self.folder else None
         self.last_scan_at = _utc_now()
         # Folder content changed: the orchestrator's cached names are read
         # live from self.index each tick, so nothing else to refresh.
@@ -543,6 +611,70 @@ class MasterApp:
         # changed table content has a new sha (its old document entry
         # no longer matches), added tables have none.
         self._queue_analysis()
+
+    # -- MT-26 (0.34) folder lifecycle ------------------------------------------
+
+    def _set_folders(self, folders: list[str]) -> None:
+        """Keep self.folder in sync with the ordered folder list."""
+        self.folders = _dedupe_folders(folders)
+        self.folder = self.folders[0] if self.folders else ""
+
+    def add_folder(self, folder) -> bool:
+        """MT-26 (0.34): index one more table folder (appended, not the
+        primary).  A missing / non-directory folder raises the named
+        ValueError; a folder already indexed (casefolded) is a no-op.
+        Returns True when the folder was added, False when it was
+        already indexed.
+        """
+        from pathlib import Path
+        resolved = str(Path(folder).expanduser().resolve())
+        if not Path(resolved).is_dir():
+            raise ValueError("folder is missing or not a directory: "
+                             + resolved)
+        if any(f.casefold() == resolved.casefold() for f in self.folders):
+            return False
+        self._set_folders(self.folders + [resolved])
+        return True
+
+    def remove_folder(self, folder) -> None:
+        """MT-26 (0.34): stop indexing one table folder.  Removing a
+        folder that is not indexed raises the named ValueError; the
+        list may become empty (the Master then has no indexed tables).
+        """
+        from pathlib import Path
+        resolved = str(Path(folder).expanduser().resolve())
+        if not any(f.casefold() == resolved.casefold() for f in self.folders):
+            raise ValueError("folder is not indexed: " + resolved)
+        remaining = [f for f in self.folders
+                     if f.casefold() != resolved.casefold()]
+        self._set_folders(remaining)
+
+    def move_folder_front(self, folder) -> None:
+        """MT-26 (0.34): make one indexed folder the primary (front).
+        Moving a folder that is not indexed raises the named ValueError.
+        """
+        from pathlib import Path
+        resolved = str(Path(folder).expanduser().resolve())
+        target = resolved.casefold()
+        if not any(f.casefold() == target for f in self.folders):
+            raise ValueError("folder is not indexed: " + resolved)
+        moved = [f for f in self.folders if f.casefold() == target]
+        rest = [f for f in self.folders if f.casefold() != target]
+        self._set_folders(moved + rest)
+
+    def entry_key(self, entry) -> str:
+        """MT-26 (0.34): the UI / storage identity key of one table.
+
+        Single-root session: the relative path (the documented picker
+        and display identity, and what the legacy single-root state
+        stored).  Multi-root session: the absolute table key (root
+        joined with the relative path), so a table is unambiguous
+        across roots.
+        """
+        from .table_index import table_key
+        if len(self.folders) <= 1:
+            return entry.relative_path
+        return table_key(entry)
 
     def _queue_analysis(self) -> int:
         """MT-24 (0.32): enqueue the unanalyzed bound tables.
@@ -555,6 +687,7 @@ class MasterApp:
         (0 when no worker is running yet - the window starts the
         worker at the waiting-view build).
         """
+        from .table_index import table_key
         worker = self.analysis_worker
         if worker is None:
             return 0
@@ -563,32 +696,39 @@ class MasterApp:
         for entry in self.index.tables():
             if not entry.process_names or entry.sha256 in known:
                 continue
-            if worker.enqueue(entry.relative_path, entry.sha256,
+            if worker.enqueue(table_key(entry), entry.sha256,
                               entry.process_names[0]):
                 queued += 1
         return queued
 
     def set_folder(self, folder) -> None:
+        # MT-26 (0.34): replace-all semantics - the given folder becomes
+        # the only indexed root (the documented contract the existing
+        # single-root callers rely on).
         from pathlib import Path
-        from .table_index import TableIndex, reconcile, save_index
-        self.folder = str(Path(folder).expanduser().resolve())
-        result = reconcile(self.folder, TableIndex(self.folder, {}))
-        self.index = result.index
+        from .table_index import RootIndexSet, TableIndex, reconcile
+        resolved = str(Path(folder).expanduser().resolve())
+        self._set_folders([resolved])
+        result = reconcile(resolved, TableIndex(resolved, {}))
+        self.index = RootIndexSet([result.index])
         self.last_changes = result.changes
+        self.scan_errors = {}
         self.scan_error = result.scan_error
         self.last_scan_at = _utc_now()
         self.orchestrator.index = self.index
         self.orchestrator.retry()
         try:
-            save_index(self.index, self.index_path())
+            self.save_index()
         except Exception:
             pass
         self.persist_state()
 
     def save_index(self) -> None:
-        from .table_index import save_index
+        # MT-26 (0.34): persist the whole multi-root set (schema 2); a
+        # single-root set is one root block in the array.
+        from .table_index import save_index_set
         try:
-            save_index(self.index, self.index_path())
+            save_index_set(self.index, self.index_path())
         except Exception:
             pass
 
@@ -715,7 +855,11 @@ class MasterWindow:
         button(header, "UI flow", self._open_ui_flow).pack(
             side="right", padx=(0, 8))
         button(header, "Rescan", self._rescan).pack(side="right", padx=(0, 8))
-        button(header, "Change folder…", self._change_folder).pack(side="right", padx=(0, 8))
+        # MT-26 (0.34): the folder manager (several indexed table
+        # folders; add / remove / set primary) replaces the single
+        # "Change folder" picker.
+        button(header, "Folders…", self._open_folder_manager).pack(
+            side="right", padx=(0, 8))
         # MT-10 (0.25): explicit table load (loads even while the bound
         # process is not running; the engine then waits for it).
         button(header, "Load table", self._open_table_load_picker).pack(
@@ -802,12 +946,16 @@ class MasterWindow:
         # background plan-analysis counts (pending "…" until the
         # analysis finishes, the failed marker "–" on a named
         # refusal, the counts otherwise).
-        cols = ("table", "processes", "status", "detail",
+        # MT-26 (0.34): the Folder column (after Table) shows the root
+        # each table was indexed under - the single primary folder in a
+        # single-root session, the per-table root in a multi-root one.
+        cols = ("table", "folder", "processes", "status", "detail",
                 "entries", "blocked",
                 "size", "modified", "last_used")
         self._table_tree = ttk.Treeview(frame, columns=cols, show="headings",
                                         height=16)
         for name, text, width in (("table", "Table", 220),
+                                  ("folder", "Folder", 160),
                                   ("processes", "Process name(s)", 170),
                                   ("status", "Status", 70),
                                   ("detail", "Detail", 170),
@@ -981,10 +1129,19 @@ class MasterWindow:
                   height=2, padx=12, pady=4).pack(anchor="e")
 
     def _folder_text(self) -> str:
-        error = self.app.scan_error
-        text = "Folder: " + self.app.folder
-        if error:
-            text += "  (scan problem: " + error + ")"
+        # MT-26 (0.34): the primary folder first; with several indexed
+        # folders the total count is shown, and every root-level scan
+        # problem is surfaced (one per failing root).
+        folders = self.app.folders
+        text = "Folder: " + (folders[0] if folders else "(none)")
+        if len(folders) > 1:
+            text += "  (" + str(len(folders)) + " folders total)"
+        errors = self.app.scan_errors
+        if errors:
+            detail = "; ".join(
+                err for _root, err in sorted(errors.items(),
+                                             key=lambda item: item[0].casefold()))
+            text += "  (scan problem: " + detail + ")"
         return text
 
     def _meta_text(self) -> str:
@@ -993,11 +1150,17 @@ class MasterWindow:
         app = self.app
         entries = app.index.tables()
         unreadable = sum(1 for e in entries if e.status != "ok")
+        # MT-26 (0.34): with several indexed folders the count names the
+        # folder span; a single folder keeps the documented line.
+        folder_note = (" across " + str(len(app.folders)) + " folder(s)"
+                       if len(app.folders) > 1 else "")
         if unreadable:
-            count = f"{len(entries)} tables ({len(entries) - unreadable} ok, " \
-                    f"{unreadable} unreadable)"
+            count = (f"{len(entries)} tables "
+                     f"({len(entries) - unreadable} ok, "
+                     f"{unreadable} unreadable)"
+                     + folder_note)
         else:
-            count = f"{len(entries)} table(s) indexed"
+            count = f"{len(entries)} table(s) indexed" + folder_note
         names = app.index.process_names()
         bound = "bound: " + (", ".join(names) if names else "(none yet)")
         parts = [count, bound]
@@ -1107,10 +1270,11 @@ class MasterWindow:
                                        analysis_by_sha)
             return
         for label, group in group_tables_by_process(rows):
-            # MT-24 (0.32): the display-only group row carries the two
-            # extra (empty) Entries / Blocked values of the new columns.
+            # MT-24 (0.32) + MT-26 (0.34): the display-only group row
+            # carries the empty Folder value plus the (empty) Entries /
+            # Blocked values of the new columns.
             parent = tree.insert("", "end", open=True, values=(
-                label, str(len(group)) + " table(s)",
+                label, "", str(len(group)) + " table(s)",
                 "", "", "", "", "", "", ""))
             for entry in group:
                 self._insert_table_row(parent, entry, pids_by_key,
@@ -1150,10 +1314,11 @@ class MasterWindow:
             detail = ""
         else:
             detail = file_detail
-        # MT-18 (0.28): the pin marker lives in the detail column -
-        # the first column (the relative path) stays the bare row
-        # identity the load paths key off.
-        if self.app.is_table_pinned(entry.relative_path):
+        # MT-18 (0.28) + MT-26 (0.34): the pin marker lives in the
+        # detail column; the row identity is the table key (relative in
+        # a single-root session, absolute in a multi-root one), checked
+        # against the persisted pin set.
+        if self.app.is_table_pinned(self.app.entry_key(entry)):
             detail = "pinned" + (" - " + detail if detail else "")
         # MT-24 (0.32): a table with blocked records gets the bounded
         # "N blocked" note in the detail column (after the pin
@@ -1162,13 +1327,16 @@ class MasterWindow:
                 and analysis["counts"]["blocked"]:
             note = str(analysis["counts"]["blocked"]) + " blocked"
             detail = (detail + " - " + note if detail else note)
+        # MT-26 (0.34): the Folder column shows the index root; the
+        # Last-used lookup and the row identity use the table key.
+        key = self.app.entry_key(entry)
         self._table_tree.insert(parent, "end", values=(
-            entry.relative_path, names, code, detail,
+            entry.relative_path, entry.root, names, code, detail,
             entries_column_text(analysis),
             blocked_column_text(analysis),
             self._format_size(entry.size),
             self._format_mtime(entry.mtime_ns),
-            recent_at.get(entry.relative_path, "")),
+            recent_at.get(key, "")),
             tags=(row_tag(code),))
 
     def _live_fingerprint(self, entry):
@@ -1176,7 +1344,12 @@ class MasterWindow:
         live ``(size, mtime_ns)`` pair, or ``None`` when the file no
         longer exists or cannot be stat'ed (the 'missing' fact)."""
         from pathlib import Path
-        path = Path(self.app.folder) / entry.relative_path
+        # MT-26 (0.34): the table file lives under the entry's index
+        # root (multi-root), falling back to the primary folder for
+        # root-less entries.
+        base = (getattr(entry, "root", "")
+                or (self.app.folders[0] if self.app.folders else ""))
+        path = Path(base) / entry.relative_path
         try:
             st = path.stat()
         except OSError:
@@ -1313,7 +1486,23 @@ class MasterWindow:
             return True
         return self._view_mode != "process"
 
-    def _table_selected_rel(self):
+    def _row_key(self, values) -> str | None:
+        """MT-26 (0.34): the table key of one tree row from its values
+        (values[0] = table name/relative path, values[1] = folder/root).
+        Single-root: the relative path; multi-root: the absolute table
+        key (so a table is unambiguous across roots)."""
+        if not values or not values[0]:
+            return None
+        rel = values[0]
+        if len(self.app.folders) <= 1:
+            return rel
+        folder = values[1] if len(values) > 1 else ""
+        if not folder:
+            return rel
+        from pathlib import Path
+        return str(Path(folder) / rel)
+
+    def _table_selected_key(self):
         item = self._table_tree.focus()
         if not item:
             selected = self._table_tree.selection()
@@ -1323,7 +1512,7 @@ class MasterWindow:
         if not self._is_table_row(item):
             return None
         values = self._table_tree.item(item, "values")
-        return values[0] if values else None
+        return self._row_key(values)
 
     def _table_double_click(self, event):
         """MT-14 (0.26): double-click loads the clicked row through
@@ -1333,13 +1522,13 @@ class MasterWindow:
             return
         values = self._table_tree.item(item, "values")
         if values:
-            self._load_selected_table(values[0])
+            self._load_selected_table(self._row_key(values))
 
     def _table_return(self, _event):
         """MT-14 (0.26): Enter loads the selected/focused row."""
-        rel = self._table_selected_rel()
-        if rel:
-            self._load_selected_table(rel)
+        key = self._table_selected_key()
+        if key:
+            self._load_selected_table(key)
 
     def _load_recent_table(self):
         """MT-15 (0.26): load the most recent table through the MT-10
@@ -1390,6 +1579,102 @@ class MasterWindow:
         self._set_running(self._running)
         self._render_tables()
         self._set_status(self._waiting_status_line())
+
+    # -- MT-26 (0.34) folder manager --------------------------------------------
+
+    def _refresh_folder_view(self) -> None:
+        """Rebuild the folder label + meta line + table rows after a
+        folder-list change, and restart the auto-rescan clock.  Every
+        indexed root is re-scanned first (the same incremental,
+        short-circuited reconcile per root), so an added / removed /
+        reordered folder shows up in the index immediately."""
+        self._last_auto_rescan = time.monotonic()
+        self.app.rescan()
+        self.app.save_index()
+        self._folder_label.configure(text=self._folder_text())
+        self._meta_label.configure(text=self._meta_text())
+        self._set_running(self._running)
+        self._render_tables()
+        self._set_status(self._waiting_status_line())
+
+    def _open_folder_manager(self):
+        """MT-26 (0.34): manage the indexed table folders - the listbox
+        shows every root in user order (the primary first, marked with
+        a star), and the buttons add a folder, set one primary, or
+        remove one.  Every action re-scans the affected root, saves the
+        index, restarts the auto-rescan clock and refreshes the view.
+        A failed change lands in the status line (fail-closed)."""
+        top = tk.Toplevel(self.root)
+        top.title("Table folders")
+        top.resizable(False, False)
+        top.transient(self.root)
+        tk.Label(top, text="Indexed table folders (primary first):",
+                 anchor="w", padx=14,
+                 font=("Segoe UI", 11)).pack(fill="x", pady=(12, 4))
+        listbox = tk.Listbox(top, exportselection=False, width=52,
+                             height=8, font=("Segoe UI", 10))
+        folders = list(self.app.folders)
+        for pos, folder in enumerate(folders):
+            marker = "★ " if pos == 0 else "   "
+            listbox.insert("end", marker + folder)
+        listbox.pack(padx=14, pady=4)
+        if folders:
+            listbox.selection_set(0)
+
+        def selected_folder() -> str | None:
+            sel = listbox.curselection()
+            if not sel:
+                return None
+            return folders[sel[0]]
+
+        def do_add():
+            folder = filedialog.askdirectory(
+                parent=top, title="Choose a table folder to index")
+            if not folder:
+                return
+            try:
+                self.app.add_folder(folder)
+            except ValueError as exc:
+                self._set_status("Folder add failed: " + str(exc))
+                return
+            self._refresh_folder_view()
+            self._open_folder_manager()
+
+        def do_set_primary():
+            folder = selected_folder()
+            if not folder:
+                return
+            try:
+                self.app.move_folder_front(folder)
+            except ValueError as exc:
+                self._set_status("Folder primary failed: " + str(exc))
+                return
+            self._refresh_folder_view()
+            self._open_folder_manager()
+
+        def do_remove():
+            folder = selected_folder()
+            if not folder:
+                return
+            try:
+                self.app.remove_folder(folder)
+            except ValueError as exc:
+                self._set_status("Folder remove failed: " + str(exc))
+                return
+            self._refresh_folder_view()
+            self._open_folder_manager()
+
+        buttons = tk.Frame(top, padx=14)
+        buttons.pack(fill="x", pady=(4, 12))
+        for label, action in (("Add folder…", do_add),
+                              ("Set primary", do_set_primary),
+                              ("Remove", do_remove),
+                              ("Close", top.destroy)):
+            tk.Button(buttons, text=label, command=action,
+                      font=("Segoe UI", 11), width=11,
+                      bg="#2a3547", fg=FG,
+                      activebackground="#3a4a63",
+                      activeforeground=FG).pack(side="left", padx=(0, 6))
 
     def _retry(self):
         self.app.orchestrator.retry()
@@ -1673,16 +1958,21 @@ class MasterWindow:
         return make_pinned_memory_factory(self.app.lister,
                                           self._attach_pin)
 
-    def _load_selected_table(self, rel):
-        """Explicit user table load (MT-10): resolve the table against
-        the live snapshot, apply the attach decision, then load.  Named
-        refusals land in the status line + dialog, never a crash."""
+    def _load_selected_table(self, table_key):
+        """Explicit user table load (MT-10, table key): resolve the
+        table against the live snapshot, apply the attach decision,
+        then load.  Named refusals land in the status line + dialog,
+        never a crash.  MT-26 (0.34): the table is addressed by its
+        key (relative in a single-root session, absolute in a
+        multi-root one)."""
+        if not table_key:
+            return
         try:
-            request = self.app.orchestrator.request_load(rel)
+            request = self.app.orchestrator.request_load(table_key)
         except ExplicitLoadRefusal as exc:
             self._set_status("Explicit load refused: " + exc.detail)
             messagebox.showerror("Table load refused",
-                                 rel + "\n\n" + exc.detail,
+                                 table_key + "\n\n" + exc.detail,
                                  parent=self.root)
             return
         decision, _ = attach_decision(request.candidates,
@@ -1711,10 +2001,13 @@ class MasterWindow:
         tk.Label(top, text="Choose the table to load now:",
                  anchor="w", padx=14, font=("Segoe UI", 11)
                  ).pack(fill="x", pady=(12, 4))
+        # MT-26 (0.34): the picker label is the table key (the relative
+        # path in a single-root session, the absolute path in a
+        # multi-root one - so a table is unambiguous across roots).
         listbox = tk.Listbox(top, exportselection=False, width=56,
                              height=12, font=("Segoe UI", 10))
         for entry in entries:
-            listbox.insert("end", entry.relative_path)
+            listbox.insert("end", self.app.entry_key(entry))
         listbox.pack(padx=14, pady=4)
         listbox.selection_set(0)
         buttons = tk.Frame(top, padx=14)
@@ -1741,11 +2034,14 @@ class MasterWindow:
         if self._table_load_picker is None:
             return
         sel = self._table_load_listbox.curselection()
-        self._close_table_load_picker()
         if not sel:
+            self._close_table_load_picker()
             return
-        self._load_selected_table(
-            self._table_load_entries[sel[0]].relative_path)
+        # MT-26 (0.34): resolve the chosen entry BEFORE closing the
+        # picker (closing clears the entry tuple).
+        entry = self._table_load_entries[sel[0]]
+        self._close_table_load_picker()
+        self._load_selected_table(self.app.entry_key(entry))
 
     def _close_table_load_picker(self):
         if self._table_load_picker is not None:
@@ -1763,42 +2059,46 @@ class MasterWindow:
         values = self._table_tree.item(item, "values")
         if not values:
             return
-        rel = values[0]
+        # MT-26 (0.34): the row menu acts on the table key (relative in
+        # a single-root session, absolute in a multi-root one).
+        key = self._row_key(values)
         menu = tk.Menu(self.root, tearoff=0)
         # MT-22 (0.30): the read-only details lead the row menu (the
         # inspection window with the live load-gate preview), then the
         # explicit load, then the pin toggle.
         menu.add_command(label="Table details",
-                         command=lambda: self._open_table_details(rel))
+                         command=lambda: self._open_table_details(key))
         menu.add_command(label="Load this table",
-                         command=lambda: self._load_selected_table(rel))
-        if self.app.is_table_pinned(rel):
+                         command=lambda: self._load_selected_table(key))
+        if self.app.is_table_pinned(key):
             menu.add_command(label="Unpin",
-                             command=lambda: self._toggle_table_pin(rel,
+                             command=lambda: self._toggle_table_pin(key,
                                                                     False))
         else:
             menu.add_command(label="Pin to top",
-                             command=lambda: self._toggle_table_pin(rel,
+                             command=lambda: self._toggle_table_pin(key,
                                                                     True))
         try:
             menu.tk_popup(event.x_root, event.y_root)
         finally:
             menu.destroy()
 
-    def _toggle_table_pin(self, rel: str, pinned: bool):
-        """MT-18 (0.28): the row-menu pin toggle - re-renders on
-        success, surfaces the named refusal in the status line on
-        failure (no crash, no state change)."""
+    def _toggle_table_pin(self, table_key: str, pinned: bool):
+        """MT-18 (0.28) + MT-26 (0.34): the row-menu pin toggle (table
+        key) - re-renders on success, surfaces the named refusal in the
+        status line on failure (no crash, no state change)."""
         try:
-            self.app.set_table_pinned(rel, pinned)
+            self.app.set_table_pinned(table_key, pinned)
         except ValueError as exc:
             self._set_status(str(exc))
             return
         self._render_tables()
-        self._set_status(("Pinned " if pinned else "Unpinned ") + rel)
+        self._set_status(("Pinned " if pinned else "Unpinned ") + table_key)
 
-    def _open_table_details(self, rel: str):
-        """MT-22 (0.30): the read-only table details window.
+    def _open_table_details(self, table_key: str):
+        """MT-22 (0.30) + MT-26 (0.34): the read-only table details
+        window (addressed by the table key - relative in a single-root
+        session, absolute in a multi-root one).
 
         One Toplevel shows the indexed facts for the table (path,
         folder, size, modified, bound processes, index status, pin
@@ -1820,30 +2120,35 @@ class MasterWindow:
             except tk.TclError:
                 pass
             self._details_win = None
-        entry = self.app.index.get(rel)
+        entry = self.app.index.get_by_key(table_key)
         if entry is None:
-            self._set_status("No index entry for " + rel)
+            self._set_status("No index entry for " + table_key)
             return
         from pathlib import Path
         from .table_details import table_detail_lines
         from .table_gate import gate_table_for_load
-        gate = gate_table_for_load(str(Path(self.app.folder) / rel), entry)
+        # MT-26 (0.34): the table file lives under the entry's index
+        # root (multi-root), falling back to the primary folder.
+        base = (getattr(entry, "root", "")
+                or (self.app.folders[0] if self.app.folders else ""))
+        gate = gate_table_for_load(str(Path(base) / entry.relative_path),
+                                   entry)
         pids = [e.pid for e in self._running
                 for n in entry.process_names
                 if e.name.casefold() == n.casefold()]
-        last_used = dict(self.app.recent_tables).get(rel)
+        last_used = dict(self.app.recent_tables).get(table_key)
         # MT-24 (0.32): the details window shows the persisted
         # background plan-analysis entry for the table's content sha
         # (None while pending - the row says so).
         analysis = self.app.analysis_store.get(entry.sha256)
-        lines = table_detail_lines(entry, root=self.app.folder,
-                                   pinned=self.app.is_table_pinned(rel),
+        lines = table_detail_lines(entry, root=base,
+                                   pinned=self.app.is_table_pinned(table_key),
                                    last_used=last_used,
                                    running_pids=pids, gate=gate,
                                    analysis=analysis)
         win = tk.Toplevel(self.root)
         self._details_win = win
-        win.title("Table details - " + rel)
+        win.title("Table details - " + table_key)
         win.configure(bg=BG, padx=16, pady=16)
         win.transient(self.root)
         win.resizable(False, False)
@@ -2264,35 +2569,79 @@ def run_master(folder=None, *, state_home: str | None = None,
                debug_log: bool = False, poll_ms: int = WAIT_POLL_MS) -> int:
     """Create the Tk root, build the Master window, run mainloop.
 
-    Folder resolution (ask on first start): an explicit ``folder`` argument
-    always wins; without one, the last-used folder stored in the state home
-    is reused when it still exists; only a genuinely first start (or a
-    stale stored folder) shows the directory picker.
+    Folder resolution (ask on first start; MT-26 multi-root): an explicit
+    ``folder`` argument always wins as the primary root (the stored
+    folders are indexed behind it); without one, the stored table folders
+    are kept as-is (a missing stored folder stays visible as a scan
+    problem, and "Folders…" fixes the list); only a genuinely first start
+    (or no stored folders at all) shows the directory picker, and a
+    cancelled first-start picker exits with 0.
     """
     from pathlib import Path
     home = state_home or _default_state_home()
-    if folder is None:
-        stored = load_master_state(Path(home) / MASTER_STATE_FILENAME)
-        last = stored.last_folder if stored is not None else None
-        if last is not None and Path(last).is_dir():
-            folder = Path(last)
-            print("Using folder from last session: " + str(folder),
+    stored = load_master_state(Path(home) / MASTER_STATE_FILENAME)
+    if folder is not None:
+        folder = Path(folder)
+        if not folder.is_dir():
+            print("Error: folder not found: " + str(folder), flush=True)
+            return 2
+        # MT-26: the explicit folder is the primary; the stored folders
+        # are indexed behind it (deduped, order kept).
+        folders = [str(folder)]
+        seen = {f.casefold() for f in folders}
+        for saved in (stored.table_folders if stored is not None else ()):
+            if saved and saved.casefold() not in seen:
+                seen.add(saved.casefold())
+                folders.append(saved)
+        print("Using folder: " + folders[0], flush=True)
+        for extra in folders[1:]:
+            print("Also indexing stored folder: " + extra, flush=True)
+    else:
+        # MT-26: the stored folder list is kept (missing folders are
+        # visible as scan problems); an empty list falls back to the
+        # single stored last folder (pre-0.34 documents carry only that).
+        folders = [f for f in
+                   (stored.table_folders if stored is not None else ())
+                   if f]
+        if not folders and stored is not None and stored.last_folder:
+            folders = [stored.last_folder]
+        existing = [f for f in folders if Path(f).is_dir()]
+        if existing:
+            print("Using folder from last session: " + folders[0],
                   flush=True)
+            for extra in folders[1:]:
+                state = " (missing - scan problem)" \
+                    if not Path(extra).is_dir() else ""
+                print("Also indexing stored folder: " + extra + state,
+                      flush=True)
+        elif folders:
+            # Every stored folder is gone: ask; the pick becomes the
+            # primary (the stored list stays behind, missing folders
+            # visible as scan problems); cancel keeps the stored list.
+            bootstrap = tk.Tk()
+            bootstrap.withdraw()
+            picked = filedialog.askdirectory(
+                parent=bootstrap, title="Choose the folder with your tables")
+            bootstrap.destroy()
+            if picked:
+                folders = [picked] + folders
+                print("Using folder: " + picked, flush=True)
+            else:
+                print("Stored folders are missing; keeping them "
+                      "(visible as scan problems). Use 'Folders...' "
+                      "to fix the list.", flush=True)
         else:
             bootstrap = tk.Tk()
             bootstrap.withdraw()
-            folder = filedialog.askdirectory(
+            picked = filedialog.askdirectory(
                 parent=bootstrap, title="Choose the folder with your tables")
             bootstrap.destroy()
-            if not folder:
+            if not picked:
                 print("No folder chosen; nothing to do.", flush=True)
                 return 0
-    folder = Path(folder)
-    if not folder.is_dir():
-        print("Error: folder not found: " + str(folder), flush=True)
-        return 2
-    app = MasterApp(folder, state_home=home, debug_log=debug_log,
-                    poll_ms=poll_ms)
+            folders = [picked]
+    app = MasterApp(folders[0], state_home=home, debug_log=debug_log,
+                    poll_ms=poll_ms, folders=folders[1:])
     try:
         app.save_index()
         app.persist_state()

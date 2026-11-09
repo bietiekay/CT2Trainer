@@ -295,9 +295,91 @@ no status-line flash and re-queues the MT-24 analysis for added /
 changed tables; zero load-path effect (the MT-9 gate re-checks
 independently). +16 tests (4 state, 12 UI).
 
-0.34 candidate (next evaluation, not yet adopted): per-table notes
-/ tags (organize metadata) vs. the multi-root index (several table
-folders in one Master window) - decide at the next release.
+### 0.34 multi-root table index (evaluated 2026-11-09, adopted +
+implemented 2026-11-09)
+
+The 0.34 evaluation (web research over table / trainer manager
+patterns - the Cheat Engine Table Manager (2026) feature set, whose
+core capability is the multi-folder table index (several source
+folders indexed and organized in one window); the trainer-manager
+import / organize / search / pin patterns (game-trainer-manager,
+Cheat Happens Trainer Manager - organize by source folder, search,
+pin); the WeMod "save your selections for next time" pattern) maps
+onto the Master Trainer use case as follows:
+
+- Several table folders in one window: **the adopted 0.34
+  candidate** - the multi-root table index (MT-26): the Master
+  indexes several table folders at once; every root keeps the same
+  incremental reconcile contract (the `(size, mtime_ns)` + sha256
+  short-circuit per root); the merged surface distinguishes tables
+  by the absolute table key (index root + relative path), so a
+  table is unambiguous across roots (the relative path remains the
+  documented single-root identity); the persisted folder list
+  (primary first, capped) restores the whole index set at start;
+  the folder manager (add / remove / set primary) manages the list;
+  zero load-path effect - the MT-9 gate re-checks the table file
+  under its index root independently at load time.
+- Per-table notes / tags (organize metadata): deferred - the
+  evaluation found notes / tags a consistently useful library
+  feature, but the table identity groundwork (MT-26's key model)
+  makes it the safer follow-up; it is the documented 0.35
+  candidate.
+- Launch / download / delete / overlay: out of scope (unchanged
+  from the 0.33 evaluation - strict read-only inputs; the index
+  binds process names, not install paths; local-only, offline,
+  single-window model).
+
+Adopted for 0.34: the multi-root table index (MT-26). Implemented
+as shipped (2026-11-09, 0.34 content on `main`): `master-settings.json`
+schema 7 -> 8 carries `table_folders` (the indexed folder list,
+primary first, capped at `TABLE_FOLDERS_LIMIT` = 8; strict non-empty
+unique casefolded strings, `TABLE_FOLDERS_LIMIT`-bounded; schema-7
+documents promote on load - the list is filled from the single
+stored last folder and the relative table references (last table,
+recents, pins) are re-anchored to absolute table keys under it, so
+pins / recents survive the upgrade; a schema-7 document carrying
+the field is refused as an unknown field; a schema-8 document with
+a set last folder but an empty list self-heals to the single
+folder); `tables-index.json` schema 1 -> 2 (one checksum-bound root
+block per indexed folder, `save_index_set` / `load_index_set`,
+schema-1 single-root documents promote on load); the table identity
+key is the absolute path (root + relative path, native separators;
+`table_key()`), resolved casefolded with the documented
+relative-path fallback (`TableIndex.get_by_key` /
+`RootIndexSet.get_by_key`); the folder lifecycle is
+`MasterApp.add_folder` / `remove_folder` / `move_folder_front`
+(named ValueErrors; `set_folder` keeps its replace-all contract);
+the "Folders…" header button opens the folder manager (the listbox
+marks the primary with a star; "Add folder…" / "Set primary" /
+"Remove" / "Close"; every action re-scans the indexed roots, saves
+the index, restarts the auto-rescan clock and refreshes the view;
+a failed change lands in the status line, fail-closed); the waiting
+view gains the Folder column (the entry's index root) and the row
+key becomes the absolute key in a multi-root session (picker,
+details, pins, recents and the MT-24 analysis queue are all
+key-based); the MT-25 auto-rescan and the MT-24 analysis cover
+every indexed root (per-root reconcile + per-root queue);
+`run_master` multi-root folder resolution (an explicit folder
+argument wins as the primary root with the stored folders indexed
+behind it; a parameterless start keeps the stored folder list as-is
+- a missing stored folder stays visible as a scan problem, fixed
+through "Folders…"; only a genuinely first start / no stored
+folders shows the picker, a cancelled first start exits 0; every
+stored folder gone shows the picker - the pick is prepended as the
+new primary, cancel keeps the list; an explicit missing folder is
+the documented exit-2 refusal). +37 new tests
+(`tests/test_native_master_ui_mt26.py`) + 7 new schema-8 state
+tests + the baseline test updates (folder column, key-based
+identity, per-root entry injection); full main suite 4,543 OK /
+30 expected skips; catalog zero delta `blocked-catalog-034-mt26`
+(3-chunk deep-equal audit over the 151 reference tables,
+2026-11-09: 151/151 loaded, 0 load errors, 117,809 total /
+116,756 supported / 60,161 staged / 103,607 actionable /
+12,974 headings / 1,053 blocked - zero delta vs
+`blocked-catalog-033-auto-rescan`).
+
+0.35 candidate (next evaluation, not yet adopted): per-table notes
+/ tags (organize metadata).
 Remaining candidates (unchanged): the MT-21 multi-column trainer
 grid, the game launch integration (needs install-path data).
 
@@ -318,19 +400,24 @@ grid, the game launch integration (needs install-path data).
 - **Default architecture x64** for auto-compiled plans (the converter
   default). A 32-bit game yields the engine's named architecture
   refusal; x86 auto-detection is a possible follow-up.
-- **One state home per user**, one index document: switching folders
-  rebuilds the index for the new root (the previous root's index is
-  dropped). A multi-root index is a possible extension.
+- **One state home per user**, one index document: the document
+  carries the ordered set of per-root indexes (schema 2, MT-26).
+  Adding / reordering roots keeps every stored per-root index;
+  removing a root drops its block; the replace-all `set_folder`
+  contract rebuilds the document for the single new root.
 - **Auto-load is silent by design** (user request: the unique match is
   loaded automatically). The picker only appears for the genuinely
   ambiguous case (several tables, one process).
 - **Ask on first start for the table folder** (recorded 2026-11-01,
-  implemented): the last-used folder persists in the state home
-  (`master-settings.json`, checksum-bound like the tables index); a
-  parameterless start reuses it when it still exists, and only a
-  genuinely first start (or a stale stored folder) shows the directory
-  picker. An explicit folder argument always wins and becomes the new
-  persisted folder.
+  implemented; MT-26 0.34 multi-root): the indexed folder list
+  persists in the state home (`master-settings.json` schema 8,
+  `table_folders`, checksum-bound like the tables index; the primary
+  is `last_folder`). A parameterless start keeps the stored list as-is
+  (a missing stored folder stays visible as a scan problem, fixed
+  through the folder manager); only a genuinely first start / no
+  stored folders shows the directory picker, and a cancelled first
+  start exits 0. An explicit folder argument always wins as the new
+  primary root (the stored folders are indexed behind it, deduped).
 - **MT-7 scope decision** (recorded 2026-11-01, implemented): the
   SteamOS/CheatDeck target route ships as the *documented-route surface*
   (`steamdeck_route.py`: named fail-closed refusal + the Proton-wrapped

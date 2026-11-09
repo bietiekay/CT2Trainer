@@ -77,7 +77,7 @@ class WaitingViewFilterSortTests(unittest.TestCase):
     def _inject_entries(self, app):
         # Deterministic entry set (the reconciled one carries real
         # fingerprints; the shape is identical).
-        app.index.entries = {
+        app.index.indexes[0].entries = {
             "Sub/Gamma (Legacy).ct": TableEntry(
                 "Sub/Gamma (Legacy).ct", 2048, 0, "c" * 64,
                 ("Gamma.exe", "GammaLegacy.exe"), "ok", None),
@@ -88,7 +88,8 @@ class WaitingViewFilterSortTests(unittest.TestCase):
             "broken.ct": TableEntry("broken.ct", 11, 0, "d" * 64, (),
                                     "unreadable", "parse failed"),
         }
-        app.index = type(app.index)(app.folder, app.index.entries)
+        # MT-26 (0.34): the entries live in the per-root index; the
+        # merged set (and the orchestrator reference) are unchanged.
         app.orchestrator.index = app.index
 
     def test_filter_entry_filters_the_tree_live(self):
@@ -279,17 +280,18 @@ class RecentAndMetadataColumnsTests(unittest.TestCase):
         values = tree.item(child, "values")
         # MT-24 (0.32): the Entries / Blocked columns sit between
         # Detail and Size (pending "…" until the background plan
-        # analysis re-renders the row).
-        self.assertEqual(values[4:6], ("…", "…"))
-        self.assertEqual(len(values), 9)
+        # analysis re-renders the row); MT-26 (0.34): the Folder
+        # column after Table shifts them right by one.
+        self.assertEqual(values[5:7], ("…", "…"))
+        self.assertEqual(len(values), 10)
         # Size is the compact human-readable byte size.
-        self.assertTrue(values[6].endswith((" B", " KB", " MB")))
+        self.assertTrue(values[7].endswith((" B", " KB", " MB")))
         # Modified is a local timestamp of the documented shape.
         import re
         self.assertTrue(re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}",
-                                     values[7]), values[7])
+                                     values[8]), values[8])
         # Last used starts empty (no recent entry yet).
-        self.assertEqual(values[8], "")
+        self.assertEqual(values[9], "")
 
     def test_recent_button_and_last_used_column_feed_the_recent_list(self):
         app = self._app()
@@ -304,9 +306,10 @@ class RecentAndMetadataColumnsTests(unittest.TestCase):
         by_name = {tree.item(i, "values")[0]: tree.item(i, "values")
                    for i in tree.get_children()}
         # MT-15/MT-24 (0.26/0.32): Last used is the last column (after
-        # the Entries / Blocked columns).
-        self.assertTrue(by_name["a.ct"][8].endswith("Z"))
-        self.assertEqual(by_name["b.ct"][8], "")
+        # the Entries / Blocked columns); MT-26 (0.34): shifted right
+        # by the Folder column.
+        self.assertTrue(by_name["a.ct"][9].endswith("Z"))
+        self.assertEqual(by_name["b.ct"][9], "")
         # The meta line lists the recent table.
         self.assertIn("recent: a.ct", str(window._meta_label.cget("text")))
 

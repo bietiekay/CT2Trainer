@@ -5,11 +5,14 @@ byte-stable serialization, strict checksum-bound load, every fail-closed
 refusal (malformed JSON, invalid shape, tampered checksum, foreign schema,
 unknown fields, out-of-bounds last_folder, size limit), tolerant
 ``load_master_state`` (absent / refused -> None), and
-``save_master_state`` directory creation.  Schema 6 (0.31) carries the
-MT-10/11/15/16/18/23 preferences (last_table, attach_mode,
+``save_master_state`` directory creation.  Schema 8 (0.34) carries the
+MT-10/11/15/16/18/23/25/26 preferences (last_table, attach_mode,
 recent_tables, waiting-view settings, pinned tables, status-filter
-mode); schema-1/2/3/4/5 documents are promoted on load with the
-documented defaults.
+mode, auto-rescan flag, the indexed table folder list); the table
+references are table keys (absolute in a multi-root session, relative
+in a single-root one); schema-1/2/3/4/5/6/7 documents are promoted on
+load with the documented defaults (the relative references re-anchored
+to absolute table keys under the stored last_folder).
 """
 from __future__ import annotations
 
@@ -36,7 +39,11 @@ from ct2trainer.native.master_trainer.master_state import (
 
 
 def _state(last_folder=None):
-    return MasterState(schema=MASTER_STATE_SCHEMA, last_folder=last_folder)
+    # MT-26 (0.34): a consistent schema-8 state carries the folder
+    # list (the single last_folder when one is set) - load self-heals
+    # an empty list to the same value, so the roundtrip stays exact.
+    return MasterState(schema=MASTER_STATE_SCHEMA, last_folder=last_folder,
+                       table_folders=(last_folder,) if last_folder else ())
 
 
 class MasterStateSerializeTests(unittest.TestCase):
@@ -54,7 +61,8 @@ class MasterStateSerializeTests(unittest.TestCase):
                           "view_mode": "list",
                           "pinned_tables": [],
                           "view_status": "",
-                          "auto_rescan": True})
+                          "auto_rescan": True,
+                          "table_folders": []})
         canonical = json.dumps(document["payload"], sort_keys=True,
                                separators=(",", ":"), allow_nan=False,
                                ensure_ascii=True).encode("utf-8")
@@ -86,16 +94,20 @@ class MasterStateSerializeTests(unittest.TestCase):
     def test_state_with_preferences_roundtrip(self):
         state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
                             last_table="sub\\gamea.ct",
-                            attach_mode=ATTACH_MODE_ASK)
+                            attach_mode=ATTACH_MODE_ASK,
+                            table_folders=("C:\\tables",))
         raw = master_state_to_bytes(state)
         self.assertEqual(master_state_from_bytes(raw), state)
 
     def test_legacy_schema1_document_promotes_on_load(self):
         payload = {"schema": 1, "last_folder": "C:\\tables"}
         state = master_state_from_bytes(self._document(payload))
+        # MT-26 (0.34): promotion fills the folder list with the single
+        # stored last folder.
         self.assertEqual(state, MasterState(
             MASTER_STATE_SCHEMA, "C:\\tables", last_table=None,
-            attach_mode=ATTACH_MODE_AUTO))
+            attach_mode=ATTACH_MODE_AUTO,
+            table_folders=("C:\\tables",)))
 
     def test_to_bytes_refuses_legacy_schema(self):
         with self.assertRaises(MasterStateRefusal) as ctx:
@@ -118,8 +130,10 @@ class MasterStateSerializeTests(unittest.TestCase):
             self.assertIn("last_table", str(ctx.exception))
 
     def test_from_bytes_refuses_oversized_last_table(self):
+        # MT-26 (0.34): table references may be absolute table keys, so
+        # the length bound is the folder+table bound (8200).
         payload = {"schema": MASTER_STATE_SCHEMA, "last_folder": None,
-                   "last_table": "x" * 5000,
+                   "last_table": "x" * 9000,
                    "attach_mode": ATTACH_MODE_AUTO}
         with self.assertRaises(MasterStateRefusal) as ctx:
             master_state_from_bytes(self._document(payload))
@@ -211,7 +225,8 @@ class MasterStateSerializeTests(unittest.TestCase):
     def test_view_settings_roundtrip(self):
         state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
                             view_filter="fallout", view_sort="process",
-                            view_mode="process")
+                            view_mode="process",
+                            table_folders=("C:\\tables",))
         raw = master_state_to_bytes(state)
         self.assertEqual(master_state_from_bytes(raw), state)
 
@@ -226,8 +241,15 @@ class MasterStateSerializeTests(unittest.TestCase):
         self.assertEqual(state.view_filter, "")
         self.assertEqual(state.view_sort, "name")
         self.assertEqual(state.view_mode, "list")
+        # MT-26 (0.34): promotion re-anchors the relative table
+        # references to absolute table keys under the stored
+        # last_folder (and fills the folder list with that folder).
+        from pathlib import Path
+        anchored = str(Path("C:\\tables") / "sub\\gamea.ct")
+        self.assertEqual(state.last_table, anchored)
         self.assertEqual(state.recent_tables,
-                         (("sub\\gamea.ct", "2026-11-03T12:00:00Z"),))
+                         ((anchored, "2026-11-03T12:00:00Z"),))
+        self.assertEqual(state.table_folders, ("C:\\tables",))
 
     def test_from_bytes_refuses_schema3_with_view_fields(self):
         for field in ("view_filter", "view_sort", "view_mode"):
@@ -261,7 +283,8 @@ class MasterStateSerializeTests(unittest.TestCase):
 
     def test_pinned_tables_roundtrip(self):
         state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
-                            pinned_tables=("sub\\zeta.ct", "alpha.ct"))
+                            pinned_tables=("sub\\zeta.ct", "alpha.ct"),
+                            table_folders=("C:\\tables",))
         raw = master_state_to_bytes(state)
         self.assertEqual(master_state_from_bytes(raw), state)
 
@@ -276,6 +299,7 @@ class MasterStateSerializeTests(unittest.TestCase):
         state = master_state_from_bytes(self._document(payload))
         self.assertEqual(state.schema, MASTER_STATE_SCHEMA)
         self.assertEqual(state.pinned_tables, ())
+        self.assertEqual(state.table_folders, ("C:\\tables",))
 
     def test_from_bytes_refuses_schema4_with_pinned_field(self):
         payload = {"schema": 4, "last_folder": None,
@@ -299,7 +323,7 @@ class MasterStateSerializeTests(unittest.TestCase):
         with self.assertRaises(MasterStateRefusal) as ctx:
             master_state_from_bytes(self._document(empty_item))
         self.assertIn("malformed", str(ctx.exception))
-        long_item = dict(base, pinned_tables=["x" * 4097])
+        long_item = dict(base, pinned_tables=["x" * 9000])
         with self.assertRaises(MasterStateRefusal) as ctx:
             master_state_from_bytes(self._document(long_item))
         self.assertIn("malformed", str(ctx.exception))
@@ -313,7 +337,8 @@ class MasterStateSerializeTests(unittest.TestCase):
 
     def test_view_status_roundtrip(self):
         state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
-                            view_status="attention")
+                            view_status="attention",
+                            table_folders=("C:\\tables",))
         raw = master_state_to_bytes(state)
         self.assertEqual(master_state_from_bytes(raw), state)
 
@@ -329,7 +354,12 @@ class MasterStateSerializeTests(unittest.TestCase):
         state = master_state_from_bytes(self._document(payload))
         self.assertEqual(state.schema, MASTER_STATE_SCHEMA)
         self.assertEqual(state.view_status, "")
-        self.assertEqual(state.pinned_tables, ("sub\\gamea.ct",))
+        # MT-26 (0.34): the persisted pins are re-anchored to absolute
+        # table keys under the stored last folder on promotion.
+        from pathlib import Path
+        self.assertEqual(state.pinned_tables,
+                         (str(Path("C:\\tables") / "sub\\gamea.ct"),))
+        self.assertEqual(state.table_folders, ("C:\\tables",))
 
     def test_from_bytes_refuses_schema5_with_status_field(self):
         payload = {"schema": 5, "last_folder": None,
@@ -351,7 +381,8 @@ class MasterStateSerializeTests(unittest.TestCase):
 
     def test_auto_rescan_roundtrip(self):
         state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
-                            auto_rescan=False)
+                            auto_rescan=False,
+                            table_folders=("C:\\tables",))
         raw = master_state_to_bytes(state)
         self.assertEqual(master_state_from_bytes(raw), state)
         # The document is byte-stable: same input, same bytes.
@@ -371,7 +402,12 @@ class MasterStateSerializeTests(unittest.TestCase):
         self.assertEqual(state.schema, MASTER_STATE_SCHEMA)
         self.assertTrue(state.auto_rescan)
         self.assertEqual(state.view_status, "ok")
-        self.assertEqual(state.pinned_tables, ("sub\\gamea.ct",))
+        # MT-26 (0.34): the relative references are re-anchored under
+        # the stored last folder on promotion.
+        from pathlib import Path
+        self.assertEqual(state.pinned_tables,
+                         (str(Path("C:\\tables") / "sub\\gamea.ct"),))
+        self.assertEqual(state.table_folders, ("C:\\tables",))
 
     def test_from_bytes_refuses_schema6_with_auto_rescan_field(self):
         payload = {"schema": 6, "last_folder": None,
@@ -388,6 +424,100 @@ class MasterStateSerializeTests(unittest.TestCase):
                 master_state_from_bytes(
                     self._document(dict(base, auto_rescan=bad)))
             self.assertIn("auto_rescan", str(ctx.exception))
+
+    # -- schema 8 (0.34) table folders (MT-26) --------------------------------
+
+    def test_table_folders_roundtrip(self):
+        state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
+                            table_folders=("C:\\tables", "D:\\more"))
+        raw = master_state_to_bytes(state)
+        self.assertEqual(master_state_from_bytes(raw), state)
+
+    def test_schema7_document_promotes_on_load(self):
+        payload = {"schema": 7, "last_folder": "C:\\tables",
+                   "last_table": "sub\\gamea.ct",
+                   "attach_mode": ATTACH_MODE_ASK,
+                   "recent_tables": [{"path": "sub\\gamea.ct",
+                                      "at": "2026-11-08T12:00:00Z"}],
+                   "view_filter": "", "view_sort": "name",
+                   "view_mode": "list",
+                   "pinned_tables": ["sub\\gamea.ct"],
+                   "view_status": "ok",
+                   "auto_rescan": True}
+        state = master_state_from_bytes(self._document(payload))
+        self.assertEqual(state.schema, MASTER_STATE_SCHEMA)
+        # MT-26 (0.34): the folder list is filled from the single stored
+        # last folder; the relative table references are re-anchored to
+        # absolute table keys under it, so pins / recents / last table
+        # survive the upgrade.
+        from pathlib import Path
+        anchored = str(Path("C:\\tables") / "sub\\gamea.ct")
+        self.assertEqual(state.table_folders, ("C:\\tables",))
+        self.assertEqual(state.last_table, anchored)
+        self.assertEqual(state.recent_tables,
+                         ((anchored, "2026-11-08T12:00:00Z"),))
+        self.assertEqual(state.pinned_tables, (anchored,))
+
+    def test_schema7_promotion_without_last_folder_keeps_relative_refs(self):
+        payload = {"schema": 7, "last_folder": None,
+                   "last_table": "sub\\gamea.ct",
+                   "attach_mode": ATTACH_MODE_ASK,
+                   "recent_tables": [], "view_filter": "",
+                   "view_sort": "name", "view_mode": "list",
+                   "pinned_tables": [], "view_status": "",
+                   "auto_rescan": True}
+        state = master_state_from_bytes(self._document(payload))
+        self.assertEqual(state.table_folders, ())
+        self.assertEqual(state.last_table, "sub\\gamea.ct")
+
+    def test_from_bytes_refuses_schema7_with_table_folders_field(self):
+        payload = {"schema": 7, "last_folder": None,
+                   "table_folders": ["C:\\tables"]}
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(payload))
+        self.assertIn("unknown fields", str(ctx.exception))
+        self.assertIn("table_folders", str(ctx.exception))
+
+    def test_from_bytes_refuses_bad_table_folders(self):
+        base = {"schema": MASTER_STATE_SCHEMA, "last_folder": None}
+        not_a_list = dict(base, table_folders="C:\\tables")
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(not_a_list))
+        self.assertIn("table_folders", str(ctx.exception))
+        empty_item = dict(base, table_folders=[""])
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(empty_item))
+        self.assertIn("table_folders", str(ctx.exception))
+        long_item = dict(base, table_folders=["x" * 5000])
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(long_item))
+        self.assertIn("table_folders", str(ctx.exception))
+        duplicate = dict(base, table_folders=["C:\\tables", "c:\\tables"])
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(duplicate))
+        self.assertIn("duplicate", str(ctx.exception))
+        from ct2trainer.native.master_trainer.master_state import (
+            TABLE_FOLDERS_LIMIT)
+        over_cap = dict(base, table_folders=[
+            "C:\\t%02d" % i for i in range(TABLE_FOLDERS_LIMIT + 1)])
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(over_cap))
+        self.assertIn("limit", str(ctx.exception))
+
+    def test_schema8_empty_folders_self_heal_to_last_folder(self):
+        # A schema-8 document with a set last folder but an empty folder
+        # list is inconsistent; it self-heals to the single folder
+        # (never dropped) instead of losing the user's table roots.
+        payload = {"schema": MASTER_STATE_SCHEMA, "last_folder": "C:\\tables",
+                   "table_folders": []}
+        state = master_state_from_bytes(self._document(payload))
+        self.assertEqual(state.table_folders, ("C:\\tables",))
+
+    def test_schema8_empty_folders_without_last_folder_stay_empty(self):
+        payload = {"schema": MASTER_STATE_SCHEMA, "last_folder": None,
+                   "table_folders": []}
+        state = master_state_from_bytes(self._document(payload))
+        self.assertEqual(state.table_folders, ())
 
 
 class MasterStateFileTests(unittest.TestCase):

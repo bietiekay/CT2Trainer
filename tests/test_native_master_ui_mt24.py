@@ -143,8 +143,9 @@ class AnalysisColumnsTests(_Mt24Base):
 
         window = self._window(self._app(), compiler)
         tree = window._table_tree
+        # MT-26 (0.34): the Folder column sits after Table.
         self.assertEqual(list(tree["columns"]), [
-            "table", "processes", "status", "detail",
+            "table", "folder", "processes", "status", "detail",
             "entries", "blocked", "size", "modified", "last_used"])
         self.assertEqual(tree.heading("entries")["text"], "Entries")
         self.assertEqual(tree.heading("blocked")["text"], "Blocked")
@@ -153,8 +154,10 @@ class AnalysisColumnsTests(_Mt24Base):
         # The worker holds the item behind the gate: both columns
         # carry the pending marker, and the meta line counts the
         # analysis in flight.
+        # MT-26 (0.34): the Folder column sits after Table, so the
+        # Entries / Blocked columns are at 5 / 6 and the detail at 4.
         values = self._row_values("a.ct")
-        self.assertEqual(values[4:6], ["…", "…"])
+        self.assertEqual(values[5:7], ["…", "…"])
         self.assertIn("analyzing 1 table(s)",
                       str(window._meta_label.cget("text")))
         gate.set()
@@ -162,11 +165,11 @@ class AnalysisColumnsTests(_Mt24Base):
         self.assertEqual(entry["status"], "ok")
         window._poll()
         values = self._row_values("a.ct")
-        self.assertEqual(values[4], "2")
-        self.assertEqual(values[5], "3")
+        self.assertEqual(values[5], "2")
+        self.assertEqual(values[6], "3")
         # A blocked count > 0 adds the bounded note to the detail
         # column; the counts themselves live in the columns.
-        self.assertEqual(values[3], "3 blocked")
+        self.assertEqual(values[4], "3 blocked")
         self.assertNotIn("analyzing",
                          str(window._meta_label.cget("text")))
 
@@ -183,8 +186,8 @@ class AnalysisColumnsTests(_Mt24Base):
         values = self._row_values("a.ct")
         # A failed analysis keeps the counts unknown on purpose: the
         # failed marker, never stale numbers - and no blocked note.
-        self.assertEqual(values[4:6], ["–", "–"])
-        self.assertEqual(values[3], "")
+        self.assertEqual(values[5:7], ["–", "–"])
+        self.assertEqual(values[4], "")
 
     def test_the_pinned_row_keeps_the_pin_marker_before_the_note(self):
         app = self._app()
@@ -199,10 +202,10 @@ class AnalysisColumnsTests(_Mt24Base):
         self.assertEqual(entry["status"], "ok")
         window._poll()
         values = self._row_values("a.ct")
-        self.assertEqual(values[3], "pinned - 3 blocked")
-        self.assertEqual(values[4:6], ["2", "3"])
+        self.assertEqual(values[4], "pinned - 3 blocked")
+        self.assertEqual(values[5:7], ["2", "3"])
 
-    def test_the_process_group_parent_row_has_nine_values(self):
+    def test_the_process_group_parent_row_has_ten_values(self):
         app = self._app()
         app.view_mode = "process"
         sha = _file_sha(self.folder, "a.ct")
@@ -215,13 +218,16 @@ class AnalysisColumnsTests(_Mt24Base):
         parents = tree.get_children()
         self.assertEqual(len(parents), 1)
         values = tree.item(parents[0], "values")
-        self.assertEqual(len(values), 9)
+        # MT-26 (0.34): ten values - the display-only group row carries
+        # the empty Folder value as well.
+        self.assertEqual(len(values), 10)
         # The display-only group row carries the casefolded bound
         # process name (the MT-17 group identity) and the count -
         # but no Entries / Blocked figures.
         self.assertEqual(values[0], "gamea.exe")
-        self.assertEqual(values[1], "1 table(s)")
-        self.assertEqual(values[4:6], ("", ""))
+        self.assertEqual(values[1], "")
+        self.assertEqual(values[2], "1 table(s)")
+        self.assertEqual(values[5:7], ("", ""))
         self.assertEqual(len(tree.get_children(parents[0])), 1)
 
 
@@ -245,13 +251,16 @@ class QueueDisciplineTests(_Mt24Base):
         entry = _wait_store(app, _file_sha(self.folder, "a.ct"))
         self.assertEqual(entry["status"], "ok")
         window._poll()
-        # The compiler only ever sees the bound table.
-        self.assertEqual(calls, ["a.ct"])
+        # The compiler only ever sees the bound table - MT-26 (0.34):
+        # addressed by the table key (the absolute path under the
+        # index root in a single-root session, same as entry_key).
+        key = str(Path(self.folder).resolve() / "a.ct")
+        self.assertEqual(calls, [key])
         self.assertIsNone(
             app.analysis_store.get(_file_sha(self.folder, "unbound.ct")))
         # The unbound row keeps the pending marker (nothing to run).
         values = self._row_values("unbound.ct")
-        self.assertEqual(values[4:6], ["…", "…"])
+        self.assertEqual(values[5:7], ["…", "…"])
 
     def test_a_rescan_does_not_requeue_a_known_sha(self):
         calls = []
@@ -269,7 +278,9 @@ class QueueDisciplineTests(_Mt24Base):
         # valid, so nothing new is queued.
         self.assertEqual(app.analysis_worker.pending_count(), 0)
         time.sleep(0.2)
-        self.assertEqual(calls, ["a.ct"])
+        # MT-26 (0.34): the compiler call carries the table key.
+        self.assertEqual(calls,
+                         [str(Path(self.folder).resolve() / "a.ct")])
 
     def test_a_rescan_requeues_a_changed_table(self):
         calls = []
@@ -293,10 +304,12 @@ class QueueDisciplineTests(_Mt24Base):
         window._rescan()
         entry = _wait_store(app, new_sha)
         self.assertEqual(entry["status"], "ok")
-        self.assertEqual(calls.count("a.ct"), 2)
+        # MT-26 (0.34): the re-queued compile carries the table key.
+        key = str(Path(self.folder).resolve() / "a.ct")
+        self.assertEqual(calls.count(key), 2)
         window._poll()
         values = self._row_values("a.ct")
-        self.assertEqual(values[4:6], ["2", "3"])
+        self.assertEqual(values[5:7], ["2", "3"])
 
 
 @unittest.skipIf(tk is None, "tkinter not available")
@@ -398,8 +411,10 @@ class WorkerLifecycleTests(_Mt24Base):
         self.assertEqual(entry["counts"]["blocked"], 0)
         window._poll()
         values = self._row_values("a.ct")
-        self.assertEqual(values[4], "1")
-        self.assertEqual(values[5], "0")
+        # MT-26 (0.34): Entries / Blocked shifted right by the Folder
+        # column.
+        self.assertEqual(values[5], "1")
+        self.assertEqual(values[6], "0")
 
 
 if __name__ == "__main__":

@@ -141,14 +141,18 @@ class ProcessGroupViewTests(_WaitingViewBase):
 
     def _grouped_window(self, view_mode="process"):
         app = self._app()
-        app.index.entries = _entries()
+        # MT-26 (0.34): the merged RootIndexSet exposes the entries
+        # read-only; the fakes are injected into the per-root index.
+        app.index.indexes[0].entries = _entries()
         return app, self._window(app, view_mode)
 
     def test_group_rows_carry_label_count_and_children(self):
         _, window = self._grouped_window()
         tree = window._table_tree
+        # MT-26 (0.34): the display-only group row gained the empty
+        # Folder value, so the count moved to values[2].
         parents = [(tuple(tree.item(i, "values"))[0],
-                    tuple(tree.item(i, "values"))[1])
+                    tuple(tree.item(i, "values"))[2])
                    for i in tree.get_children("")]
         self.assertEqual(
             parents,
@@ -200,7 +204,9 @@ class ProcessGroupViewTests(_WaitingViewBase):
         # The group row never surfaces as a selectable table.
         tree.selection_set(parent)
         tree.focus(parent)
-        self.assertIsNone(window._table_selected_rel())
+        # MT-26 (0.34): the selected-row resolver returns the table key
+        # (renamed from the relative-path version).
+        self.assertIsNone(window._table_selected_key())
         # The child loads through the ordinary MT-10 path (Enter on
         # the selected child row).
         tree.selection_set(child)
@@ -217,7 +223,9 @@ class ProcessGroupViewTests(_WaitingViewBase):
 
     def test_view_cycle_toggles_back_to_flat(self):
         app = self._app()
-        app.index.entries = _entries()
+        # MT-26 (0.34): the fakes go into the per-root index (the
+        # merged set surface is read-only).
+        app.index.indexes[0].entries = _entries()
         window = self._window(app)
         window._cycle_view()
         self.assertEqual(window._view_mode, "process")

@@ -153,10 +153,12 @@ class AnalysisWorker:
 
     # -- queue -------------------------------------------------------
 
-    def enqueue(self, relative_path: str, sha: str,
+    def enqueue(self, table_key: str, sha: str,
                 process_name: str) -> bool:
         """Queue one table for analysis.
 
+        ``table_key`` is the table's global key (absolute path in a
+        multi-root session, relative path in a single-root session).
         Returns False when the item was skipped (already queued for
         that sha, the queue is at its bound, or the worker is
         stopping) - the table then stays pending until the next
@@ -168,7 +170,7 @@ class AnalysisWorker:
             if len(self._queued) >= QUEUE_LIMIT:
                 return False
             self._queued.add(sha)
-        self._queue.put((relative_path, sha, process_name))
+        self._queue.put((table_key, sha, process_name))
         return True
 
     def pending_count(self) -> int:
@@ -202,13 +204,20 @@ class AnalysisWorker:
         with self._lock:
             return self._paused
 
-    def _compile(self, relative_path: str, process_name: str):
-        """The plan compile for one table (the injected override wins)."""
+    def _compile(self, table_key: str, process_name: str):
+        """The plan compile for one table (the injected override wins).
+
+        MT-26 (0.34): ``table_key`` is the table's global key (the
+        absolute path in a multi-root session, the relative path in a
+        single-root session); an absolute key resolves directly, a
+        relative key falls back to the primary table folder.
+        """
         if self._compile_override is not None:
-            return self._compile_override(relative_path, process_name)
+            return self._compile_override(table_key, process_name)
         from pathlib import Path
         from ..compiler import compile_table
-        path = Path(self._app.folder) / relative_path
+        key = Path(table_key)
+        path = key if key.is_absolute() else Path(self._app.folder) / table_key
         return compile_table(path, process_name, architecture="x64")
 
     def _analyze_one(self, relative_path: str, sha: str,

@@ -34,7 +34,7 @@ from typing import Callable
 from .process_picker import candidate_processes
 from .process_watch import (ProcessSnapshotEntry, ProcessLister,
                             match_targets)
-from .table_index import TableEntry, TableIndex
+from .table_index import RootIndexSet, TableEntry, TableIndex, table_key
 
 STATE_WAITING = "waiting"
 STATE_CHOOSING = "choosing"
@@ -116,7 +116,8 @@ class LoadOutcome:
 class MasterOrchestrator:
     """Waiting-mode decision engine over an index and a process lister."""
 
-    def __init__(self, index: TableIndex, lister: ProcessLister,
+    def __init__(self, index: "TableIndex | RootIndexSet",
+                 lister: ProcessLister,
                  plan_compiler: Callable[[TableEntry, str], dict],
                  now: Callable[[], float] = time.monotonic):
         self.index = index
@@ -252,13 +253,26 @@ class MasterOrchestrator:
 
     # -- choice resolution -----------------------------------------------------
 
-    def choose(self, relative_path: str) -> LoadOutcome:
-        """Resolve the open choice with one table (compile + handoff plan)."""
+    def choose(self, key: str) -> LoadOutcome:
+        """Resolve the open choice with one table (compile + handoff plan).
+
+        MT-26 (0.34): the table is addressed by its table key (absolute
+        path in a multi-root session, relative path in a single-root
+        session); a relative-path match remains accepted for
+        single-root callers.
+        """
         if self.state != STATE_CHOOSING or self.choice is None:
             raise ValueError("no open table choice")
-        if relative_path not in [t.relative_path for t in self.choice.tables]:
+        target = key.casefold() if isinstance(key, str) else None
+        table = None
+        if target is not None:
+            for candidate in self.choice.tables:
+                if (table_key(candidate).casefold() == target
+                        or candidate.relative_path.casefold() == target):
+                    table = candidate
+                    break
+        if table is None:
             raise ValueError("chosen table is not part of the open choice")
-        table = next(t for t in self.choice.tables if t.relative_path == relative_path)
         process = min(self.choice.snapshot_entries, key=lambda e: e.pid)
         return self.load(table, process)
 
@@ -351,13 +365,18 @@ class MasterOrchestrator:
 
     # -- explicit load (MT-10) ---------------------------------------------------
 
-    def request_load(self, relative_path: str) -> ExplicitLoadRequest:
+    def request_load(self, table_key: str) -> ExplicitLoadRequest:
         """Explicit user table load (MT-10): resolve one indexed table
         against the live process snapshot.
 
+        MT-26 (0.34): the table is addressed by its table key (absolute
+        path in a multi-root session, relative path in a single-root
+        session); the lookup resolves the key against the index (a
+        relative-path match remains accepted for single-root callers).
+
         Named refusals (:class:`ExplicitLoadRefusal` with stable ``code``):
 
-        - ``not-in-index``: the path is not part of the index (the table
+        - ``not-in-index``: the key is not part of the index (the table
           is new or gone; Rescan re-arms the index);
         - ``table-unreadable``: the entry is visible but not loadable
           (the named scan error rides in the detail);
@@ -373,24 +392,24 @@ class MasterOrchestrator:
         bound name in casefold order is used and the engine simply waits
         for the process to start (the plan is compiled statically).
         """
-        if type(relative_path) is not str or not relative_path:
+        if type(table_key) is not str or not table_key:
             raise ExplicitLoadRefusal("not-in-index",
                                       "no table path given")
-        entry = self.index.get(relative_path)
+        entry = self.index.get_by_key(table_key)
         if entry is None:
             raise ExplicitLoadRefusal(
                 "not-in-index",
-                "table '" + relative_path + "' is not part of the index "
+                "table '" + table_key + "' is not part of the index "
                 "(Rescan the folder first if the table is new)")
         if entry.status != "ok":
             raise ExplicitLoadRefusal(
                 "table-unreadable",
-                "table '" + relative_path + "' is unreadable: "
+                "table '" + table_key + "' is unreadable: "
                 + (entry.detail or "no detail"))
         if not entry.process_names:
             raise ExplicitLoadRefusal(
                 "no-process-binding",
-                "table '" + relative_path + "' binds no process name, so "
+                "table '" + table_key + "' binds no process name, so "
                 "no target can be attached to it")
         try:
             snapshot = self.lister.list_processes()

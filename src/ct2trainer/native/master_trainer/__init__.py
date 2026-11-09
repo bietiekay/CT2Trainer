@@ -8,7 +8,19 @@ This is a convenience layer on top of the existing CT2Trainer engine — it does
 not add new trainer functionality, only the folder-scan and auto-load loop.
 """
 
-from .table_index import TableEntry, TableIndex, load_index, reconcile, save_index
+from .table_index import (
+    INDEX_SCHEMA,
+    INDEX_SET_SCHEMA,
+    TableEntry,
+    TableIndex,
+    RootIndexSet,
+    load_index,
+    load_index_set,
+    reconcile,
+    save_index,
+    save_index_set,
+    table_key,
+)
 from .table_gate import (
     TableGateResult,
     TableLoadGateRefusal,
@@ -58,11 +70,17 @@ from .steamdeck_route import (
 )
 
 __all__ = [
+    "INDEX_SCHEMA",
+    "INDEX_SET_SCHEMA",
     "TableEntry",
     "TableIndex",
+    "RootIndexSet",
     "load_index",
+    "load_index_set",
     "reconcile",
     "save_index",
+    "save_index_set",
+    "table_key",
     "TableGateResult",
     "TableLoadGateRefusal",
     "gate_table_for_load",

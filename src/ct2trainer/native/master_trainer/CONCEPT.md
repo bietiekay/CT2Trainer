@@ -18,21 +18,26 @@ load-gate preview) with the 0.30 release (2026-11-04); MT-23 (per-table
 live status + color coding + status filter) with the 0.31 release
 (2026-11-05); MT-24 (per-table entry count + blocked count, background
 plan analysis) with the 0.32 release (2026-11-06); MT-25 (table
-folder auto-rescan) with the 0.33 release (2026-11-08). Design and
+folder auto-rescan) with the 0.33 release (2026-11-08); MT-26 (multi-root
+table index: several table folders in one Master window, the folder
+manager, the absolute table key identity, the persisted folder list)
+with the 0.34 release (2026-11-09). Design and
 implementation notes; the working plan is [ROADMAP.md](ROADMAP.md) and
 the reviewable UI-flow document is [UI.md](UI.md).
 
 ## What it is
 
 The Master Trainer is one long-lived trainer window instead of one trainer
-per table. The user starts it once, points it at the folder that holds
-their `.ct` tables (sub-folders included), and then works normally: when a
-game process starts that a table binds to, the Master Trainer loads that
-table automatically, attaches, and switches into the exact trainer UI of
-the standalone `trainer.exe`. Toggles the user enables are persisted
-per-table and restored on the next load of the same table. When the user
-returns to the Master (header button “⬅ Master”), the same window keeps
-waiting for the next matching process — a “Forever-Master-Trainer”.
+per table. The user starts it once, points it at the table folder or
+folders (MT-26, 0.34: several table folders can be indexed at once —
+sub-folders of every root included) that hold their `.ct` tables, and then
+works normally: when a game process starts that a table binds to, the
+Master Trainer loads that table automatically, attaches, and switches
+into the exact trainer UI of the standalone `trainer.exe`. Toggles the
+user enables are persisted per-table and restored on the next load of the
+same table. When the user returns to the Master (header button “⬅
+Master”), the same window keeps waiting for the next matching process —
+a “Forever-Master-Trainer”.
 
 The Master Trainer adds **no new trainer functionality**: every table
 feature, activation contract, fail-closed guard and state journal is the
@@ -44,13 +49,17 @@ auto-load/handoff loop around that existing engine.
 
 ### Waiting mode (default)
 
-- Shows the configured folder, a compact metadata line (table counts,
-  bound process names, last scan time, the state home location), a live
-  “Running now” line (which bound processes are visible in the latest
-  process snapshot, with PIDs), the table index (one row per `.ct` table:
-  relative path, bound process name(s), status, indexed size, modified
-  time, last used — rows for a running
-  process are marked `running` with its PID(s)) and a live status line.
+- Shows the indexed table folders (the primary first, MT-26: the
+  folder count and a scan-problem mark when a stored folder is
+  missing), a compact metadata line (table counts across the indexed
+  folders, bound process names, last scan time, the state home
+  location), a live “Running now” line (which bound processes are
+  visible in the latest process snapshot, with PIDs), the table index
+  (one row per `.ct` table: table name, the **Folder** column (the
+  entry's index root), bound process name(s), status, detail, entries
+  / blocked counts, indexed size, modified time, last used — rows for
+  a running process are marked `running` with its PID(s)) and a live
+  status line.
   On non-Windows the metadata line also carries the permanent MT-7 route
   hint (attach unavailable; the documented Proton-wrapped trainer route).
 - 0.26 (MT-13/14/15) waiting-view usability: the table list carries a
@@ -79,8 +88,9 @@ auto-load/handoff loop around that existing engine.
   the full window; the waiting view is rebuilt whole on the way back,
   filter / sort / view / pins / recents included). The header gains
   the read-only **“UI flow”** button (the in-app copy of the
-  reviewable [UI.md](UI.md) flow document); **F5** re-scans the folder
-  from anywhere in the waiting view; the table list takes the
+  reviewable [UI.md](UI.md) flow document); **F5** re-scans the
+  indexed folders from anywhere in the waiting view; the table
+  list takes the
   **initial focus** (arrow keys and Enter work immediately without a
   first click); the “Retry load” re-arm moves into the status bar
   next to the attach toggle and the Recent button.
@@ -129,10 +139,31 @@ auto-load/handoff loop around that existing engine.
   trainer is attached, is restarted by a manual rescan or a folder
   change, and has zero effect on the load path (the MT-9 gate
   re-checks the table independently at load time).
-- The table folder is taken from a CLI parameter, or from the
-  last-used folder persisted in the state home (`master-settings.json`);
-  only a genuinely first start (or a stale stored folder) shows the
-  directory picker — “ask on first start”.
+- 0.34 (MT-26): the **multi-root table index** — the Master indexes
+  several table folders at once. The "Folders…" header button opens
+  the folder manager (the indexed folders, primary first, the primary
+  marked with a star; "Add folder…" / "Set primary" / "Remove" /
+  "Close"; every action re-scans the indexed roots, saves the index,
+  restarts the auto-rescan clock and refreshes the view). The tree
+  gains the **Folder** column (the entry's index root), and the table
+  identity in a multi-root session is the **absolute table key**
+  (index root + relative path) — picker, details, pins, recents and
+  the MT-24 analysis queue are all key-based, so a table is
+  unambiguous across roots (the relative path remains the documented
+  single-root identity). The folder list persists in
+  `master-settings.json` (schema 7 -> 8, `table_folders`, primary
+  first, capped at 8) and the tables index document carries one
+  checksum-bound root block per indexed folder (schema 1 -> 2); a
+  missing stored folder stays visible as a scan problem (fixed
+  through the folder manager). Zero load-path effect — the MT-9 gate
+  re-checks the table file under its index root independently at load
+  time; the auto-rescan and the analysis cover every indexed root.
+- The table folders are taken from the CLI parameter, or from the
+  persisted folder list in the state home (`master-settings.json`);
+  only a genuinely first start (or no stored folders at all) shows the
+  directory picker — “ask on first start”. An explicit folder argument
+  wins as the new primary root (the stored folders are indexed behind
+  it).
 - A 1 s poll tick asks the pure orchestrator for a decision:
   - no bound process running → stays waiting, the line says so;
   - exactly one table binds the running process → **auto-loads** that
@@ -193,9 +224,25 @@ Index file: `<state home>/tables-index.json` (state home =
 lives **outside the table folder** so the user's table directory is never
 written to.
 
+MT-26 (0.34): the document is the ordered **set** of per-root indexes
+(schema 2) — one checksum-bound root block per indexed table folder,
+in user order (the first root is the primary). A table is identified
+globally by its **table key**: the absolute path (index root joined
+with the relative path, native separators) in a multi-root session,
+the relative path in a single-root one (the documented legacy
+identity). The merged surface resolves keys casefolded with the
+documented relative-path fallback; entries from different roots may
+share a relative path (the merged relative-path dict is first-root-
+wins and only the compatibility surface — the key is the identity).
+Schema-1 single-root documents promote on load. Adding / reordering
+roots keeps the stored per-root indexes; removing a root drops its
+block; `set_folder` (replace-all) rebuilds the document for the single
+new root.
+
 Per table the entry stores: relative path, size, `st_mtime_ns`,
 `sha256`, bound process names, and a status (`ok` / `unreadable` with a
-named error). Reconcile rules:
+named error) — plus the index root it was found under. Reconcile rules (the same
+contract per root):
 
 1. Only the folder is listed (`os.walk`, deterministic order); that is the
    only filesystem work on an unchanged tree.
@@ -409,10 +456,17 @@ usability”):
 ct2trainer native master [FOLDER] [--state-dir DIR] [--debug-log] [--poll-ms N]
 ```
 
-- `FOLDER` optional; when omitted the last-used folder stored in the
-  state home is reused when it still exists, and only a genuinely first
-  start (or a stale stored folder) shows the directory picker. An
-  explicit folder always wins and becomes the new persisted folder.
+- `FOLDER` optional; when omitted the stored folder list
+  (`master-settings.json` schema 8, `table_folders`) is kept as-is —
+  a missing stored folder stays visible as a scan problem (fixed
+  through the "Folders…" folder manager), and only a genuinely first
+  start (no stored folders at all) shows the directory picker. An
+  explicit folder wins as the new primary root; the stored folders are
+  indexed behind it (casefold-deduped, each printed as an "Also
+  indexing stored folder:" line). A cancelled first start exits 0;
+  every stored folder gone shows the picker (the pick is prepended as
+  the new primary, a cancel keeps the missing list). An explicit
+  missing folder is the documented exit-2 refusal.
 - `--state-dir` overrides the state home (tests, portable installs).
 - `--debug-log` propagates into the compiled plans, so the trainer
   writes the usual `.ct2debug.log` next to the running trainer.
@@ -452,9 +506,8 @@ passed to the MT-8 PyInstaller freeze).
   around the tested engine, not a second trainer implementation.
 - No writing into the table folder (index and state live in the state
   home).
-- No cross-machine index sync, no multi-root index, no hot-reload of a
-  loaded table while its trainer session is active (return to the
-  Master, then re-load).
+- No cross-machine index sync, no hot-reload of a loaded table while
+  its trainer session is active (return to the Master, then re-load).
 - No global per-feature hotkeys, no auto-update, no concurrent
   multi-table sessions (recorded with the online feature evaluation in
   ROADMAP.md: the engine already supports per-record hotkeys, the

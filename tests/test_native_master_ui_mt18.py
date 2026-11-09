@@ -105,7 +105,7 @@ class PinPersistTests(_WaitingViewBase):
 
     def test_pin_toggles_via_window_and_persists(self):
         app = self._app()
-        app.index.entries = _entries()
+        app.index.indexes[0].entries = _entries()
         window = self._window(app)
         # Default name order: alpha, empty, rdr2, zeta.
         self.assertEqual(
@@ -116,11 +116,12 @@ class PinPersistTests(_WaitingViewBase):
         self.assertEqual(app.pinned_tables, ("zeta.ct",))
         self.assertEqual(self._stored().pinned_tables, ("zeta.ct",))
         self.assertIn("Pinned zeta.ct", window._status_var.get())
-        # The pinned row floats to the top with the detail-column marker.
+        # The pinned row floats to the top with the detail-column
+        # marker (MT-26 (0.34): the Folder column shifted it to 4).
         first = window._table_tree.get_children("")[0]
         values = tuple(window._table_tree.item(first, "values"))
         self.assertEqual(values[0], "zeta.ct")
-        self.assertTrue(values[3].startswith("pinned"))
+        self.assertTrue(values[4].startswith("pinned"))
         # The first column stays the bare relative path (row identity).
         self.assertEqual(values[0].casefold(), "zeta.ct")
         # Most recent pin first: pinning alpha now puts it above zeta.
@@ -133,7 +134,7 @@ class PinPersistTests(_WaitingViewBase):
 
     def test_unpin_restores_order_and_clears_state(self):
         app = self._app()
-        app.index.entries = _entries()
+        app.index.indexes[0].entries = _entries()
         window = self._window(app)
         window._toggle_table_pin("zeta.ct", True)
         window._toggle_table_pin("zeta.ct", False)
@@ -147,7 +148,7 @@ class PinPersistTests(_WaitingViewBase):
 
     def test_named_refusals_land_in_status_without_state_change(self):
         app = self._app()
-        app.index.entries = _entries()
+        app.index.indexes[0].entries = _entries()
         window = self._window(app)
         # Cap: PINNED_TABLES_LIMIT pins, then the next one is refused.
         for i in range(PINNED_TABLES_LIMIT):
@@ -174,7 +175,7 @@ class PinPersistTests(_WaitingViewBase):
 
     def test_pinned_table_filtered_out_is_ignored(self):
         app = self._app()
-        app.index.entries = _entries()
+        app.index.indexes[0].entries = _entries()
         window = self._window(app)
         window._toggle_table_pin("zeta.ct", True)
         window._filter_entry.insert(0, "alpha")
@@ -197,7 +198,7 @@ class PinProcessGroupTests(_WaitingViewBase):
 
     def test_pin_floats_to_top_of_its_process_group(self):
         app = self._app()
-        app.index.entries = _entries_shared()
+        app.index.indexes[0].entries = _entries_shared()
         window = self._window(app, view_mode="process")
         tree = window._table_tree
         # Default within-group order (name sort): aaa before bbb.
@@ -220,7 +221,7 @@ class PinProcessGroupTests(_WaitingViewBase):
 
     def test_pin_marker_is_visible_in_the_group_child(self):
         app = self._app()
-        app.index.entries = _entries_shared()
+        app.index.indexes[0].entries = _entries_shared()
         window = self._window(app, view_mode="process")
         app.set_table_pinned("bbb.ct", True)
         window._render_tables()
@@ -229,7 +230,9 @@ class PinProcessGroupTests(_WaitingViewBase):
         child = tree.get_children(group)[0]
         values = tuple(tree.item(child, "values"))
         self.assertEqual(values[0], "bbb.ct")
-        self.assertTrue(values[3].startswith("pinned"))
+        # MT-26 (0.34): the detail column shifted right of the Folder
+        # column.
+        self.assertTrue(values[4].startswith("pinned"))
 
 
 if __name__ == "__main__":
