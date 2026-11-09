@@ -30,7 +30,8 @@ import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
 from typing import Callable
 
-from .engine import (TrainerEngine, NativeRuntimeError, parse_value, format_value,
+from .engine import (TrainerEngine, NativeRuntimeError, StateError,
+                     parse_value, format_value,
                      StaleStateRecoverable, StaleArtifactsRecoverable,
                      perform_stale_recovery,
                      LiveStateConflict, terminate_live_session)
@@ -1183,8 +1184,48 @@ class TrainerWindow:
         self.root.destroy()
 
 
-def run_trainer(plan: dict | str | Path) -> int:
-    """Run from an embedded plan dictionary or a UTF-8 JSON plan file."""
+def _log_startup_failure(plan, exc) -> None:
+    """Keep the failed startup in the trainer debug log (best effort)."""
+    try:
+        from .debug_log import create_debug_log
+        create_debug_log(plan).error("trainer-startup-failed", exc)
+    except Exception:
+        pass
+
+
+def _log_force_event(plan, event: str, detail: str) -> None:
+    """Keep the --force decision in the trainer debug log (best effort)."""
+    try:
+        from .debug_log import create_debug_log
+        create_debug_log(plan).log(event, detail=detail)
+    except Exception:
+        pass
+
+
+def _force_reclaim(plan) -> tuple[bool, str]:
+    """The --force escape hatch for a held, unclassifiable state.
+
+    Addresses exactly the directories the engine would have claimed
+    (the documented default state home via ``default_state_dirs``) and
+    hands them to ``state_force.force_reclaim``.
+    """
+    from .engine import default_state_dirs
+    from .state_force import force_reclaim
+    state_dir, shared_dir = default_state_dirs(plan)
+    return force_reclaim(state_dir, shared_dir, plan)
+
+
+def run_trainer(plan: dict | str | Path, force: bool = False) -> int:
+    """Run from an embedded plan dictionary or a UTF-8 JSON plan file.
+
+    ``force`` (0.38, the ``--force`` flag) skips the state-lock safety
+    prompts: a recoverable stale state is archived without confirmation,
+    and a leftover recovery fence (or any other unclassifiable held
+    state) triggers the forced reclaim instead of the plain error
+    dialog. The one boundary that stays: a proven-alive trainer session
+    is still refused with its named reason, and a failed forced
+    recovery still exits with the untouched state.
+    """
     if not isinstance(plan, dict):
         plan = json.loads(Path(plan).read_text(encoding="utf-8"))
     root = tk.Tk()
@@ -1218,15 +1259,47 @@ def run_trainer(plan: dict | str | Path) -> int:
             artifacts = exc
         except LiveStateConflict as exc:
             live = exc
+        except StateError as exc:
+            if not force:
+                _log_startup_failure(plan, exc)
+                messagebox.showerror("CT2Trainer cannot start", str(exc), parent=root)
+                root.destroy()
+                return 1
+            # 0.38: the --force escape hatch for the documented SteamOS
+            # dead end (leftover recovery fence / unclassifiable held
+            # state lock): reclaim the blocking artifacts - a
+            # proven-alive trainer-side owner still refuses - and
+            # retry the startup.
+            completed, detail = _force_reclaim(plan)
+            if completed:
+                _log_force_event(plan, "state-force-reclaimed", detail)
+                continue
+            _log_force_event(plan, "state-force-refused", detail)
+            messagebox.showerror("CT2Trainer cannot start",
+                                 "--force refusal: " + detail, parent=root)
+            root.destroy()
+            return 1
         except Exception as exc:
-            try:
-                from .debug_log import create_debug_log
-                create_debug_log(plan).error("trainer-startup-failed", exc)
-            except Exception:
-                pass
+            _log_startup_failure(plan, exc)
             messagebox.showerror("CT2Trainer cannot start", str(exc), parent=root)
             root.destroy()
             return 1
+        if stale is not None and force:
+            # 0.38: no confirmation prompt - the stale state is archived
+            # straight away (the documented --force contract: a
+            # non-interactive forced start).
+            ok, detail = perform_stale_recovery(stale)
+            if not ok:
+                _log_force_event(plan, "state-force-failed", detail)
+                messagebox.showerror(
+                    "CT2Trainer - forced recovery failed",
+                    detail + "\n\nThe old state was left untouched at\n"
+                    + str(stale.state_directory),
+                    parent=root)
+                root.destroy()
+                return 1
+            _log_force_event(plan, "state-force-recovered", detail)
+            continue
         if stale is not None:
             if stale.live_target_takeover:
                 stale_body = (
@@ -1274,6 +1347,21 @@ def run_trainer(plan: dict | str | Path) -> int:
                     parent=root)
                 root.destroy()
                 return 1
+        if artifacts is not None and force:
+            # 0.38: no confirmation prompt - the unfinished receipts are
+            # archived straight away (the documented --force contract).
+            ok, detail = perform_stale_recovery(artifacts)
+            if not ok:
+                _log_force_event(plan, "state-force-failed", detail)
+                messagebox.showerror(
+                    "CT2Trainer - forced recovery failed",
+                    detail + "\n\nThe old state was left untouched at\n"
+                    + str(artifacts.state_directory),
+                    parent=root)
+                root.destroy()
+                return 1
+            _log_force_event(plan, "state-force-recovered", detail)
+            continue
         if artifacts is not None:
             fence_note = ""
             if (artifacts.state_directory / "recovery.lock").exists():
@@ -1321,6 +1409,18 @@ def run_trainer(plan: dict | str | Path) -> int:
                     parent=root)
                 root.destroy()
                 return 1
+        if live is not None and force:
+            # 0.38: the one boundary that stays under --force - a
+            # proven-alive second trainer session is never displaced
+            # (named refusal, no termination prompt).
+            refusal = ("Another trainer session (PID " + str(live.owner_pid)
+                       + ") is proven alive; --force never displaces a live "
+                       "trainer session. Close that session and start again.")
+            _log_force_event(plan, "state-force-refused", refusal)
+            messagebox.showerror("CT2Trainer cannot start",
+                                 "--force refusal: " + refusal, parent=root)
+            root.destroy()
+            return 1
         if live is not None:
             if live.owner_created is None:
                 messagebox.showinfo(

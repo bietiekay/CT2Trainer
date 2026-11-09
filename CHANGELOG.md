@@ -2,6 +2,61 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.38 (2026-11-09)
+
+The `--force` startup parameter for the documented SteamOS state-lock
+dead end (user request 2026-11-09; diagnosis logs from the 0.22/0.30/
+0.31 Indiana Jones and the Great Circle field runs on Proton: an
+interrupted recovery transaction left `recovery.lock` behind, the
+recovery-eligibility assessment stopped classifying the state, and the
+conservative refusal "A recovery transaction owns this state" fired on
+every start for hours - with no easy way to delete the state folder on
+SteamOS). `--force` is accepted by the frozen trainer EXE
+(`launcher.py`), the source CLI `run` and `master` commands
+(`__main__.py`) and the frozen `CT2Trainer-Master.exe`
+(`tools/native_master.py`); it skips the state-lock safety prompts - a
+recoverable stale state (dead state-lock owner) or unfinished receipts
+are archived through the tested `perform_stale_recovery` path without a
+confirmation dialog, and a leftover recovery fence / any other
+unclassifiable held state (the plain `StateError` dead end, including
+the "state.lock already exists" probe fallback) triggers the new
+bounded forced reclaim in the pure `state_force.py` layer
+(`force_reclaim`): every recorded trainer-side owner (state lock,
+recovery fence, session record, matching shared process claims under
+`_process_sessions`) is probed with the tested process probe (one
+observation, one retry on a transient "unknown"); a **proven-alive**
+trainer-side owner is still refused with its named reason - the one
+hard data-safety boundary that stays even under `--force` (the
+`LiveStateConflict` path now refuses without the termination prompt);
+every other case (proven-dead owner, unprovable owner: transient probe
+failure, legacy lock without creation identity, unparseable document)
+quarantines the blocking artifacts (state.lock, recovery.lock,
+session.json, state.json.tmp, oneshot.json.tmp, hook receipts /
+global-pool, this trainer's shared claims) into a timestamped
+`forced-recovery/<UTC stamp>-<trainer id>/` archive next to the state
+folder with a full evidence document (`ct2trainer-forced-reclaim/v1`:
+owner observations, moved files with size + sha256); the saved
+`state.json` (the user's saved wishes) is always preserved, so the
+saved toggles survive the forced reclaim; the engine default state
+directories factored out as `default_state_dirs` (single fact shared by
+the engine claim and the reclaim path); debug-log events
+`state-force-recovered` / `-reclaimed` / `-refused` / `-failed`; master
+wiring: `run_master(..., force=)` → `MasterApp.force` → the `_start_load`
+loop (status line `Forced … complete` / `--force refusal: …`, the
+fail-closed loop guard unchanged); on Steam set it in the game's launch
+options (Properties → Launch Options: `--force`) so the Proton-wrapped
+trainer starts without any dialog. +27 tests (new
+`tests/test_native_state_force.py` 13 + force-flow classes in
+`tests/test_native_ui_recovery_flow.py` 6 + `tests/test_native_master_force.py`
+8); full main suite 4,760 OK / 30 expected skips; catalog zero delta
+(all three audit chunks byte-identical vs `blocked-catalog-037-attach`:
+117,809 total / 116,756 supported / 60,161 staged / 1,053 blocked, zero
+newly blocked). Documented open issue (not part of 0.38): the Win32
+error 299 transient read failure during a live `PatchConflict` receipt
+verification on Proton (`memory._read_exact` has no bounded retry)
+remains the upstream trigger of the stale state on Deck - see the
+0.38 ledger section in `documentation/native-progress.md`.
+
 ## 0.37 (2026-11-09)
 
 Master Trainer per-table process binding persistence (MT-28) — the

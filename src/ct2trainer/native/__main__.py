@@ -52,6 +52,10 @@ def main(argv=None) -> int:
     il2cpp.add_argument("--output", type=Path, help="Write JSON report to this path")
     run = commands.add_parser("run")
     run.add_argument("plan", type=Path)
+    run.add_argument("--force", action="store_true",
+                     help="Forced startup (0.38): recover stale state without a "
+                          "confirmation prompt and reclaim a leftover recovery "
+                          "fence; a proven-alive trainer session is still refused")
     master = commands.add_parser(
         "master",
         help="Master Trainer: index a table folder and auto-load the "
@@ -68,6 +72,11 @@ def main(argv=None) -> int:
                              "(plan flag debug_log; the trainer writes a *.ct2debug.log file next to the EXE)")
     master.add_argument("--poll-ms", type=int, default=None,
                         help="Waiting-mode poll interval in milliseconds (default: 1000)")
+    master.add_argument("--force", action="store_true",
+                        help="Forced trainer start (0.38): recover stale state "
+                             "without a confirmation prompt and reclaim a "
+                             "leftover recovery fence; a proven-alive trainer "
+                             "session is still refused")
     for name in ('assess-recovery', 'recover'):
         recovery = commands.add_parser(name)
         recovery.add_argument('plan', type=Path)
@@ -87,14 +96,16 @@ def main(argv=None) -> int:
             return gui_main()
         if args.command == "run":
             from .ui import run_trainer
-            return run_trainer(json.loads(args.plan.read_text(encoding="utf-8"))) or 0
+            return run_trainer(json.loads(args.plan.read_text(encoding="utf-8")),
+                               force=args.force) or 0
         if args.command == "master":
             from .master_trainer.master_ui import WAIT_POLL_MS, run_master
             return run_master(
                 args.folder,
                 state_home=str(args.state_dir) if args.state_dir is not None else None,
                 debug_log=args.debug_log,
-                poll_ms=args.poll_ms if args.poll_ms is not None else WAIT_POLL_MS) or 0
+                poll_ms=args.poll_ms if args.poll_ms is not None else WAIT_POLL_MS,
+                force=args.force) or 0
         if args.command == "il2cpp":
             from .il2cpp_static_probe import run_probe
             report = run_probe(args.pe, args.metadata, args.output)

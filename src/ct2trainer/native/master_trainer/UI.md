@@ -192,6 +192,22 @@ refusals included — never a crash):
   state: the load is refused; close the other trainer first.
 - **Non-convergence** — four recovery attempts without a clean start:
   the state folder is preserved for manual recovery.
+- **`--force` (0.38)** — the frozen Master EXE (and the standalone
+  trainer EXE, the source CLI `run`/`master` commands) accepts a
+  `--force` flag for the documented SteamOS dead end: stale state and
+  unfinished receipts are recovered **without the confirmation
+  prompt**, and a leftover recovery fence / any other unclassifiable
+  held state triggers the bounded forced reclaim instead of the plain
+  error dialog. The one boundary that stays: a **proven-alive** trainer
+  session is still refused with its named reason (the status line shows
+  `--force refusal: …` and the load fails once, as every other startup
+  failure). The reclaim quarantines the blocking artifacts into a
+  timestamped `forced-recovery/<timestamp>-<trainer id>/` archive next
+  to the state folder (with a full evidence document) and always
+  preserves the saved `state.json`, so the saved toggles survive. On
+  Steam: set it in the game's launch options
+  (Properties → Launch Options: `--force`) so the trainer starts
+  without any dialog.
 
 ### Platform gate (MT-7)
 

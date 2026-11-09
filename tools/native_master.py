@@ -32,6 +32,11 @@ def main(argv=None) -> int:
     cli.add_argument("--poll-ms", type=int, default=None,
                      help="Waiting-mode poll interval in milliseconds "
                           "(default: 1000)")
+    cli.add_argument("--force", action="store_true",
+                     help="Forced trainer start (0.38): recover stale state "
+                          "without a confirmation prompt and reclaim a "
+                          "leftover recovery fence; a proven-alive trainer "
+                          "session is still refused")
     args = cli.parse_args(argv)
     # Fail-closed, named, before any UI import: a missing folder must
     # never pull in tkinter or create a window. run_master re-checks the
@@ -48,7 +53,8 @@ def main(argv=None) -> int:
         args.folder,
         state_home=str(args.state_dir) if args.state_dir is not None else None,
         debug_log=args.debug_log,
-        poll_ms=args.poll_ms if args.poll_ms is not None else WAIT_POLL_MS) or 0
+        poll_ms=args.poll_ms if args.poll_ms is not None else WAIT_POLL_MS,
+        force=args.force) or 0
 
 
 if __name__ == "__main__":

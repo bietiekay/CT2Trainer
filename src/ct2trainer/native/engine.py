@@ -1029,6 +1029,27 @@ def format_value(entry: dict, raw: bytes) -> str:
     return format(number, ".9g" if kind == "Float" else ".17g")
 
 
+def default_state_dirs(plan: dict, state_dir: str | Path | None = None,
+                       process_lock_dir: str | Path | None = None) -> tuple[Path, Path]:
+    """The documented state directory and shared process-lock directory.
+
+    An explicit ``state_dir`` wins; otherwise the default state home
+    (LOCALAPPDATA, or XDG_STATE_HOME, or ~/.local/state) under
+    ``CT2Trainer/native/<trainer id>``.  The shared directory defaults to
+    the state directory's ``_process_sessions`` sibling.  This is the
+    single fact shared by the engine default and the ``--force`` reclaim
+    path (0.38), so both address exactly the same directories.
+    """
+    if state_dir is None:
+        base = os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_STATE_HOME")
+        state_dir = Path(base) if base else Path.home() / ".local" / "state"
+        state_dir = state_dir / "CT2Trainer" / "native" / plan["trainer_id"]
+    directory = Path(state_dir)
+    shared = Path(process_lock_dir) if process_lock_dir is not None \
+        else directory.parent / "_process_sessions"
+    return directory, shared
+
+
 class _StateStore:
     """Exclusive owner plus atomic, checksum-bound snapshots and crash journal."""
 
@@ -1586,12 +1607,10 @@ class TrainerEngine:
             from .memory import ProcessMemory
             memory_factory = ProcessMemory
         self.memory_factory = memory_factory
-        if state_dir is None:
-            base = os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_STATE_HOME")
-            state_dir = Path(base) if base else Path.home() / ".local" / "state"
-            state_dir = state_dir / "CT2Trainer" / "native" / plan["trainer_id"]
-        directory = Path(state_dir)
-        shared = Path(process_lock_dir) if process_lock_dir is not None else directory.parent / "_process_sessions"
+        # 0.38: the documented default state directories live in
+        # default_state_dirs so the --force reclaim path addresses the
+        # exact same directories the engine would have claimed.
+        directory, shared = default_state_dirs(plan, state_dir, process_lock_dir)
         # Wish-carrying records: script records on their own, every
         # supported group heading (WP-53: flagged headings own the cascade
         # wish at the parent-activation save boundary; plain headings own

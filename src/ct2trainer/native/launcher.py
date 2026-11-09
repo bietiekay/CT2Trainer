@@ -29,6 +29,10 @@ def main(argv=None) -> int:
     from .engine import validate_plan
     cli = argparse.ArgumentParser(description="Independent CT2Trainer runtime")
     cli.add_argument("--plan", type=Path, help="Source runtime: declarative trainer JSON")
+    cli.add_argument("--force", action="store_true",
+                     help="Forced startup (0.38): recover stale state without a "
+                          "confirmation prompt and reclaim a leftover recovery "
+                          "fence; a proven-alive trainer session is still refused")
     cli.add_argument("--smoke", action="store_true", help="Check plan without a window or process writes")
     cli.add_argument("--smoke-output", type=Path, help="Write static smoke result as JSON")
     cli.add_argument("--fixture-target", type=Path, help="Integration gate: owned FixtureTarget.exe only")
@@ -127,7 +131,7 @@ def main(argv=None) -> int:
                 print(json.dumps(result))
             return 0
         from .ui import run_trainer
-        return run_trainer(plan) or 0
+        return run_trainer(plan, force=args.force) or 0
     except (OSError, ValueError, RuntimeError, AssertionError) as exc:
         try:
             if "plan" in locals() and plan is not None:

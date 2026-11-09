@@ -137,7 +137,9 @@ from ..ui import (BG, BG_HEADER, BG_CARD, FG, FG_DIM, POLL_MS,
                   TrainerWindow, trainer_title)
 from ..engine import (TrainerEngine, StaleStateRecoverable,
                       StaleArtifactsRecoverable, LiveStateConflict,
+                      StateError, default_state_dirs,
                       perform_stale_recovery)
+from ..state_force import force_reclaim
 from ..window_icon import window_icon_path
 from ..about_ui import repo_link
 from .orchestrator import (MasterOrchestrator, STATE_ACTIVE,
@@ -368,7 +370,7 @@ class MasterApp:
     def __init__(self, folder, *, state_home: str | None = None,
                  debug_log: bool = False, poll_ms: int = WAIT_POLL_MS,
                  lister=None, plan_compiler=None, state_dir_factory=None,
-                 folders=None):
+                 folders=None, force: bool = False):
         from pathlib import Path
         from .table_index import RootIndexSet, load_index_set, reconcile
         from .process_watch import default_process_lister
@@ -472,6 +474,11 @@ class MasterApp:
         self.lister = lister if lister is not None else default_process_lister()
         self.plan_compiler = plan_compiler
         self.state_dir_factory = state_dir_factory
+        # 0.38: the --force flag (the documented forced-start contract:
+        # recoverable stale state is archived without confirmation, a
+        # leftover recovery fence triggers the forced reclaim, and a
+        # proven-alive trainer session is still refused).
+        self.force = bool(force)
         if plan_compiler is None:
             from ..compiler import compile_table
             from .table_gate import TableLoadGateRefusal, gate_table_for_load
@@ -1939,21 +1946,81 @@ class MasterWindow:
                                        memory_factory=self._memory_factory())
                 break
             except StaleStateRecoverable as exc:
+                if self.app.force:
+                    # 0.38: no confirmation prompt - the stale state is
+                    # archived straight away (the documented --force
+                    # contract: a non-interactive forced start).
+                    ok, detail = perform_stale_recovery(exc)
+                    if not ok:
+                        self._fail_trainer_start(detail)
+                        self._set_status("Forced recovery failed: " + detail)
+                        return False
+                    self._set_status("Forced stale-state recovery "
+                                     "complete; starting.")
+                    continue
                 if not self._confirm_recovery("stale state", exc):
                     self._fail_trainer_start(str(exc))
                     return False
                 continue
             except StaleArtifactsRecoverable as exc:
+                if self.app.force:
+                    # 0.38: no confirmation prompt - the unfinished
+                    # receipts are archived straight away.
+                    ok, detail = perform_stale_recovery(exc)
+                    if not ok:
+                        self._fail_trainer_start(detail)
+                        self._set_status("Forced recovery failed: " + detail)
+                        return False
+                    self._set_status("Forced receipt recovery complete; "
+                                     "starting.")
+                    continue
                 if not self._confirm_recovery("unfinished receipts", exc):
                     self._fail_trainer_start(str(exc))
                     return False
                 continue
             except LiveStateConflict as exc:
+                if self.app.force:
+                    # 0.38: the one boundary that stays under --force -
+                    # a proven-alive second trainer session is never
+                    # displaced (named refusal, no termination prompt).
+                    refusal = ("Another trainer session (PID "
+                               + str(exc.owner_pid) + ") is proven alive; "
+                               "--force never displaces a live trainer "
+                               "session.")
+                    messagebox.showerror("Live session conflict", refusal,
+                                         parent=self.root)
+                    self._fail_trainer_start(refusal)
+                    self._set_status("Forced load refused: " + refusal)
+                    return False
                 messagebox.showerror(
                     "Live session conflict",
                     "Another trainer session (PID " + str(exc.owner_pid) +
                     ") still uses this table's state.\nClose the other "
                     "trainer and try again.", parent=self.root)
+                self._fail_trainer_start(str(exc))
+                return False
+            except StateError as exc:
+                if self.app.force:
+                    # 0.38: the forced-start escape hatch for the
+                    # documented dead end (leftover recovery fence /
+                    # unclassifiable held state lock): reclaim the
+                    # blocking artifacts (a proven-alive trainer-side
+                    # owner still refuses) and retry the start.
+                    state_dir, shared_dir = default_state_dirs(
+                        plan, self.app.state_dir_for(plan))
+                    ok, detail = force_reclaim(state_dir, shared_dir, plan)
+                    if ok:
+                        self._set_status("Forced state reclaim complete; "
+                                         "starting.")
+                        continue
+                    messagebox.showerror("Trainer cannot start",
+                                         "--force refusal: " + detail,
+                                         parent=self.root)
+                    self._fail_trainer_start(detail)
+                    self._set_status("--force refusal: " + detail)
+                    return False
+                messagebox.showerror("Trainer cannot start",
+                                     str(exc), parent=self.root)
                 self._fail_trainer_start(str(exc))
                 return False
             except Exception as exc:
@@ -2943,7 +3010,8 @@ class MasterWindow:
 
 
 def run_master(folder=None, *, state_home: str | None = None,
-               debug_log: bool = False, poll_ms: int = WAIT_POLL_MS) -> int:
+               debug_log: bool = False, poll_ms: int = WAIT_POLL_MS,
+               force: bool = False) -> int:
     """Create the Tk root, build the Master window, run mainloop.
 
     Folder resolution (ask on first start; MT-26 multi-root): an explicit
@@ -3018,7 +3086,7 @@ def run_master(folder=None, *, state_home: str | None = None,
                 return 0
             folders = [picked]
     app = MasterApp(folders[0], state_home=home, debug_log=debug_log,
-                    poll_ms=poll_ms, folders=folders[1:])
+                    poll_ms=poll_ms, folders=folders[1:], force=force)
     try:
         app.save_index()
         app.persist_state()
