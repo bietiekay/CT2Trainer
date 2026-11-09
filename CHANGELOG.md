@@ -2,6 +2,53 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.37 (2026-11-09)
+
+Master Trainer per-table process binding persistence (MT-28) — the
+adopted 0.37 candidate from the online evaluation (the WeMod
+community thread "UI customization" re-read,
+community.wemod.com/t/ui-customization/371434 — the thread's layout /
+visibility requests remain covered by the 0.36 multi-column grid —
+plus the code audit of the Master Trainer attach flow that found the
+gap: MT-11 persists the attach mode, and the picker's chosen PID is
+"pinned for the session" only, so a restart loses the per-table
+process choice). MT-28: the explicit process choice is remembered per
+table (`table-attach.json` schema 1, under the state home, keyed by
+the table content sha256 — the same identity as the MT-24 analysis
+and the MT-27 notes documents, so a remembered choice survives a
+rename and follows a content-identical file to another root; strict
+key-set / field validation, checksummed envelope, LRU-bounded to
+1024 entries, refused documents treated as absent); a live
+remembered choice outranks the documented smallest-PID rule in
+`auto` mode; in `ask` mode the picker still opens (the documented
+contract) with the remembered row preselected so the one-click
+attach is the remembered target; a stale or foreign PID (the process
+exited, or the PID was recycled by another process) falls back to
+the ordinary attach decision; every picker origin persists the
+choice (auto-load, explicit load, table choice, re-attach after a
+detach — the `attach` origin addresses the loaded table through the
+sidecar sha); a table without a content sha cannot carry a binding
+(the documented MT-27 identity rule); the MT-22 table-details window
+shows the "Remembered process" row; zero load-path effect — the MT-9
+gate re-checks the table independently at load time. The pure layer
+lives in `table_attach.py` (`binding_entry`, the document bytes /
+load / save, `evict_oldest`, `AttachStore`, `binding_target`,
+`details_attach_lines`); `master_ui.py` carries the wiring
+(`MasterApp.attach_store`, the picker `preselect_pid`,
+`_binding_candidate`, `_remember_attach_choice`);
+`table_details.py` renders the row. +68 tests
+(`tests/test_native_master_attach.py` 53,
+`tests/test_native_master_ui_mt28.py` 15) + the baseline
+details-line assertion updates in `tests/test_native_master_ui_mt22.py`
+(2), `tests/test_native_master_notes.py` (2) and
+`tests/test_native_master_ui_mt24.py` (2). Full main suite 4,733 OK /
+30 expected skips (4,665 from the 0.36 content + 68 new); catalog
+zero delta `blocked-catalog-037-attach` (3-chunk deep-equal audit over
+the 151 reference tables, 2026-11-09: 151/151 loaded, 0 load errors,
+117,809 total / 116,756 supported / 60,161 staged / 103,607
+actionable / 12,974 headings / 1,053 blocked — zero delta vs
+`blocked-catalog-036-grid`).
+
 ## 0.36 (2026-11-09)
 
 Master Trainer multi-column trainer grid (MT-21) — the adopted

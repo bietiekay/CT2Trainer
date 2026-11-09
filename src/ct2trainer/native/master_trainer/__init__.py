@@ -69,6 +69,17 @@ from .table_notes import (
     notes_document_to_bytes,
     parse_tags,
 )
+from .table_attach import (
+    ATTACH_DOC_NAME,
+    ATTACH_SCHEMA,
+    AttachRefusal,
+    AttachStore,
+    attach_document_from_bytes,
+    attach_document_to_bytes,
+    binding_entry,
+    binding_target,
+    details_attach_lines,
+)
 from .steamdeck_route import (
     AttachRoute,
     DeckAttachUnavailableError,

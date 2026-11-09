@@ -408,6 +408,24 @@ configuration.
   candidates and the chosen PID is pinned on resume; in “auto” mode
   the ordinary wait simply resumes. A target exit while attached is
   unaffected — the engine keeps waiting as before.
+- **MT-28 per-table process binding (0.37).** The explicit process
+  choice is remembered per table: `table-attach.json` (schema 1,
+  under the state home, keyed by the table content sha256 — the same
+  identity as the MT-24 analysis and the MT-27 notes, so the choice
+  survives a rename and follows a content-identical file to another
+  root).  While the remembered PID is still one of the live
+  candidates matching the table's process name it outranks the
+  documented smallest-PID rule in "auto" mode; in "ask" mode the
+  picker still opens (the documented contract) with the remembered
+  row preselected, so the one-click attach is the remembered target.
+  A stale or foreign PID (the process exited, or the PID was recycled
+  by another process) falls back to the ordinary attach decision.
+  The MT-22 table-details window shows the "Remembered process" row.
+  Every picker origin persists the choice (auto-load, explicit load,
+  table choice, re-attach after a detach); a table without a content
+  sha cannot carry a binding (the documented MT-27 identity rule).
+  Zero load-path effect — the MT-9 gate re-checks the table
+  independently at load time.
 
 ## Waiting-view usability (0.26: MT-13 / MT-14 / MT-15)
 

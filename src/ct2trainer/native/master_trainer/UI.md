@@ -168,6 +168,15 @@ refusals included — never a crash):
   single running candidate; the chosen PID pins the session (it
   self-clears once that PID exits, then the ordinary name-based attach
   applies).
+- **Remembered process (0.37, MT-28)** — an explicit process choice is
+  remembered per table (`table-attach.json`, keyed by the table
+  content sha256): while the remembered PID is still a live
+  candidate matching the table's process name, it outranks the
+  smallest-PID rule in auto mode; in ask mode the picker still opens
+  with the remembered row preselected (one-click attach = the
+  remembered target).  A stale or foreign PID falls back to the
+  ordinary decision; the Table-details window shows the
+  “Remembered process” row.
 
 ### Startup recovery (named, fail-closed)
 
@@ -237,6 +246,7 @@ target) and `⬅ Master` (the return below).
 | Per-table settings sidecar | `settings/<table-sha256>.ct2trainer.json` (keyed by content hash, never the path) |
 | Per-table plan analysis (0.32, MT-24) | `table-analysis.json` (schema 1; keyed by table content sha256, LRU-bounded to 1024 entries — a content change re-analyzes, an unchanged table reuses the cached counts) |
 | Per-table notes / tags (0.35, MT-27) | `table-notes.json` (schema 1; keyed by table content sha256, LRU-bounded to 1024 entries — a note follows the content identity across renames and roots) |
+| Per-table process binding (0.37, MT-28) | `table-attach.json` (schema 1; keyed by table content sha256, LRU-bounded to 1024 entries — the explicit process choice is remembered per table: live binding outranks the smallest-PID rule in auto mode, ask preselects the remembered row, stale / foreign PIDs fall back to the ordinary decision) |
 | Enabled toggles (per table) | the engine state store; only confirmed ON toggles persist |
 | Table index (0.34: one checksum-bound root block per indexed folder) | `tables-index.json` (schema 2, checksum-bound) |
 

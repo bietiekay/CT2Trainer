@@ -164,6 +164,7 @@ from .table_analysis import (AnalysisStore, blocked_column_text,
 from .table_notes import (NotesRefusal, NotesStore, TAGS_LIMIT,
                           TAG_MAX_LEN, note_column_text, parse_tags,
                           sha256_key_ok)
+from .table_attach import (AttachRefusal, AttachStore, binding_target)
 from .analysis_worker import AnalysisWorker
 from .steamdeck_route import (attach_gate, require_engine_attach,
                               DeckAttachUnavailableError)
@@ -461,6 +462,13 @@ class MasterApp:
         # roots and renames).  An absent or refused document means
         # the documented empty state (no notes).
         self.notes_store = NotesStore(self.state_home)
+        # MT-28 (0.37): the per-table process-binding sidecar under the
+        # state home (table-attach.json, schema 1, keyed by the table
+        # content sha256 - the same identity as the notes document, so
+        # a remembered choice follows a content-identical file across
+        # roots and renames).  An absent or refused document means the
+        # documented empty state (no remembered choice).
+        self.attach_store = AttachStore(self.state_home)
         self.lister = lister if lister is not None else default_process_lister()
         self.plan_compiler = plan_compiler
         self.state_dir_factory = state_dir_factory
@@ -2050,14 +2058,26 @@ class MasterWindow:
         """Auto-load path with the MT-11 attach decision applied: in
         'ask' mode the user picks the target process first (even for a
         single running candidate); 'auto' attaches directly to the
-        documented smallest-PID process."""
+        documented smallest-PID process.
+
+        MT-28 (0.37): the table's remembered process choice (the
+        persisted binding, while its PID is still a live candidate)
+        outranks the smallest-PID rule in 'auto' mode and is
+        preselected in the picker in 'ask' mode (which still opens -
+        the documented contract)."""
         candidates = candidate_processes(self._running,
                                          request.process_names)
         decision, _ = attach_decision(candidates, self.app.attach_mode)
+        honored = self._binding_candidate(
+            getattr(request, "sha256", None), candidates)
         if decision == DECISION_PICK:
-            self._open_process_picker(request, candidates,
-                                      origin="auto-load")
+            self._open_process_picker(
+                request, candidates, origin="auto-load",
+                preselect_pid=honored.pid if honored is not None
+                else None)
             return
+        if honored is not None:
+            process = honored
         self._start_load(request, process)
 
     def _memory_factory(self):
@@ -2086,11 +2106,21 @@ class MasterWindow:
             return
         decision, _ = attach_decision(request.candidates,
                                       self.app.attach_mode)
+        # MT-28 (0.37): the table's remembered process choice (the
+        # persisted binding, while its PID is still a live candidate)
+        # outranks the smallest-PID rule and is preselected in the
+        # picker (which still opens in 'ask' mode - the documented
+        # contract).
+        honored = self._binding_candidate(request.table.sha256,
+                                          request.candidates)
         if decision == DECISION_PICK:
-            self._open_process_picker(request.table, request.candidates,
-                                      origin="explicit")
+            self._open_process_picker(
+                request.table, request.candidates, origin="explicit",
+                preselect_pid=honored.pid if honored is not None
+                else None)
             return
-        self._start_load(request.table, request.process, explicit=True)
+        target = honored if honored is not None else request.process
+        self._start_load(request.table, target, explicit=True)
 
     def _open_table_load_picker(self):
         """The MT-10 table picker: every readable indexed table, pick
@@ -2377,12 +2407,17 @@ class MasterWindow:
         # background plan-analysis entry for the table's content sha
         # (None while pending - the row says so).
         analysis = self.app.analysis_store.get(entry.sha256)
+        # MT-28 (0.37): the details window shows the persisted
+        # per-table process binding for the table's content sha
+        # (None while the table carries no remembered choice).
+        attach = self.app.attach_store.get(entry.sha256)
         lines = table_detail_lines(entry, root=base,
                                    pinned=self.app.is_table_pinned(table_key),
                                    last_used=last_used,
                                    running_pids=pids, gate=gate,
                                    analysis=analysis,
-                                   notes=self.app.notes_store.get(entry.sha256))
+                                   notes=self.app.notes_store.get(entry.sha256),
+                                   attach=attach)
         win = tk.Toplevel(self.root)
         self._details_win = win
         win.title("Table details - " + table_key)
@@ -2408,7 +2443,25 @@ class MasterWindow:
                   activeforeground=FG, font=("Segoe UI", 12)
                   ).pack(fill="x", pady=(4, 0))
 
-    def _open_process_picker(self, entry, candidates, origin):
+    def _binding_candidate(self, sha, candidates):
+        """MT-28 (0.37): the table's remembered process choice, when it
+        still applies.
+
+        Looks up the persisted per-table process binding for the
+        table's content ``sha`` and returns the live candidate whose
+        PID it names (through the pure ``table_attach.binding_target``)
+        - or None while the table carries no remembered choice, or the
+        choice is stale (its PID is no longer one of the live
+        candidates).  A ``sha`` that is not a content sha256 (or None)
+        yields None (the documented MT-27 identity rule - a table
+        without a content sha cannot carry a binding).
+        """
+        if sha is None or not sha256_key_ok(sha):
+            return None
+        return binding_target(self.app.attach_store.get(sha), candidates)
+
+    def _open_process_picker(self, entry, candidates, origin,
+                             preselect_pid=None):
         """The MT-11 process picker: one row per running candidate
         (name + PID), an Attach button and Cancel.
 
@@ -2416,6 +2469,14 @@ class MasterWindow:
         ``auto-load`` (the auto-load request), ``explicit`` (the MT-10
         table load), ``choice`` (a table from the open table picker) or
         ``attach`` (the MT-12 attach after a detach).
+
+        MT-28 (0.37): ``preselect_pid`` is the table's remembered
+        process choice (its PID from the persisted binding, when that
+        PID is one of the live candidates): the picker still opens in
+        ``ask`` mode (the documented contract - the user is asked
+        before anything attaches) but the remembered row is preselected
+        so the one-click attach is the remembered target; a stale or
+        missing choice preselects the first candidate as before.
         """
         top = tk.Toplevel(self.root)
         if origin == "attach":
@@ -2433,7 +2494,16 @@ class MasterWindow:
             listbox.insert("end", cand.name + "  (PID " + str(cand.pid) + ")")
         listbox.pack(padx=14, pady=4)
         if candidates:
-            listbox.selection_set(0)
+            # MT-28 (0.37): preselect the table's remembered process
+            # choice when its PID is one of the live candidates;
+            # otherwise the first candidate (the pre-0.37 behavior).
+            preselect = 0
+            if preselect_pid is not None:
+                for i, cand in enumerate(candidates):
+                    if cand.pid == preselect_pid:
+                        preselect = i
+                        break
+            listbox.selection_set(preselect)
         buttons = tk.Frame(top, padx=14)
         buttons.pack(fill="x", pady=(4, 12))
         tk.Button(buttons, text="Attach",
@@ -2465,11 +2535,44 @@ class MasterWindow:
             return
         self._proc_picker_chosen(sel[0])
 
+    def _remember_attach_choice(self, entry, chosen, origin):
+        """MT-28 (0.37): persist the user's explicit process choice as
+        the table's remembered process binding.
+
+        Keyed by the table's content sha256 (the MT-24 / MT-27
+        identity): the ``attach`` origin has no table argument and
+        addresses the currently loaded table through the sidecar sha
+        (set on trainer entry); the other origins carry the table
+        entry.  A table without a content sha (unreadable / never
+        scanned) cannot carry a binding - the documented MT-27
+        identity rule; a refused binding (bad key or out-of-bounds
+        name / PID) is not persisted (fail-closed, no status-line
+        noise on the hot pick path).
+        """
+        if origin == "attach":
+            sha = getattr(self, "_sidecar_sha", None)
+        elif entry is not None:
+            sha = getattr(entry, "sha256", None)
+        else:
+            sha = None
+        if sha is None:
+            return
+        try:
+            self.app.attach_store.set_binding(sha, chosen.name, chosen.pid)
+        except AttachRefusal:
+            pass
+
     def _proc_picker_chosen(self, index):
-        """Route the user's process choice to the pending action."""
+        """Route the user's process choice to the pending action.
+
+        MT-28 (0.37): the explicit choice is persisted as the table's
+        remembered process binding before the picker state is torn
+        down (``_close_proc_picker`` resets the entry / origin).
+        """
         origin = self._proc_picker_origin
         entry = self._proc_picker_entry
         chosen = self._proc_picker_candidates[index]
+        self._remember_attach_choice(entry, chosen, origin)
         self._close_proc_picker()
         self._attach_pin = {"pid": chosen.pid}
         if origin == "attach":
@@ -2624,8 +2727,16 @@ class MasterWindow:
                 (e for e in snapshot if names_match(e.name, plan_name)),
                 key=lambda e: e.pid))
             if candidates:
-                self._open_process_picker(None, candidates,
-                                          origin="attach")
+                # MT-28 (0.37): preselect the loaded table's remembered
+                # process choice (the attach origin carries no table
+                # argument - the sidecar sha addresses the currently
+                # loaded table).
+                honored = self._binding_candidate(
+                    getattr(self, "_sidecar_sha", None), candidates)
+                self._open_process_picker(
+                    None, candidates, origin="attach",
+                    preselect_pid=honored.pid if honored is not None
+                    else None)
                 return
         try:
             engine.resume_attach()
@@ -2697,9 +2808,24 @@ class MasterWindow:
             self._choice_table_rel = rel
             entry = next(t for t in orch.choice.tables
                          if t.relative_path == rel)
+            cands = tuple(orch.choice.snapshot_entries)
+            # MT-28 (0.37): preselect the table's remembered process
+            # choice (the picker still opens - the documented 'ask'
+            # contract).
+            honored = self._binding_candidate(entry.sha256, cands)
             self._open_process_picker(
-                entry, tuple(orch.choice.snapshot_entries), origin="choice")
+                entry, cands, origin="choice",
+                preselect_pid=honored.pid if honored is not None
+                else None)
             return
+        # MT-28 (0.37): capture the choice's snapshot entries + the
+        # chosen table before the orchestrator consumes the choice
+        # (choose() clears it), so the remembered process choice can
+        # be consulted below.
+        choice = orch.choice
+        choice_entry = next((t for t in (choice.tables if choice else ())
+                            if t.relative_path == rel), None)
+        choice_cands = (tuple(choice.snapshot_entries) if choice else ())
         outcome = orch.choose(rel)
         if not outcome.ok:
             self._set_status("Load failed: " + (outcome.error or ""))
@@ -2711,14 +2837,18 @@ class MasterWindow:
         # MT-15 (0.26): successful load feeds the rolling recent list
         # (same rule as the _start_load path).
         self.app.remember_recent_table(rel)
-        entry = next(t for t in self.app.orchestrator.choice.tables
-                     if t.relative_path == rel) if self.app.orchestrator.choice \
-            else None
+        entry = choice_entry
         # Auto mode: the documented smallest-PID rule; pin it so the
         # session cannot drift to another instance mid-flight.
-        if self.app.orchestrator.choice is not None:
-            self._attach_pin = {"pid": min(
-                e.pid for e in self.app.orchestrator.choice.snapshot_entries)}
+        # MT-28 (0.37): the table's remembered process choice (its
+        # persisted binding, while that PID is still a live candidate)
+        # outranks the smallest-PID rule.
+        if choice_cands:
+            honored = self._binding_candidate(
+                choice_entry.sha256 if choice_entry is not None else None,
+                choice_cands)
+            self._attach_pin = {"pid": honored.pid if honored is not None
+                                else min(e.pid for e in choice_cands)}
         else:
             self._attach_pin = {"pid": None}
         self._enter_trainer(outcome.plan, entry)

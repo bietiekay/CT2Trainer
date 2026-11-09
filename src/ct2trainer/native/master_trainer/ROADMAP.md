@@ -40,6 +40,8 @@ main-branch libraries; none adds trainer functionality.
 | MT-26 | Multi-root table index | done (2026-11-09) | `table_index.py`: `RootIndexSet` - the ordered set of per-root indexes (every root keeps the MT-1 incremental reconcile contract: the per-root `(size, mtime_ns)` + sha256 short-circuit), the merged lookups with the first-root-wins rule, the absolute table key (index root + relative path) as the global identity with the documented relative-path fallback; the tables index document schema 1 -> 2 (one checksum-bound root block per indexed folder). `master_state.py`: `master-settings.json` schema 7 -> 8 - `table_folders` (the indexed folder list, primary first, capped at `TABLE_FOLDERS_LIMIT` = 8; a schema-7 document promotes on load - the list is filled from the single stored last folder and the relative table references (last table, recents, pins) are re-anchored to absolute table keys under it; a schema-7 document carrying the field is refused as an unknown field). `master_ui.py`: the "Folders..." header button opens the folder manager (add / remove / set primary, the primary marked with a star; every action re-scans the indexed roots, saves the index and restarts the auto-rescan clock); the waiting view gains the Folder column; the load picker disambiguates across roots by the absolute key; `run_master` multi-root folder resolution (an explicit folder argument wins as the primary root with the stored folders indexed behind it, casefold-deduped; a parameterless start keeps the stored list - a missing stored folder stays visible as a scan problem; only a genuinely first start shows the directory picker, cancel exits 0; an explicit missing folder is the documented exit-2 refusal); the MT-25 auto-rescan and the MT-24 background analysis run over every indexed root. Zero load-path effect - the MT-9 gate re-checks the table under its index root independently at load time. +44 tests (`tests/test_native_master_ui_mt26.py`). |
 | MT-27 | Per-table notes / tags (waiting view) | done (2026-11-09) | `table_notes.py` (new pure decision + document layer - no OS / index / state access): `parse_tags` (the editor's comma-separated string -> the bounded tag list: stripped, empty pieces dropped, casefold-deduped first-spelling-wins, capped at `TAGS_LIMIT` = 8, each tag at most `TAG_MAX_LEN` = 40 characters; a too-long tag is the named `NotesRefusal`, never a silent truncation), `note_entry` (the persisted entry `{"note", "tags", "updated_at"}`, strict validation - note at most `NOTE_MAX_LEN` = 500 characters), the persisted `table-notes.json` document (schema 1, under the state home; **keyed by the table content sha256** - the same identity as the MT-24 analysis document, so a note survives a rename within a root and follows a content-identical file to another root; strict key-set / field validation of the master-state discipline - an unknown field is a named refusal, never a silent drop; checksummed canonical-JSON envelope; `NOTES_ENTRIES_LIMIT` = 1024 entries, `evict_oldest` by `updated_at`, ties by sha256 - deterministic; a refused document is treated as absent, documented, never a silent reset); `NotesStore` (`document` / `get` / `has` / `set_note` / `clear_note` / `clear`; a malformed key or an out-of-bounds note / tag list is a named refusal, fail-closed); the text helpers `note_column_text` (note truncated to `NOTE_COLUMN_MAX` = 60 characters with ellipsis, tags in brackets; note-only and tag-only entries both render) and `details_note_lines` (the MT-22 details-window rows). `table_filter.py`: `filter_tables` gains the optional `note_lookup` (table content sha256 -> entry) - the note text and every tag join the casefolded match surface (a table matches when ANY of them matches); `note_lookup=None` is the exact pre-0.35 behavior. `table_details.py`: `table_detail_lines` gains the `notes` argument (the note / tag rows after the entry-analysis block). `master_ui.py`: the waiting view gains the Note column (last, width 160; group rows carry one more empty value); the row context menu offers `Edit note...` between load and pin - the small Toplevel (note Text bounded by `NOTE_MAX_LEN`, comma-separated tag Entry bounded by the tag rules, Save / Cancel, the named save-time refusal in the dialog's own label - the dialog stays open, the persisted document is untouched; single window, lift on second open; a table without a content sha (unreadable / never scanned) is refused in the status line, no dialog; closed on trainer entry with the rest of the waiting view). No master-state schema bump (the MT-24 sidecar precedent - the notes live in their own checksum-bound document). No load-path effect. +67 tests (`tests/test_native_master_notes.py`: pure layer + the Tk wiring incl. the menu order `Table details` / `Load this table` / `Edit note...` / `Pin to top`). |
 
+| MT-28 | Per-table process binding persistence | done (2026-11-09) | `table_attach.py` (new pure decision + document layer - no OS / index / state access): the persisted `table-attach.json` document (schema 1, under the state home; **keyed by the table content sha256** - the same identity as the MT-24 analysis and the MT-27 notes documents, so a remembered choice survives a rename within a root and follows a content-identical file to another root; strict key-set / field validation of the master-state discipline - an unknown field is a named `AttachRefusal`, never a silent drop; checksummed canonical-JSON envelope; `ATTACH_ENTRIES_LIMIT` = 1024 entries, `evict_oldest` by `updated_at`, ties by sha256 - deterministic; a refused document is treated as absent, documented, never a silent reset); `AttachStore` (`document` / `get` / `has` / `set_binding` / `clear_binding` / `clear`; a malformed key or an out-of-bounds process name / PID is a named refusal, fail-closed - the store never persists what the validator refuses); `binding_target` (the pure decision: honour the stored PID only while it is one of the live candidates whose name still matches the bound process - case-insensitive, the same rule the picker and the memory factory use; a stale or foreign PID yields the documented fallback); `details_attach_lines` (the MT-22 details-window "Remembered process" row). `master_ui.py`: `MasterApp.attach_store`; the process picker gains `preselect_pid` (the remembered row is preselected - the picker still opens in `ask` mode, the documented contract); `_binding_candidate` (the persisted binding for a table's content sha, or None - a table without a content sha cannot carry a binding, the documented MT-27 identity rule); the binding is consulted in `_auto_load` (a live binding outranks the documented smallest-PID rule in `auto` mode; preselected in the picker in `ask` mode), `_load_selected_table`, `_picker_chosen` (the table-choice path) and `_detach_or_attach` (the `attach` origin addresses the loaded table through the sidecar sha); `_remember_attach_choice` persists the explicit choice before the picker state is torn down (every origin: auto-load / explicit / choice / attach; a refused choice is not persisted, no status-line noise on the hot pick path). `table_details.py`: `table_detail_lines` gains the `attach` argument (the "Remembered process" row after the note / tag block). Zero load-path effect - the MT-9 gate re-checks the table independently at load time. +68 tests (`tests/test_native_master_attach.py` 53, `tests/test_native_master_ui_mt28.py` 15). |
+
 ## Online feature evaluation (2026-11-02)
 
 Web research (2026-11-02) evaluated all-in-one trainer front ends and
@@ -490,6 +492,66 @@ the Master handoff wiring (persisted preference + the cycle
 callback). +55 tests (`tests/test_native_ui_grid.py` 37,
 `tests/test_native_master_ui_mt21.py` 14, the grid tests in
 `tests/test_native_master_state.py` 4).
+
+Remaining candidates (updated): the game launch integration
+(needs install-path data; out of scope for the read-only table
+model).
+
+### 0.37 per-table process binding (evaluated 2026-11-09, adopted +
+implemented 2026-11-09)
+
+The 0.37 evaluation (a re-read of the WeMod community thread "UI
+customization" (community.wemod.com/t/ui-customization/371434) -
+the thread's layout / visibility requests remain covered by the
+0.36 multi-column grid - plus a code audit of the Master Trainer
+attach flow) found the open functional gap against the use case's
+core requirement ("choose which table runs and which process it
+attaches to - remember the configuration"): MT-11 persists the
+attach *mode* (auto / ask), and the picker's chosen PID is
+"pinned for the session" only (`master_ui.py` `_attach_pin`,
+honoured by the injected memory factory until that process
+exits); a restart loses the per-table process choice and the user
+must re-pick it.  The 0.37 candidate maps onto the Master Trainer
+use case as follows:
+
+- Per-table process binding: **the adopted 0.37 candidate** - the
+  per-table process binding persistence (MT-28): the user's
+  explicit process choice (every picker origin: auto-load,
+  explicit load, table choice, re-attach after detach) is
+  remembered per table against the table content sha256 (the same
+  identity as the MT-24 analysis and the MT-27 notes documents,
+  so the choice survives a rename and follows a content-identical
+  file to another root); a live remembered choice outranks the
+  documented smallest-PID rule in `auto` mode; in `ask` mode the
+  picker still opens (the documented contract) with the
+  remembered row preselected so the one-click attach is the
+  remembered target; a stale or foreign PID (the process exited,
+  or the PID was recycled by another process) falls back to the
+  ordinary attach decision - the picker re-opens in `ask` mode,
+  the smallest-PID rule in `auto`; the MT-22 table-details window
+  shows the remembered process.
+- Game launch integration: still the only remaining candidate
+  (needs install-path data; out of scope for the read-only table
+  model).
+- Download / import / online catalogs / themes / bilingual UI:
+  out of scope (unchanged - strict read-only inputs, local-only,
+  offline, single-window model).
+
+Adopted for 0.37: the per-table process binding persistence
+(MT-28). Implemented as shipped (2026-11-09, 0.37 content on
+`main`): the pure `table_attach.py` layer (`binding_entry`, the
+persisted `table-attach.json` document schema 1 with the
+master-state discipline - strict key sets, the checksummed
+envelope, the 1024-entry bound, refused-as-absent; `evict_oldest`,
+`AttachStore`, `binding_target`, `details_attach_lines`); the
+`master_ui.py` wiring (`MasterApp.attach_store`, the picker
+`preselect_pid`, `_binding_candidate`, the binding consulted in
+`_auto_load` / `_load_selected_table` / `_picker_chosen` /
+`_detach_or_attach` - the `attach` origin addresses the loaded
+table through the sidecar sha - and `_remember_attach_choice`
+persisting the explicit choice); the MT-22 details-window
+"Remembered process" row. +68 tests (`tests/test_native_master_attach.py`
+53, `tests/test_native_master_ui_mt28.py` 15).
 
 Remaining candidates (updated): the game launch integration
 (needs install-path data; out of scope for the read-only table

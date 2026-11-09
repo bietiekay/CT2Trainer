@@ -808,8 +808,11 @@ class NoteDetailsUiTests(_NotesUiBase):
         self.assertIsNotNone(win)
         self.addCleanup(win.destroy)
         values = self._value_rows(win)
-        self.assertEqual(values[-2], "the details note")
-        self.assertEqual(values[-1], "combat, spoilers")
+        # MT-28 (0.37): the "Remembered process" row follows the
+        # note / tag rows (no binding in this test -> "none").
+        self.assertEqual(values[-3], "the details note")
+        self.assertEqual(values[-2], "combat, spoilers")
+        self.assertEqual(values[-1], "none")
 
     def test_the_details_window_shows_the_none_placeholders(self):
         app = self._app()
@@ -819,6 +822,9 @@ class NoteDetailsUiTests(_NotesUiBase):
         self.assertIsNotNone(win)
         self.addCleanup(win.destroy)
         values = self._value_rows(win)
+        # MT-28 (0.37): three trailing "none" rows - note, tags,
+        # remembered process.
+        self.assertEqual(values[-3], "none")
         self.assertEqual(values[-2], "none")
         self.assertEqual(values[-1], "none")
 

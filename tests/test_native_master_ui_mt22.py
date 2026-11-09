@@ -109,7 +109,9 @@ class DetailLinesTests(unittest.TestCase):
             # when no analysis entry is passed).
             "Entry analysis",
             # MT-27 (0.35): the per-table note / tag rows.
-            "Note", "Tags"])
+            "Note", "Tags",
+            # MT-28 (0.37): the remembered process row.
+            "Remembered process"])
         values = dict(lines)
         self.assertEqual(values["Table"], "a/b.ct")
         self.assertEqual(values["Folder"], "C:\\tables")
@@ -283,8 +285,9 @@ class DetailsWindowTests(_DetailsBase):
         self.assertEqual(win.title(), "Table details - zeta.ct")
         values = self._value_rows(win)
         # MT-27 (0.35): the details window gained the Note / Tags
-        # rows (12 base rows + 2 note rows = 14).
-        self.assertEqual(len(values), 14)
+        # rows (12 base rows + 2 note rows = 14); MT-28 (0.37) adds
+        # the "Remembered process" row (15).
+        self.assertEqual(len(values), 15)
         entry = app.index.get("zeta.ct")
         self.assertEqual(values[0], "zeta.ct")
         self.assertEqual(values[1], app.folder)

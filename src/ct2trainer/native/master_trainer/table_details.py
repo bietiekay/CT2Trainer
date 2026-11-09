@@ -56,7 +56,8 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
                        running_pids,
                        gate,
                        analysis=None,
-                       notes=None) -> list:
+                       notes=None,
+                       attach=None) -> list:
     """Ordered ``(label, value)`` rows for the read-only details
     window of one indexed table.
 
@@ -73,7 +74,12 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
     ``notes`` (MT-27, 0.35) is the persisted notes/tags entry for
     the same content sha from ``table_notes.NotesStore`` (or None
     when the table carries no organization metadata) - it adds the
-    note / tag rows below the entry-analysis block.
+    note / tag rows below the entry-analysis block;
+    ``attach`` (MT-28, 0.37) is the persisted per-table process
+    binding for the same content sha from
+    ``table_attach.AttachStore`` (or None while the table carries no
+    remembered choice) - it adds the "Remembered process" row below
+    the note / tag block.
     """
     names = ", ".join(entry.process_names) or "(none found)"
     if entry.status == "ok":
@@ -107,4 +113,8 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
     # keyed by the same content sha).
     from .table_notes import details_note_lines
     lines.extend(details_note_lines(notes))
+    # MT-28 (0.37): the per-table remembered process choice (keyed by
+    # the same content sha).
+    from .table_attach import details_attach_lines
+    lines.extend(details_attach_lines(attach))
     return lines
