@@ -21,7 +21,9 @@ plan analysis) with the 0.32 release (2026-11-06); MT-25 (table
 folder auto-rescan) with the 0.33 release (2026-11-08); MT-26 (multi-root
 table index: several table folders in one Master window, the folder
 manager, the absolute table key identity, the persisted folder list)
-with the 0.34 release (2026-11-09). Design and
+with the 0.34 release (2026-11-09); MT-27 (per-table notes / tags:
+the Note column, the filter match surface, the "Edit note…" editor,
+the details-window rows) with the 0.35 release (2026-11-09). Design and
 implementation notes; the working plan is [ROADMAP.md](ROADMAP.md) and
 the reviewable UI-flow document is [UI.md](UI.md).
 
@@ -158,6 +160,30 @@ auto-load/handoff loop around that existing engine.
   through the folder manager). Zero load-path effect — the MT-9 gate
   re-checks the table file under its index root independently at load
   time; the auto-rescan and the analysis cover every indexed root.
+- 0.35 (MT-27): **per-table notes / tags** — the waiting view gains a
+  **Note** column (the persisted note text truncated to one line plus
+  the tags in brackets; empty while no note exists). The note and the
+  tags are free-form organization metadata, edited from the row
+  context menu ("Edit note…" between load and pin) in a small
+  Toplevel (the note as a multi-line text bounded at 500 characters,
+  the tags as one comma-separated entry bounded at 8 tags × 40
+  characters; a named refusal at save time is shown in the dialog's
+  own label — the dialog stays open, the persisted document is
+  untouched). They persist in `table-notes.json` (schema 1, under the
+  state home, **keyed by the table content sha256** — the same
+  identity as the MT-24 analysis document, so a note survives a
+  rename within a root and follows a content-identical file to
+  another root; LRU-bounded to 1024 entries), not in the
+  master-state document (no schema bump — the MT-24 sidecar
+  precedent). The waiting-view filter also matches the note text and
+  every tag (the `note_lookup` extension of the pure
+  `filter_tables`; the pre-0.35 behavior is unchanged when no lookup
+  is passed), and the MT-22 details window shows the note / tag rows
+  (`none` while the table carries no organization metadata). A table
+  without a content sha (unreadable / never scanned) cannot carry a
+  note: the named refusal lands in the status line, no dialog opens.
+  Zero load-path effect — the MT-9 gate re-checks the table
+  independently at load time.
 - The table folders are taken from the CLI parameter, or from the
   persisted folder list in the state home (`master-settings.json`);
   only a genuinely first start (or no stored folders at all) shows the

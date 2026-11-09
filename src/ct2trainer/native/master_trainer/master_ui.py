@@ -95,6 +95,21 @@ manual rescan or a folder change, and has zero effect on the load
 path (the MT-9 gate re-checks the table independently at load
 time).
 
+0.35 per-table notes / tags (MT-27): the waiting view gains a
+Note column (note text truncated, tags in brackets) fed by the
+persisted ``table-notes.json`` document (schema 1, under the state
+home, keyed by the table content sha256 - the same identity as the
+MT-24 analysis document).  The row context menu offers "Edit
+note..." between load and pin: a small Toplevel with the note
+(multi-line, bounded by ``NOTE_MAX_LEN``) and a comma-separated
+tag entry (bounded by ``TAGS_LIMIT`` / ``TAG_MAX_LEN``); a named
+refusal at save time (note over the limit, a tag too long, too
+many tags) is shown in the dialog's own label while the persisted
+document stays untouched; a table without a content sha (unreadable
+/ never scanned) is refused in the status line.  The waiting-view
+filter also matches the note text and tags, and the MT-22 details
+window shows the note / tag rows.  No load-path effect.
+
 All waiting-mode logic lives in the pure orchestrator; this module is
 Tk wiring plus the picker Toplevel.
 """
@@ -133,6 +148,9 @@ from .process_watch import names_match
 from .settings_sidecar import MasterSettingsStore
 from .table_analysis import (AnalysisStore, blocked_column_text,
                              entries_column_text)
+from .table_notes import (NotesRefusal, NotesStore, TAGS_LIMIT,
+                          TAG_MAX_LEN, note_column_text, parse_tags,
+                          sha256_key_ok)
 from .analysis_worker import AnalysisWorker
 from .steamdeck_route import (attach_gate, require_engine_attach,
                               DeckAttachUnavailableError)
@@ -202,9 +220,12 @@ def ui_flow_text() -> str:
         "background plan analysis - the supported script / value "
         "records, i.e. the real cheat options; '…' while analyzing, "
         "'–' on a named failure), Blocked (the blocked records of "
-        "the same analysis), Size, Modified, Last used.  In "
-        "'process' view the tables group under their bound process "
-        "name (unbound last); group rows are display-only.\n"
+        "the same analysis), Size, Modified, Last used, Note (the "
+        "persisted per-table organization metadata - the note text "
+        "truncated to one line plus the tags in brackets; empty while "
+        "no note exists).  In 'process' view the tables group under "
+        "their bound process name (unbound last); group rows are "
+        "display-only.\n"
         "   Status bar, left to right: the status line (waiting for "
         "which process, last error); Attach mode toggle (auto/ask, "
         "persisted); Auto-rescan toggle (on/off, persisted - while "
@@ -220,8 +241,10 @@ def ui_flow_text() -> str:
         "the list (it takes the initial focus); Enter or double-click "
         "loads the selected row; right-click a row for the context menu "
         "(table details - the read-only inspection window with the "
-        "live load-gate preview and the entry analysis, load, pin to "
-        "top / unpin).\n"
+        "live load-gate preview, the entry analysis and the note / "
+        "tag rows, load, edit note - the small dialog for the "
+        "per-table note and the comma-separated tags, saved with the "
+        "table's content hash, pin to top / unpin).\n"
         "   Auto-load: the poll tick asks the orchestrator.  A unique "
         "table-for-process match loads by itself (the documented "
         "default).  A multi-table match opens the picker.  Nothing "
@@ -277,9 +300,11 @@ def ui_flow_text() -> str:
         "/favorite tables, the rolling recent list, the attach mode, "
         "the table folders (the indexed folder list, primary first), "
         "the per-table plan-analysis results "
-        "(keyed by the table content hash, LRU-bounded), and the "
-        "per-table settings sidecar (keyed by the table content hash, "
-        "never the path) all survive restarts under the state home.  "
+        "(keyed by the table content hash, LRU-bounded), the "
+        "per-table notes / tags (keyed by the table content hash, "
+        "LRU-bounded) and the per-table settings sidecar (keyed by "
+        "the table content hash, never the path) all survive "
+        "restarts under the state home.  "
         "Only confirmed ON toggles are persisted "
         "as saved wishes; a failed enable stays visibly inactive.\n\n"
         "6) FAILURE STATES\n"
@@ -408,6 +433,13 @@ class MasterApp:
         # columns show the pending marker.
         self.analysis_store = AnalysisStore(self.state_home)
         self.analysis_worker = None
+        # MT-27 (0.35): the per-table notes/tags sidecar under the
+        # state home (table-notes.json, schema 1, keyed by the table
+        # content sha256 - the same identity as the analysis
+        # document, so a note follows a content-identical file across
+        # roots and renames).  An absent or refused document means
+        # the documented empty state (no notes).
+        self.notes_store = NotesStore(self.state_home)
         self.lister = lister if lister is not None else default_process_lister()
         self.plan_compiler = plan_compiler
         self.state_dir_factory = state_dir_factory
@@ -793,6 +825,9 @@ class MasterWindow:
         # MT-22 (0.30): the read-only table-details Toplevel (at most
         # one at a time).
         self._details_win = None
+        # MT-27 (0.35): the per-table note / tag editor Toplevel (at
+        # most one at a time).
+        self._note_editor_win = None
         # Live bound-process feedback of the latest waiting tick.
         self._running: tuple = ()
         self._running_keys: frozenset = frozenset()
@@ -949,9 +984,12 @@ class MasterWindow:
         # MT-26 (0.34): the Folder column (after Table) shows the root
         # each table was indexed under - the single primary folder in a
         # single-root session, the per-table root in a multi-root one.
+        # MT-27 (0.35): the Note column (last) shows the persisted
+        # per-table organization metadata (note text truncated, tags
+        # in brackets) - "" while no note exists.
         cols = ("table", "folder", "processes", "status", "detail",
                 "entries", "blocked",
-                "size", "modified", "last_used")
+                "size", "modified", "last_used", "note")
         self._table_tree = ttk.Treeview(frame, columns=cols, show="headings",
                                         height=16)
         for name, text, width in (("table", "Table", 220),
@@ -963,7 +1001,8 @@ class MasterWindow:
                                   ("blocked", "Blocked", 70),
                                   ("size", "Size", 80),
                                   ("modified", "Modified", 130),
-                                  ("last_used", "Last used", 150)):
+                                  ("last_used", "Last used", 150),
+                                  ("note", "Note", 160)):
             self._table_tree.heading(name, text=text)
             self._table_tree.column(name, width=width, anchor="w")
         # MT-23 (0.31): the live status color coding - the default
@@ -1071,6 +1110,13 @@ class MasterWindow:
             except tk.TclError:
                 pass
             self._details_win = None
+        if self._note_editor_win is not None:
+            try:
+                if self._note_editor_win.winfo_exists():
+                    self._note_editor_win.destroy()
+            except tk.TclError:
+                pass
+            self._note_editor_win = None
         if self._waiting_frame is not None:
             self._waiting_frame.destroy()
             self._waiting_frame = None
@@ -1256,6 +1302,10 @@ class MasterWindow:
         # visible rows (one document load per render; the pending
         # rows keep the "…" marker until the worker finishes them).
         analysis_by_sha = self.app.analysis_store.document()["tables"]
+        # MT-27 (0.35): the per-table notes/tags entries for the
+        # visible rows (one document load per render; rows without a
+        # note entry show an empty Note cell).
+        notes_by_sha = self.app.notes_store.document()["tables"]
         # MT-23 (0.31): one bounded stat per visible row per render -
         # the live (code, detail) pairs feed the Status column, the
         # row color tag and the attention detail.  A file that drifted
@@ -1267,24 +1317,26 @@ class MasterWindow:
             for entry in rows:
                 self._insert_table_row("", entry, pids_by_key, recent_at,
                                        statuses[entry.relative_path],
-                                       analysis_by_sha)
+                                       analysis_by_sha, notes_by_sha)
             return
         for label, group in group_tables_by_process(rows):
-            # MT-24 (0.32) + MT-26 (0.34): the display-only group row
-            # carries the empty Folder value plus the (empty) Entries /
-            # Blocked values of the new columns.
+            # MT-24 (0.32) + MT-26 (0.34) + MT-27 (0.35): the
+            # display-only group row carries the empty Folder value
+            # plus the (empty) Entries / Blocked / Note values of the
+            # new columns.
             parent = tree.insert("", "end", open=True, values=(
                 label, "", str(len(group)) + " table(s)",
-                "", "", "", "", "", "", ""))
+                "", "", "", "", "", "", "", ""))
             for entry in group:
                 self._insert_table_row(parent, entry, pids_by_key,
                                        recent_at,
                                        statuses[entry.relative_path],
-                                       analysis_by_sha)
+                                       analysis_by_sha, notes_by_sha)
 
     def _insert_table_row(self, parent: str, entry, pids_by_key: dict,
                           recent_at: dict, status: tuple,
-                          analysis_by_sha: dict) -> None:
+                          analysis_by_sha: dict,
+                          notes_by_sha: dict) -> None:
         """One waiting-view table row (flat list or group child).
 
         MT-23 (0.31): ``status`` is the live ``(code, detail)`` pair
@@ -1306,6 +1358,9 @@ class MasterWindow:
         # MT-24 (0.32): the persisted analysis entry for this table's
         # content sha (None = pending, the "…" marker).
         analysis = analysis_by_sha.get(entry.sha256)
+        # MT-27 (0.35): the persisted notes/tags entry for this
+        # table's content sha (None = no note yet, the empty cell).
+        note_entry = notes_by_sha.get(entry.sha256)
         if code == "running":
             pids = sorted(set(p for n in entry.process_names
                               for p in pids_by_key.get(n.casefold(), ())))
@@ -1330,13 +1385,17 @@ class MasterWindow:
         # MT-26 (0.34): the Folder column shows the index root; the
         # Last-used lookup and the row identity use the table key.
         key = self.app.entry_key(entry)
+        # MT-27 (0.35): the Note column shows the persisted note
+        # (truncated) plus the tags; "" while no note exists.
+        note_text = note_column_text(note_entry)
         self._table_tree.insert(parent, "end", values=(
             entry.relative_path, entry.root, names, code, detail,
             entries_column_text(analysis),
             blocked_column_text(analysis),
             self._format_size(entry.size),
             self._format_mtime(entry.mtime_ns),
-            recent_at.get(key, "")),
+            recent_at.get(key, ""),
+            note_text),
             tags=(row_tag(code),))
 
     def _live_fingerprint(self, entry):
@@ -1370,16 +1429,23 @@ class MasterWindow:
         return row_status(entry, fingerprint, running), detail
 
     def _visible_tables(self) -> list:
-        """MT-13/18/23 (0.26/0.28/0.31): the waiting-view row set -
-        the full index, sorted per the current mode, filtered per the
-        current query, then the persisted status filter (MT-23; one
-        bounded stat per remaining row per render), then the
+        """MT-13/18/23/27 (0.26/0.28/0.31/0.35): the waiting-view row
+        set - the full index, sorted per the current mode, filtered per
+        the current query (MT-27: the note text and tags of the
+        persisted notes document join the match surface, keyed by the
+        table content sha), then the persisted status filter (MT-23;
+        one bounded stat per remaining row per render), then the
         persisted pin set floated to the top (MT-18; pinned rows not
         in the filtered set are ignored).  Row identity stays the
         relative path; the load picker and the auto-load path keep
         using the full index."""
         entries = sort_tables(self.app.index.tables(), self._sort_mode)
-        filtered = filter_tables(entries, self._filter_query)
+        # MT-27 (0.35): the filter also matches the persisted note
+        # text and tags (one document load per render; a table without
+        # a note entry simply has no note-side match surface).
+        notes_by_sha = self.app.notes_store.document()["tables"]
+        filtered = filter_tables(entries, self._filter_query,
+                                 note_lookup=notes_by_sha)
         if self._status_filter:
             codes = [self._row_status(entry)[0] for entry in filtered]
             filtered = filter_rows_by_status(filtered, codes,
@@ -2063,13 +2129,16 @@ class MasterWindow:
         # a single-root session, absolute in a multi-root one).
         key = self._row_key(values)
         menu = tk.Menu(self.root, tearoff=0)
-        # MT-22 (0.30): the read-only details lead the row menu (the
-        # inspection window with the live load-gate preview), then the
-        # explicit load, then the pin toggle.
+        # MT-22 (0.30) + MT-27 (0.35): the read-only details lead the
+        # row menu (the inspection window with the live load-gate
+        # preview), then the explicit load, then the per-table
+        # note / tag editor, then the pin toggle.
         menu.add_command(label="Table details",
                          command=lambda: self._open_table_details(key))
         menu.add_command(label="Load this table",
                          command=lambda: self._load_selected_table(key))
+        menu.add_command(label="Edit note\u2026",
+                         command=lambda: self._open_note_editor(key))
         if self.app.is_table_pinned(key):
             menu.add_command(label="Unpin",
                              command=lambda: self._toggle_table_pin(key,
@@ -2094,6 +2163,130 @@ class MasterWindow:
             return
         self._render_tables()
         self._set_status(("Pinned " if pinned else "Unpinned ") + table_key)
+
+    def _open_note_editor(self, table_key: str):
+        """MT-27 (0.35): the per-table note / tag editor Toplevel.
+
+        Addressed by the table key (relative in a single-root session,
+        absolute in a multi-root one).  The note and the tags persist
+        against the table's *content* sha256 (the same identity as the
+        MT-24 analysis and the MT-22 content-sha row), so they survive a
+        rename or a move between indexed roots while the content is
+        unchanged.  A table whose index entry has no content sha
+        (unreadable / never scanned) cannot carry a note: the named
+        refusal lands in the status line, no dialog opens, no state
+        changes.
+
+        The dialog is a small Toplevel: the note as a multi-line Text
+        (bounded by NOTE_MAX_LEN), the tags as one comma-separated
+        Entry (bounded by the TAGS_LIMIT / TAG_MAX_LEN rules), a Save
+        button and a Cancel button.  A named refusal at save time
+        (note over the limit, a tag too long, too many tags) is shown
+        in the dialog's own status label - the dialog stays open, the
+        persisted document is untouched.  A successful save re-renders
+        the waiting view (the Note column updates) and reports to the
+        status line.  A second open lifts the window instead of
+        duplicating it; the window closes on trainer entry with the
+        rest of the waiting view.
+        """
+        if self._note_editor_win is not None:
+            try:
+                if self._note_editor_win.winfo_exists():
+                    self._note_editor_win.lift()
+                    self._note_editor_win.focus_set()
+                    return
+            except tk.TclError:
+                pass
+            self._note_editor_win = None
+        entry = self.app.index.get_by_key(table_key)
+        if entry is None:
+            self._set_status("No index entry for " + table_key)
+            return
+        if not sha256_key_ok(entry.sha256):
+            self._set_status(
+                "Note: no content sha for " + table_key
+                + " (the table is unreadable or unscanned - a note "
+                "follows the content identity, so there is none to "
+                "edit)")
+            return
+        stored = self.app.notes_store.get(entry.sha256) or {}
+        existing_note = stored.get("note") or ""
+        existing_tags = ", ".join(stored.get("tags") or ())
+        win = tk.Toplevel(self.root)
+        self._note_editor_win = win
+        win.title("Edit note - " + table_key)
+        win.configure(bg=BG, padx=16, pady=16)
+        win.transient(self.root)
+        win.resizable(True, False)
+        win.protocol("WM_DELETE_WINDOW", self._note_editor_cancel)
+        tk.Label(win, text="Note for this table (saved with its content "
+                           "sha256)",
+                 bg=BG, fg=FG, font=("Segoe UI", 12, "bold"),
+                 anchor="w").pack(fill="x")
+        note_box = tk.Text(win, width=72, height=6, bg="#10151f", fg=FG,
+                           insertbackground=FG, relief="flat",
+                           font=("Segoe UI", 11), wrap="word")
+        note_box.insert("1.0", existing_note)
+        note_box.pack(fill="x", pady=(8, 4))
+        tk.Label(win, text="Tags (comma separated; max "
+                           + str(TAGS_LIMIT) + " tags, "
+                           + str(TAG_MAX_LEN) + " characters each)",
+                 bg=BG, fg=FG_DIM, font=("Segoe UI", 10),
+                 anchor="w").pack(fill="x")
+        tag_entry = tk.Entry(win, width=74, bg="#10151f", fg=FG,
+                             insertbackground=FG, relief="flat",
+                             font=("Segoe UI", 11))
+        tag_entry.insert(0, existing_tags)
+        tag_entry.pack(fill="x", pady=(0, 4))
+        error_var = tk.StringVar(win)
+        error_label = tk.Label(win, textvariable=error_var, bg=BG,
+                               fg="#ff7b72", font=("Segoe UI", 10),
+                               anchor="w", justify="left")
+        error_label.pack(fill="x")
+
+        def save():
+            note_text = note_box.get("1.0", "end").rstrip("\n")
+            try:
+                tags = parse_tags(tag_entry.get())
+                self.app.notes_store.set_note(entry.sha256, note_text,
+                                              tags)
+            except NotesRefusal as exc:
+                error_var.set(str(exc))
+                return
+            win.destroy()
+            self._note_editor_win = None
+            self._render_tables()
+            self._set_status("Note saved for " + table_key)
+
+        def cancel():
+            win.destroy()
+            self._note_editor_win = None
+            self._set_status("Note edit cancelled for " + table_key)
+
+        tk.Button(win, text="Save", command=save, bg="#2a3547", fg=FG,
+                  activebackground="#3a4a63", activeforeground=FG,
+                  font=("Segoe UI", 12), padx=12, pady=2).pack(
+            side="right", pady=(8, 0))
+        tk.Button(win, text="Cancel", command=cancel, bg="#2a3547",
+                  fg=FG, activebackground="#3a4a63",
+                  activeforeground=FG, font=("Segoe UI", 12), padx=12,
+                  pady=2).pack(side="right", pady=(8, 0), padx=(0, 8))
+
+    def _note_editor_cancel(self):
+        """MT-27 (0.35): the window X handler of the note editor
+        (same documented path as the Cancel button)."""
+        if self._note_editor_win is None:
+            return
+        try:
+            if not self._note_editor_win.winfo_exists():
+                self._note_editor_win = None
+                return
+        except tk.TclError:
+            self._note_editor_win = None
+            return
+        win = self._note_editor_win
+        win.destroy()
+        self._note_editor_win = None
 
     def _open_table_details(self, table_key: str):
         """MT-22 (0.30) + MT-26 (0.34): the read-only table details
@@ -2145,7 +2338,8 @@ class MasterWindow:
                                    pinned=self.app.is_table_pinned(table_key),
                                    last_used=last_used,
                                    running_pids=pids, gate=gate,
-                                   analysis=analysis)
+                                   analysis=analysis,
+                                   notes=self.app.notes_store.get(entry.sha256))
         win = tk.Toplevel(self.root)
         self._details_win = win
         win.title("Table details - " + table_key)

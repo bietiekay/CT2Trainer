@@ -403,8 +403,10 @@ class MasterWindowTests(unittest.TestCase):
         # analysis has not re-rendered yet (the MT-24 test module
         # covers the count values themselves).
         self.assertEqual(values[5:7], ["…", "…"])
-        # MT-15 (0.26): the row gained Size / Modified / Last-used.
-        self.assertEqual(len(values), 10)
+        # MT-15 (0.26): the row gained Size / Modified / Last-used;
+        # MT-27 (0.35): the row gained the Note column (the 11th
+        # value, empty while no note exists).
+        self.assertEqual(len(values), 11)
         self.assertTrue(values[7].endswith((" B", " KB", " MB")), values[7])
         self.assertTrue(re.fullmatch(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}",
                                      values[8]), values[8])

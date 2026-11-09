@@ -12,8 +12,11 @@ Contract:
 - ``filter_tables``: empty/whitespace query returns the input order
   unchanged; otherwise a casefolded substring match against the table's
   relative path AND any bound process name (a table matches when ANY bound
-  name matches; the table name always counts).  Input order is preserved
-  (stable, deterministic).
+  name matches; the table name always counts).  MT-27 (0.35): an optional
+  ``note_lookup`` mapping (table content sha256 -> the persisted
+  ``{"note", "tags"}`` entry) makes the note text and every tag part of
+  the match (a table matches when ANY of them matches).  Input order is
+  preserved (stable, deterministic).
 - ``sort_tables``: stable, deterministic ordering per mode, with the
   casefolded relative path as the universal tie-breaker.
 """
@@ -22,13 +25,20 @@ from __future__ import annotations
 SORT_MODES = ("name", "process", "status")
 
 
-def filter_tables(entries, query) -> list:
+def filter_tables(entries, query, note_lookup=None) -> list:
     """Casefolded substring filter over table name and bound process names.
 
     ``entries`` is an iterable of ``TableEntry``-shaped objects (anything
     with ``relative_path`` and ``process_names``); the result is a list in
     the same order as the input.  An empty or whitespace-only query is the
     identity (all entries, order unchanged).
+
+    MT-27 (0.35): ``note_lookup`` (optional) maps the table content
+    sha256 to the persisted notes entry (``{"note", "tags", ...}`` or
+    anything with those keys) so the note text and every tag join the
+    match surface - a table matches when ANY of them matches.  Entries
+    without a lookup entry (no note yet) keep the name / process
+    behavior only; ``note_lookup=None`` is the exact pre-0.35 behavior.
     """
     text = (query or "").strip().casefold()
     if not text:
@@ -40,6 +50,15 @@ def filter_tables(entries, query) -> list:
             continue
         if any(text in name.casefold() for name in entry.process_names):
             result.append(entry)
+            continue
+        if note_lookup is not None:
+            note = note_lookup.get(getattr(entry, "sha256", ""))
+            if note is not None:
+                note_text = (note.get("note") or "").casefold()
+                tags = note.get("tags") or ()
+                if text in note_text or any(
+                        text in tag.casefold() for tag in tags):
+                    result.append(entry)
     return result
 
 

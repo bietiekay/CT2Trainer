@@ -1,6 +1,6 @@
 # CT2Trainer Master Trainer — UI flow (reviewable)
 
-Status: 0.34 (2026-11-09). This document is the reviewable copy of the
+Status: 0.35 (2026-11-09). This document is the reviewable copy of the
 in-app "UI flow" dialog (the `ui_flow_text()` function in
 `master_ui.py`; keep both aligned when the flow changes). It describes
 the complete user flow of the Master Trainer so it can be reviewed and
@@ -33,7 +33,7 @@ survive — they are window/app state, not widget state).
 | Control | Action |
 | --- | --- |
 | Title | `CT2Trainer <version> — Master Trainer` (label only) |
-| Filter entry | Live casefolded substring filter over table name AND any bound process name; the meta line shows `filtered: N/M` while a query is active; persisted (schema 4) |
+| Filter entry | Live casefolded substring filter over table name AND any bound process name AND — with 0.35, MT-27 — the persisted note text and tags (a table matches when ANY of them matches); the meta line shows `filtered: N/M` while a query is active; persisted (schema 4) |
 | `Status: all/ok/attention` | Cycles the live status filter (0.31, MT-23): all rows / only the loadable rows / only the rows the MT-9 gate would refuse right now (changed / missing / unreadable); persisted (schema 6) |
 | `View: list/process` | Cycles the display mode: flat list vs. grouped by bound process name; persisted (schema 4) |
 | `Sort: name/process/status` | Cycles the sort mode; persisted (schema 4) |
@@ -80,6 +80,7 @@ display-only):
 | Size | Indexed file size (compact B/KB/MB) |
 | Modified | Local `YYYY-MM-DD HH:MM` |
 | Last used | The persisted UTC timestamp from the recent list |
+| Note | The persisted per-table organization metadata (0.35, MT-27): the note text truncated to one line (an ellipsis marks a cut) plus the tags in brackets (`note [tag-a, tag-b]`); empty while no note exists |
 
 The tree takes the **initial focus** on build (0.29, MT-20), so arrow
 keys and Enter work immediately without a first click.
@@ -95,8 +96,18 @@ checked before loading it. It also shows the background plan-analysis
 result for the table (0.32, MT-24): `pending` while the analysis is
 still queued/running, `N entries (M blocked) of T records` + the top
 blocked reasons (up to 8, `reason × count`) once analyzed, or
-`failed: <reason>` for a named compile refusal. Then `Load this
-table` (the explicit load path) and the `Pin to top` / `Unpin`
+`failed: <reason>` for a named compile refusal — and the per-table
+note / tag rows (0.35, MT-27; `none` while the table carries no
+organization metadata). Then `Load this
+table` (the explicit load path), `Edit note…` (0.35, MT-27 — the
+per-table note / tag editor: a small Toplevel with the note (multi-line,
+bounded at 500 characters) and a comma-separated tag entry (bounded at
+8 tags × 40 characters); the note and tags persist against the
+table's *content sha256*, so they survive a rename or a move between
+indexed roots while the content is unchanged; a named refusal at save
+time is shown in the dialog's own label — the dialog stays open, the
+persisted document stays untouched; a table without a content sha is
+refused in the status line), and the `Pin to top` / `Unpin`
 toggle (0.28, MT-18).
 Group rows (process view) are display-only: no context menu.
 
@@ -220,6 +231,7 @@ offers the re-attach target) and `⬅ Master` (the return below).
 | Status filter (all / ok / attention) | `master-settings.json` (schema 6+, 0.31 MT-23) |
 | Per-table settings sidecar | `settings/<table-sha256>.ct2trainer.json` (keyed by content hash, never the path) |
 | Per-table plan analysis (0.32, MT-24) | `table-analysis.json` (schema 1; keyed by table content sha256, LRU-bounded to 1024 entries — a content change re-analyzes, an unchanged table reuses the cached counts) |
+| Per-table notes / tags (0.35, MT-27) | `table-notes.json` (schema 1; keyed by table content sha256, LRU-bounded to 1024 entries — a note follows the content identity across renames and roots) |
 | Enabled toggles (per table) | the engine state store; only confirmed ON toggles persist |
 | Table index (0.34: one checksum-bound root block per indexed folder) | `tables-index.json` (schema 2, checksum-bound) |
 
@@ -236,7 +248,7 @@ as a saved wish on the next attach.
 | `↑/↓/←/→`, `PgUp/PgDn` | Navigate the table list (initial focus on build, 0.29) | Grid navigation (trainer UI) |
 | `Enter` / `KP_Enter` | Load the selected row (explicit path, named refusals included) | — |
 | Double-click | Load the clicked row | Value-row expansion (trainer UI) |
-| Right-click | Row context menu: `Table details` (0.30), `Load this table`, `Pin to top` / `Unpin` | Row context menu (trainer UI) |
+| Right-click | Row context menu: `Table details` (0.30), `Load this table`, `Edit note…` (0.35), `Pin to top` / `Unpin` | Row context menu (trainer UI) |
 
 ## 7) Failure states
 

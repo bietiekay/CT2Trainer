@@ -2,6 +2,71 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.35 (2026-11-09)
+
+Master Trainer per-table notes / tags (MT-27) — the adopted 0.35
+candidate from the online evaluation (the trainer / table manager
+library-organization patterns — game-trainer-manager
+(Karasukaigan): organizing + local search + Pin to Top;
+Fling-Trainer-Manager: local catalog with search; FLiNG:
+per-trainer metadata; WeMod: library organization — see the Master
+Trainer ROADMAP "0.35 per-table notes / tags" section):
+
+- **MT-27 per-table notes / tags**: the waiting view gains a **Note**
+  column (last, width 160) — the persisted per-table organization
+  metadata: the note text truncated to one line (an ellipsis marks a
+  cut, `NOTE_COLUMN_MAX` = 60 characters) plus the tags in brackets
+  (`note [tag-a, tag-b]`); note-only and tag-only entries both
+  render; empty while no note exists. The row context menu offers
+  **"Edit note…"** between "Load this table" and the pin toggle —
+  a small Toplevel with the note (multi-line text, bounded at
+  `NOTE_MAX_LEN` = 500 characters) and a comma-separated tag entry
+  (bounded at `TAGS_LIMIT` = 8 tags × `TAG_MAX_LEN` = 40 characters,
+  stripped, casefold-deduped first-spelling-wins); a named refusal
+  at save time (note over the limit, a tag too long, too many tags)
+  is shown in the dialog's own label — the dialog stays open, the
+  persisted document is untouched; a table without a content sha
+  (unreadable / never scanned) is refused in the status line, no
+  dialog opens; single window, lift on second open, closed on
+  trainer entry with the rest of the waiting view.
+- **Persistence**: `table-notes.json` (schema 1, under the state
+  home) — **keyed by the table content sha256** (the same identity
+  as the MT-24 analysis document), so a note survives a rename
+  within a root and follows a content-identical file to another
+  root; one entry per noted table (`{"note", "tags",
+  "updated_at"}`); strict key-set / field validation of the
+  master-state discipline (an unknown field is a named refusal,
+  never a silent drop); checksummed canonical-JSON envelope;
+  `NOTES_ENTRIES_LIMIT` = 1024 entries, `evict_oldest` by
+  `updated_at` (ties by sha256 — deterministic); a refused
+  document is treated as absent (documented, never a silent
+  reset). No master-state schema bump (the MT-24 sidecar
+  precedent — the notes live in their own checksum-bound
+  document).
+- **Search**: the waiting-view filter now also matches the note
+  text and every tag — the pure `filter_tables` gains the optional
+  `note_lookup` (table content sha256 -> entry); a table matches
+  when ANY of them matches; `note_lookup=None` is the exact
+  pre-0.35 behavior (backward-compatible).
+- **Details**: the MT-22 table-details window gains the note / tag
+  rows after the entry-analysis block (`none` while the table
+  carries no organization metadata).
+- The pure layer is `table_notes.py` (`parse_tags`, `note_entry`,
+  the document bytes / load / save, `evict_oldest`, `NotesStore`,
+  `note_column_text`, `details_note_lines`, the named
+  `NotesRefusal` with `.reasons`); no index mutation, no
+  table-file access, no load-path effect (the MT-9 gate
+  re-checks the table independently at load time). +67 tests
+  (`tests/test_native_master_notes.py`: the pure layer + the Tk
+  wiring incl. the menu order `Table details` / `Load this table` /
+  `Edit note…` / `Pin to top`); full main suite 4,610 OK / 30
+  expected skips; catalog zero delta `blocked-catalog-035-notes`
+  (3-chunk deep-equal audit over the 151 reference tables,
+  2026-11-09: 151/151 loaded, 0 load errors, 117,809 total /
+  116,756 supported / 60,161 staged / 103,607 actionable /
+  12,974 headings / 1,053 blocked — zero delta vs
+  `blocked-catalog-034-mt26`).
+
 ## 0.34 (2026-11-09)
 
 Master Trainer multi-root table index (MT-26) — the adopted 0.34

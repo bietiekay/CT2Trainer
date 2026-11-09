@@ -107,7 +107,9 @@ class DetailLinesTests(unittest.TestCase):
             "Load gate (live re-check)",
             # MT-24 (0.32): the entry-analysis block (pending marker
             # when no analysis entry is passed).
-            "Entry analysis"])
+            "Entry analysis",
+            # MT-27 (0.35): the per-table note / tag rows.
+            "Note", "Tags"])
         values = dict(lines)
         self.assertEqual(values["Table"], "a/b.ct")
         self.assertEqual(values["Folder"], "C:\\tables")
@@ -280,7 +282,9 @@ class DetailsWindowTests(_DetailsBase):
         self.addCleanup(win.destroy)
         self.assertEqual(win.title(), "Table details - zeta.ct")
         values = self._value_rows(win)
-        self.assertEqual(len(values), 12)
+        # MT-27 (0.35): the details window gained the Note / Tags
+        # rows (12 base rows + 2 note rows = 14).
+        self.assertEqual(len(values), 14)
         entry = app.index.get("zeta.ct")
         self.assertEqual(values[0], "zeta.ct")
         self.assertEqual(values[1], app.folder)

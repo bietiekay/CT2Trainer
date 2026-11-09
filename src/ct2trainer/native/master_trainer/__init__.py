@@ -58,6 +58,17 @@ from .master_state import (
     master_state_to_bytes,
 )
 from .settings_sidecar import MasterSettingsStore, MasterSettingsRefusal
+from .table_notes import (
+    NOTES_DOC_NAME,
+    NOTES_SCHEMA,
+    NotesRefusal,
+    NotesStore,
+    details_note_lines,
+    note_column_text,
+    notes_document_from_bytes,
+    notes_document_to_bytes,
+    parse_tags,
+)
 from .steamdeck_route import (
     AttachRoute,
     DeckAttachUnavailableError,

@@ -143,10 +143,14 @@ class AnalysisColumnsTests(_Mt24Base):
 
         window = self._window(self._app(), compiler)
         tree = window._table_tree
-        # MT-26 (0.34): the Folder column sits after Table.
+        # MT-26 (0.34): the Folder column sits after Table; MT-27
+        # (0.35): the Note column is the last one.
         self.assertEqual(list(tree["columns"]), [
             "table", "folder", "processes", "status", "detail",
-            "entries", "blocked", "size", "modified", "last_used"])
+            "entries", "blocked", "size", "modified", "last_used",
+            "note"])
+        self.assertEqual(tree.heading("note")["text"], "Note")
+        self.assertEqual(int(tree.column("note", "width")), 160)
         self.assertEqual(tree.heading("entries")["text"], "Entries")
         self.assertEqual(tree.heading("blocked")["text"], "Blocked")
         self.assertEqual(int(tree.column("entries", "width")), 70)
@@ -219,8 +223,9 @@ class AnalysisColumnsTests(_Mt24Base):
         self.assertEqual(len(parents), 1)
         values = tree.item(parents[0], "values")
         # MT-26 (0.34): ten values - the display-only group row carries
-        # the empty Folder value as well.
-        self.assertEqual(len(values), 10)
+        # the empty Folder value as well; MT-27 (0.35): the Note
+        # column adds the 11th (empty) value.
+        self.assertEqual(len(values), 11)
         # The display-only group row carries the casefolded bound
         # process name (the MT-17 group identity) and the count -
         # but no Entries / Blocked figures.
@@ -334,9 +339,12 @@ class DetailsAnalysisRowsTests(_Mt24Base):
         self.assertIsNotNone(win)
         self.addCleanup(win.destroy)
         rows = self._value_rows(win)
-        self.assertEqual(len(rows), 13)
+        # MT-27 (0.35): +2 note / tag rows after the analysis block.
+        self.assertEqual(len(rows), 15)
         self.assertEqual(rows[11], "2 entries (3 blocked) of 6 records")
         self.assertEqual(rows[12], "r-one × 2, r-two × 1")
+        self.assertEqual(rows[13], "none")
+        self.assertEqual(rows[14], "none")
 
     def test_the_failed_entry_shows_the_named_error(self):
         app = self._seed(failed_analysis("ValueError: boom",
@@ -347,8 +355,11 @@ class DetailsAnalysisRowsTests(_Mt24Base):
         self.assertIsNotNone(win)
         self.addCleanup(win.destroy)
         rows = self._value_rows(win)
-        self.assertEqual(len(rows), 12)
+        # MT-27 (0.35): +2 note / tag rows after the analysis block.
+        self.assertEqual(len(rows), 14)
         self.assertEqual(rows[11], "failed: ValueError: boom")
+        self.assertEqual(rows[12], "none")
+        self.assertEqual(rows[13], "none")
 
 
 @unittest.skipIf(tk is None, "tkinter not available")

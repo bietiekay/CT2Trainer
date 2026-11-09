@@ -283,7 +283,9 @@ class RecentAndMetadataColumnsTests(unittest.TestCase):
         # analysis re-renders the row); MT-26 (0.34): the Folder
         # column after Table shifts them right by one.
         self.assertEqual(values[5:7], ("…", "…"))
-        self.assertEqual(len(values), 10)
+        # MT-27 (0.35): the Note column is the 11th value (empty while
+        # no note exists).
+        self.assertEqual(len(values), 11)
         # Size is the compact human-readable byte size.
         self.assertTrue(values[7].endswith((" B", " KB", " MB")))
         # Modified is a local timestamp of the documented shape.

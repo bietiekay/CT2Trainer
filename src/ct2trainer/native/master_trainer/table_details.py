@@ -55,7 +55,8 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
                        last_used: str | None,
                        running_pids,
                        gate,
-                       analysis=None) -> list:
+                       analysis=None,
+                       notes=None) -> list:
     """Ordered ``(label, value)`` rows for the read-only details
     window of one indexed table.
 
@@ -68,7 +69,11 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
     ``analysis`` (MT-24, 0.32) is the persisted background
     plan-analysis entry for the table's content sha from
     ``table_analysis.AnalysisStore`` (or None while pending) - it
-    adds the entry-analysis rows below the load-gate row.
+    adds the entry-analysis rows below the load-gate row;
+    ``notes`` (MT-27, 0.35) is the persisted notes/tags entry for
+    the same content sha from ``table_notes.NotesStore`` (or None
+    when the table carries no organization metadata) - it adds the
+    note / tag rows below the entry-analysis block.
     """
     names = ", ".join(entry.process_names) or "(none found)"
     if entry.status == "ok":
@@ -98,4 +103,8 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
     # or None while pending).
     from .table_analysis import details_analysis_lines
     lines.extend(details_analysis_lines(analysis))
+    # MT-27 (0.35): the per-table organization metadata (note + tags,
+    # keyed by the same content sha).
+    from .table_notes import details_note_lines
+    lines.extend(details_note_lines(notes))
     return lines
