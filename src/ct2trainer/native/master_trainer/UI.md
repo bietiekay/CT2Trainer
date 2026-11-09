@@ -204,8 +204,12 @@ The exact standalone-trainer row grid, now owning the full window
 - **info rows** — dim rows for blocked / unselected records.
 
 Header: the standalone trainer header plus, in Master mode only,
-`Detach` (release the live target; in `ask` mode the process picker
-offers the re-attach target) and `⬅ Master` (the return below).
+`Columns: N` (0.36, MT-21 - cycles the trainer row grid
+1 -> 2 -> 3 -> 1; the requested count persists; a narrow window
+renders fewer columns than requested, and a section with its
+children never splits across columns), `Detach` (release the live
+target; in `ask` mode the process picker offers the re-attach
+target) and `⬅ Master` (the return below).
 
 ## 4) Back to Master / Detach
 
@@ -222,7 +226,8 @@ offers the re-attach target) and `⬅ Master` (the return below).
 
 | Item | Where |
 | --- | --- |
-| Table folders (the indexed folder list, primary first, capped at 8; ask on first start; 0.34, MT-26) | `master-settings.json` (schema 8) |
+| Table folders (the indexed folder list, primary first, capped at 8; ask on first start; 0.34, MT-26) | `master-settings.json` (schema 8+) |
+| Trainer grid column count (1 / 2 / 3, default 1; the header "Columns: N" cycle; 0.36, MT-21) | `master-settings.json` (schema 9) |
 | Attach mode (auto/ask) | `master-settings.json` (schema 2+) |
 | Last explicit table | `master-settings.json` (schema 2+) |
 | Recent tables (≤ 10, UTC) | `master-settings.json` (schema 3+) |

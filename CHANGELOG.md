@@ -2,6 +2,57 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.36 (2026-11-09)
+
+Master Trainer multi-column trainer grid (MT-21) — the adopted
+0.36 candidate from the online evaluation (WeMod's cheat list
+multi-column layout with the staff-confirmed collapse behavior —
+the official WeMod community thread "UI customization",
+community.wemod.com/t/ui-customization/371434, 2025-09-11: "The
+cheat list collapses to a single column under a certain size so
+nothing is hidden. There are also minimum width constraints to
+prevent it from ever being hidden" — see the Master Trainer
+ROADMAP "0.36 multi-column trainer grid" section):
+
+- **MT-21 multi-column trainer grid**: the trainer row grid can
+  now run in up to three side-by-side columns. The requested
+  column count (1 / 2 / 3, default 1) persists in the master
+  state (`master-settings.json` schema 8 -> 9, `grid_columns`;
+  strict int validation, a schema-8 document carrying the field is
+  refused as an unknown field) and is handed to the trainer window
+  on table load. The trainer header gains the **"Columns: N"**
+  cycle button (master only — the standalone trainer header stays
+  byte-identical and always renders the single column): 1 -> 2 ->
+  3 -> 1, immediate re-render, persisted on every change. The
+  pure grid layer lives in `ui_rows.py`: `build_grid` (per-column
+  row lists; `columns == 1` byte-stable against `build_rows`;
+  otherwise the reference rows are emitted at the full width,
+  split into top-level units (`row_units` — a section with its
+  children never splits across columns), the width-independent
+  unit heights flow shortest-column-first (`flow_units`, ties to
+  the lower column index) and each column is re-emitted at its own
+  width with the column `x0` baked into every row rectangle
+  (`column_layout`, equal widths, the leftover pixels to the
+  leftmost columns)); `effective_columns` clamps the requested
+  count to what fits (two columns need 652 px, three need 984 px;
+  a column never falls below the 320 px floor). Renderer:
+  per-column pagination, per-column hit-testing (x picks the
+  column, y the row inside that column with its own page offset),
+  the right-anchored positions derived from the baked `row.hit`
+  rectangles. The standalone trainer is untouched beyond the new
+  default-valued constructor arguments. +55 tests
+  (`tests/test_native_ui_grid.py` 37,
+  `tests/test_native_master_ui_mt21.py` 14, the grid tests in
+  `tests/test_native_master_state.py` 4) + the baseline handoff
+  assertion updates in `tests/test_native_master_ui.py`. Full main
+  suite 4,665 OK / 30 expected skips (4,610 from the 0.35 content
+  + 55 new); catalog zero delta `blocked-catalog-036-grid`
+  (3-chunk deep-equal audit over the 151 reference tables,
+  2026-11-09: 151/151 loaded, 0 load errors, 117,809 total /
+  116,756 supported / 60,161 staged / 103,607 actionable /
+  12,974 headings / 1,053 blocked — zero delta vs
+  `blocked-catalog-035-notes`).
+
 ## 0.35 (2026-11-09)
 
 Master Trainer per-table notes / tags (MT-27) — the adopted 0.35

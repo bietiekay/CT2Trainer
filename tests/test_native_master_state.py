@@ -62,7 +62,8 @@ class MasterStateSerializeTests(unittest.TestCase):
                           "pinned_tables": [],
                           "view_status": "",
                           "auto_rescan": True,
-                          "table_folders": []})
+                          "table_folders": [],
+                          "grid_columns": 1})
         canonical = json.dumps(document["payload"], sort_keys=True,
                                separators=(",", ":"), allow_nan=False,
                                ensure_ascii=True).encode("utf-8")
@@ -518,6 +519,49 @@ class MasterStateSerializeTests(unittest.TestCase):
                    "table_folders": []}
         state = master_state_from_bytes(self._document(payload))
         self.assertEqual(state.table_folders, ())
+
+    # -- schema 9 (0.36) grid columns (MT-21) ---------------------------------
+
+    def test_grid_columns_roundtrip(self):
+        state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
+                             grid_columns=3,
+                             table_folders=("C:\\tables",))
+        raw = master_state_to_bytes(state)
+        self.assertEqual(master_state_from_bytes(raw), state)
+        # The document is byte-stable: same input, same bytes.
+        self.assertEqual(master_state_to_bytes(state), raw)
+
+    def test_schema8_document_promotes_on_load_with_default_columns(self):
+        payload = {"schema": 8, "last_folder": "C:\\tables",
+                   "last_table": "sub\\gamea.ct",
+                   "attach_mode": ATTACH_MODE_ASK,
+                   "recent_tables": [{"path": "sub\\gamea.ct",
+                                      "at": "2026-11-09T12:00:00Z"}],
+                   "view_filter": "", "view_sort": "name",
+                   "view_mode": "list",
+                   "pinned_tables": ["sub\\gamea.ct"],
+                   "view_status": "ok",
+                   "auto_rescan": True,
+                   "table_folders": ["C:\\tables"]}
+        state = master_state_from_bytes(self._document(payload))
+        self.assertEqual(state.schema, MASTER_STATE_SCHEMA)
+        self.assertEqual(state.grid_columns, 1)  # documented default
+        self.assertEqual(state.table_folders, ("C:\\tables",))
+
+    def test_from_bytes_refuses_schema8_with_grid_columns_field(self):
+        payload = {"schema": 8, "last_folder": None, "grid_columns": 2}
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(payload))
+        self.assertIn("unknown fields", str(ctx.exception))
+        self.assertIn("grid_columns", str(ctx.exception))
+
+    def test_from_bytes_refuses_bad_grid_columns(self):
+        base = {"schema": MASTER_STATE_SCHEMA, "last_folder": None}
+        for bad in (0, 4, "2", True, None, [1]):
+            with self.assertRaises(MasterStateRefusal) as ctx:
+                master_state_from_bytes(
+                    self._document(dict(base, grid_columns=bad)))
+            self.assertIn("grid_columns", str(ctx.exception))
 
 
 class MasterStateFileTests(unittest.TestCase):

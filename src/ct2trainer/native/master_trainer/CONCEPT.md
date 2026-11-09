@@ -23,7 +23,12 @@ table index: several table folders in one Master window, the folder
 manager, the absolute table key identity, the persisted folder list)
 with the 0.34 release (2026-11-09); MT-27 (per-table notes / tags:
 the Note column, the filter match surface, the "Edit note…" editor,
-the details-window rows) with the 0.35 release (2026-11-09). Design and
+the details-window rows) with the 0.35 release (2026-11-09); MT-21
+(multi-column trainer grid: up to three side-by-side columns in
+trainer mode, the persisted "Columns: N" header cycle, the
+narrow-window clamp with the 320 px column floor, the byte-stable
+single-column standalone) with the 0.36 release (2026-11-09).
+Design and
 implementation notes; the working plan is [ROADMAP.md](ROADMAP.md) and
 the reviewable UI-flow document is [UI.md](UI.md).
 
@@ -228,6 +233,16 @@ differences from the standalone trainer are two extra header buttons:
 and — 0.25 (MT-12) — the “Detach” / “Attach” button, which holds the
 live target (no auto re-attach; see User control below) and re-attaches
 to a user-chosen process in “ask” mode.
+
+— 0.36 (MT-21) — and the “Columns: N” button, which cycles the
+trainer row grid between one, two and three side-by-side columns
+(1 -> 2 -> 3 -> 1); the requested count persists in the master
+state (schema 9, `grid_columns`) and is restored on the next load,
+a narrow window renders fewer columns than requested (a column
+never falls below the 320 px floor; two columns need 652 px, three
+need 984 px), a section with its children is never split across
+columns, and the standalone trainer keeps the byte-identical
+single-column layout without this control.
 
 — 0.29 (MT-19) — and the trainer-focus mode: on trainer entry the
 whole waiting view (header, table list, status bar) is destroyed with

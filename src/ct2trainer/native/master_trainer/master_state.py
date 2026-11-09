@@ -1,7 +1,7 @@
 """Master Trainer state document (last-used folder, preferences).
 
 The state home holds one small document, ``master-settings.json``, next to
-the tables index.  Schema 8 (0.34) carries:
+the tables index.  Schema 9 (0.36) carries:
 
 - ``last_folder``  - the last-used (primary) table folder ("ask on first
   start"); always equal to the first entry of ``table_folders``;
@@ -43,24 +43,31 @@ the tables index.  Schema 8 (0.34) carries:
   (MT-25, 0.33): true (default) re-runs the incremental scan on a
   bounded background interval while the waiting view is open, so
   added / changed / removed tables show up without a manual rescan;
-  false keeps the manual-only behavior.
+  false keeps the manual-only behavior;
+- ``grid_columns`` - the persisted trainer grid column count
+  (MT-21, 0.36): 1 (default), 2 or 3; handed to the trainer window
+  on table load.  The standalone trainer always renders the
+  single-column layout.
 
-Schema 7 (0.33) documents carry the first ten fields; schema 6
-(0.31/0.32) documents the first nine; schema 5 (0.28) documents the
-first eight; schema 4 (0.27) documents the first seven; schema 3
-(0.26) documents the first six; schema 2 (0.25) documents the first
-four; schema 1 documents (last_folder only) are schema-2 ancestors.
+Schema 8 (0.34) documents carry the first eleven fields; schema 7
+(0.33) documents the first ten fields; schema 6 (0.31/0.32) documents
+the first nine; schema 5 (0.28) documents the first eight; schema 4
+(0.27) documents the first seven; schema 3 (0.26) documents the first
+six; schema 2 (0.25) documents the first four; schema 1 documents
+(last_folder only) are schema-2 ancestors.
 All are promoted on load: the missing fields take their documented
 defaults (last_table=None, attach_mode "auto", recent_tables=[],
 view_filter "", view_sort "name", view_mode "list", pinned_tables=[],
 view_status "", auto_rescan true, table_folders=(last_folder,) when
-last_folder is set), so existing state homes keep working unchanged.
+last_folder is set, grid_columns 1), so existing state homes keep
+working unchanged.
 MT-26 promotion also re-anchors the relative table references of a
 promoted document (last_table, recent_tables, pinned_tables) to
 absolute table keys under the stored last_folder, so the user's pins,
 recents and last-loaded table survive the upgrade; a document without
 a last_folder keeps its (relative) references untouched.  A schema-7
-document carrying a table_folders field is refused as an unknown field
+document carrying a table_folders field (or a schema-8 document
+carrying a grid_columns field) is refused as an unknown field
 (foreign schema, never silently promoted).
 
 Persistence discipline mirrors the table index (``table_index.py``):
@@ -76,13 +83,14 @@ import hashlib
 import json
 from pathlib import Path
 
-MASTER_STATE_SCHEMA = 8
-MASTER_STATE_SCHEMA_PREVIOUS = 7
-MASTER_STATE_SCHEMA_PREVIOUS2 = 6
-MASTER_STATE_SCHEMA_PREVIOUS3 = 5
-MASTER_STATE_SCHEMA_PREVIOUS4 = 4
-MASTER_STATE_SCHEMA_PREVIOUS5 = 3
-MASTER_STATE_SCHEMA_PREVIOUS6 = 2
+MASTER_STATE_SCHEMA = 9
+MASTER_STATE_SCHEMA_PREVIOUS = 8
+MASTER_STATE_SCHEMA_PREVIOUS2 = 7
+MASTER_STATE_SCHEMA_PREVIOUS3 = 6
+MASTER_STATE_SCHEMA_PREVIOUS4 = 5
+MASTER_STATE_SCHEMA_PREVIOUS5 = 4
+MASTER_STATE_SCHEMA_PREVIOUS6 = 3
+MASTER_STATE_SCHEMA_PREVIOUS7 = 2
 MASTER_STATE_SCHEMA_LEGACY = 1
 MASTER_STATE_FILENAME = "master-settings.json"
 MAX_MASTER_STATE_BYTES = 1024 * 1024
@@ -105,6 +113,9 @@ VIEW_MODES = ("list", "process")
 # mirrors ``table_status.VIEW_STATUS_FILTERS`` (the view_mode
 # pattern) and must stay in sync with it.
 VIEW_STATUS_FILTERS = ("", "ok", "attention")
+# MT-21 (0.36): the persisted trainer grid column count modes (1, 2 or
+# 3); mirrors ``ui_rows.MAX_GRID_COLUMNS`` and must stay in sync with it.
+GRID_COLUMN_MODES = (1, 2, 3)
 VIEW_FILTER_MAX = 200
 _MAX_FOLDER = 4096
 # MT-26 (0.34): table references (last_table / recent_tables / pinned)
@@ -155,7 +166,7 @@ class MasterStateRefusal(ValueError):
 class MasterState:
     """One master-state document (schema-bound).
 
-    Only schema-7 documents may be written; schemas 1-6 are load-only
+    Only schema-9 documents may be written; schemas 1-8 are load-only
     (promoted on load, see the module docstring).
     """
 
@@ -176,6 +187,9 @@ class MasterState:
     # primary); a fresh or promoted state home defaults to the single
     # last_folder (see the module docstring).
     table_folders: tuple[str, ...] = ()
+    # MT-21 (0.36): the persisted trainer grid column count (1, 2 or
+    # 3); a fresh or promoted state home defaults to 1.
+    grid_columns: int = 1
 
 
 def empty_master_state() -> MasterState:
@@ -194,6 +208,7 @@ def _validate_state_dict(payload: dict) -> MasterState:
             MASTER_STATE_SCHEMA_PREVIOUS4,
             MASTER_STATE_SCHEMA_PREVIOUS5,
             MASTER_STATE_SCHEMA_PREVIOUS6,
+            MASTER_STATE_SCHEMA_PREVIOUS7,
             MASTER_STATE_SCHEMA_LEGACY):
         reasons.append(f"master-state schema {schema!r} is not supported "
                        f"(expected {MASTER_STATE_SCHEMA}, legacy "
@@ -203,31 +218,37 @@ def _validate_state_dict(payload: dict) -> MasterState:
                        f"{MASTER_STATE_SCHEMA_PREVIOUS4} / "
                        f"{MASTER_STATE_SCHEMA_PREVIOUS5} / "
                        f"{MASTER_STATE_SCHEMA_PREVIOUS6} / "
+                       f"{MASTER_STATE_SCHEMA_PREVIOUS7} / "
                        f"{MASTER_STATE_SCHEMA_LEGACY} are promoted on load)")
     allowed = {"schema", "last_folder"}
     if schema == MASTER_STATE_SCHEMA:
         allowed |= {"last_table", "attach_mode", "recent_tables",
                     "view_filter", "view_sort", "view_mode",
                     "pinned_tables", "view_status", "auto_rescan",
-                    "table_folders"}
+                    "table_folders", "grid_columns"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS:
         allowed |= {"last_table", "attach_mode", "recent_tables",
                     "view_filter", "view_sort", "view_mode",
-                    "pinned_tables", "view_status", "auto_rescan"}
+                    "pinned_tables", "view_status", "auto_rescan",
+                    "table_folders"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS2:
         allowed |= {"last_table", "attach_mode", "recent_tables",
                     "view_filter", "view_sort", "view_mode",
-                    "pinned_tables", "view_status"}
+                    "pinned_tables", "view_status", "auto_rescan"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS3:
         allowed |= {"last_table", "attach_mode", "recent_tables",
                     "view_filter", "view_sort", "view_mode",
-                    "pinned_tables"}
+                    "pinned_tables", "view_status"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS4:
         allowed |= {"last_table", "attach_mode", "recent_tables",
-                    "view_filter", "view_sort", "view_mode"}
+                    "view_filter", "view_sort", "view_mode",
+                    "pinned_tables"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS5:
-        allowed |= {"last_table", "attach_mode", "recent_tables"}
+        allowed |= {"last_table", "attach_mode", "recent_tables",
+                    "view_filter", "view_sort", "view_mode"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS6:
+        allowed |= {"last_table", "attach_mode", "recent_tables"}
+    elif schema == MASTER_STATE_SCHEMA_PREVIOUS7:
         allowed |= {"last_table", "attach_mode"}
     unknown = sorted(set(payload) - allowed)
     if unknown:
@@ -345,6 +366,14 @@ def _validate_state_dict(payload: dict) -> MasterState:
                 seen_folders.add(key)
             if not reasons:
                 folders = list(folders_raw)
+    # MT-21 (0.36): the grid column count (schema 9 only; strict int in
+    # 1..3).  Schema-8-or-older documents never carry the field, so the
+    # documented default 1 applies on promotion.
+    grid_columns = payload.get("grid_columns", 1)
+    if type(grid_columns) is not int or grid_columns not in GRID_COLUMN_MODES:
+        reasons.append("grid_columns must be an integer in "
+                       + ", ".join(str(m) for m in GRID_COLUMN_MODES)
+                       + f" (got {grid_columns!r})")
     if reasons:
         raise MasterStateRefusal(reasons)
     # Promote older documents (schema 7 / 6 / 5 / 4 / 3 / 2 / 1) to the
@@ -383,7 +412,8 @@ def _validate_state_dict(payload: dict) -> MasterState:
                        view_filter=view_filter, view_sort=view_sort,
                        view_mode=view_mode, pinned_tables=tuple(pinned),
                        view_status=view_status, auto_rescan=auto_rescan,
-                       table_folders=table_folders)
+                       table_folders=table_folders,
+                       grid_columns=grid_columns)
 
 
 def master_state_to_bytes(state: MasterState) -> bytes:
@@ -409,7 +439,8 @@ def master_state_to_bytes(state: MasterState) -> bytes:
                           "pinned_tables": list(state.pinned_tables),
                           "view_status": state.view_status,
                           "auto_rescan": state.auto_rescan,
-                          "table_folders": list(state.table_folders)})
+                          "table_folders": list(state.table_folders),
+                          "grid_columns": state.grid_columns})
     payload = {"schema": state.schema, "last_folder": state.last_folder,
                "last_table": state.last_table, "attach_mode": state.attach_mode,
                "recent_tables": [
@@ -421,7 +452,8 @@ def master_state_to_bytes(state: MasterState) -> bytes:
                "pinned_tables": list(state.pinned_tables),
                "view_status": state.view_status,
                "auto_rescan": state.auto_rescan,
-               "table_folders": list(state.table_folders)}
+               "table_folders": list(state.table_folders),
+               "grid_columns": state.grid_columns}
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
                            allow_nan=False, ensure_ascii=True).encode("utf-8")
     digest = hashlib.sha256(canonical).hexdigest()
@@ -433,8 +465,8 @@ def master_state_to_bytes(state: MasterState) -> bytes:
 def master_state_from_bytes(raw: bytes) -> MasterState:
     """Strict, checksum-bound load of one master-state document.
 
-    Schema-1 / 2 / 3 / 4 / 5 documents are accepted and promoted to the
-    current schema (see module docstring); every other foreign
+    Schema-1 through schema-8 documents are accepted and promoted to
+    the current schema (see module docstring); every other foreign
     schema, malformed shape or tampered checksum raises the named
     :class:`MasterStateRefusal`.
     """

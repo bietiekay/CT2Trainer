@@ -110,6 +110,19 @@ document stays untouched; a table without a content sha (unreadable
 filter also matches the note text and tags, and the MT-22 details
 window shows the note / tag rows.  No load-path effect.
 
+0.36 multi-column trainer grid (MT-21): the trainer row grid can
+run in up to three side-by-side columns.  The requested column
+count (1 / 2 / 3, default 1) persists in the master state (schema 9,
+``grid_columns``) and is handed to the trainer window on table
+load; the trainer header gains the "Columns: N" cycle button
+(master only - the standalone trainer header stays byte-identical
+and always renders the single column).  The pure grid layer lives
+in ``ui_rows`` (``build_grid`` / ``effective_columns`` /
+``column_layout`` / ``row_units`` / ``flow_units``): a narrow window
+renders fewer columns than requested (a column never falls below
+the 320 px floor), sections are never split across columns, and the
+one-column path is byte-stable against the pre-0.36 renderer.
+
 All waiting-mode logic lives in the pure orchestrator; this module is
 Tk wiring plus the picker Toplevel.
 """
@@ -132,10 +145,10 @@ from .orchestrator import (MasterOrchestrator, STATE_ACTIVE,
                            ExplicitLoadRefusal)
 from .master_state import (MASTER_STATE_SCHEMA, MASTER_STATE_FILENAME,
                            ATTACH_MODE_ASK, ATTACH_MODE_AUTO,
-                           PINNED_TABLES_LIMIT, RECENT_TABLES_LIMIT,
-                           VIEW_FILTER_MAX, VIEW_STATUS_FILTERS,
-                           MasterState, load_master_state,
-                           save_master_state)
+                           GRID_COLUMN_MODES, PINNED_TABLES_LIMIT,
+                           RECENT_TABLES_LIMIT, VIEW_FILTER_MAX,
+                           VIEW_STATUS_FILTERS, MasterState,
+                           load_master_state, save_master_state)
 from .table_filter import (SORT_MODES, VIEW_MODES, UNBOUND_PROCESS_LABEL,
                            filter_tables, group_tables_by_process,
                            pin_tables, sort_tables)
@@ -283,8 +296,11 @@ def ui_flow_text() -> str:
         "editor), group section headers (chevron + counter + group "
         "toggle where one exists), and dim info rows (blocked or "
         "unselected records).  The header gains 'Detach' (detach the "
-        "live target and re-attach to a user-chosen process) and "
-        "'< Master' (below).\n\n"
+        "live target and re-attach to a user-chosen process), "
+        "'Columns: N' (the trainer grid column count cycle "
+        "1 -> 2 -> 3 -> 1, persisted; a narrow window renders fewer "
+        "columns than requested, and sections never split across "
+        "columns) and '< Master' (below).\n\n"
         "4) BACK TO MASTER\n"
         "   The '< Master' button closes the engine cleanly and "
         "rebuilds the waiting view, so the same process keeps watching "
@@ -296,7 +312,8 @@ def ui_flow_text() -> str:
         "process.\n\n"
         "5) WHAT IS REMEMBERED (persisted)\n"
         "   Waiting-view settings (filter, sort, view mode, status "
-        "filter), the pinned "
+        "filter), the trainer grid column count (the trainer 'Columns: "
+        "N' setting), the pinned "
         "/favorite tables, the rolling recent list, the attach mode, "
         "the table folders (the indexed folder list, primary first), "
         "the per-table plan-analysis results "
@@ -425,6 +442,10 @@ class MasterApp:
         # (schema 7); a fresh or refused state home takes the
         # documented default True.
         self.auto_rescan = (state.auto_rescan if state is not None else True)
+        # MT-21 (0.36): the persisted trainer grid column count
+        # (schema 9); a fresh or refused state home takes the
+        # documented default 1 (the single-column layout).
+        self.grid_columns = (state.grid_columns if state is not None else 1)
         # MT-24 (0.32): the background plan-analysis cache under the
         # state home (table-analysis.json, schema 1, keyed by the
         # table content sha256).  The analysis worker is NOT started
@@ -500,7 +521,8 @@ class MasterApp:
                 pinned_tables=tuple(self.pinned_tables),
                 view_status=self.view_status,
                 auto_rescan=self.auto_rescan,
-                table_folders=tuple(self.folders)),
+                table_folders=tuple(self.folders),
+                grid_columns=self.grid_columns),
                 self.state_path())
         except Exception:
             pass
@@ -518,6 +540,22 @@ class MasterApp:
         if type(enabled) is not bool:
             raise ValueError("auto-rescan flag must be a boolean")
         self.auto_rescan = enabled
+        self.persist_state()
+
+    def set_grid_columns(self, columns: int) -> None:
+        """MT-21 (0.36): persist the trainer grid column count
+        (schema 9) and re-persist it.
+
+        ``columns`` must be one of ``GRID_COLUMN_MODES`` (1, 2 or 3);
+        a window too narrow for the request renders fewer columns than
+        requested (``ui_rows.effective_columns``).  Invalid values
+        raise the named ValueError, so the UI never persists what it
+        would not render.
+        """
+        if type(columns) is not int or columns not in GRID_COLUMN_MODES:
+            raise ValueError("grid columns must be 1, 2 or 3 (got "
+                             + repr(columns) + ")")
+        self.grid_columns = columns
         self.persist_state()
 
     def set_view_settings(self, filter_query: str | None, sort_mode: str,
@@ -1922,9 +1960,14 @@ class MasterWindow:
         # waiting view is rebuilt whole on the way back.
         self._teardown_waiting_view()
         try:
+            # MT-21 (0.36): the trainer grid column count (persisted
+            # preference) is handed to the trainer window, and the
+            # header cycle control persists it back through the app.
             self.trainer_window = TrainerWindow(
                 self.root, engine, master_back=self._back_to_master,
-                detach_cb=self._detach_or_attach)
+                detach_cb=self._detach_or_attach,
+                columns=self.app.grid_columns,
+                on_columns_changed=self._set_trainer_grid_columns)
         except Exception as exc:
             # The engine is up but the trainer view could not be built:
             # close the engine again, restore the waiting view (torn
@@ -2534,6 +2577,16 @@ class MasterWindow:
         self._set_status("Auto-rescan: " + ("on" if enabled else "off")
                          + " (every "
                          + str(AUTO_RESCAN_INTERVAL_SECONDS) + " s)")
+
+    def _set_trainer_grid_columns(self, columns: int) -> None:
+        """MT-21 (0.36): the trainer header's "Columns: N" cycle changed
+        the grid column count; persist it through the app (named
+        refusal for a bogus value, which the window can only produce
+        by construction)."""
+        try:
+            self.app.set_grid_columns(columns)
+        except ValueError:
+            pass
 
     def _detach_or_attach(self):
         """The MT-12 header action: detach the live target, or (while

@@ -91,6 +91,14 @@ BTN_APPLY_W, BTN_FREEZE_W = 56, 56
 BTN_STEP_W, BTN_RESET_W = 48, 48
 ROW_HEIGHT_INFO = 48
 
+# MT-21 (0.36): multi-column trainer grid (Master Trainer only).  A grid
+# column never falls below the single-column floor of _check_width; the
+# gap between two adjacent columns is COLUMN_GAP.
+GRID_COLUMNS_MIN = 1
+MAX_GRID_COLUMNS = 3
+COLUMN_GAP = 12
+MIN_COLUMN_WIDTH = 320
+
 _ELLIPSIS = "…"
 _NARROW_CHARS = set("iIljft1.,:;!|()[]")
 
@@ -470,7 +478,24 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
         values = {}
     if not isinstance(values, dict):
         raise RowModelError("values must map entry ids to display text")
+    visible, children_of = _prepare_view(entries, view, search, snapshot)
+    return _emit_all(entries, visible, children_of, snapshot, width,
+                     x0=0, top_ids=None,
+                     expanded_values=expanded_values,
+                     collapsed_sections=collapsed_sections, values=values)
 
+
+def _prepare_view(entries: dict, view: str, search: str,
+                  snapshot: RowSnapshot) -> tuple[set, dict]:
+    """Width-independent view preparation (MT-21, 0.36).
+
+    The visible entry set (the view + search filter over the snapshot),
+    the parent -> child map and the moAlwaysHideChildren suppressed
+    subtree (CE display parity: the flagged parent's whole subtree never
+    renders as rows in any view).  Splitting build_rows into this step
+    and ``_emit_all`` lets the multi-column grid (build_grid) compute one
+    reference row list at the full width and re-emit per column.
+    """
     visible = {entry["id"] for entry in
                filter_entries(entries, view, search, snapshot.applied, snapshot.desired)}
     children_of: dict = {}
@@ -490,7 +515,25 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
             hidden.update(subtree)
     if hidden:
         visible -= hidden
+    return visible, children_of
 
+
+def _emit_all(entries: dict, visible: set, children_of: dict,
+              snapshot: RowSnapshot, width: int, *, x0: int = 0,
+              top_ids: set | None = None, expanded_values=frozenset(),
+              collapsed_sections=frozenset(),
+              values: dict | None = None) -> list:
+    """Emit the rows of one grid column (MT-21, 0.36 split).
+
+    ``width`` is the column width; ``x0`` the column's left edge in
+    row-area coordinates (every baked x coordinate is offset by x0);
+    ``top_ids`` keeps only the top-level (indent 0) units whose entry id
+    is in the set - their indented descendants always follow, so a
+    section never splits across columns.  With x0=0 and top_ids=None the
+    emission is byte-identical to the original single-column build_rows.
+    """
+    if values is None:
+        values = {}
     rows: list[Row] = []
     y = 0
 
@@ -498,12 +541,12 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
         nonlocal y
         has_toggle = entry.get("parent_activation") is not None
         on = entry["id"] in snapshot.parent_active
-        counter_right = width - GROUP_TOGGLE_W - RIGHT_MARGIN - SECTION_NAME_GAP \
-            if has_toggle else width - RIGHT_MARGIN
+        counter_right = x0 + width - GROUP_TOGGLE_W - RIGHT_MARGIN - SECTION_NAME_GAP \
+            if has_toggle else x0 + width - RIGHT_MARGIN
         # The section name starts after the 4 px accent bar + 12 px gap
         # (16 + indent), the 16 px chevron and an 8 px gap, i.e. at
         # 40 + indent; the sublabel repeats that origin one line down.
-        name_x = 16 + indent + SECTION_CHEVRON_W + SECTION_NAME_GAP
+        name_x = x0 + 16 + indent + SECTION_CHEVRON_W + SECTION_NAME_GAP
         name_max = counter_right - name_x
         sublabel_max = counter_right - name_x
         row = Row(
@@ -516,11 +559,11 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
                                     max(0, sublabel_max), size=11),
             counter=_section_counter(entries, children_of, entry["id"], snapshot.applied),
             expanded=expanded, group=True, group_toggle=has_toggle,
-            chevron=RowRect(16 + indent, y + 14, SECTION_CHEVRON_W, 20),
-            group_toggle_hit=(RowRect(width - RIGHT_MARGIN - GROUP_TOGGLE_W,
+            chevron=RowRect(x0 + 16 + indent, y + 14, SECTION_CHEVRON_W, 20),
+            group_toggle_hit=(RowRect(x0 + width - RIGHT_MARGIN - GROUP_TOGGLE_W,
                                       y + 4, GROUP_TOGGLE_W, GROUP_TOGGLE_H)
                               if has_toggle else None),
-            hit=RowRect(0, y, width, ROW_HEIGHT_SECTION),
+            hit=RowRect(x0, y, width, ROW_HEIGHT_SECTION),
         )
         rows.append(row)
         y += ROW_HEIGHT_SECTION
@@ -537,19 +580,21 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
             height = ROW_HEIGHT_VALUE_EXPANDED if identifier in expanded_values else ROW_HEIGHT_VALUE
             # Label: from x=16+indent (accent bar + gap) to the value area
             # (W-240) with a 12 px gap.
-            label_x = ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + indent
-            label_max = (width - VALUE_AREA_W) - 12 - label_x
-            value_rect = RowRect(width - RIGHT_MARGIN - VALUE_AREA_W, y, VALUE_AREA_W, height)
-            info = RowRect(width - RIGHT_MARGIN - INFO_CHIP, y + 28, INFO_CHIP, INFO_CHIP)
+            label_x = x0 + ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + indent
+            label_max = (x0 + width - VALUE_AREA_W) - 12 - label_x
+            value_rect = RowRect(x0 + width - RIGHT_MARGIN - VALUE_AREA_W, y,
+                                 VALUE_AREA_W, height)
+            info = RowRect(x0 + width - RIGHT_MARGIN - INFO_CHIP, y + 28,
+                           INFO_CHIP, INFO_CHIP)
             editor = None
             if identifier in expanded_values:
                 # line 2 of the expanded row: input + Apply + Freeze + + - + Reset
-                reset_x = width - RIGHT_MARGIN - BTN_RESET_W
+                reset_x = x0 + width - RIGHT_MARGIN - BTN_RESET_W
                 minus_x = reset_x - BTN_GAP - BTN_STEP_W
                 plus_x = minus_x - BTN_GAP - BTN_STEP_W
                 freeze_x = plus_x - BTN_GAP - BTN_FREEZE_W
                 apply_x = freeze_x - BTN_GAP - BTN_APPLY_W
-                input_x = RIGHT_MARGIN + indent
+                input_x = x0 + RIGHT_MARGIN + indent
                 editor = EditorRects(
                     input=RowRect(input_x, y + ROW_HEIGHT_VALUE + EDITOR_LINE_PAD,
                                   apply_x - BTN_GAP - input_x,
@@ -585,16 +630,17 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
                 value_area_hit=value_rect,
                 info_hit=info,
                 editor=editor,
-                hit=RowRect(0, y, width, height),
+                hit=RowRect(x0, y, width, height),
             ))
             y += height
             return
         # switch row
-        pill = RowRect(ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + indent, y + 20, PILL_W, PILL_H)
+        pill = RowRect(x0 + ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + indent, y + 20,
+                       PILL_W, PILL_H)
         # Label: from pill end (56+i) + 12 px gap to the status-chip right edge
         # (W-44); right-side zones: chip text, error dot (W-36..W-28),
         # info chip (W-24..W-8).
-        label_max = (width - 44) - 12 - (ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + PILL_W + LABEL_GAP_AFTER_PILL + indent)
+        label_max = (x0 + width - 44) - 12 - (x0 + ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + PILL_W + LABEL_GAP_AFTER_PILL + indent)
         rows.append(Row(
             kind=ROW_SWITCH, entry_id=identifier, y=y, height=ROW_HEIGHT_SWITCH,
             indent=indent, state=state, accent=STATE_ACCENT[state], tint=tint,
@@ -606,8 +652,9 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
             pill_on=identifier in snapshot.applied,
             error_dot=state == STATE_ERROR,
             pulsing=pulsing, confirmed=confirmed,
-            info_hit=RowRect(width - RIGHT_MARGIN - INFO_CHIP, y + 24, INFO_CHIP, INFO_CHIP),
-            hit=RowRect(0, y, width, ROW_HEIGHT_SWITCH),
+            info_hit=RowRect(x0 + width - RIGHT_MARGIN - INFO_CHIP, y + 24,
+                             INFO_CHIP, INFO_CHIP),
+            hit=RowRect(x0, y, width, ROW_HEIGHT_SWITCH),
         ))
         y += ROW_HEIGHT_SWITCH
 
@@ -615,15 +662,16 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
         nonlocal y
         identifier = entry["id"]
         # Label: from x=16+i to 8 px left of the info chip (W-24..W-8).
-        label_max = (width - INFO_CHIP - RIGHT_MARGIN - 8) - 12 - (ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + indent)
+        label_max = (x0 + width - INFO_CHIP - RIGHT_MARGIN - 8) - 12 - (x0 + ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + indent)
         rows.append(Row(
             kind=ROW_INFO, entry_id=identifier, y=y, height=ROW_HEIGHT_INFO,
             indent=indent, state=STATE_BLOCKED, accent=ACCENT_OFF, tint=TINT_BLOCKED,
             label=truncate_label(entry["label"], max(0, label_max), size=12),
             sublabel=truncate_label(entry.get("reason") or "Not included in this trainer",
                                     max(0, label_max), size=11),
-            info_hit=RowRect(width - RIGHT_MARGIN - INFO_CHIP, y + 16, INFO_CHIP, INFO_CHIP),
-            hit=RowRect(0, y, width, ROW_HEIGHT_INFO),
+            info_hit=RowRect(x0 + width - RIGHT_MARGIN - INFO_CHIP, y + 16,
+                             INFO_CHIP, INFO_CHIP),
+            hit=RowRect(x0, y, width, ROW_HEIGHT_INFO),
         ))
         y += ROW_HEIGHT_INFO
 
@@ -633,6 +681,12 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
             if entry.get("parent_id") != parent_id:
                 continue
             identifier = entry["id"]
+            # MT-21 (0.36): the top-level unit filter applies only to the
+            # top level; the indented descendants of a kept unit always
+            # follow it (a section never splits across grid columns).
+            if top_ids is not None and parent_id is None \
+                    and identifier not in top_ids:
+                continue
             if entry["kind"] == "heading" and children_of.get(identifier):
                 subtree_visible = any(
                     descendant in visible
@@ -654,6 +708,166 @@ def build_rows(entries: dict, view: str, search: str, snapshot: RowSnapshot,
 
     render_level(None, 0)
     return rows
+
+
+def effective_columns(width: int, requested: int) -> int:
+    """MT-21 (0.36): clamp the requested column count to what fits.
+
+    ``n`` columns need ``n * MIN_COLUMN_WIDTH + (n - 1) * COLUMN_GAP``
+    pixels; the result is the largest count of at most ``requested``
+    that still fits.  One column always fits by the width contract.
+    """
+    if type(width) is not int or width < MIN_COLUMN_WIDTH:
+        raise RowModelError(
+            "grid width must be an integer of at least "
+            + str(MIN_COLUMN_WIDTH) + " px")
+    if type(requested) is not int or not (
+            GRID_COLUMNS_MIN <= requested <= MAX_GRID_COLUMNS):
+        raise RowModelError(
+            "grid columns must be an integer in "
+            + str(GRID_COLUMNS_MIN) + ".." + str(MAX_GRID_COLUMNS)
+            + " (got " + repr(requested) + ")")
+    n = MAX_GRID_COLUMNS
+    while n > GRID_COLUMNS_MIN and (
+            n * MIN_COLUMN_WIDTH + (n - 1) * COLUMN_GAP) > width:
+        n -= 1
+    return min(requested, n)
+
+
+def column_layout(width: int, columns: int) -> tuple[list, list]:
+    """MT-21 (0.36): column widths and left edges for one grid.
+
+    The columns are equal width; any leftover pixel is distributed one
+    per leftmost column (deterministic).  ``columns == 1`` yields
+    ``([width], [0])`` so the single-column path is byte-stable.
+    """
+    if type(width) is not int or width < MIN_COLUMN_WIDTH:
+        raise RowModelError(
+            "grid width must be an integer of at least "
+            + str(MIN_COLUMN_WIDTH) + " px")
+    if type(columns) is not int or not (
+            GRID_COLUMNS_MIN <= columns <= MAX_GRID_COLUMNS):
+        raise RowModelError(
+            "grid columns must be an integer in "
+            + str(GRID_COLUMNS_MIN) + ".." + str(MAX_GRID_COLUMNS)
+            + " (got " + repr(columns) + ")")
+    if columns == GRID_COLUMNS_MIN:
+        return [width], [0]
+    usable = width - COLUMN_GAP * (columns - 1)
+    base, leftover = divmod(usable, columns)
+    col_ws: list = []
+    col_xs: list = []
+    x = 0
+    for c in range(columns):
+        w = base + (1 if c < leftover else 0)
+        col_ws.append(w)
+        col_xs.append(x)
+        x += w + COLUMN_GAP
+    return col_ws, col_xs
+
+
+def row_units(rows: list) -> list:
+    """MT-21 (0.36): split a flat, unpaged row list into top-level units.
+
+    A unit is one row with ``indent == 0`` plus all following indented
+    rows until the next top-level row, so a section with its children
+    never splits across grid columns.
+    """
+    if not isinstance(rows, list):
+        raise RowModelError("rows must be a list")
+    units: list = []
+    current: list | None = None
+    for row in rows:
+        if row.indent == 0:
+            current = [row]
+            units.append(current)
+        else:
+            if current is None:
+                raise RowModelError("indented row without a top-level unit")
+            current.append(row)
+    return units
+
+
+def flow_units(unit_heights: list, columns: int) -> list:
+    """MT-21 (0.36): shortest-column-first unit flow.
+
+    Each unit (addressed by its index in ``unit_heights``) goes to the
+    column with the smallest accumulated height so far; ties go to the
+    lower column index.  Returns the unit-index list per column,
+    preserving the input order within a column.
+    """
+    if not isinstance(unit_heights, list):
+        raise RowModelError("unit heights must be a list")
+    if type(columns) is not int or not (
+            GRID_COLUMNS_MIN <= columns <= MAX_GRID_COLUMNS):
+        raise RowModelError(
+            "grid columns must be an integer in "
+            + str(GRID_COLUMNS_MIN) + ".." + str(MAX_GRID_COLUMNS)
+            + " (got " + repr(columns) + ")")
+    assigned: list = [[] for _ in range(columns)]
+    heights = [0] * columns
+    for index, height in enumerate(unit_heights):
+        column = min(range(columns), key=lambda c: (heights[c], c))
+        assigned[column].append(index)
+        heights[column] += height
+    return assigned
+
+
+def build_grid(entries: dict, view: str, search: str, snapshot: RowSnapshot,
+               width: int, *, columns: int,
+               expanded_values=frozenset(), collapsed_sections=frozenset(),
+               values: dict | None = None) -> list:
+    """MT-21 (0.36): the multi-column row grid.
+
+    Returns the per-column row lists (length == the effective column
+    count).  With ``columns == 1`` this returns ``[build_rows(...)]``,
+    byte-stable against the single-column model.  For more columns: the
+    reference rows are emitted at the full width, split into top-level
+    units (row_units) - unit heights are width-independent constants -
+    flowed shortest-column-first (flow_units), and each column is
+    re-emitted at its own width with its x offset baked into every row
+    rectangle (column_layout).  Column x offsets: a unit and all of its
+    indented children stay in one column; the renderer derives its
+    right-anchored positions from ``row.hit`` (x0 already baked in).
+    """
+    if type(columns) is not int or not (
+            GRID_COLUMNS_MIN <= columns <= MAX_GRID_COLUMNS):
+        raise RowModelError(
+            "grid columns must be an integer in "
+            + str(GRID_COLUMNS_MIN) + ".." + str(MAX_GRID_COLUMNS)
+            + " (got " + repr(columns) + ")")
+    columns = effective_columns(width, columns)
+    if columns == GRID_COLUMNS_MIN:
+        return [build_rows(entries, view, search, snapshot, width,
+                           expanded_values=expanded_values,
+                           collapsed_sections=collapsed_sections,
+                           values=values)]
+    _check_width(width)
+    if not isinstance(expanded_values, frozenset):
+        raise RowModelError("expanded_values must be a frozenset of ids")
+    if not isinstance(collapsed_sections, frozenset):
+        raise RowModelError("collapsed_sections must be a frozenset of ids")
+    if values is None:
+        values = {}
+    if not isinstance(values, dict):
+        raise RowModelError("values must map entry ids to display text")
+    visible, children_of = _prepare_view(entries, view, search, snapshot)
+    reference = _emit_all(entries, visible, children_of, snapshot, width,
+                          expanded_values=expanded_values,
+                          collapsed_sections=collapsed_sections,
+                          values=values)
+    units = row_units(reference)
+    heights = [sum(row.height for row in unit) for unit in units]
+    flow = flow_units(heights, columns)
+    col_ws, col_xs = column_layout(width, columns)
+    return [
+        _emit_all(entries, visible, children_of, snapshot, col_ws[c],
+                  x0=col_xs[c],
+                  top_ids={units[i][0].entry_id for i in flow[c]},
+                  expanded_values=expanded_values,
+                  collapsed_sections=collapsed_sections, values=values)
+        for c in range(columns)
+    ]
 
 
 def _subtree_ids(children_of: dict, heading_id: int) -> set:

@@ -49,7 +49,8 @@ from .ui_rows import (ACCENT_BAR_WIDTH, ACCENT_ERROR, ACCENT_OFF, ACCENT_ON,
                       LABEL_GAP_AFTER_PILL, PILL_GAP_AFTER_BAR, PILL_H, PILL_W,
                       ROW_HEIGHT_SECTION, SECTION_CHEVRON_W, SECTION_NAME_GAP,
                       STATE_BLOCKED, STATE_ON, STATE_STAGED, TEXT_DIM,
-                      RowSnapshot, build_rows, find_row, slice_pages,
+                      RowSnapshot, build_grid, build_rows, column_layout,
+                      effective_columns, find_row, slice_pages,
                       try_again_available)
 from .ui_script_view import entry_assessment, row_details, script_preview
 from .trainer_sounds import play_sound
@@ -91,7 +92,9 @@ class TrainerWindow:
 
     def __init__(self, root: tk.Tk, engine: TrainerEngine,
                  master_back: Callable[[], None] | None = None,
-                 detach_cb: Callable[[], None] | None = None):
+                 detach_cb: Callable[[], None] | None = None,
+                 columns: int = 1,
+                 on_columns_changed: Callable[[int], None] | None = None):
         self.root, self.engine = root, engine
         # MT-4 (Master Trainer): optional "back to the Master wait mode"
         # callback.  None keeps the standalone trainer exactly as before
@@ -104,6 +107,17 @@ class TrainerWindow:
         # keeps the label in sync).
         self.detach_cb = detach_cb
         self.detach_btn: tk.Button | None = None
+        # MT-21 (Master Trainer, 0.36): the trainer grid column count
+        # (1 / 2 / 3) and the optional persistence callback.  The Master
+        # passes both (persisted preference + the header cycle control);
+        # the standalone trainer keeps the single-column layout and no
+        # column control in its header.
+        if type(columns) is not int or columns not in (1, 2, 3):
+            raise ValueError("grid columns must be 1, 2 or 3 (got "
+                             + repr(columns) + ")")
+        self.columns = columns
+        self.on_columns_changed = on_columns_changed
+        self.columns_btn: tk.Button | None = None
         self.view = "Switches"
         self.page = 0
         self.drafts = {i: tk.StringVar(value=str(entry.get("value_default") or entry.get("default_value") or ""))
@@ -117,7 +131,14 @@ class TrainerWindow:
         self._value_texts: dict = {}          # id -> current display text
         self._rows: list = []
         self._pages: list = []
-        self._page_offset = 0
+        # MT-21 (0.36): per-column row-grid state (a single column for
+        # the standalone trainer): every column's full row list, the
+        # column x offsets / widths of the last render, and the first
+        # row y of each column's current page (the render offset).
+        self._col_rows: list = []
+        self._col_xs: list = []
+        self._col_ws: list = []
+        self._page_offsets: list = []
         self._embedded: list = []             # widgets embedded in the canvas
         self._drag_anchor: int | None = None
         self._longpress_job: int | None = None
@@ -200,6 +221,17 @@ class TrainerWindow:
             self.detach_btn = self._button(self.header, "Detach",
                                            self.detach_cb, width=10)
             self.detach_btn.pack(side="right")
+        # MT-21 (Master Trainer, 0.36): the grid column count cycle
+        # control ("Columns: 1/2/3").  Present only when the Master
+        # passes its handler; the standalone trainer header stays
+        # byte-identical.  The label mirrors the requested column count;
+        # narrow windows render fewer columns than requested
+        # (ui_rows.effective_columns).
+        if self.on_columns_changed is not None:
+            self.columns_btn = self._button(
+                self.header, "Columns: " + str(self.columns),
+                self._cycle_columns, width=11)
+            self.columns_btn.pack(side="right")
 
     def _chip(self, parent, name):
         return self._button(parent, name, lambda: self.set_view(name),
@@ -306,6 +338,23 @@ class TrainerWindow:
         self.page = 0
         self.render()
 
+    def _cycle_columns(self):
+        """MT-21 (0.36): cycle the trainer grid 1 -> 2 -> 3 -> 1.
+
+        The requested count is handed to the Master persistence
+        callback (if any) and the view re-renders immediately.  A
+        window too narrow for the request renders fewer columns
+        (effective_columns) while the label keeps showing the
+        requested mode.
+        """
+        next_columns = self.columns % 3 + 1
+        self.columns = next_columns
+        if self.columns_btn is not None:
+            self.columns_btn.configure(text="Columns: " + str(next_columns))
+        if self.on_columns_changed is not None:
+            self.on_columns_changed(next_columns)
+        self.render()
+
     # -- engine state snapshot for the pure row model -------------------------
 
     def _snapshot(self) -> RowSnapshot:
@@ -366,36 +415,63 @@ class TrainerWindow:
             width = 320
         area = self.canvas.winfo_height()
         snapshot = self._snapshot()
-        rows = build_rows(self.engine.entries, self.view, self._search_text.get(),
-                          snapshot, width,
+        # MT-21 (0.36): the multi-column trainer grid.  ``self.columns``
+        # is the persisted (requested) count; a narrow window renders
+        # fewer columns than requested (effective_columns).  With one
+        # column the whole pipeline is byte-stable against the
+        # pre-0.36 single-column renderer.
+        columns = effective_columns(width, self.columns)
+        col_ws, col_xs = column_layout(width, columns)
+        grid = build_grid(self.engine.entries, self.view,
+                          self._search_text.get(), snapshot, width,
+                          columns=columns,
                           expanded_values=self.expanded_values,
                           collapsed_sections=self.collapsed_sections,
                           values=self._value_texts)
-        pages = slice_pages(rows, area)
-        self._rows, self._pages = rows, pages
+        self._col_rows = grid
+        self._col_ws = list(col_ws)
+        self._col_xs = list(col_xs)
+        # Per-column paging (the existing slice_pages floor rule); the
+        # page count is the max across the columns - shorter columns
+        # draw nothing on the later pages.
+        col_pages = [slice_pages(col_rows, area) for col_rows in grid]
+        n_pages = max((len(pages) for pages in col_pages), default=0)
+        self._pages = [
+            [col_pages[c][p] if p < len(col_pages[c]) else []
+             for c in range(len(col_pages))]
+            for p in range(n_pages)
+        ]
+        self._rows = [row for col_rows in grid for row in col_rows]
         self._mark_chips()
-        if not rows:
-            self._page_offset = 0
+        if not self._rows:
+            self._page_offsets = []
             self.page = 0
             self._page_text.set("Page 1 / 1")
             self.canvas.create_text(width / 2, 24,
                                     text="No entries match this view or search.",
                                     fill=FG_DIM, font=("Segoe UI", 12))
             return
-        if self.page >= len(pages):
-            self.page = len(pages) - 1
+        if self.page >= len(self._pages):
+            self.page = len(self._pages) - 1
         self.page = max(0, self.page)
-        visible = pages[self.page]
-        self._page_offset = visible[0].y
-        for row in visible:
-            self._draw_row(row, width, self._page_offset)
-        self._page_text.set(f"Page {self.page + 1} / {len(pages)}")
+        visible = self._pages[self.page]
+        self._page_offsets = [rows[0].y if rows else 0 for rows in visible]
+        for col_rows, offset in zip(visible, self._page_offsets):
+            for row in col_rows:
+                self._draw_row(row, offset)
+        self._page_text.set(f"Page {self.page + 1} / {len(self._pages)}")
 
-    def _draw_row(self, row, width, offset):
+    def _draw_row(self, row, offset):
+        # MT-21 (0.36): right-anchored positions are derived from the
+        # row's hit rectangle (the column x offset is baked in) instead
+        # of the canvas width, so multi-column grids render correctly;
+        # for the single column (x0 = 0, w = canvas width) this is
+        # byte-identical to the pre-0.36 renderer.
         canvas = self.canvas
-        canvas.create_rectangle(0, row.y - offset, width, row.y + row.height - offset,
+        x0, w = row.hit.x, row.hit.w
+        canvas.create_rectangle(x0, row.y - offset, x0 + w, row.y + row.height - offset,
                                 fill=row.tint, outline="")
-        canvas.create_rectangle(0, row.y - offset, ACCENT_BAR_WIDTH,
+        canvas.create_rectangle(x0, row.y - offset, x0 + ACCENT_BAR_WIDTH,
                                 row.y + row.height - offset, fill=row.accent, outline="")
         if row.kind == "section":
             self._draw_section(row, offset)
@@ -404,16 +480,16 @@ class TrainerWindow:
         else:
             self._draw_value(row, offset)
         if row.chip:
-            canvas.create_text(width - 44, row.y + row.height / 2 - offset,
+            canvas.create_text(x0 + w - 44, row.y + row.height / 2 - offset,
                                anchor="e", text=row.chip, fill=TEXT_DIM,
                                font=("Segoe UI", 11))
         if row.error_dot:
-            canvas.create_oval(width - 36, row.y + 16 - offset, width - 28,
+            canvas.create_oval(x0 + w - 36, row.y + 16 - offset, x0 + w - 28,
                                row.y + 24 - offset, fill=ACCENT_ERROR, outline="")
         if row.info_hit is not None:
             self._draw_info_chip(row.info_hit.x, row.info_hit.y - offset)
         if row.confirmed:
-            canvas.create_text(width - 10, row.y + 8 - offset, anchor="ne",
+            canvas.create_text(x0 + w - 10, row.y + 8 - offset, anchor="ne",
                                text="OK", fill=ACCENT_ON,
                                font=("Segoe UI", 11, "bold"))
 
@@ -436,7 +512,7 @@ class TrainerWindow:
             knob_x = track.x + 4 if not row.pill_on else track.x + PILL_W - knob - 4
             canvas.create_oval(knob_x, track_y + 4, knob_x + knob, track_y + knob + 4,
                                fill=FG if row.pill_on else FG_DIM, outline="")
-        label_x = ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + PILL_W + LABEL_GAP_AFTER_PILL + row.indent
+        label_x = row.hit.x + ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + PILL_W + LABEL_GAP_AFTER_PILL + row.indent
         canvas.create_text(label_x, row.y + 18 - offset, anchor="w", text=row.label,
                            fill=FG, font=("Segoe UI", 12))
         if row.sublabel:
@@ -445,7 +521,7 @@ class TrainerWindow:
 
     def _draw_value(self, row, offset):
         canvas = self.canvas
-        label_x = ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + row.indent
+        label_x = row.hit.x + ACCENT_BAR_WIDTH + PILL_GAP_AFTER_BAR + row.indent
         canvas.create_text(label_x, row.y + 18 - offset, anchor="w", text=row.label,
                            fill=FG, font=("Segoe UI", 12))
         if row.sublabel:
@@ -459,13 +535,13 @@ class TrainerWindow:
 
     def _draw_value_line(self, row, offset, expanded: bool):
         canvas = self.canvas
-        width = self.canvas.winfo_width() or self.root.winfo_width()
-        canvas.create_text(width - 8, row.y + (18 if expanded else 22) - offset,
+        right = row.hit.x + row.hit.w
+        canvas.create_text(right - 8, row.y + (18 if expanded else 22) - offset,
                            anchor="e", text=row.value_text,
                            fill=TEXT_DIM if expanded else FG, font=("Consolas", 12))
         if row.frozen_badge:
             badge_y = row.y + (12 if expanded else 34) - offset
-            canvas.create_rectangle(width - 8 - 14, badge_y, width - 8 - 4,
+            canvas.create_rectangle(right - 8 - 14, badge_y, right - 8 - 4,
                                     badge_y + 10, fill=BADGE_FROZEN, outline="")
 
     def _draw_editor(self, row, offset):
@@ -523,7 +599,7 @@ class TrainerWindow:
                            chevron.y + chevron.h / 2 - offset,
                            text="▾" if row.expanded else "▸", fill=TEXT_DIM,
                            font=("Segoe UI", 12))
-        name_x = 16 + row.indent + SECTION_CHEVRON_W + SECTION_NAME_GAP
+        name_x = row.hit.x + 16 + row.indent + SECTION_CHEVRON_W + SECTION_NAME_GAP
         if row.sublabel:
             canvas.create_text(name_x, row.y + 16 - offset, anchor="w", text=row.label,
                                fill=FG, font=("Segoe UI", 13, "bold"))
@@ -532,8 +608,8 @@ class TrainerWindow:
         else:
             canvas.create_text(name_x, row.y + ROW_HEIGHT_SECTION / 2 - offset, anchor="w",
                                text=row.label, fill=FG, font=("Segoe UI", 13, "bold"))
-        width = self.canvas.winfo_width() or self.root.winfo_width()
-        counter_x = width - 8 - (GROUP_TOGGLE_W + 8 if row.group_toggle else 0)
+        counter_x = row.hit.x + row.hit.w - 8 \
+            - (GROUP_TOGGLE_W + 8 if row.group_toggle else 0)
         if row.counter:
             canvas.create_text(counter_x, row.y + ROW_HEIGHT_SECTION / 2 - offset,
                                anchor="e", text=row.counter, fill=TEXT_DIM,
@@ -552,10 +628,22 @@ class TrainerWindow:
 
     # -- touch input (D8): tap, long-press, drag paging -------------------------
 
+    def _column_at(self, x):
+        """MT-21 (0.36): the grid column containing row-area x (or None)."""
+        for c, cx in enumerate(self._col_xs):
+            if cx <= x < cx + self._col_ws[c]:
+                return c
+        return None
+
     def _row_at(self, x, y):
-        if not self._rows:
+        # MT-21 (0.36): pick the column by x, then the row by y inside
+        # that column (each column has its own page offset).
+        if not self._col_rows:
             return None
-        return find_row(self._rows, y + self._page_offset)
+        column = self._column_at(x)
+        if column is None or not self._col_rows[column]:
+            return None
+        return find_row(self._col_rows[column], y + self._page_offsets[column])
 
     def on_press(self, event):
         self._drag_anchor = event.y
@@ -1005,20 +1093,23 @@ class TrainerWindow:
         if not self._pages or self.page >= len(self._pages):
             return
         changed = False
-        for row in self._pages[self.page]:
-            if row.kind != "value" or row.state == STATE_BLOCKED:
-                continue
-            entry = self.engine.entries.get(row.entry_id)
-            if entry is None:
-                continue
-            staged_pending = staged_card_state(entry, self.engine.applied) == STAGED_PENDING
-            try:
-                text = self.engine.read_value(row.entry_id)
-            except Exception:
-                text = "unavailable (provider inactive)" if staged_pending else "unavailable"
-            if self._value_texts.get(row.entry_id) != text:
-                self._value_texts[row.entry_id] = text
-                changed = True
+        # MT-21 (0.36): value rows live in per-column page slices.
+        for col_rows in self._pages[self.page]:
+            for row in col_rows:
+                if row.kind != "value" or row.state == STATE_BLOCKED:
+                    continue
+                entry = self.engine.entries.get(row.entry_id)
+                if entry is None:
+                    continue
+                staged_pending = staged_card_state(entry, self.engine.applied) == STAGED_PENDING
+                try:
+                    text = self.engine.read_value(row.entry_id)
+                except Exception:
+                    text = ("unavailable (provider inactive)"
+                            if staged_pending else "unavailable")
+                if self._value_texts.get(row.entry_id) != text:
+                    self._value_texts[row.entry_id] = text
+                    changed = True
         if changed:
             self.render()
 

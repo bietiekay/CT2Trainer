@@ -494,9 +494,13 @@ class MasterWindowTests(unittest.TestCase):
                 patch("ct2trainer.native.master_trainer.master_ui.TrainerWindow") as window_cls:
             window._poll()
         engine = engine_cls.return_value
+        # MT-21 (0.36): the handoff carries the persisted grid column
+        # count and the header cycle callback.
         window_cls.assert_called_once_with(
             self.root, engine, master_back=window._back_to_master,
-            detach_cb=window._detach_or_attach)
+            detach_cb=window._detach_or_attach,
+            columns=app.grid_columns,
+            on_columns_changed=window._set_trainer_grid_columns)
         self.assertIs(window.engine, engine)
         self.assertIsNotNone(window.trainer_window)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
@@ -572,9 +576,13 @@ class MasterWindowTests(unittest.TestCase):
         self.assertIsNone(window._picker)
         self.assertIsNone(window._picker_selection)
         engine = engine_cls.return_value
+        # MT-21 (0.36): the handoff carries the persisted grid column
+        # count and the header cycle callback.
         window_cls.assert_called_once_with(
             self.root, engine, master_back=window._back_to_master,
-            detach_cb=window._detach_or_attach)
+            detach_cb=window._detach_or_attach,
+            columns=app.grid_columns,
+            on_columns_changed=window._set_trainer_grid_columns)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
         self.assertIs(window.engine, engine)
 
@@ -770,9 +778,13 @@ class TrainerHandoffTests(unittest.TestCase):
                               StaleStateRecoverable)
         self.assertIs(window.engine, engine)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
+        # MT-21 (0.36): the handoff carries the persisted grid column
+        # count and the header cycle callback.
         window_cls.assert_called_once_with(
             self.root, engine, master_back=window._back_to_master,
-            detach_cb=window._detach_or_attach)
+            detach_cb=window._detach_or_attach,
+            columns=app.grid_columns,
+            on_columns_changed=window._set_trainer_grid_columns)
         box.showerror.assert_not_called()
 
     def test_recovery_artifacts_declined_fails_start(self):
@@ -798,9 +810,13 @@ class TrainerHandoffTests(unittest.TestCase):
                               StaleArtifactsRecoverable)
         self.assertIs(window.engine, engine)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
+        # MT-21 (0.36): the handoff carries the persisted grid column
+        # count and the header cycle callback.
         window_cls.assert_called_once_with(
             self.root, engine, master_back=window._back_to_master,
-            detach_cb=window._detach_or_attach)
+            detach_cb=window._detach_or_attach,
+            columns=app.grid_columns,
+            on_columns_changed=window._set_trainer_grid_columns)
         self.assertIn("unfinished receipts", str(box.askyesno.call_args))
 
     def test_recovery_failure_shows_error_and_fails_start(self):
