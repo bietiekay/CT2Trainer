@@ -486,6 +486,106 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- 0.36 Master Trainer multi-column trainer grid (MT-21)
+  (2026-11-09, root-direct on `main`; online-evaluated in
+  `master_trainer/ROADMAP.md`, the "0.36 multi-column trainer grid"
+  section - WeMod's cheat list layout: the official WeMod community
+  thread "UI customization"
+  (community.wemod.com/t/ui-customization/371434, 2025-09-11)
+  records the staff-confirmed behavior - "The cheat list collapses
+  to a single column under a certain size so nothing is hidden.
+  There are also minimum width constraints to prevent it from ever
+  being hidden" - a multi-column cheat list with the clamped
+  single-column collapse and a per-column width floor, the exact
+  multi-screen / multi-monitor use case the thread is about; the
+  2025-09-22 follow-up in the same thread (trainer options "highly
+  compacted ... unreadable" on a portrait / narrow display)
+  corroborates the width-floor requirement).
+  MT-21: the trainer row grid can run in up to three side-by-side
+  columns. The requested column count (1 / 2 / 3, default 1)
+  persists in the master state (master-settings.json schema 8 -> 9,
+  `grid_columns`; strict int validation in 1..3; a schema-8
+  document carrying the field is refused as an unknown field;
+  schema-1..8 documents promote with the documented default 1) and
+  is handed to the trainer window on table load. The trainer header
+  gains the **"Columns: N"** cycle button (master only - the
+  standalone trainer header stays byte-identical and always renders
+  the single column): 1 -> 2 -> 3 -> 1, immediate re-render, the
+  requested count persisted through the callback on every change.
+  The pure grid layer lives in `ui_rows.py`: `build_grid`
+  (per-column row lists; `columns == 1` byte-stable against
+  `build_rows`; otherwise the reference rows are emitted at the
+  full width, split into top-level units (`row_units` - a section
+  with its children never splits across columns; an indented row
+  without a top-level unit is a named refusal), the
+  width-independent unit heights flow shortest-column-first
+  (`flow_units`, ties to the lower column index) and each column is
+  re-emitted at its own width with the column x0 baked into every
+  row rectangle (`column_layout` - equal widths, the leftover
+  pixels to the leftmost columns; the columns always fill the width
+  exactly)); `effective_columns` clamps the requested count to what
+  fits (two columns need 652 px, three need 984 px; a column never
+  falls below the 320 px floor). `ui.py`:
+  `TrainerWindow(..., columns=1, on_columns_changed=None)` with
+  named kwarg validation; per-column pagination and per-column
+  hit-testing (x picks the column, y the row inside that column
+  with its own page offset); the right-anchored renderer positions
+  derive from the baked `row.hit` rectangles. `master_ui.py`: the
+  app loads / persists the preference and the handoff carries
+  `columns` + the cycle callback (the named app-level refusal is
+  swallowed by the window handler - the window can only produce 1 /
+  2 / 3 by construction). The standalone trainer is untouched
+  beyond the new default-valued constructor arguments. Zero
+  load-path effect - the MT-9 gate re-checks the table
+  independently at load time. Remaining candidates (updated): the
+  game launch integration (needs install-path data; out of scope
+  for the read-only table model). +55 tests
+  (`tests/test_native_ui_grid.py` 37 - the pure grid layer:
+  effective_columns thresholds, column_layout incl. the leftover
+  distribution + the exact-fit cases + the width-fill invariant,
+  row_units (split at indent 0, coverage, the orphan refusal),
+  flow_units determinism (shortest-column-first, ties, the
+  section-unit integrity), build_grid byte-stability vs build_rows
+  / every-row-exactly-once / section integrity / deterministic flow
+  / column geometry / x0 baking / expanded value / value text /
+  search / no-match / hidden-children / height constants / kwarg
+  refusals; `tests/test_native_master_ui_mt21.py` 14 - the app
+  default on a fresh state home, the persisted restore, the
+  immediate persistence, the named app-level refusals (0 / 4 / '2'
+  / True / None / [2], state + document untouched), the schema-8
+  document promotion via a hand-written checksum-bound document,
+  the handoff columns + callback, the window handler persistence,
+  the handler refusal swallow, the columns kwarg default +
+  validation, the header button present only when wired
+  (standalone byte-identical), the cycle label + notify 1 -> 2 ->
+  3 -> 1, the 2-column render + per-column hit test (incl. the
+  column gap), the narrow-window clamp 700 -> 2 / 320 -> 1, the
+  standalone always-one-column invariant; the grid tests in
+  `tests/test_native_master_state.py` 4 - the schema-9 document
+  round-trip, the grid_columns validation, the schema-8 promotion,
+  the schema-8-with-field refusal) + the baseline handoff
+  assertion updates in `tests/test_native_master_ui.py` (4); full
+  main suite 4,665 OK / 30 expected skips (4,610 from the 0.35
+  content + 55 new); catalog remeasure
+  `blocked-catalog-036-grid` (3-chunk deep-equal audit over the 151
+  reference tables, 2026-11-09): 151/151 loaded, 0 load errors,
+  117,809 total / 116,756 supported / 60,161 staged / 103,607
+  actionable / 12,974 headings / 1,053 blocked - **zero delta** vs
+  `blocked-catalog-035-notes` (per-table count/reason/sha changes:
+  0); feature matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION 0.36 +
+  CHANGELOG entry in the same change. The 0.36 build
+  `native-20261109T114726Z-15c3d9ab` cut from `main` @ `d071884`
+  (2026-11-09): in-build suite 4,665 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.36-source.zip` sha256
+  `79464f02cd71492763656ca0ff3283a240c3579b9f52df3bcc18857dabb3d1be`
+  (14,490,858 bytes), portable ZIP
+  `CT2Trainer-0.36-windows-portable.zip` sha256
+  `089fc92b0c5758ba758fdc88bb92e11d8e3b3e36c28d04231f27b3eeaecceac0`
+  (49,751,886 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `07ebef319b55d686c4f76cdb6f07440a2b4934fc8943f9f72b402d62c4c49fe8`,
+  17,006,463 bytes, ships next to the converter).
 - 0.35 Master Trainer per-table notes / tags (MT-27)
   (2026-11-09, root-direct on `main`; online-evaluated in
   `master_trainer/ROADMAP.md`, the "0.35 per-table notes / tags"

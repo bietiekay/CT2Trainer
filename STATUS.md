@@ -1,6 +1,27 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-09. **0.35 released** (build
+**Updated:** 2026-11-09. **0.36 released** (build
+`native-20261109T114726Z-15c3d9ab`, cut from `main` @ `d071884`,
+2026-11-09) - Master Trainer multi-column
+trainer grid MT-21 (the trainer row grid can run in up to three
+side-by-side columns - the requested column count (1 / 2 / 3,
+default 1) persists in the master state (master-settings.json
+schema 8 -> 9, `grid_columns`) and is handed to the trainer window
+on table load; the trainer header gains the "Columns: N" cycle
+button (master only - the standalone trainer header stays
+byte-identical and always renders the single column); a narrow
+window renders fewer columns than requested (two columns need 652
+px, three need 984 px, a column never falls below the 320 px
+floor); a section with its children never splits across columns;
+the pure grid layer in `ui_rows.py` (`build_grid` /
+`effective_columns` / `column_layout` / `row_units` / `flow_units`,
+`columns == 1` byte-stable against `build_rows`); per-column
+pagination and per-column hit-testing (x picks the column, y the
+row inside that column); +55 tests; full main suite 4,665 OK / 30
+expected skips; in-build suite 4,665 OK / 30 expected skips,
+`ce_inputs: []`; catalog zero delta
+`blocked-catalog-036-grid`; see the 0.36 section below.
+Superseded 0.35 (build
 `native-20261109T054146Z-c5f18494`, cut from `main` @ `65d8fbe`,
 2026-11-09) - Master Trainer per-table
 notes / tags MT-27 (the waiting view gains the Note column - the
@@ -156,10 +177,26 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.35, build
-`native-20261109T054146Z-c5f18494` (cut from `main` @ `65d8fbe`,
-2026-11-09): the 0.35 Master Trainer per-table notes / tags
-release (MT-27) - in-build suite 4,610 OK / 30 expected
+**Latest verified release:** 0.36, build
+`native-20261109T114726Z-15c3d9ab` (cut from `main` @ `d071884`,
+2026-11-09): the 0.36 Master Trainer multi-column trainer grid
+release (MT-21) - in-build suite 4,665 OK / 30 expected
+skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; source ZIP `CT2Trainer-0.36-source.zip` sha256
+`79464f02cd71492763656ca0ff3283a240c3579b9f52df3bcc18857dabb3d1be`
+(14,490,858 bytes) - carries the MT-21 multi-column trainer grid
+(`ui_rows.py` grid pure layer + `master_state.py` schema 9,
+`tests/test_native_ui_grid.py` +
+`tests/test_native_master_ui_mt21.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.36-windows-portable.zip` sha256
+`089fc92b0c5758ba758fdc88bb92e11d8e3b3e36c28d04231f27b3eeaecceac0`
+(49,751,886 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`07ebef319b55d686c4f76cdb6f07440a2b4934fc8943f9f72b402d62c4c49fe8`,
+17,006,463 bytes) ships next to the converter). Superseded 0.35,
+build `native-20261109T054146Z-c5f18494` (cut from `main` @
+`65d8fbe`, 2026-11-09): the 0.35 Master Trainer per-table notes /
+tags release (MT-27) - in-build suite 4,610 OK / 30 expected
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
 gate; source ZIP `CT2Trainer-0.35-source.zip` sha256
 `575ee8ad6f0864bd8ff39f3ae547bb629d5c128938cff792e9c4fb7362fbcdac`
@@ -652,6 +689,96 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.36 released (build `native-20261109T114726Z-15c3d9ab`, cut from
+`main` @ `d071884`, 2026-11-09): Master Trainer multi-column
+trainer grid (MT-21).**
+The 0.36 feature was evaluated against online trainer front-end
+cheat-list layout patterns (WeMod's cheat list: the official WeMod
+community thread "UI customization"
+(community.wemod.com/t/ui-customization/371434, 2025-09-11)
+records the staff-confirmed behavior - "The cheat list collapses
+to a single column under a certain size so nothing is hidden.
+There are also minimum width constraints to prevent it from ever
+being hidden" - i.e. a multi-column cheat list with the clamped
+single-column collapse and a per-column width floor, the exact
+multi-screen / multi-monitor use case the thread is about; the
+2025-09-22 follow-up in the same thread (trainer options
+"highly compacted ... unreadable" on a portrait / narrow display)
+corroborates the width-floor requirement; see the Master Trainer
+ROADMAP "0.36 multi-column trainer grid" section). Adopted: MT-21,
+the multi-column trainer grid. Remaining candidates (updated): the
+game launch integration (needs install-path data; out of scope
+for the read-only table model).
+- **MT-21 multi-column trainer grid:** the trainer row grid can
+  run in up to three side-by-side columns. The requested column
+  count (1 / 2 / 3, default 1) persists in the master state
+  (master-settings.json schema 8 -> 9, `grid_columns`; strict int
+  validation in 1..3; a schema-8 document carrying the field is
+  refused as an unknown field; schema-1..8 documents promote with
+  the documented default 1) and is handed to the trainer window on
+  table load. The trainer header gains the **"Columns: N"** cycle
+  button (master only - the standalone trainer header stays
+  byte-identical and always renders the single column): 1 -> 2 ->
+  3 -> 1, immediate re-render, the requested count persisted
+  through the callback on every change. The pure grid layer lives
+  in `ui_rows.py`: `build_grid` (per-column row lists;
+  `columns == 1` byte-stable against `build_rows`; otherwise the
+  reference rows are emitted at the full width, split into
+  top-level units (`row_units` - a section with its children never
+  splits across columns), the width-independent unit heights flow
+  shortest-column-first (`flow_units`, ties to the lower column
+  index) and each column is re-emitted at its own width with the
+  column x0 baked into every row rectangle (`column_layout`, equal
+  widths, the leftover pixels to the leftmost columns));
+  `effective_columns` clamps the requested count to what fits
+  (two columns need 652 px, three need 984 px; a column never
+  falls below the 320 px floor). The renderer carries per-column
+  pagination and per-column hit-testing (x picks the column, y the
+  row inside that column with its own page offset); the
+  right-anchored positions derive from the baked `row.hit`
+  rectangles. The standalone trainer is untouched beyond the new
+  default-valued constructor arguments. Zero load-path effect -
+  the MT-9 gate re-checks the table independently at load time.
+- +55 tests (`tests/test_native_ui_grid.py` 37 - the pure grid
+  layer: effective_columns thresholds, column_layout incl. the
+  leftover distribution, row_units, flow_units determinism,
+  build_grid byte-stability / section integrity / geometry /
+  clamp / hidden-children; `tests/test_native_master_ui_mt21.py`
+  14 - the app default / persistence / refusals / schema-8
+  promotion, the handoff columns + callback, the handler
+  persistence + refusal swallow, the columns kwarg validation,
+  the header button wiring-only, the cycle label + notify, the
+  2-column render + per-column hit test, the narrow clamp, the
+  standalone 1-column invariant; the grid tests in
+  `tests/test_native_master_state.py` 4) + the baseline handoff
+  assertion updates in `tests/test_native_master_ui.py` (4); full
+  main suite 4,665 OK / 30 expected skips (4,610 from the 0.35
+  content + 55 new); catalog zero delta
+  `blocked-catalog-036-grid` (3-chunk deep-equal audit over the
+  151 reference tables, 2026-11-09): 151/151 loaded, 0 load
+  errors, 117,809 total / 116,756 supported / 60,161 staged /
+  103,607 actionable / 12,974 headings / 1,053 blocked - **zero
+  delta** vs `blocked-catalog-035-notes` (per-table
+  count/reason/sha changes: 0); feature matrix unchanged (42/42,
+  7,475/7,475 over `w4b4-case30-20261020081722Z`); AP-11 0/6,143.
+  VERSION bumped to 0.36 with the changelog entry in the same
+  change. The 0.36 build `native-20261109T114726Z-15c3d9ab` was
+  cut from `main` @ `d071884` (2026-11-09): in-build suite 4,665
+  OK / 30 expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.36-source.zip` sha256
+  `79464f02cd71492763656ca0ff3283a240c3579b9f52df3bcc18857dabb3d1be`
+  (14,490,858 bytes) - carries the MT-21 multi-column trainer
+  grid (`ui_rows.py` grid pure layer + `master_state.py` schema
+  9, `tests/test_native_ui_grid.py` +
+  `tests/test_native_master_ui_mt21.py`) and the reviewable
+  `master_trainer/UI.md` - and portable ZIP
+  `CT2Trainer-0.36-windows-portable.zip` sha256
+  `089fc92b0c5758ba758fdc88bb92e11d8e3b3e36c28d04231f27b3eeaecceac0`
+  (49,751,886 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `07ebef319b55d686c4f76cdb6f07440a2b4934fc8943f9f72b402d62c4c49fe8`,
+  17,006,463 bytes, ships next to the converter).
 
 **0.35 released (build `native-20261109T054146Z-c5f18494`, cut from
 `main` @ `65d8fbe`, 2026-11-09): Master Trainer per-table notes /

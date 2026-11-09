@@ -201,7 +201,39 @@ in-build suite 4,499 OK / 30 expected skips, `ce_inputs: []`,
 `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
 16,968,879 bytes) ships next to the converter); superseded 0.32
 (build `native-20261108T100731Z-a1d311e5` cut from `main` @
-`bfcc3a3`, 2026-11-08). 0.35 released (build
+`bfcc3a3`, 2026-11-08). 0.36 released (build
+`native-20261109T114726Z-15c3d9ab` cut from `main` @ `d071884`,
+2026-11-09): the Master Trainer multi-column
+trainer grid (MT-21: the trainer row grid can run in up to three
+side-by-side columns - the requested column count (1 / 2 / 3,
+default 1) persists in the master state (master-settings.json
+schema 8 -> 9, grid_columns) and is handed to the trainer window
+on table load; the trainer header gains the "Columns: N" cycle
+button (master only - the standalone trainer header stays
+byte-identical and always renders the single column); a narrow
+window renders fewer columns than requested (two columns need
+652 px, three need 984 px, a column never falls below the 320 px
+floor); a section with its children never splits across columns;
+the pure grid layer in ui_rows.py (build_grid / effective_columns
+/ column_layout / row_units / flow_units, columns == 1
+byte-stable against build_rows); per-column pagination and
+per-column hit-testing; zero load-path effect - the MT-9 gate
+re-checks the table independently at load time); +55 tests, full
+main suite 4,665 OK / 30 expected skips, catalog zero delta
+`blocked-catalog-036-grid`; in-build suite 4,665 OK / 30 expected
+skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; source ZIP `CT2Trainer-0.36-source.zip` sha256
+`79464f02cd71492763656ca0ff3283a240c3579b9f52df3bcc18857dabb3d1be`
+(14,490,858 bytes) - carries the MT-21 multi-column trainer grid
+(`ui_rows.py` grid pure layer + `master_state.py` schema 9,
+`tests/test_native_ui_grid.py` +
+`tests/test_native_master_ui_mt21.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.36-windows-portable.zip` sha256
+`089fc92b0c5758ba758fdc88bb92e11d8e3b3e36c28d04231f27b3eeaecceac0`
+(49,751,886 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`07ebef319b55d686c4f76cdb6f07440a2b4934fc8943f9f72b402d62c4c49fe8`,
+17,006,463 bytes) ships next to the converter); superseded 0.35 (build
 `native-20261109T054146Z-c5f18494` cut from `main` @ `65d8fbe`,
 2026-11-09): the Master Trainer per-table notes / tags
 (MT-27: the waiting view gains the Note column - the persisted
@@ -388,7 +420,10 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-09, 0.35 released - build
+**CT2Trainer (status 2026-11-09, 0.36 released - build
+`native-20261109T114726Z-15c3d9ab` cut from `main` @ `d071884`,
+2026-11-09, in-build suite 4,665 OK / 30 expected skips,
+`ce_inputs: []`; superseded 0.35, build
 `native-20261109T054146Z-c5f18494` cut from `main` @ `65d8fbe`,
 2026-11-09, in-build suite 4,610 OK / 30 expected skips,
 `ce_inputs: []`; superseded 0.34, build
@@ -397,7 +432,26 @@ language used in chat.
 `ce_inputs: []`; superseded 0.33, build
 `native-20261108T200230Z-b0167049` cut from `main` @ `6e71739`,
 2026-11-08, in-build suite 4,499 OK / 30 expected skips,
-`ce_inputs: []`) - 0.35 Master Trainer per-table notes / tags
+`ce_inputs: []`) - 0.36 Master Trainer multi-column trainer grid
+(MT-21: the trainer row grid can run in up to three
+side-by-side columns - the requested column count (1 / 2 / 3,
+default 1) persists in the master state (master-settings.json
+schema 8 -> 9, grid_columns) and is handed to the trainer window
+on table load; the trainer header gains the "Columns: N" cycle
+button (master only - the standalone trainer header stays
+byte-identical and always renders the single column); a narrow
+window renders fewer columns than requested (two columns need
+652 px, three need 984 px, a column never falls below the 320 px
+floor); a section with its children never splits across columns;
+the pure grid layer in ui_rows.py (build_grid / effective_columns
+/ column_layout / row_units / flow_units, columns == 1
+byte-stable against build_rows); per-column pagination and
+per-column hit-testing; zero load-path effect - the MT-9 gate
+re-checks the table independently at load time); +55 tests, full
+main suite 4,665 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-036-grid`), superseded 0.35 released (build
+`native-20261109T054146Z-c5f18494` cut from `main` @ `65d8fbe`,
+2026-11-09) - 0.35 Master Trainer per-table notes / tags
 (MT-27: the waiting view gains the Note column - the persisted
 per-table organization metadata (note text truncated, tags in
 brackets, empty while no note exists); the row context menu
@@ -799,7 +853,23 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261109T054146Z-c5f18494` (0.35,
+**Latest verified build:** `native-20261109T114726Z-15c3d9ab` (0.36,
+cut from `main` @ `d071884`, 2026-11-09; in-build suite 4,665 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.36-source.zip` sha256
+`79464f02cd71492763656ca0ff3283a240c3579b9f52df3bcc18857dabb3d1be`
+(14,490,858 bytes) - carries the MT-21 multi-column trainer grid
+(`ui_rows.py` grid pure layer + `master_state.py` schema 9,
+`tests/test_native_ui_grid.py` +
+`tests/test_native_master_ui_mt21.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.36-windows-portable.zip` sha256
+`089fc92b0c5758ba758fdc88bb92e11d8e3b3e36c28d04231f27b3eeaecceac0`
+(49,751,886 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `07ebef319b55d686c4f76cdb6f07440a2b4934fc8943f9f72b402d62c4c49fe8`,
+17,006,463 bytes) ships next to the converter)).
+0.36 ships the Master Trainer multi-column trainer grid (MT-21).
+Superseded 0.35 build: `native-20261109T054146Z-c5f18494` (0.35,
 cut from `main` @ `65d8fbe`, 2026-11-09; in-build suite 4,610 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
 kept per gate; source ZIP `CT2Trainer-0.35-source.zip` sha256

@@ -52,6 +52,19 @@ ROADMAP "0.36 multi-column trainer grid" section):
   116,756 supported / 60,161 staged / 103,607 actionable /
   12,974 headings / 1,053 blocked — zero delta vs
   `blocked-catalog-035-notes`).
+- Build: 0.36 released as run
+  `native-20261109T114726Z-15c3d9ab` (cut from `main` @ `d071884`,
+  2026-11-09): in-build suite 4,665 OK / 30 expected skips, 0
+  failures — fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.36-source.zip` sha256
+  `79464f02cd71492763656ca0ff3283a240c3579b9f52df3bcc18857dabb3d1be`
+  (14,490,858 bytes); portable ZIP
+  `CT2Trainer-0.36-windows-portable.zip` sha256
+  `089fc92b0c5758ba758fdc88bb92e11d8e3b3e36c28d04231f27b3eeaecceac0`
+  (49,751,886 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `07ebef319b55d686c4f76cdb6f07440a2b4934fc8943f9f72b402d62c4c49fe8`,
+  17,006,463 bytes, ships next to the converter).
 
 ## 0.35 (2026-11-09)
 
