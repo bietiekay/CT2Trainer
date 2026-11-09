@@ -201,7 +201,44 @@ in-build suite 4,499 OK / 30 expected skips, `ce_inputs: []`,
 `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
 16,968,879 bytes) ships next to the converter); superseded 0.32
 (build `native-20261108T100731Z-a1d311e5` cut from `main` @
-`bfcc3a3`, 2026-11-08). 0.36 released (build
+`bfcc3a3`, 2026-11-08). 0.37 released (build
+`native-20261109T154005Z-4ad8e339` cut from `main` @ `27dbf0d`,
+2026-11-09): the Master Trainer per-table process
+binding persistence (MT-28: the explicit process choice is
+remembered per table - `table-attach.json` schema 1 under the
+state home, keyed by the table content sha256 - the same
+identity as the MT-24 analysis and the MT-27 notes documents,
+so a remembered choice survives a rename and follows a
+content-identical file to another root; a live remembered choice
+outranks the documented smallest-PID rule in auto mode; in ask
+mode the picker still opens (the documented contract) with the
+remembered row preselected so the one-click attach is the
+remembered target; a stale or foreign PID falls back to the
+ordinary attach decision; every picker origin persists the
+choice (auto-load, explicit load, table choice, re-attach after
+a detach - the attach origin addresses the loaded table through
+the sidecar sha); a table without a content sha cannot carry a
+binding (the documented MT-27 identity rule); the MT-22
+table-details window shows the "Remembered process" row; zero
+load-path effect - the MT-9 gate re-checks the table
+independently at load time); +68 tests, full main suite 4,733 OK
+/ 30 expected skips, catalog zero delta
+`blocked-catalog-037-attach`; in-build suite 4,733 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified`
+deliberately kept per gate; source ZIP
+`CT2Trainer-0.37-source.zip` sha256
+`a49bdd7d738de9551a1d971430ed9f7b0a212ec0d4a2afd8667e1f87ec61d301`
+(14,506,715 bytes) - carries the MT-28 per-table process
+binding persistence (`table_attach.py` pure layer +
+`table-attach.json` schema 1,
+`tests/test_native_master_attach.py` +
+`tests/test_native_master_ui_mt28.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.37-windows-portable.zip` sha256
+`5cdb23b24c0757cb047ddd72ae673614fc6bccee960747079849fe325785c3ce`
+(49,762,223 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`c2a1a6948fa28248d36a6defa5a116867620261e55bdcfe1e144cd301060a9de`,
+17,017,090 bytes) ships next to the converter); superseded 0.36 (build
 `native-20261109T114726Z-15c3d9ab` cut from `main` @ `d071884`,
 2026-11-09): the Master Trainer multi-column
 trainer grid (MT-21: the trainer row grid can run in up to three
@@ -420,7 +457,10 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-09, 0.36 released - build
+**CT2Trainer (status 2026-11-09, 0.37 released - build
+`native-20261109T154005Z-4ad8e339` cut from `main` @ `27dbf0d`,
+2026-11-09, in-build suite 4,733 OK / 30 expected skips,
+`ce_inputs: []`; superseded 0.36, build
 `native-20261109T114726Z-15c3d9ab` cut from `main` @ `d071884`,
 2026-11-09, in-build suite 4,665 OK / 30 expected skips,
 `ce_inputs: []`; superseded 0.35, build
@@ -432,7 +472,29 @@ language used in chat.
 `ce_inputs: []`; superseded 0.33, build
 `native-20261108T200230Z-b0167049` cut from `main` @ `6e71739`,
 2026-11-08, in-build suite 4,499 OK / 30 expected skips,
-`ce_inputs: []`) - 0.36 Master Trainer multi-column trainer grid
+`ce_inputs: []`) - 0.37 Master Trainer per-table process
+binding persistence (MT-28: the explicit process choice is
+remembered per table - `table-attach.json` schema 1 under the
+state home, keyed by the table content sha256 - the same
+identity as the MT-24 analysis and the MT-27 notes documents,
+so a remembered choice survives a rename and follows a
+content-identical file to another root; a live remembered choice
+outranks the documented smallest-PID rule in auto mode; in ask
+mode the picker still opens (the documented contract) with the
+remembered row preselected so the one-click attach is the
+remembered target; a stale or foreign PID falls back to the
+ordinary attach decision; every picker origin persists the
+choice (auto-load, explicit load, table choice, re-attach after
+a detach - the attach origin addresses the loaded table through
+the sidecar sha); a table without a content sha cannot carry a
+binding (the documented MT-27 identity rule); the MT-22
+table-details window shows the "Remembered process" row; zero
+load-path effect - the MT-9 gate re-checks the table
+independently at load time); +68 tests, full
+main suite 4,733 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-037-attach`), superseded 0.36 released (build
+`native-20261109T114726Z-15c3d9ab` cut from `main` @ `d071884`,
+2026-11-09) - 0.36 Master Trainer multi-column trainer grid
 (MT-21: the trainer row grid can run in up to three
 side-by-side columns - the requested column count (1 / 2 / 3,
 default 1) persists in the master state (master-settings.json
@@ -853,7 +915,24 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261109T114726Z-15c3d9ab` (0.36,
+**Latest verified build:** `native-20261109T154005Z-4ad8e339` (0.37,
+cut from `main` @ `27dbf0d`, 2026-11-09; in-build suite 4,733 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.37-source.zip` sha256
+`a49bdd7d738de9551a1d971430ed9f7b0a212ec0d4a2afd8667e1f87ec61d301`
+(14,506,715 bytes) - carries the MT-28 per-table process
+binding persistence (`table_attach.py` pure layer +
+`table-attach.json` schema 1,
+`tests/test_native_master_attach.py` +
+`tests/test_native_master_ui_mt28.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.37-windows-portable.zip` sha256
+`5cdb23b24c0757cb047ddd72ae673614fc6bccee960747079849fe325785c3ce`
+(49,762,223 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `c2a1a6948fa28248d36a6defa5a116867620261e55bdcfe1e144cd301060a9de`,
+17,017,090 bytes) ships next to the converter)).
+0.37 ships the Master Trainer per-table process binding
+persistence (MT-28). Superseded 0.36 build: `native-20261109T114726Z-15c3d9ab` (0.36,
 cut from `main` @ `d071884`, 2026-11-09; in-build suite 4,665 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
 kept per gate; source ZIP `CT2Trainer-0.36-source.zip` sha256

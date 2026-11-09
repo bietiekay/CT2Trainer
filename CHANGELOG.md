@@ -48,6 +48,19 @@ the 151 reference tables, 2026-11-09: 151/151 loaded, 0 load errors,
 117,809 total / 116,756 supported / 60,161 staged / 103,607
 actionable / 12,974 headings / 1,053 blocked — zero delta vs
 `blocked-catalog-036-grid`).
+- Build: 0.37 released as run
+  `native-20261109T154005Z-4ad8e339` (cut from `main` @ `27dbf0d`,
+  2026-11-09): in-build suite 4,733 OK / 30 expected skips, 0
+  failures — fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.37-source.zip` sha256
+  `a49bdd7d738de9551a1d971430ed9f7b0a212ec0d4a2afd8667e1f87ec61d301`
+  (14,506,715 bytes); portable ZIP
+  `CT2Trainer-0.37-windows-portable.zip` sha256
+  `5cdb23b24c0757cb047ddd72ae673614fc6bccee960747079849fe325785c3ce`
+  (49,762,223 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `c2a1a6948fa28248d36a6defa5a116867620261e55bdcfe1e144cd301060a9de`,
+  17,017,090 bytes, ships next to the converter).
 
 ## 0.36 (2026-11-09)
 

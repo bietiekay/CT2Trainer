@@ -1,6 +1,29 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-09. **0.36 released** (build
+**Updated:** 2026-11-09. **0.37 released** (build
+`native-20261109T154005Z-4ad8e339`, cut from `main` @ `27dbf0d`,
+2026-11-09) - Master Trainer per-table
+process binding persistence MT-28 (the explicit process choice is
+remembered per table - `table-attach.json` schema 1 under the state
+home, keyed by the table content sha256 - the same identity as the
+MT-24 analysis and the MT-27 notes documents, so a remembered
+choice survives a rename and follows a content-identical file to
+another root; a live remembered choice outranks the documented
+smallest-PID rule in auto mode; in ask mode the picker still opens
+(the documented contract) with the remembered row preselected so
+the one-click attach is the remembered target; a stale or foreign
+PID falls back to the ordinary attach decision; every picker
+origin persists the choice (auto-load, explicit load, table
+choice, re-attach after a detach - the attach origin addresses the
+loaded table through the sidecar sha); a table without a content
+sha cannot carry a binding (the documented MT-27 identity rule);
+the MT-22 table-details window shows the "Remembered process"
+row; zero load-path effect - the MT-9 gate re-checks the table
+independently at load time); +68 tests; full main suite 4,733 OK /
+30 expected skips; in-build suite 4,733 OK / 30 expected skips,
+`ce_inputs: []`; catalog zero delta
+`blocked-catalog-037-attach`; see the 0.37 section below.
+Superseded 0.36 (build
 `native-20261109T114726Z-15c3d9ab`, cut from `main` @ `d071884`,
 2026-11-09) - Master Trainer multi-column
 trainer grid MT-21 (the trainer row grid can run in up to three
@@ -177,10 +200,28 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.36, build
-`native-20261109T114726Z-15c3d9ab` (cut from `main` @ `d071884`,
-2026-11-09): the 0.36 Master Trainer multi-column trainer grid
-release (MT-21) - in-build suite 4,665 OK / 30 expected
+**Latest verified release:** 0.37, build
+`native-20261109T154005Z-4ad8e339` (cut from `main` @ `27dbf0d`,
+2026-11-09): the 0.37 Master Trainer per-table process
+binding persistence release (MT-28) - in-build suite 4,733 OK /
+30 expected skips, `ce_inputs: []`, `runtime_unverified`
+deliberately kept per gate; source ZIP
+`CT2Trainer-0.37-source.zip` sha256
+`a49bdd7d738de9551a1d971430ed9f7b0a212ec0d4a2afd8667e1f87ec61d301`
+(14,506,715 bytes) - carries the MT-28 per-table process
+binding persistence (`table_attach.py` pure layer +
+`table-attach.json` schema 1,
+`tests/test_native_master_attach.py` +
+`tests/test_native_master_ui_mt28.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.37-windows-portable.zip` sha256
+`5cdb23b24c0757cb047ddd72ae673614fc6bccee960747079849fe325785c3ce`
+(49,762,223 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`c2a1a6948fa28248d36a6defa5a116867620261e55bdcfe1e144cd301060a9de`,
+17,017,090 bytes) ships next to the converter). Superseded 0.36,
+build `native-20261109T114726Z-15c3d9ab` (cut from `main` @
+`d071884`, 2026-11-09): the 0.36 Master Trainer multi-column
+trainer grid release (MT-21) - in-build suite 4,665 OK / 30 expected
 skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
 gate; source ZIP `CT2Trainer-0.36-source.zip` sha256
 `79464f02cd71492763656ca0ff3283a240c3579b9f52df3bcc18857dabb3d1be`
@@ -689,6 +730,107 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.37 released (build `native-20261109T154005Z-4ad8e339`, cut from
+`main` @ `27dbf0d`, 2026-11-09): Master Trainer per-table process
+binding persistence (MT-28).**
+The 0.37 feature was evaluated against the use case's core
+requirement ("choose which table runs and which process it
+attaches to - remember the configuration"): a re-read of the WeMod
+community thread "UI customization"
+(community.wemod.com/t/ui-customization/371434) - the thread's
+layout / visibility requests remain covered by the 0.36
+multi-column grid - plus a code audit of the Master Trainer attach
+flow found the open functional gap: MT-11 persists the attach
+*mode* (auto / ask), and the picker's chosen PID is "pinned for
+the session" only (`master_ui.py` `_attach_pin`, honoured by the
+injected memory factory until that process exits); a restart
+loses the per-table process choice and the user must re-pick it.
+Adopted: MT-28, the per-table process binding persistence.
+Remaining candidates (updated): the game launch integration (needs
+install-path data; out of scope for the read-only table model).
+- **MT-28 per-table process binding persistence:** the user's
+  explicit process choice (every picker origin: auto-load,
+  explicit load, table choice, re-attach after a detach) is
+  remembered per table against the table content sha256 (the same
+  identity as the MT-24 analysis and the MT-27 notes documents, so
+  a remembered choice survives a rename and follows a
+  content-identical file to another root). The persisted document
+  is `table-attach.json` (schema 1, under the state home; strict
+  key-set / field validation of the master-state discipline - an
+  unknown field is a named `AttachRefusal`, never a silent drop;
+  checksummed canonical-JSON envelope; `ATTACH_ENTRIES_LIMIT` =
+  1024 entries, `evict_oldest` by `updated_at`, ties by sha256 -
+  deterministic; a refused document is treated as absent,
+  documented, never a silent reset). The pure layer lives in
+  `table_attach.py` (`binding_entry`, the document bytes / load /
+  save, `evict_oldest`, `AttachStore`, `binding_target` - honour
+  the stored PID only while it is one of the live candidates
+  whose name still matches the bound process - case-insensitive,
+  the same rule the picker and the memory factory use; a stale or
+  foreign PID yields the documented fallback; `details_attach_lines`
+  - the MT-22 details-window "Remembered process" row).
+  `master_ui.py`: `MasterApp.attach_store`; the process picker
+  gains `preselect_pid` (the remembered row is preselected - the
+  picker still opens in `ask` mode, the documented contract);
+  `_binding_candidate` (the persisted binding for a table's
+  content sha, or None - a table without a content sha cannot
+  carry a binding, the documented MT-27 identity rule); the
+  binding is consulted in `_auto_load` (a live binding outranks
+  the documented smallest-PID rule in `auto` mode; preselected in
+  the picker in `ask` mode), `_load_selected_table`,
+  `_picker_chosen` (the table-choice path) and
+  `_detach_or_attach` (the `attach` origin addresses the loaded
+  table through the sidecar sha); `_remember_attach_choice`
+  persists the explicit choice before the picker state is torn
+  down (a refused choice is not persisted, no status-line noise on
+  the hot pick path). Zero load-path effect - the MT-9 gate
+  re-checks the table independently at load time.
+- +68 tests (`tests/test_native_master_attach.py` 53 - the pure
+  `table_attach` layer: the schema-1 document round-trip, the
+  strict key-set / field validation refusals, the checksummed
+  envelope, the entry shape validation, `evict_oldest` order
+  (`updated_at`, ties by sha256), `AttachStore` set / get / has /
+  clear, refused documents treated as absent, `binding_target`
+  (live + name match, stale, foreign), `details_attach_lines`;
+  `tests/test_native_master_ui_mt28.py` 15 - the Tk wiring: the
+  `MasterApp.attach_store` sidecar, the picker preselect in `ask`
+  mode (with / without / stale binding), the persistence of the
+  explicit choice from every origin (auto-load, explicit, choice,
+  attach via the sidecar sha), the `auto`-mode honouring (live
+  binding outranks the smallest-PID rule; stale / missing binding
+  keeps the pre-0.37 behavior), the no-content-sha guard, the
+  MT-22 details-window "Remembered process" row) + the baseline
+  details-line assertion updates in
+  `tests/test_native_master_ui_mt22.py` (2),
+  `tests/test_native_master_notes.py` (2) and
+  `tests/test_native_master_ui_mt24.py` (2); full main suite 4,733
+  OK / 30 expected skips (4,665 from the 0.36 content + 68 new);
+  catalog zero delta `blocked-catalog-037-attach` (3-chunk
+  deep-equal audit over the 151 reference tables, 2026-11-09):
+  151/151 loaded, 0 load errors, 117,809 total / 116,756 supported
+  / 60,161 staged / 103,607 actionable / 12,974 headings / 1,053
+  blocked - **zero delta** vs `blocked-catalog-036-grid` (per-table
+  count/reason/sha changes: 0); feature matrix unchanged (42/42,
+  7,475/7,475 over `w4b4-case30-20261020081722Z`); AP-11 0/6,143.
+  VERSION bumped to 0.37 with the changelog entry in the same
+  change. The 0.37 build `native-20261109T154005Z-4ad8e339` was
+  cut from `main` @ `27dbf0d` (2026-11-09): in-build suite 4,733
+  OK / 30 expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.37-source.zip` sha256
+  `a49bdd7d738de9551a1d971430ed9f7b0a212ec0d4a2afd8667e1f87ec61d301`
+  (14,506,715 bytes) - carries the MT-28 per-table process
+  binding persistence (`table_attach.py` pure layer +
+  `table-attach.json` schema 1,
+  `tests/test_native_master_attach.py` +
+  `tests/test_native_master_ui_mt28.py`) and the reviewable
+  `master_trainer/UI.md` - and portable ZIP
+  `CT2Trainer-0.37-windows-portable.zip` sha256
+  `5cdb23b24c0757cb047ddd72ae673614fc6bccee960747079849fe325785c3ce`
+  (49,762,223 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `c2a1a6948fa28248d36a6defa5a116867620261e55bdcfe1e144cd301060a9de`,
+  17,017,090 bytes, ships next to the converter).
 
 **0.36 released (build `native-20261109T114726Z-15c3d9ab`, cut from
 `main` @ `d071884`, 2026-11-09): Master Trainer multi-column
