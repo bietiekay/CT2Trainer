@@ -201,8 +201,43 @@ in-build suite 4,499 OK / 30 expected skips, `ce_inputs: []`,
 `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
 16,968,879 bytes) ships next to the converter); superseded 0.32
 (build `native-20261108T100731Z-a1d311e5` cut from `main` @
-`bfcc3a3`, 2026-11-08). 0.34 released (build
-`native-20261109T024143Z-a5457911` cut from `main` @ `dc00343`,
+`bfcc3a3`, 2026-11-08). 0.35 released (build
+`native-20261109T054146Z-c5f18494` cut from `main` @ `65d8fbe`,
+2026-11-09): the Master Trainer per-table notes / tags
+(MT-27: the waiting view gains the Note column - the persisted
+per-table organization metadata (note text truncated, tags in
+brackets, empty while no note exists); the row context menu
+"Edit note..." between load and pin - the small Toplevel with the
+note (multi-line, bounded at 500 characters) and a
+comma-separated tag entry (bounded at 8 tags x 40 characters); a
+named refusal at save time is shown in the dialog's own label -
+the dialog stays open, the persisted document is untouched; a
+table without a content sha (unreadable / never scanned) is
+refused in the status line; the notes persist in
+`table-notes.json` schema 1, under the state home, keyed by the
+table content sha256 - the same identity as the MT-24 analysis
+document, so a note survives a rename and follows a
+content-identical file across roots; LRU-bounded to 1024 entries;
+no master-state schema bump - the MT-24 sidecar precedent; the
+waiting-view filter also matches the note text and tags, and the
+MT-22 details window shows the note / tag rows; zero load-path
+effect - the MT-9 gate re-checks the table independently at load
+time); +67 tests, full main suite 4,610 OK / 30 expected skips,
+catalog zero delta `blocked-catalog-035-notes`; in-build suite
+4,610 OK / 30 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.35-source.zip` sha256
+`575ee8ad6f0864bd8ff39f3ae547bb629d5c128938cff792e9c4fb7362fbcdac`
+(14,474,384 bytes) - carries the MT-27 per-table notes / tags
+(`table_notes.py` pure layer + `table-notes.json` schema 1,
+`tests/test_native_master_notes.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.35-windows-portable.zip` sha256
+`488d7453ca0433f843c1e46a2241142347aa2ee41390ed334d6068ed30e42d34`
+(49,737,899 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`0c53908c267746cabd74e1ef091daa35d31eb94c4d0accc6401085d7e8c59ccc`,
+16,999,124 bytes) ships next to the converter); superseded 0.34
+(build `native-20261109T024143Z-a5457911` cut from `main` @ `dc00343`,
 2026-11-09): the Master Trainer multi-root table
 index (MT-26: the Master indexes several table folders at once -
 every root keeps the same (size, mtime_ns) + sha256 short-circuit
@@ -353,13 +388,39 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-09, 0.34 released - build
+**CT2Trainer (status 2026-11-09, 0.35 released - build
+`native-20261109T054146Z-c5f18494` cut from `main` @ `65d8fbe`,
+2026-11-09, in-build suite 4,610 OK / 30 expected skips,
+`ce_inputs: []`; superseded 0.34, build
 `native-20261109T024143Z-a5457911` cut from `main` @ `dc00343`,
 2026-11-09, in-build suite 4,543 OK / 30 expected skips,
 `ce_inputs: []`; superseded 0.33, build
 `native-20261108T200230Z-b0167049` cut from `main` @ `6e71739`,
 2026-11-08, in-build suite 4,499 OK / 30 expected skips,
-`ce_inputs: []`) - 0.34 Master Trainer multi-root table index
+`ce_inputs: []`) - 0.35 Master Trainer per-table notes / tags
+(MT-27: the waiting view gains the Note column - the persisted
+per-table organization metadata (note text truncated, tags in
+brackets, empty while no note exists); the row context menu
+"Edit note..." between load and pin - the small Toplevel with the
+note (multi-line, bounded at 500 characters) and a
+comma-separated tag entry (bounded at 8 tags x 40 characters); a
+named refusal at save time is shown in the dialog's own label -
+the dialog stays open, the persisted document is untouched; a
+table without a content sha (unreadable / never scanned) is
+refused in the status line; the notes persist in
+`table-notes.json` schema 1, under the state home, keyed by the
+table content sha256 - the same identity as the MT-24 analysis
+document, so a note survives a rename and follows a
+content-identical file across roots; LRU-bounded to 1024 entries;
+no master-state schema bump - the MT-24 sidecar precedent; the
+waiting-view filter also matches the note text and tags, and the
+MT-22 details window shows the note / tag rows; zero load-path
+effect - the MT-9 gate re-checks the table independently at load
+time); +67 tests, full main suite 4,610 OK / 30 expected skips;
+catalog zero delta `blocked-catalog-035-notes`), superseded 0.34
+released (build
+`native-20261109T024143Z-a5457911` cut from `main` @ `dc00343`,
+2026-11-09) - 0.34 Master Trainer multi-root table index
 (MT-26: the Master indexes several table folders at once - every
 root keeps the same (size, mtime_ns) + sha256 short-circuit
 reconcile contract; the merged surface distinguishes tables by the
@@ -738,7 +799,22 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261109T024143Z-a5457911` (0.34,
+**Latest verified build:** `native-20261109T054146Z-c5f18494` (0.35,
+cut from `main` @ `65d8fbe`, 2026-11-09; in-build suite 4,610 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.35-source.zip` sha256
+`575ee8ad6f0864bd8ff39f3ae547bb629d5c128938cff792e9c4fb7362fbcdac`
+(14,474,384 bytes) - carries the MT-27 per-table notes / tags
+(`table_notes.py` pure layer + `table-notes.json` schema 1,
+`tests/test_native_master_notes.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.35-windows-portable.zip` sha256
+`488d7453ca0433f843c1e46a2241142347aa2ee41390ed334d6068ed30e42d34`
+(49,737,899 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256 `0c53908c267746cabd74e1ef091daa35d31eb94c4d0accc6401085d7e8c59ccc`,
+16,999,124 bytes) ships next to the converter)).
+0.35 ships the Master Trainer per-table notes / tags (MT-27).
+Superseded 0.34 build: `native-20261109T024143Z-a5457911` (0.34,
 cut from `main` @ `dc00343`, 2026-11-09; in-build suite 4,543 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
 kept per gate; source ZIP `CT2Trainer-0.34-source.zip` sha256

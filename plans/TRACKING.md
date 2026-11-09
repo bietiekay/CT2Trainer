@@ -486,6 +486,92 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- 0.35 Master Trainer per-table notes / tags (MT-27)
+  (2026-11-09, root-direct on `main`; online-evaluated in
+  `master_trainer/ROADMAP.md`, the "0.35 per-table notes / tags"
+  section - the trainer / table manager library-organization
+  patterns: game-trainer-manager (Karasukaigan) organizing + local
+  real-time fuzzy search + Pin to Top (already MT-13/18) + CSV data
+  storage, Fling-Trainer-Manager (OscarZhang-735) local catalog with
+  search across main + archive catalogs, FLiNG per-trainer metadata
+  (option counts, game version, last updated - already covered by
+  the MT-24 Entries / Blocked columns and the Size / Modified /
+  Last-used columns), WeMod library organization patterns).
+  MT-27: the waiting view gains the **Note column** (last, width
+  160) - the persisted per-table organization metadata: the note
+  text truncated to one line (an ellipsis marks a cut,
+  `NOTE_COLUMN_MAX` = 60 characters) plus the tags in brackets
+  (`note [tag-a, tag-b]`); note-only and tag-only entries both
+  render; empty while no note exists. The row context menu offers
+  **"Edit note..."** between "Load this table" and the pin toggle -
+  a small Toplevel with the note (multi-line text, bounded at
+  `NOTE_MAX_LEN` = 500 characters) and a comma-separated tag entry
+  (bounded at `TAGS_LIMIT` = 8 tags x `TAG_MAX_LEN` = 40
+  characters, stripped, casefold-deduped first-spelling-wins); a
+  named refusal at save time (note over the limit, a tag too long,
+  too many tags) is shown in the dialog's own label - the dialog
+  stays open, the persisted document is untouched; a table without
+  a content sha (unreadable / never scanned) is refused in the
+  status line, no dialog opens; single window, lift on second open,
+  closed on trainer entry with the rest of the waiting view.
+  Persistence: `table-notes.json` (schema 1, under the state home)
+  - **keyed by the table content sha256** (the same identity as the
+  MT-24 analysis document), so a note survives a rename within a
+  root and follows a content-identical file to another root; one
+  entry per noted table (`{"note", "tags", "updated_at"}`); strict
+  key-set / field validation of the master-state discipline (an
+  unknown field is a named refusal, never a silent drop);
+  checksummed canonical-JSON envelope; `NOTES_ENTRIES_LIMIT` = 1024
+  entries, `evict_oldest` by `updated_at` (ties by sha256 -
+  deterministic); a refused document is treated as absent
+  (documented, never a silent reset). No master-state schema bump
+  (the MT-24 sidecar precedent - the notes live in their own
+  checksum-bound document). Search + details: the waiting-view
+  filter now also matches the note text and every tag (the pure
+  `filter_tables` gains the optional `note_lookup`, keyed by the
+  table content sha; a table matches when ANY of them matches;
+  `note_lookup=None` is the exact pre-0.35 behavior); the MT-22
+  table-details window gains the note / tag rows after the
+  entry-analysis block (`none` while the table carries no
+  organization metadata). No index mutation, no table-file access,
+  zero load-path effect - the MT-9 gate re-checks the table
+  independently at load time. Remaining candidates (evaluated, not
+  yet adopted): the MT-21 multi-column trainer grid; the game
+  launch integration (needs install-path data). +67 tests
+  (`tests/test_native_master_notes.py`: the pure layer -
+  `parse_tags` rules, the `note_entry` builder, the schema-1
+  document discipline (unknown fields, checksum, schema, key,
+  timestamp, entry-limit), `evict_oldest` determinism,
+  `NotesStore` (set / clear / eviction /
+  refused-document-as-absent), the column / details text helpers,
+  the filter extension - plus the Tk wiring: the Note column (11
+  row values), the menu order (`Table details` / `Load this table`
+  / `Edit note...` / `Pin to top`), the editor (prefill, save
+  persistence + re-render, cancel, the over-limit note / over-
+  long tag refusal inside the dialog, the no-content-sha and the
+  missing-entry refusal in the status line, the second-open
+  lift), the details-window note / tag rows); full main suite
+  4,610 OK / 30 expected skips (4,543 from the 0.34 content + 67
+  new); catalog remeasure `blocked-catalog-035-notes` (3-chunk
+  deep-equal audit over the 151 reference tables, 2026-11-09):
+  151/151 loaded, 0 load errors, 117,809 total / 116,756 supported
+  / 60,161 staged / 103,607 actionable / 12,974 headings / 1,053
+  blocked - **zero delta** vs `blocked-catalog-034-mt26`
+  (per-table count/reason/sha changes: 0); feature matrix
+  unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION 0.35 +
+  CHANGELOG entry in the same change. The 0.35 build
+  `native-20261109T054146Z-c5f18494` cut from `main` @ `65d8fbe`
+  (2026-11-09): in-build suite 4,610 OK / 30 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.35-source.zip` sha256
+  `575ee8ad6f0864bd8ff39f3ae547bb629d5c128938cff792e9c4fb7362fbcdac`
+  (14,474,384 bytes), portable ZIP
+  `CT2Trainer-0.35-windows-portable.zip` sha256
+  `488d7453ca0433f843c1e46a2241142347aa2ee41390ed334d6068ed30e42d34`
+  (49,737,899 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `0c53908c267746cabd74e1ef091daa35d31eb94c4d0accc6401085d7e8c59ccc`,
+  16,999,124 bytes, ships next to the converter).
 - 0.34 Master Trainer multi-root table index (MT-26)
   (2026-11-09, root-direct on `main`; online-evaluated in
   `master_trainer/ROADMAP.md`, the "0.34 multi-root table index"

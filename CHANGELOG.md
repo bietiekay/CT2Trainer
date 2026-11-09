@@ -66,6 +66,19 @@ Trainer ROADMAP "0.35 per-table notes / tags" section):
   116,756 supported / 60,161 staged / 103,607 actionable /
   12,974 headings / 1,053 blocked — zero delta vs
   `blocked-catalog-034-mt26`).
+- Build: 0.35 released as run
+  `native-20261109T054146Z-c5f18494` (cut from `main` @ `65d8fbe`,
+  2026-11-09): in-build suite 4,610 OK / 30 expected skips, 0
+  failures — fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.35-source.zip` sha256
+  `575ee8ad6f0864bd8ff39f3ae547bb629d5c128938cff792e9c4fb7362fbcdac`
+  (14,474,384 bytes); portable ZIP
+  `CT2Trainer-0.35-windows-portable.zip` sha256
+  `488d7453ca0433f843c1e46a2241142347aa2ee41390ed334d6068ed30e42d34`
+  (49,737,899 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `0c53908c267746cabd74e1ef091daa35d31eb94c4d0accc6401085d7e8c59ccc`,
+  16,999,124 bytes, ships next to the converter).
 
 ## 0.34 (2026-11-09)
 
