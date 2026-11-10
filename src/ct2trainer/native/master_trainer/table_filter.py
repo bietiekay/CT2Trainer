@@ -15,7 +15,12 @@ Contract:
   name matches; the table name always counts).  MT-27 (0.35): an optional
   ``note_lookup`` mapping (table content sha256 -> the persisted
   ``{"note", "tags"}`` entry) makes the note text and every tag part of
-  the match (a table matches when ANY of them matches).  Input order is
+  the match (a table matches when ANY of them matches).  MT-29 (0.39):
+  an optional ``autoload_lookup`` mapping (table content sha256 -> the
+  persisted ``{"policy", "updated_at"}`` entry) makes the persisted
+  auto-load policy text part of the match (the only persisted policy is
+  "manual-only" - the documented default "auto" is the ABSENCE of an
+  entry, so it carries no match surface).  Input order is
   preserved (stable, deterministic).
 - ``sort_tables``: stable, deterministic ordering per mode, with the
   casefolded relative path as the universal tie-breaker.
@@ -25,7 +30,8 @@ from __future__ import annotations
 SORT_MODES = ("name", "process", "status")
 
 
-def filter_tables(entries, query, note_lookup=None) -> list:
+def filter_tables(entries, query, note_lookup=None,
+                  autoload_lookup=None) -> list:
     """Casefolded substring filter over table name and bound process names.
 
     ``entries`` is an iterable of ``TableEntry``-shaped objects (anything
@@ -39,6 +45,15 @@ def filter_tables(entries, query, note_lookup=None) -> list:
     match surface - a table matches when ANY of them matches.  Entries
     without a lookup entry (no note yet) keep the name / process
     behavior only; ``note_lookup=None`` is the exact pre-0.35 behavior.
+
+    MT-29 (0.39): ``autoload_lookup`` (optional) maps the table
+    content sha256 to the persisted auto-load policy entry
+    (``{"policy", "updated_at", ...}``).  The persisted policy text
+    joins the match surface (a query like "manual-only" or "manual"
+    finds the manual-only tables); the documented default "auto" is
+    the absence of an entry and carries no match surface - a table
+    without a lookup entry keeps the name / process / note behavior
+    only.  ``autoload_lookup=None`` is the exact pre-0.39 behavior.
     """
     text = (query or "").strip().casefold()
     if not text:
@@ -58,6 +73,14 @@ def filter_tables(entries, query, note_lookup=None) -> list:
                 tags = note.get("tags") or ()
                 if text in note_text or any(
                         text in tag.casefold() for tag in tags):
+                    result.append(entry)
+                    continue
+        if autoload_lookup is not None:
+            policy_entry = autoload_lookup.get(
+                getattr(entry, "sha256", ""))
+            if policy_entry is not None:
+                policy = str(policy_entry.get("policy") or "").casefold()
+                if policy and text in policy:
                     result.append(entry)
     return result
 

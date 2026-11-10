@@ -2,6 +2,73 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.39 (2026-11-10)
+
+Master Trainer per-table auto-load policy (MT-29) + state folder /
+debug log quick access (MT-30) + the bounded transient-read retry in
+`memory.py` — the adopted 0.39 candidates from the online evaluation
+(the WeMod community thread re-read: the layout / visibility /
+trainer-options requests remain covered by the 0.36 multi-column
+grid and the 0.37 per-table process binding; plus the code survey of
+Game-Trainer-Manager (github.com/Karasukaigan/game-trainer-manager):
+pin-to-top → MT-18 exists, local search → MT-13/14 exists, detailed
+logs / debug mode → the adopted MT-30 signal, Steam launch / online
+catalog / themes / bilingual → out of scope for the private own-use
+model), and the reliability lane closing the documented open issue
+of the 0.38 ledger. MT-29: the use case's "choose which table runs"
+direction — the per-table auto-load policy (`table-autoload.json`
+schema 1, under the state home, keyed by the table content sha256,
+the same identity as the MT-24/27/28 sidecars, so a policy survives
+a rename and follows a content-identical file to another root); only
+the non-default policy persists — one `manual-only` entry per table,
+the absence of an entry is the documented automatic default; a
+manual-only table is never auto-loaded (no auto-load request and no
+picker — the waiting line shows the stable named detail "auto-load
+suppressed (all N bound table(s) for this process are manual-only;
+load one explicitly)" instead, and an open choice is dropped back to
+waiting), while every explicit load path (double-click / Enter,
+"Load this table", the "Load table" picker, `Recent:`) keeps
+working unchanged; the policy set is a zero-arg callable
+re-evaluated on every orchestrator tick (a policy change applies
+from the next tick); the row context menu offers the toggle
+("Auto-load: manual only" / "Auto-load: automatic" — the label
+names the action, the pin-toggle convention; immediate persist +
+status line; the disabled "Auto-load policy (no content sha)" item
+for a table without a content sha), the MT-22 table-details window
+gains the "Auto-load policy" row, and the waiting-view filter
+matches the persisted policy text. MT-30: the waiting view gains
+two header buttons — "State folder…" and "Debug log…" (master-only,
+the standalone trainer header stays byte-identical) — opening the
+persisted state home (the master-state document, the table index,
+the per-table sidecars, and the `forced-recovery/` archives created
+by the 0.38 `--force` forced start) and the trainer debug log at its
+exact `debug_log.default_log_path()` in the platform file manager /
+default handler (the pure `state_access.py` layer: the named
+`StateAccessRefusal` codes `state-folder-bad` / `state-folder-
+missing` / `debug-log-bad` / `debug-log-missing` / `no-opener` /
+`bad-path` / `opener-failed`; every refusal lands in the status
+line — never a dialog, never a crash). Reliability lane: the field-
+observed transient "ReadProcessMemory failed (Win32 error 299)"
+(0.22 / 0.30 / 0.31 field logs, Proton — no public Windows constant
+is named for 299, so it is documented as a field-observed transient
+code) is now retried in `memory._read_exact` with the bounded
+exponential backoff — the transient set {299, ERROR_MORE_DATA=119,
+ERROR_BAD_LENGTH=1116, ERROR_INVALID_ID=24} (the same codes the
+module-snapshot retry treats as transient), exactly 4 attempts,
+backoff 0.05 → 0.25 s (the sleep under the caller's lock, the
+snapshot-retry precedent); a partial result (a successful call that
+transferred fewer bytes) is NOT retried — an unexpected state, not
+a transient error code; after the budget the original error is
+raised unchanged (fail-closed, no silent success). +73 tests (new
+`tests/test_native_master_autoload.py` 33 +
+`tests/test_native_master_ui_mt29.py` 14 +
+`tests/test_native_master_ui_mt30.py` 20 +
+`tests/test_native_memory_read_retry.py` 6); full main suite 4,833
+OK / 30 expected skips; catalog zero delta (the audit chunks
+byte-identical vs `blocked-catalog-038-force`: 117,809 total /
+116,756 supported / 60,161 staged / 1,053 blocked, zero newly
+blocked).
+
 ## 0.38 (2026-11-09)
 
 The `--force` startup parameter for the documented SteamOS state-lock

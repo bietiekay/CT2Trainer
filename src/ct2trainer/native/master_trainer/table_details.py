@@ -57,7 +57,8 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
                        gate,
                        analysis=None,
                        notes=None,
-                       attach=None) -> list:
+                                              attach=None,
+                       autoload=None) -> list:
     """Ordered ``(label, value)`` rows for the read-only details
     window of one indexed table.
 
@@ -79,7 +80,12 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
     binding for the same content sha from
     ``table_attach.AttachStore`` (or None while the table carries no
     remembered choice) - it adds the "Remembered process" row below
-    the note / tag block.
+    the note / tag block;
+    ``autoload`` (MT-29, 0.39) is the persisted per-table auto-load
+    policy entry for the same content sha from
+    ``table_autoload.AutoLoadStore`` (or None while the table carries
+    the documented default) - it adds the "Auto-load policy" row
+    below the remembered-process block.
     """
     names = ", ".join(entry.process_names) or "(none found)"
     if entry.status == "ok":
@@ -117,4 +123,8 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
     # the same content sha).
     from .table_attach import details_attach_lines
     lines.extend(details_attach_lines(attach))
+    # MT-29 (0.39): the per-table auto-load policy (keyed by the same
+    # content sha; None = the documented default "automatic").
+    from .table_autoload import details_autoload_lines
+    lines.extend(details_autoload_lines(autoload))
     return lines

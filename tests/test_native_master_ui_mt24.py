@@ -342,12 +342,16 @@ class DetailsAnalysisRowsTests(_Mt24Base):
         # MT-27 (0.35): +2 note / tag rows after the analysis block.
         # MT-28 (0.37): +1 "Remembered process" row after the
         # note / tag rows.
-        self.assertEqual(len(rows), 16)
+        # MT-29 (0.39): +1 "Auto-load policy" row (the documented
+        # default while no policy is persisted).
+        self.assertEqual(len(rows), 17)
         self.assertEqual(rows[11], "2 entries (3 blocked) of 6 records")
         self.assertEqual(rows[12], "r-one × 2, r-two × 1")
         self.assertEqual(rows[13], "none")
         self.assertEqual(rows[14], "none")
         self.assertEqual(rows[15], "none")
+        self.assertEqual(rows[16],
+                         "automatic (the documented default)")
 
     def test_the_failed_entry_shows_the_named_error(self):
         app = self._seed(failed_analysis("ValueError: boom",
@@ -361,11 +365,15 @@ class DetailsAnalysisRowsTests(_Mt24Base):
         # MT-27 (0.35): +2 note / tag rows after the analysis block.
         # MT-28 (0.37): +1 "Remembered process" row after the
         # note / tag rows.
-        self.assertEqual(len(rows), 15)
+        # MT-29 (0.39): +1 "Auto-load policy" row (the documented
+        # default while no policy is persisted).
+        self.assertEqual(len(rows), 16)
         self.assertEqual(rows[11], "failed: ValueError: boom")
         self.assertEqual(rows[12], "none")
         self.assertEqual(rows[13], "none")
         self.assertEqual(rows[14], "none")
+        self.assertEqual(rows[15],
+                         "automatic (the documented default)")
 
 
 @unittest.skipIf(tk is None, "tkinter not available")

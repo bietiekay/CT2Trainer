@@ -119,11 +119,29 @@ class MasterOrchestrator:
     def __init__(self, index: "TableIndex | RootIndexSet",
                  lister: ProcessLister,
                  plan_compiler: Callable[[TableEntry, str], dict],
-                 now: Callable[[], float] = time.monotonic):
+                 now: Callable[[], float] = time.monotonic,
+                 manual_only: Callable[[], set] | None = None):
+        """Waiting-mode decision engine over an index and a lister.
+
+        ``manual_only`` (MT-29, 0.39): an optional zero-arg callable
+        returning the current set of manual-only table content sha256
+        keys (the persisted ``manual-only`` policy of the
+        ``table_autoload`` sidecar).  When set, tables whose content
+        sha is in that set are excluded from the auto-load DECISION:
+        no auto-load request and no picker, and a stable named
+        waiting detail instead.  The set is re-evaluated on every
+        tick, so a policy change applies from the next tick.  The
+        exclusion happens here (not in the UI handler) so the tick
+        returns one static detail instead of re-issuing a request
+        that the UI would refuse on every poll.  An EXPLICIT load
+        (the MT-10 path: ``request_load`` / ``choose``) is never
+        affected - the user asked for that table.
+        """
         self.index = index
         self.lister = lister
         self.plan_compiler = plan_compiler
         self._now = now
+        self._manual_only = manual_only
         self.state = STATE_WAITING
         self.choice: PendingChoice | None = None
         self.last_error: str | None = None
@@ -203,6 +221,30 @@ class MasterOrchestrator:
                 self.state = STATE_WAITING
             return TickOutcome(self.state, reason=detail, running=running)
         table_entries = self.index.entries_for_process(key)
+        # MT-29 (0.39): the per-table auto-load policy exclusion.
+        # Tables whose content sha is persisted as manual-only never
+        # auto-load (no request, no picker); a table without a
+        # content sha (unreadable / never scanned) cannot carry a
+        # policy and stays in the decision set.  An explicit load
+        # (request_load / choose) is never affected by the policy.
+        if self._manual_only is not None and table_entries:
+            manual = {s.casefold() for s in self._manual_only()}
+            kept = [t for t in table_entries
+                    if (getattr(t, "sha256", "") or "").casefold()
+                    not in manual]
+            if not kept:
+                detail = ("auto-load suppressed (all "
+                          + str(len(table_entries))
+                          + " bound table(s) for this process are "
+                          "manual-only; load one explicitly)")
+                self.last_tick_detail = detail
+                self.last_error = None
+                if self.state == STATE_CHOOSING:
+                    self.choice = None
+                    self.state = STATE_WAITING
+                return TickOutcome(self.state, reason=detail,
+                                   running=running)
+            table_entries = kept
         if not table_entries:
             # A snapshot name matched a stored bound name, but every
             # corresponding table entry is unreadable: name the dead end.

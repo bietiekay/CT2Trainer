@@ -642,7 +642,8 @@ class NoteEditorUiTests(_NotesUiBase):
         self.assertEqual(len(created), 1)
         self.assertEqual(created[0].commands,
                          ["Table details", "Load this table",
-                          "Edit note\u2026", "Pin to top"])
+                          "Edit note\u2026", "Auto-load: manual only",
+                          "Pin to top"])
 
     def test_a_table_without_a_content_sha_is_a_named_refusal(self):
         app = self._app()
@@ -809,10 +810,14 @@ class NoteDetailsUiTests(_NotesUiBase):
         self.addCleanup(win.destroy)
         values = self._value_rows(win)
         # MT-28 (0.37): the "Remembered process" row follows the
-        # note / tag rows (no binding in this test -> "none").
-        self.assertEqual(values[-3], "the details note")
-        self.assertEqual(values[-2], "combat, spoilers")
-        self.assertEqual(values[-1], "none")
+        # note / tag rows (no binding in this test -> "none");
+        # MT-29 (0.39): the "Auto-load policy" row follows it
+        # (no policy in this test -> the documented default).
+        self.assertEqual(values[-4], "the details note")
+        self.assertEqual(values[-3], "combat, spoilers")
+        self.assertEqual(values[-2], "none")
+        self.assertEqual(values[-1],
+                         "automatic (the documented default)")
 
     def test_the_details_window_shows_the_none_placeholders(self):
         app = self._app()
@@ -823,10 +828,13 @@ class NoteDetailsUiTests(_NotesUiBase):
         self.addCleanup(win.destroy)
         values = self._value_rows(win)
         # MT-28 (0.37): three trailing "none" rows - note, tags,
-        # remembered process.
+        # remembered process; MT-29 (0.39): the "Auto-load policy"
+        # row follows with the documented default.
+        self.assertEqual(values[-4], "none")
         self.assertEqual(values[-3], "none")
         self.assertEqual(values[-2], "none")
-        self.assertEqual(values[-1], "none")
+        self.assertEqual(values[-1],
+                         "automatic (the documented default)")
 
 
 if __name__ == "__main__":

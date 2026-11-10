@@ -166,6 +166,9 @@ from .table_analysis import (AnalysisStore, blocked_column_text,
 from .table_notes import (NotesRefusal, NotesStore, TAGS_LIMIT,
                           TAG_MAX_LEN, note_column_text, parse_tags,
                           sha256_key_ok)
+# MT-29 (0.39): the per-table auto-load policy sidecar (pure layer).
+from .table_autoload import (AutoLoadRefusal, AutoLoadStore,
+                             AUTOLOAD_MANUAL_ONLY)
 from .table_attach import (AttachRefusal, AttachStore, binding_target)
 from .analysis_worker import AnalysisWorker
 from .steamdeck_route import (attach_gate, require_engine_attach,
@@ -215,7 +218,9 @@ def ui_flow_text() -> str:
         "Folders... (the folder manager: add / remove / set primary "
         "among the indexed table folders - several folders can be "
         "indexed at once, primary first); Rescan; UI flow (this "
-        "window); Close.\n"
+        "window); State folder... (opens the persisted state home in "
+        "the file manager); Debug log... (opens the trainer debug "
+        "log); Close.\n"
         "   Below the header: the folder line (the primary folder, "
         "the total folder count with several indexed, and any scan "
         "problem), the meta line (table counts across the indexed "
@@ -257,14 +262,23 @@ def ui_flow_text() -> str:
         "the list (it takes the initial focus); Enter or double-click "
         "loads the selected row; right-click a row for the context menu "
         "(table details - the read-only inspection window with the "
-        "live load-gate preview, the entry analysis and the note / "
-        "tag rows, load, edit note - the small dialog for the "
-        "per-table note and the comma-separated tags, saved with the "
-        "table's content hash, pin to top / unpin).\n"
+        "live load-gate preview, the entry analysis, the note / "
+        "tag, the remembered process and the auto-load policy rows, "
+        "load, edit note - the small dialog for the per-table note "
+        "and the comma-separated tags, saved with the table's content "
+        "hash, the auto-load policy toggle - automatic / manual only, "
+        "persisted per table - and pin to top / unpin).\n"
         "   Auto-load: the poll tick asks the orchestrator.  A unique "
         "table-for-process match loads by itself (the documented "
         "default).  A multi-table match opens the picker.  Nothing "
         "matches and the line keeps ticking.\n"
+        "   Auto-load policy (per table, persisted): the row menu "
+        "toggles a table between 'automatic' (the documented "
+        "default) and 'manual only'.  A manual-only table is never "
+        "auto-loaded - the line names the suppression instead; every "
+        "explicit load path keeps working for it.  The choice is "
+        "keyed by the table's content hash, so it survives renames "
+        "and follows a content-identical file to another root.\n"
         "   Auto-rescan: while the toggle is on, the tick re-runs the "
         "incremental scan of every indexed folder every 30 s (one stat "
         "pass per folder - added / changed / removed tables show up "
@@ -322,8 +336,11 @@ def ui_flow_text() -> str:
         "the per-table plan-analysis results "
         "(keyed by the table content hash, LRU-bounded), the "
         "per-table notes / tags (keyed by the table content hash, "
-        "LRU-bounded) and the per-table settings sidecar (keyed by "
-        "the table content hash, never the path) all survive "
+        "LRU-bounded), the per-table process binding (the explicit "
+        "process choice, keyed by the table content hash, LRU-bounded) "
+        "and the per-table auto-load policy (manual-only vs. the "
+        "documented automatic default, keyed by the table content "
+        "hash, LRU-bounded) all survive "
         "restarts under the state home.  "
         "Only confirmed ON toggles are persisted "
         "as saved wishes; a failed enable stays visibly inactive.\n\n"
@@ -471,6 +488,14 @@ class MasterApp:
         # roots and renames).  An absent or refused document means the
         # documented empty state (no remembered choice).
         self.attach_store = AttachStore(self.state_home)
+        # MT-29 (0.39): the per-table auto-load policy sidecar under
+        # the state home (table-autoload.json, schema 1, keyed by the
+        # table content sha256 - the same identity as the notes and
+        # attach documents, so a policy follows a content-identical
+        # file across roots and renames).  An absent or refused
+        # document means the documented default: every table
+        # auto-loads (no persisted policy = automatic).
+        self.autoload_store = AutoLoadStore(self.state_home)
         self.lister = lister if lister is not None else default_process_lister()
         self.plan_compiler = plan_compiler
         self.state_dir_factory = state_dir_factory
@@ -505,7 +530,8 @@ class MasterApp:
                                      debug_log=debug_log)
             self.plan_compiler = plan_compiler
         self.orchestrator = MasterOrchestrator(self.index, self.lister,
-                                               self.plan_compiler)
+                                               self.plan_compiler,
+                                               manual_only=self._manual_only_shas)
 
     def index_path(self):
         from pathlib import Path
@@ -541,6 +567,19 @@ class MasterApp:
                 self.state_path())
         except Exception:
             pass
+
+    def _manual_only_shas(self) -> set:
+        """MT-29 (0.39): the current manual-only policy set - the
+        content sha256 keys persisted with the "manual-only"
+        auto-load policy (one store read per orchestrator tick; the
+        store treats a refused document as the empty default, so a
+        corrupt document degrades to automatic loading, never a
+        crash).  The orchestrator re-evaluates it on every tick, so
+        a policy change from the row menu applies from the next
+        tick."""
+        return {sha for sha, entry
+                in self.autoload_store.document()["tables"].items()
+                if entry.get("policy") == AUTOLOAD_MANUAL_ONLY}
 
     def set_attach_mode(self, mode: str) -> None:
         """Switch the persisted attach mode (MT-11) and re-persist it."""
@@ -938,6 +977,17 @@ class MasterWindow:
             return tk.Button(parent, text=label, command=action, **style)
 
         button(header, "Close", self.close).pack(side="right")
+        # MT-30 (0.39): the reliability observability quick access -
+        # the persisted state home (the documents, the forced-
+        # recovery archives from the 0.38 --force start) and the
+        # trainer debug log (a named refusal in the status line when
+        # the folder / file does not exist or no opener is
+        # available; master-only, the standalone header stays
+        # byte-identical).
+        button(header, "Debug log…", self._open_debug_log).pack(
+            side="right", padx=(0, 8))
+        button(header, "State folder…", self._open_state_folder).pack(
+            side="right", padx=(0, 8))
         # MT-20 (0.29): the read-only in-app UI-flow reference (the
         # same content as the reviewable UI.md next to this module).
         button(header, "UI flow", self._open_ui_flow).pack(
@@ -1227,6 +1277,57 @@ class MasterWindow:
                   activeforeground=FG, font=("Segoe UI", 12),
                   height=2, padx=12, pady=4).pack(anchor="e")
 
+    def _open_state_folder(self):
+        """MT-30 (0.39): open the persisted state home in the file
+        manager (the master-state document, the table index, the
+        per-table sidecars, and the ``forced-recovery/`` archives
+        created by the 0.38 ``--force`` forced start).
+
+        A missing folder (a genuinely fresh start has nothing
+        persisted yet) or an unavailable desktop opener is a named
+        refusal in the status line - never a crash, no dialog."""
+        from .state_access import (StateAccessRefusal, open_path,
+                                   resolve_state_folder)
+        try:
+            target = resolve_state_folder(self.app.state_home)
+        except StateAccessRefusal as exc:
+            self._set_status("State folder: " + exc.code
+                             + " - " + exc.detail)
+            return
+        try:
+            open_path(target)
+        except StateAccessRefusal as exc:
+            self._set_status("State folder: " + exc.code
+                             + " - " + exc.detail)
+            return
+        self._set_status("State folder opened: " + target)
+
+    def _open_debug_log(self):
+        """MT-30 (0.39): open the trainer debug log (written when the
+        converter option "Debug logging" is enabled - the frozen
+        trainer next to the EXE, the source runtime in the working
+        directory; the exact path is ``debug_log.default_log_path()``).
+
+        A missing log (debug logging off, or no session has written
+        it yet) or an unavailable desktop opener is a named refusal
+        in the status line - never a crash, no dialog."""
+        from ..debug_log import default_log_path
+        from .state_access import (StateAccessRefusal, open_path,
+                                   resolve_debug_log)
+        try:
+            target = resolve_debug_log(str(default_log_path()))
+        except StateAccessRefusal as exc:
+            self._set_status("Debug log: " + exc.code
+                             + " - " + exc.detail)
+            return
+        try:
+            open_path(target)
+        except StateAccessRefusal as exc:
+            self._set_status("Debug log: " + exc.code
+                             + " - " + exc.detail)
+            return
+        self._set_status("Debug log opened: " + target)
+
     def _folder_text(self) -> str:
         # MT-26 (0.34): the primary folder first; with several indexed
         # folders the total count is shown, and every root-level scan
@@ -1497,8 +1598,14 @@ class MasterWindow:
         # text and tags (one document load per render; a table without
         # a note entry simply has no note-side match surface).
         notes_by_sha = self.app.notes_store.document()["tables"]
+        # MT-29 (0.39): the filter also matches the persisted
+        # auto-load policy text (one document load per render; the
+        # documented default "auto" is the absence of an entry, so
+        # only the manual-only tables carry a match surface).
+        autoload_by_sha = self.app.autoload_store.document()["tables"]
         filtered = filter_tables(entries, self._filter_query,
-                                 note_lookup=notes_by_sha)
+                                 note_lookup=notes_by_sha,
+                                 autoload_lookup=autoload_by_sha)
         if self._status_filter:
             codes = [self._row_status(entry)[0] for entry in filtered]
             filtered = filter_rows_by_status(filtered, codes,
@@ -2279,6 +2386,25 @@ class MasterWindow:
                          command=lambda: self._load_selected_table(key))
         menu.add_command(label="Edit note\u2026",
                          command=lambda: self._open_note_editor(key))
+        # MT-29 (0.39): the per-table auto-load policy toggle (the
+        # table is never auto-loaded; explicit loads keep working).
+        # The policy persists against the table's content sha256 (the
+        # MT-27 identity rule); a table without a content sha (unread-
+        # able / never scanned) cannot carry one - the item is
+        # disabled with the named reason.
+        entry = self.app.index.get_by_key(key)
+        if entry is not None and sha256_key_ok(
+                getattr(entry, "sha256", "") or ""):
+            manual = (self.app.autoload_store.policy(entry.sha256)
+                      == AUTOLOAD_MANUAL_ONLY)
+            menu.add_command(
+                label="Auto-load: automatic" if manual
+                else "Auto-load: manual only",
+                command=lambda: self._toggle_table_autoload(key,
+                                                            not manual))
+        else:
+            menu.add_command(label="Auto-load policy (no content sha)",
+                             state="disabled")
         if self.app.is_table_pinned(key):
             menu.add_command(label="Unpin",
                              command=lambda: self._toggle_table_pin(key,
@@ -2303,6 +2429,40 @@ class MasterWindow:
             return
         self._render_tables()
         self._set_status(("Pinned " if pinned else "Unpinned ") + table_key)
+
+    def _toggle_table_autoload(self, table_key: str, manual_only: bool):
+        """MT-29 (0.39): the row-menu auto-load policy toggle (table
+        key) - persists the policy against the table's content
+        sha256 (immediate save), re-renders on success, and surfaces
+        the named refusal in the status line on failure (no crash,
+        no state change).  ``manual_only=True`` sets the persisted
+        "manual-only" policy (the table is never auto-loaded);
+        ``False`` restores the documented default (automatic) by
+        dropping the entry.  Explicit loads (double-click, Enter,
+        "Load this table", the "Load table" picker) are never
+        affected by the policy."""
+        entry = self.app.index.get_by_key(table_key)
+        if entry is None:
+            self._set_status("No index entry for " + table_key)
+            return
+        sha = getattr(entry, "sha256", "") or ""
+        if not sha256_key_ok(sha):
+            self._set_status(
+                "Auto-load policy needs a content sha (the table is "
+                "unreadable or was never scanned)")
+            return
+        try:
+            if manual_only:
+                self.app.autoload_store.set_policy(sha,
+                                                   AUTOLOAD_MANUAL_ONLY)
+                self._set_status("Auto-load: manual only - " + table_key)
+            else:
+                self.app.autoload_store.set_policy(sha, "auto")
+                self._set_status("Auto-load: automatic - " + table_key)
+        except AutoLoadRefusal as exc:
+            self._set_status(str(exc))
+            return
+        self._render_tables()
 
     def _open_note_editor(self, table_key: str):
         """MT-27 (0.35): the per-table note / tag editor Toplevel.
@@ -2478,13 +2638,17 @@ class MasterWindow:
         # per-table process binding for the table's content sha
         # (None while the table carries no remembered choice).
         attach = self.app.attach_store.get(entry.sha256)
+        # MT-29 (0.39): the details window shows the persisted
+        # per-table auto-load policy for the table's content sha
+        # (None = the documented default "automatic").
+        autoload = self.app.autoload_store.get(entry.sha256)
         lines = table_detail_lines(entry, root=base,
                                    pinned=self.app.is_table_pinned(table_key),
                                    last_used=last_used,
                                    running_pids=pids, gate=gate,
                                    analysis=analysis,
                                    notes=self.app.notes_store.get(entry.sha256),
-                                   attach=attach)
+                                   attach=attach, autoload=autoload)
         win = tk.Toplevel(self.root)
         self._details_win = win
         win.title("Table details - " + table_key)

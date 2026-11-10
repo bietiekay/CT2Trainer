@@ -59,6 +59,23 @@ _SNAPSHOT_TRANSIENT_ERRORS = {ERROR_BAD_LENGTH, ERROR_INVALID_ID, ERROR_MORE_DAT
 _SNAPSHOT_MAX_ATTEMPTS = 8
 _SNAPSHOT_RETRY_BASE_SECONDS = 0.05
 _SNAPSHOT_RETRY_MAX_SECONDS = 1.0
+# Transient READ failures (the 0.39 reliability lane, closing the
+# documented open issue of the 0.38 ledger): Win32 299 is field-
+# observed on Proton (the 0.22 / 0.30 / 0.31 field logs' transient
+# "ReadProcessMemory failed (Win32 error 299)" - the target mid-
+# decommit / AV / exit; no public Windows constant is named for 299,
+# so it is documented as a field-observed transient code, not a
+# named constant).  The remaining codes are the same transient set
+# the module-snapshot retry uses (in-flight state while the target
+# is still changing).  A transient read is retried with a bounded
+# exponential backoff; every OTHER code (e.g. 5, access denied)
+# fails immediately, and the budget-exhausted read raises the
+# original error unchanged (fail-closed, no silent success).
+_READ_TRANSIENT_ERRORS = {299, ERROR_MORE_DATA, ERROR_BAD_LENGTH,
+                          ERROR_INVALID_ID}
+_READ_MAX_ATTEMPTS = 4
+_READ_RETRY_BASE_SECONDS = 0.05
+_READ_RETRY_MAX_SECONDS = 0.25
 _DWORD = ctypes.c_uint32
 _WORD = ctypes.c_uint16
 
@@ -420,13 +437,27 @@ class ProcessMemory:
         return information
 
     def _read_exact(self, address: int, size: int) -> bytes:
+        # 0.39 reliability lane: the bounded transient-read retry.
+        # The sleep stays under the caller's self._lock (every caller
+        # holds it; the snapshot-retry precedent), so no other
+        # read/write interleaves a transient retry.  A partial result
+        # (a successful call that transferred less) is NOT retried -
+        # it is an unexpected state, not a transient error code.
         buffer = ctypes.create_string_buffer(size)
         transferred = ctypes.c_size_t()
-        if not self._kernel.ReadProcessMemory(self._handle, address, buffer, size, ctypes.byref(transferred)):
-            raise _windows_error("ReadProcessMemory")
-        if transferred.value != size:
-            raise ProcessMemoryError("ReadProcessMemory returned a partial result.")
-        return buffer.raw
+        attempt = 0
+        while True:
+            attempt += 1
+            if self._kernel.ReadProcessMemory(self._handle, address, buffer, size, ctypes.byref(transferred)):
+                if transferred.value != size:
+                    raise ProcessMemoryError("ReadProcessMemory returned a partial result.")
+                return buffer.raw
+            error = ctypes.get_last_error()
+            if (error not in _READ_TRANSIENT_ERRORS
+                    or attempt >= _READ_MAX_ATTEMPTS):
+                raise _windows_error("ReadProcessMemory")
+            time.sleep(min(_READ_RETRY_BASE_SECONDS * (2 ** (attempt - 1)),
+                           _READ_RETRY_MAX_SECONDS))
 
     def read(self, address: int, size: int) -> bytes:
         with self._lock:

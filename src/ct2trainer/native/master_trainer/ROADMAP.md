@@ -42,6 +42,9 @@ main-branch libraries; none adds trainer functionality.
 
 | MT-28 | Per-table process binding persistence | done (2026-11-09) | `table_attach.py` (new pure decision + document layer - no OS / index / state access): the persisted `table-attach.json` document (schema 1, under the state home; **keyed by the table content sha256** - the same identity as the MT-24 analysis and the MT-27 notes documents, so a remembered choice survives a rename within a root and follows a content-identical file to another root; strict key-set / field validation of the master-state discipline - an unknown field is a named `AttachRefusal`, never a silent drop; checksummed canonical-JSON envelope; `ATTACH_ENTRIES_LIMIT` = 1024 entries, `evict_oldest` by `updated_at`, ties by sha256 - deterministic; a refused document is treated as absent, documented, never a silent reset); `AttachStore` (`document` / `get` / `has` / `set_binding` / `clear_binding` / `clear`; a malformed key or an out-of-bounds process name / PID is a named refusal, fail-closed - the store never persists what the validator refuses); `binding_target` (the pure decision: honour the stored PID only while it is one of the live candidates whose name still matches the bound process - case-insensitive, the same rule the picker and the memory factory use; a stale or foreign PID yields the documented fallback); `details_attach_lines` (the MT-22 details-window "Remembered process" row). `master_ui.py`: `MasterApp.attach_store`; the process picker gains `preselect_pid` (the remembered row is preselected - the picker still opens in `ask` mode, the documented contract); `_binding_candidate` (the persisted binding for a table's content sha, or None - a table without a content sha cannot carry a binding, the documented MT-27 identity rule); the binding is consulted in `_auto_load` (a live binding outranks the documented smallest-PID rule in `auto` mode; preselected in the picker in `ask` mode), `_load_selected_table`, `_picker_chosen` (the table-choice path) and `_detach_or_attach` (the `attach` origin addresses the loaded table through the sidecar sha); `_remember_attach_choice` persists the explicit choice before the picker state is torn down (every origin: auto-load / explicit / choice / attach; a refused choice is not persisted, no status-line noise on the hot pick path). `table_details.py`: `table_detail_lines` gains the `attach` argument (the "Remembered process" row after the note / tag block). Zero load-path effect - the MT-9 gate re-checks the table independently at load time. +68 tests (`tests/test_native_master_attach.py` 53, `tests/test_native_master_ui_mt28.py` 15). |
 
+| MT-29 | Per-table auto-load policy | done (2026-11-10) | `table_autoload.py` (new pure decision + document layer - no OS / index / state access): the persisted `table-autoload.json` document (schema 1, under the state home; **keyed by the table content sha256** - the same identity as the MT-24 analysis, the MT-27 notes and the MT-28 attach documents, so a policy survives a rename within a root and follows a content-identical file to another root; strict key-set / field validation of the master-state discipline - an unknown field is a named `AutoLoadRefusal`, never a silent drop; checksummed canonical-JSON envelope; `AUTOLOAD_ENTRIES_LIMIT` = 1024 entries, `evict_oldest` by `updated_at`, ties by sha256 - deterministic; a refused document is treated as absent, documented, never a silent reset); only the NON-DEFAULT policy persists - one `{"policy", "updated_at"}` entry per manual-only table; the ABSENCE of an entry (and a refused document) is the documented default `AUTOLOAD_AUTO` (the same discipline as the MT-28 binding document); `AutoLoadStore` (`document` / `get` / `has` / `policy` / `set_policy` / `clear_policy` / `clear`; setting `auto` drops a persisted entry; a malformed key or an out-of-bounds policy is a named refusal, fail-closed); `details_autoload_lines` (the MT-22 details-window "Auto-load policy" row). `orchestrator.py`: the optional zero-arg `manual_only` callable (re-evaluated on every tick, so a policy change applies from the next tick) - a table whose content sha is in the set is excluded from the auto-load DECISION: no auto-load request and no picker, a stable named waiting detail ("auto-load suppressed (all N bound table(s) for this process are manual-only; load one explicitly)") instead of a re-issued request, and an open choice is dropped back to waiting; a table without a content sha cannot carry a policy and stays in the decision set; the EXPLICIT load path (`request_load` / `choose`, the MT-10 path) is never affected. `table_filter.py`: `filter_tables` gains the optional `autoload_lookup` (the persisted policy text joins the casefolded match surface; the documented default `auto` is the absence of an entry and carries no match surface; `None` is the exact pre-0.39 behavior). `table_details.py`: `table_detail_lines` gains the `autoload` argument (the policy row below the remembered-process block). `master_ui.py`: `MasterApp.autoload_store` + `_manual_only_shas` wired to the orchestrator; the row context menu offers the toggle ("Auto-load: manual only" / "Auto-load: automatic" - the label names the ACTION, the pin-toggle convention; immediate persist + status line; the disabled item "Auto-load policy (no content sha)" for a table without a content sha); the filter matches the persisted policy text; the MT-22 details window shows the row. +47 tests (`tests/test_native_master_autoload.py` 33, `tests/test_native_master_ui_mt29.py` 14). |
+| MT-30 | State folder / debug log quick access | done (2026-11-10) | `state_access.py` (new pure decision + opener layer - no window, no Tk): `StateAccessRefusal` (the stable machine-readable `code` + the displayable `detail`); `resolve_state_folder` (the state home must exist and be a directory - `state-folder-bad` / `state-folder-missing`; a genuinely fresh start has nothing persisted yet) and `resolve_debug_log` (the log must exist and be a file - `debug-log-bad` / `debug-log-missing`; debug logging is a converter option, so an un-enabled build or a fresh install has no log yet); `choose_opener` (the only OS-service boundary - `os.startfile` on Windows, `xdg-open` through a fire-and-forget subprocess on Linux / SteamOS, the named `no-opener` refusal when no desktop handler exists - e.g. a headless SteamOS session); `open_path` (the injectable opener is the test seam; a non-string / empty target is the named `bad-path`; an opener failure is contained as the named `opener-failed` - never a crash; an opener-raised `StateAccessRefusal` is re-raised unchanged). `master_ui.py`: the two waiting-view header buttons "State folder…" / "Debug log…" (master-only - the standalone trainer header stays byte-identical): they open the persisted state home (the master-state document, the table index, the per-table sidecars, and the `forced-recovery/` archives created by the 0.38 `--force` forced start) and the trainer debug log at its exact `debug_log.default_log_path()` (the frozen trainer next to the EXE, the source runtime in the working directory) in the platform file manager / default handler; every named refusal lands in the status line - never a dialog, never a crash. +20 tests (`tests/test_native_master_ui_mt30.py`). |
+
 ## Online feature evaluation (2026-11-02)
 
 Web research (2026-11-02) evaluated all-in-one trainer front ends and
@@ -556,6 +559,65 @@ persisting the explicit choice); the MT-22 details-window
 Remaining candidates (updated): the game launch integration
 (needs install-path data; out of scope for the read-only table
 model).
+
+### 0.39 per-table auto-load policy + state/log quick access + bounded transient-read retry (evaluated 2026-11-09/10, adopted + implemented 2026-11-10)
+
+The 0.39 evaluation (a re-read of the WeMod community threads - the
+layout / visibility / trainer-options requests remain covered by the
+0.36 multi-column grid and the 0.37 per-table process binding - plus
+a code survey of Game-Trainer-Manager (github.com/Karasukaigan/game-
+trainer-manager, a PySide6 trainer front end): pin-to-top -> covered
+by MT-18 (0.28), local search -> covered by MT-13/14 (0.26/0.27),
+detailed logs / debug mode -> the adopted signal, Steam launch /
+online catalog / themes / bilingual UI -> out of scope for the
+private own-use model) found two open candidates for the Master
+Trainer use case plus the reliability item open since the 0.22
+field cycle:
+
+- Per-table auto-load policy: **the adopted 0.39 candidate** - the
+  use case's "choose which table runs against which process" adds
+  the direction the MT-10 explicit load only covers from one side:
+  some tables should NEVER auto-load; the user loads them
+  explicitly.  The persisted per-table policy (manual-only vs. the
+  documented automatic default) is the MT-29 sidecar.
+- State / debug-log quick access: **the adopted 0.39 candidate** -
+  the detailed-logs / debug-mode signal from Game-Trainer-Manager:
+  the waiting view gains the "State folder…" and "Debug log…"
+  header buttons - the persisted state home (incl. the forced-
+  recovery archives from the 0.38 --force start) and the trainer
+  debug log at its exact default path, opened in the platform file
+  manager / default handler, with named refusals in the status line
+  instead of dialogs or crashes.
+- Bounded transient-read retry: **the reliability lane of 0.39** -
+  the field-observed transient "ReadProcessMemory failed (Win32
+  error 299)" (0.22 / 0.30 / 0.31 field logs, Proton) is now
+  retried with the bounded exponential backoff in `memory.py`
+  (4 attempts, 0.05 -> 0.25 s backoff, partial results not
+  retried, the original error after the budget - fail-closed)
+  before it surfaces.
+
+Adopted for 0.39: MT-29 (per-table auto-load policy), MT-30 (state
+folder / debug log quick access), and the bounded transient-read
+retry. Implemented as shipped (2026-11-10, 0.39 content on
+`main`): the pure `table_autoload.py` layer (the persisted
+`table-autoload.json` document schema 1 with the master-state
+discipline - only the non-default `manual-only` policy persists,
+absence = the documented `auto` default; `AutoLoadStore`,
+`evict_oldest`, `details_autoload_lines`); the orchestrator
+`manual_only` exclusion (the zero-arg callable re-evaluated on
+every tick; a stable named waiting detail instead of a re-issued
+request; the explicit MT-10 load path never affected); the pure
+`state_access.py` layer (the named `StateAccessRefusal` codes, the
+platform opener selection, the injectable opener); the `memory.py`
+bounded transient-read retry. +73 tests
+(`tests/test_native_master_autoload.py` 33,
+`tests/test_native_master_ui_mt29.py` 14,
+`tests/test_native_master_ui_mt30.py` 20,
+`tests/test_native_memory_read_retry.py` 6).
+
+Remaining candidates (updated): the game launch integration
+(needs install-path data; out of scope for the read-only table
+model), the online catalog (out of scope - private own use).
 
 ## Merge & release plan (historical + current)
 

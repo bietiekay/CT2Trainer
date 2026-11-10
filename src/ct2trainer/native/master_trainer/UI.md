@@ -42,6 +42,8 @@ survive — they are window/app state, not widget state).
 | `Folders…` | The folder manager (0.34, MT-26): the indexed table folders in user order (the primary marked with a star); `Add folder…` / `Set primary` / `Remove` / `Close`; every action re-scans the indexed roots, saves the index, restarts the auto-rescan clock and refreshes the view; a failed change lands in the status line (fail-closed) |
 | `Rescan` | Re-scans the indexed folders now (same as **F5**) |
 | `UI flow` | Opens this flow document as a read-only in-app dialog (0.29, MT-20); a second click lifts the open window instead of duplicating it |
+| `State folder…` | Opens the persisted state home in the file manager (0.39, MT-30): the master-state document, the table index, the per-table sidecars, and the `forced-recovery/` archives from the 0.38 `--force` start; a missing folder or an unavailable opener is the named refusal in the status line, never a dialog |
+| `Debug log…` | Opens the trainer debug log at its exact default path (0.39, MT-30); a missing log (debug logging disabled, or no session wrote it yet) or an unavailable opener is the named refusal in the status line |
 | `Close` | Closes the app (an active trainer session is closed cleanly first) |
 
 ### The lines
@@ -160,6 +162,22 @@ refusals included — never a crash):
 3. **Row** — right-click "Load this table", Enter, or double-click.
 4. **`Recent: <path>`** — the one-click re-load.
 
+### Auto-load policy (persisted, MT-29, 0.39)
+
+- **automatic** (default) — the documented MT-3 behavior: a unique
+  match auto-loads, a multi-table match opens the picker.
+- **manual only** — the table never auto-loads (no request, no
+  picker); the waiting line shows the stable named detail instead
+  ("auto-load suppressed … load one explicitly"). Set per table from
+  the row context menu ("Auto-load: manual only" / "Auto-load:
+  automatic"), persisted in `table-autoload.json` keyed by the table
+  content sha256 (the same identity as the notes / attach / analysis
+  sidecars — a policy survives a rename and follows a content-
+  identical file to another root). A table without a content sha
+  cannot carry a policy (the menu item is disabled with the named
+  reason). Every explicit load path above (1.–4.) keeps working
+  unchanged for a manual-only table.
+
 ### Attach decision (persisted, MT-11)
 
 - **auto** (default) — no picker ever; several instances attach to the
@@ -263,6 +281,7 @@ target) and `⬅ Master` (the return below).
 | Per-table plan analysis (0.32, MT-24) | `table-analysis.json` (schema 1; keyed by table content sha256, LRU-bounded to 1024 entries — a content change re-analyzes, an unchanged table reuses the cached counts) |
 | Per-table notes / tags (0.35, MT-27) | `table-notes.json` (schema 1; keyed by table content sha256, LRU-bounded to 1024 entries — a note follows the content identity across renames and roots) |
 | Per-table process binding (0.37, MT-28) | `table-attach.json` (schema 1; keyed by table content sha256, LRU-bounded to 1024 entries — the explicit process choice is remembered per table: live binding outranks the smallest-PID rule in auto mode, ask preselects the remembered row, stale / foreign PIDs fall back to the ordinary decision) |
+| Per-table auto-load policy (0.39, MT-29) | `table-autoload.json` (schema 1; keyed by table content sha256, LRU-bounded to 1024 entries — only the non-default `manual-only` policy persists, absence = the documented `auto` default: a manual-only table never auto-loads, the explicit load paths keep working) |
 | Enabled toggles (per table) | the engine state store; only confirmed ON toggles persist |
 | Table index (0.34: one checksum-bound root block per indexed folder) | `tables-index.json` (schema 2, checksum-bound) |
 

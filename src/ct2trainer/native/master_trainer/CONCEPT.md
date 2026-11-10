@@ -426,6 +426,38 @@ configuration.
   sha cannot carry a binding (the documented MT-27 identity rule).
   Zero load-path effect — the MT-9 gate re-checks the table
   independently at load time.
+- **MT-29 per-table auto-load policy (0.39).** The use case's
+  "choose which table runs" direction: the persisted per-table
+  auto-load policy (`table-autoload.json`, schema 1, under the state
+  home, keyed by the table content sha256 — the same identity as the
+  MT-24/27/28 sidecars, so a policy survives a rename and follows a
+  content-identical file to another root). Only the non-default
+  policy persists: a `manual-only` entry; the absence of an entry is
+  the documented automatic default. A manual-only table is never
+  auto-loaded — no auto-load request and no picker; the waiting line
+  shows the stable named detail ("auto-load suppressed … load one
+  explicitly") instead, and the explicit load paths (double-click /
+  Enter, "Load this table", the "Load table" picker) keep working
+  unchanged. The row context menu offers the toggle ("Auto-load:
+  manual only" / "Auto-load: automatic" — the label names the
+  action), the MT-22 table-details window shows the "Auto-load
+  policy" row, and the waiting-view filter matches the persisted
+  policy text. A table without a content sha cannot carry a policy
+  (the documented MT-27 identity rule; the menu item is disabled
+  with the named reason). Zero load-path effect — the MT-9 gate
+  re-checks the table independently at load time.
+- **MT-30 state folder / debug log quick access (0.39).** The
+  waiting view gains two header buttons — "State folder…" and
+  "Debug log…" (master-only; the standalone trainer header stays
+  byte-identical). They open the persisted state home (the
+  master-state document, the table index, the per-table sidecars,
+  and the `forced-recovery/` archives created by the 0.38 `--force`
+  forced start) and the trainer debug log at its exact
+  `debug_log.default_log_path()` in the platform file manager /
+  default handler. The pure `state_access.py` layer names every
+  refusal (missing folder / missing log, wrong kind, no desktop
+  opener, a failing opener) — the status line says so, never a
+  crash, no dialog.
 
 ## Waiting-view usability (0.26: MT-13 / MT-14 / MT-15)
 
