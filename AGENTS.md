@@ -201,7 +201,47 @@ in-build suite 4,499 OK / 30 expected skips, `ce_inputs: []`,
 `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
 16,968,879 bytes) ships next to the converter); superseded 0.32
 (build `native-20261108T100731Z-a1d311e5` cut from `main` @
-`bfcc3a3`, 2026-11-08). 0.39 released (build `native-20261110T051241Z-57bf7d47` cut from `main`
+`bfcc3a3`, 2026-11-08). 0.40 released (build `native-20261110T093203Z-82c49872` cut from `main`
+@ `e611e9e`, 2026-11-10): the Master Trainer process
+identification in picker + details (MT-31) + the bounded
+zero-transfer transient-write retry in `memory.py` (MT-31: the
+optional identification fields `path` / `creation_time` /
+`pointer_size` on `ProcessSnapshotEntry`, all default `None`
+- fail-closed, the row keeps the byte-stable name + PID
+form, the `pid` / `name` decision fields are never touched;
+the bounded per-candidate enrichment only at picker +
+details open - Windows `OpenProcess(PROCESS_QUERY_INFORMATION)`
++ `QueryFullProcessImageNameW` + `GetProcessTimes` +
+`IsWow64Process2`, procfs `exe` link target + `stat` field 22
++ `btime`; the picker rows and the table-details "Running
+now" row render the proved facts, a refused fact never
+renders; zero load-path effect, the MT-9 gate re-checks the
+table independently at load time); (the write-side symmetry
+of the 0.39 transient-read retry: a `WriteProcessMemory`
+call that FAILED with the transient set {299, 119, 1116,
+24} and transferred NOTHING is retried in `memory._write_checked`
+with the bounded exponential backoff - exactly 4 attempts,
+backoff 0.05 -> 0.25 s; a partial transfer or any
+non-transient code is never retried, the original error is
+raised unchanged after the budget - completing the read /
+write pair); +46 tests, full main suite 4,879 OK / 35
+expected skips, catalog zero delta
+`blocked-catalog-040-process-id`; in-build suite 4,879 OK / 35
+expected skips, `ce_inputs: []`, `runtime_unverified`
+deliberately kept per gate; source ZIP
+`CT2Trainer-0.40-source.zip` sha256
+`46ad5dd9f9adc872e320dd4aec2362e007020ae879bba0cc8fe0621e44c34c40`
+(14,569,029 bytes) - carries the MT-31 process
+identification (`process_watch.py` enrichment layer +
+`tests/test_native_master_ui_mt31.py`) and the bounded
+transient-write retry
+(`tests/test_native_memory_write_retry.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.40-windows-portable.zip` sha256
+`5075586c7b0f3251749c8e3e60ec0db7fea251db39190b59b63273a4e9b10bd6`
+(49,809,535 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`52f6da1cebfc44a0dc791d4b5758112342b5a1d42c9fc9656901a16d1a5eb03f`,
+17,048,910 bytes) ships next to the converter); superseded 0.39 (build `native-20261110T051241Z-57bf7d47` cut from `main`
 @ `17a22f7`, 2026-11-10): the Master Trainer per-table auto-load
 policy (MT-29) + state folder / debug log quick access (MT-30) +
 the bounded transient-read retry in `memory.py` (MT-29: the
@@ -546,7 +586,10 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-10, 0.39 released - build
+**CT2Trainer (status 2026-11-10, 0.40 released - build
+`native-20261110T093203Z-82c49872` cut from `main` @ `e611e9e`,
+2026-11-10, in-build suite 4,879 OK / 35 expected skips, `ce_inputs:
+[]`; superseded 0.39, build
 `native-20261110T051241Z-57bf7d47` cut from `main` @ `17a22f7`,
 2026-11-10, in-build suite 4,833 OK / 30 expected skips, `ce_inputs:
 []`; superseded 0.38, build
@@ -567,7 +610,48 @@ language used in chat.
 `ce_inputs: []`; superseded 0.33, build
 `native-20261108T200230Z-b0167049` cut from `main` @ `6e71739`,
 2026-11-08, in-build suite 4,499 OK / 30 expected skips,
-`ce_inputs: []`) - 0.39 the Master Trainer per-table auto-load
+`ce_inputs: []`) - 0.40 the Master Trainer process
+identification in picker + details (MT-31) + the bounded
+zero-transfer transient-write retry in `memory.py` (the
+optional identification fields `path` / `creation_time` /
+`pointer_size` on `ProcessSnapshotEntry`, all default `None`
+- fail-closed, the row keeps the byte-stable name + PID form,
+the `pid` / `name` decision fields are never touched; the
+bounded per-candidate enrichment only at picker + details
+open - Windows `OpenProcess(PROCESS_QUERY_INFORMATION)` +
+`QueryFullProcessImageNameW` + `GetProcessTimes` +
+`IsWow64Process2`, procfs `exe` link target + `stat` field 22
++ `btime`; the picker rows and the table-details "Running
+now" row render the proved facts, a refused fact never
+renders; zero load-path effect, the MT-9 gate re-checks the
+table independently at load time; the write-side symmetry of
+the 0.39 transient-read retry: a `WriteProcessMemory` call
+that FAILED with the transient set {299, 119, 1116, 24} and
+transferred NOTHING is retried in `memory._write_checked`
+with the bounded exponential backoff - exactly 4 attempts,
+backoff 0.05 -> 0.25 s; a partial transfer or any
+non-transient code is never retried, the original error is
+raised unchanged after the budget - completing the read /
+write pair); +46 tests, full main suite 4,879 OK / 35
+expected skips, catalog zero delta
+`blocked-catalog-040-process-id`; in-build suite 4,879 OK /
+35 expected skips, `ce_inputs: []`, `runtime_unverified`
+deliberately kept per gate; source ZIP
+`CT2Trainer-0.40-source.zip` sha256
+`46ad5dd9f9adc872e320dd4aec2362e007020ae879bba0cc8fe0621e44c34c40`
+(14,569,029 bytes) - carries the MT-31 process
+identification (`process_watch.py` enrichment layer +
+`tests/test_native_master_ui_mt31.py`) and the bounded
+transient-write retry
+(`tests/test_native_memory_write_retry.py`) and the
+reviewable `master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.40-windows-portable.zip` sha256
+`5075586c7b0f3251749c8e3e60ec0db7fea251db39190b59b63273a4e9b10bd6`
+(49,809,535 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`52f6da1cebfc44a0dc791d4b5758112342b5a1d42c9fc9656901a16d1a5eb03f`,
+17,048,910 bytes) ships next to the converter); superseded 0.39 released (build
+`native-20261110T051241Z-57bf7d47` cut from `main` @ `17a22f7`,
+2026-11-10) - 0.39 the Master Trainer per-table auto-load
 policy (MT-29) + state folder / debug log quick access (MT-30) +
 the bounded transient-read retry in `memory.py` (the per-table
 auto-load policy `table-autoload.json` schema 1 under the state
@@ -1079,7 +1163,26 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261110T051241Z-57bf7d47` (0.39, cut
+**Latest verified build:** `native-20261110T093203Z-82c49872` (0.40, cut
+from `main` @ `e611e9e`, 2026-11-10; in-build suite 4,879 OK / 35
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+per gate; source ZIP `CT2Trainer-0.40-source.zip` sha256
+`46ad5dd9f9adc872e320dd4aec2362e007020ae879bba0cc8fe0621e44c34c40`
+(14,569,029 bytes) - carries the MT-31 process
+identification (`process_watch.py` enrichment layer +
+`tests/test_native_master_ui_mt31.py`) and the bounded
+transient-write retry
+(`tests/test_native_memory_write_retry.py`)
+and the reviewable `master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.40-windows-portable.zip` sha256
+`5075586c7b0f3251749c8e3e60ec0db7fea251db39190b59b63273a4e9b10bd6`
+(49,809,535 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`52f6da1cebfc44a0dc791d4b5758112342b5a1d42c9fc9656901a16d1a5eb03f`,
+17,048,910 bytes) ships next to the converter)). 0.40 ships the
+Master Trainer process identification in picker + details
+(MT-31) and the bounded zero-transfer transient-write retry in
+`memory.py`. Superseded
+0.39 build: `native-20261110T051241Z-57bf7d47` (0.39, cut
 from `main` @ `17a22f7`, 2026-11-10; in-build suite 4,833 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
 per gate; source ZIP `CT2Trainer-0.39-source.zip` sha256

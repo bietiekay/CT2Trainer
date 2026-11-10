@@ -73,6 +73,19 @@ expected skips; catalog zero delta (the audit chunks
 byte-identical vs `blocked-catalog-039-autoload`: 117,809 total /
 116,756 supported / 60,161 staged / 1,053 blocked, zero newly
 blocked; run `blocked-catalog-040-process-id`).
+- Build: 0.40 released as run
+  `native-20261110T093203Z-82c49872` (cut from `main` @ `e611e9e`,
+  2026-11-10): in-build suite 4,879 OK / 35 expected skips, 0
+  failures — fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.40-source.zip` sha256
+  `46ad5dd9f9adc872e320dd4aec2362e007020ae879bba0cc8fe0621e44c34c40`
+  (14,569,029 bytes); portable ZIP
+  `CT2Trainer-0.40-windows-portable.zip` sha256
+  `5075586c7b0f3251749c8e3e60ec0db7fea251db39190b59b63273a4e9b10bd6`
+  (49,809,535 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `52f6da1cebfc44a0dc791d4b5758112342b5a1d42c9fc9656901a16d1a5eb03f`,
+  17,048,910 bytes, ships next to the converter).
 
 ## 0.39 (2026-11-10)
 

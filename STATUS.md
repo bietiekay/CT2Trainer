@@ -1,6 +1,34 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-10. **0.39 released** (build
+**Updated:** 2026-11-10. **0.40 released** (build
+`native-20261110T093203Z-82c49872`, cut from `main` @ `e611e9e`,
+2026-11-10) - the Master Trainer process identification in
+picker + details (MT-31) + the bounded zero-transfer
+transient-write retry in `memory.py` (MT-31: the optional
+identification fields `path` / `creation_time` /
+`pointer_size` on `ProcessSnapshotEntry`, all default `None`
+- fail-closed, the row keeps the byte-stable name + PID form,
+the `pid` / `name` decision fields are never touched; the
+bounded per-candidate enrichment only at picker + details
+open - Windows `OpenProcess(PROCESS_QUERY_INFORMATION)` +
+`QueryFullProcessImageNameW` + `GetProcessTimes` +
+`IsWow64Process2`, procfs `exe` link target + `stat` field
+22 + `btime`; the picker rows and the table-details "Running
+now" row render the proved facts, a refused fact never
+renders); (the write-side symmetry of the 0.39
+transient-read retry: a `WriteProcessMemory` call that
+FAILED with the transient set {299, 119, 1116, 24} and
+transferred NOTHING is retried in `memory._write_checked`
+with the bounded exponential backoff - exactly 4 attempts,
+backoff 0.05 -> 0.25 s; a partial transfer or any
+non-transient code is never retried, the original error is
+raised unchanged after the budget - completing the read /
+write pair); +46 tests; full main suite 4,879 OK / 35
+expected skips; in-build suite 4,879 OK / 35 expected
+skips, `ce_inputs: []`; catalog zero delta
+`blocked-catalog-040-process-id`; see the 0.40 section
+below.
+Superseded 0.39 (build
 `native-20261110T051241Z-57bf7d47`, cut from `main` @ `17a22f7`,
 2026-11-10) - the Master Trainer per-table auto-load
 policy (MT-29) + state folder / debug log quick access
@@ -263,7 +291,27 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.39, build
+**Latest verified release:** 0.40, build
+`native-20261110T093203Z-82c49872` (cut from `main` @ `e611e9e`,
+2026-11-10): the 0.40 Master Trainer process identification
+in picker + details (MT-31) + the bounded zero-transfer
+transient-write retry in `memory.py` release - in-build
+suite 4,879 OK / 35 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.40-source.zip` sha256
+`46ad5dd9f9adc872e320dd4aec2362e007020ae879bba0cc8fe0621e44c34c40`
+(14,569,029 bytes) - carries the MT-31 process
+identification (`process_watch.py` enrichment layer +
+`tests/test_native_master_ui_mt31.py`) and the bounded
+transient-write retry
+(`tests/test_native_memory_write_retry.py`)
+and the reviewable `master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.40-windows-portable.zip` sha256
+`5075586c7b0f3251749c8e3e60ec0db7fea251db39190b59b63273a4e9b10bd6`
+(49,809,535 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`52f6da1cebfc44a0dc791d4b5758112342b5a1d42c9fc9656901a16d1a5eb03f`,
+17,048,910 bytes) ships next to the converter). Superseded 0.39,
+build
 `native-20261110T051241Z-57bf7d47` (cut from `main` @ `17a22f7`,
 2026-11-10): the 0.39 Master Trainer per-table auto-load
 policy (MT-29) + state folder / debug log quick access
@@ -834,6 +882,156 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.40 released (build `native-20261110T093203Z-82c49872`, cut from
+`main` @ `e611e9e`, 2026-11-10): the Master Trainer process
+identification in picker + details (MT-31) + the bounded
+zero-transfer transient-write retry in `memory.py`.**
+0.40 ships the adopted 0.40 candidates from the online
+evaluation (the Cheat Engine forum "Open Process By PID"
+thread: the multi-instance indistinguishability problem -
+several running instances of the same game name with no way
+to tell them apart; the WeMod UI threads: the layout /
+visibility / trainer-options requests remain covered by the
+0.36 multi-column grid and the 0.37 per-table process
+binding; the Game Cheats Manager front end: tags / search /
+filters / last-used -> covered by MT-13/15/18/27,
+auto-update / online catalog -> out of scope; the zhisync /
+game.cheat online catalog -> out of scope; the game launch
+integration -> still out of scope - no install-path data in
+the read-only table model) plus the reliability lane that
+completes the 0.39 read-side symmetry (the transient WRITE
+failure now gets the same bounded retry the transient READ
+failure got in 0.39 - the read / write pair is complete).
+- **MT-31, the process identification in picker + details:**
+  the use case's "choose which table runs against which
+  process" direction - MT-10/11/28 persist the attach mode
+  and the process binding, but the picker and the
+  table-details "Running now" row could not TELL the
+  candidates apart: several instances of the same game name
+  render as identical name + PID rows, and the PID is the
+  only discriminant. The `ProcessSnapshotEntry` gains the
+  optional identification fields `path` (the full image
+  path), `creation_time` (the process start, Unix epoch
+  seconds) and `pointer_size` (4 / 8, the target bitness),
+  all default `None` (refused / unavailable - fail-closed:
+  the row keeps the byte-stable name + PID form, the `pid`
+  / `name` decision fields are never touched). The snapshot
+  listers stay cheap (name + PID only, the 30 s auto-rescan
+  tick keeps its contract); the bounded per-candidate
+  enrichment runs only where the user asks for it - the
+  process picker rows and the table-details "Running now"
+  row, never per poll tick: `enrich_candidates` applies the
+  platform `default_process_enricher` (the injectable test
+  seam) to each entry of the bounded candidate set, every
+  per-entry failure fails closed (the entry stays
+  unenriched, a non-entry result is refused as well). The
+  Windows backend opens the process with
+  `OpenProcess(PROCESS_QUERY_INFORMATION)` only - no other
+  rights - and asks `QueryFullProcessImageNameW` /
+  `GetProcessTimes` (FILETIME ticks -> Unix seconds via the
+  11644473600 s epoch delta) / `IsWow64Process2` (I386 ->
+  4, AMD64 -> 8, anything else unknown), the handle closed
+  in a finally, a refused handle / query / missing export
+  keeps the entry unenriched, no error propagates. The
+  Linux/SteamOS backend takes the `/proc/<pid>/exe` link
+  target (under Proton the compatibility-prefix path of the
+  bound Windows EXE) and the `starttime` field 22 of
+  `/proc/<pid>/stat` plus the system `btime` at
+  `SC_CLK_TCK` (the bitness is not provable from `/proc`
+  and stays `None`; any read failure keeps the entry
+  unenriched). `process_picker.py`: `candidate_display_text`
+  - name + PID always (byte-stable against the pre-0.40 row
+  format while unenriched), the proved facts appended as
+  "  -  " joined (path / "started YYYY-MM-DD HH:MM" via
+  `format_creation_time` / "64-bit" / "32-bit"); a `None`
+  fact never renders. `table_details.py`:
+  `table_detail_lines(..., running_entries=None)` - the
+  enriched "Running now" row (sorted by PID, "; "-joined)
+  with the pre-0.40 PID-only form while `None`.
+  `master_ui.py`: the picker enriches its bounded candidate
+  set before rendering (the listbox widens 48 -> 76 to fit
+  the facts on one row), the details window passes the
+  enriched running entries; the waiting-view "Running now"
+  line keeps its cheap name + PID form (never enriched).
+  Zero load-path effect - the MT-9 gate re-checks the table
+  independently at load time; the attach decision (the PID
+  pin) is unaffected by the enrichment.
+- **The bounded zero-transfer transient-write retry:** the
+  write-side symmetry of the 0.39 transient-read retry - a
+  `WriteProcessMemory` call that FAILED with the
+  field-observed transient set {299, ERROR_MORE_DATA=119,
+  ERROR_BAD_LENGTH=1116, ERROR_INVALID_ID=24} and
+  transferred NOTHING is now retried in
+  `memory._write_checked` with the bounded exponential
+  backoff (exactly 4 attempts, backoff 0.05 -> 0.25 s, the
+  sleep under the caller's lock, the snapshot-retry /
+  read-retry precedent); a partial transfer (a call that
+  moved any bytes, failed or not) or any non-transient code
+  is NEVER retried and lands in the existing uncertain-write
+  protocol unchanged (fail-closed - the "never silently
+  retries a PARTIAL write" contract holds; after the budget
+  the original error surfaces as before).
+- +46 tests (`tests/test_native_master_ui_mt31.py` 12 - the
+  master Tk wiring: the picker enrichment + row rendering,
+  the details "Running now" row, the fail-closed refusal
+  paths; `tests/test_native_memory_write_retry.py` 7 - the
+  bounded retry: the {299, 119, 1116, 24} transient set, the
+  4-attempt budget, the 0.05 -> 0.25 s backoff sequence, the
+  zero-transfer precondition, the partial transfer never
+  retried, the original error after the budget, the
+  non-transient code never retried; the MT-31 additions in
+  `tests/test_native_master_process_watch.py` +23 - the
+  `ProcessSnapshotEntry` identification fields, the
+  `enrich_candidates` bounded loop + fail-closed per-entry
+  refusal, the Windows enricher (mocked Win32 seam), the
+  procfs enricher (SYMLINKS_OK-guarded),
+  `format_creation_time`;
+  `tests/test_native_master_process_picker.py` +4 - the
+  `candidate_display_text` byte-stable base + fact
+  rendering, a refused fact never renders; baseline pinning
+  in the MT-12 / MT-22 / MT-28 UI tests - the details-window
+  and waiting-view assertions gain the new rows). Full main
+  suite 4,879 OK / 35 expected skips (4,833 from the 0.39
+  content + 46 new; the 5 SYMLINKS_OK-guarded procfs
+  enrichment tests are expected skips where the symlink seam
+  is unavailable, alongside the 4 pre-existing symlink
+  tests); catalog zero delta `blocked-catalog-040-process-id`
+  (the 3-chunk audit byte-identical vs
+  `blocked-catalog-039-autoload`, 2026-11-10): 117,809 total
+  / 116,756 supported / 60,161 staged / 103,607 actionable
+  / 12,974 headings / 1,053 blocked - **zero delta** (zero
+  newly blocked, zero reason changes); feature matrix
+  unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION
+  bumped to 0.40 with the changelog entry in the same change
+  (incl. the `__version__` package constant sync, guarded by
+  `test_version_matches_root_version_file`). The 0.40 build
+  `native-20261110T093203Z-82c49872` was cut from `main` @
+  `e611e9e` (2026-11-10): in-build suite 4,879 OK / 35
+  expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.40-source.zip` sha256
+  `46ad5dd9f9adc872e320dd4aec2362e007020ae879bba0cc8fe0621e44c34c40`
+  (14,569,029 bytes) - carries the MT-31 process
+  identification (`process_watch.py` enrichment layer +
+  `tests/test_native_master_ui_mt31.py`) and the bounded
+  transient-write retry
+  (`tests/test_native_memory_write_retry.py`) and the
+  reviewable `master_trainer/UI.md` - and portable ZIP
+  `CT2Trainer-0.40-windows-portable.zip` sha256
+  `5075586c7b0f3251749c8e3e60ec0db7fea251db39190b59b63273a4e9b10bd6`
+  (49,809,535 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `52f6da1cebfc44a0dc791d4b5758112342b5a1d42c9fc9656901a16d1a5eb03f`,
+  17,048,910 bytes, ships next to the converter).
+- The read / write transient pair is now complete: the
+  0.39 half (the Win32 error 299 transient read failure,
+  `memory._read_exact`) and this 0.40 half
+  (`memory._write_checked`) both ship bounded retries, both
+  fail closed on a partial transfer. The remaining
+  reliability work stays in the RT-6 / field lane
+  (live-target runtime confirmation, `runtime_unverified`
+  kept per gate).
 
 **0.39 released (build `native-20261110T051241Z-57bf7d47`, cut from
 `main` @ `17a22f7`, 2026-11-10): the Master Trainer per-table
