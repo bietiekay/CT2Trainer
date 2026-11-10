@@ -201,7 +201,48 @@ in-build suite 4,499 OK / 30 expected skips, `ce_inputs: []`,
 `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
 16,968,879 bytes) ships next to the converter); superseded 0.32
 (build `native-20261108T100731Z-a1d311e5` cut from `main` @
-`bfcc3a3`, 2026-11-08). 0.37 released (build
+`bfcc3a3`, 2026-11-08). 0.38 released (build `native-20261109T211151Z-03e89050` cut from `main`
+@ `da1e68f`, 2026-11-09): the --force forced start for the documented
+SteamOS state-lock dead end (the user-requested `--force` startup
+parameter (accepted by the frozen trainer EXE (`launcher.py`), the
+source CLI `run` + `master` commands (`__main__.py`) and the frozen
+`CT2Trainer-Master.exe` (`tools/native_master.py`)) skips the state-lock
+safety prompts: a recoverable stale state (dead state-lock owner) or
+unfinished receipts are archived through the tested
+`perform_stale_recovery` path without a confirmation dialog; the fence
+dead end (the plain `StateError` "A recovery transaction owns this
+state", incl. the "state.lock already exists" probe fallback) triggers
+the new bounded forced reclaim in the pure `state_force.py` layer
+(`force_reclaim`): every recorded trainer-side owner is probed with the
+tested process probe (one observation, one retry on a transient
+"unknown"); a proven-alive trainer-side owner is still refused with its
+named reason - the one hard data-safety boundary that stays even under
+`--force`; every other case (proven-dead or unprovable owner)
+quarantines the blocking artifacts (state.lock, recovery.lock,
+session.json, state.json.tmp, oneshot.json.tmp, hook receipts /
+global-pool, this trainer's shared claims) into a timestamped
+`forced-recovery/<UTC stamp>-<trainer id>/` archive next to the state
+folder with a full evidence document (`ct2trainer-forced-reclaim/v1`);
+the saved `state.json` (the user's saved wishes) is always preserved, so
+the saved toggles survive the forced reclaim; debug-log events
+`state-force-recovered` / `-reclaimed` / `-refused` / `-failed`; on
+Steam / SteamOS: `--force` in the launch options so the Proton-wrapped
+trainer starts without any dialog); +27 tests, full main suite 4,760 OK
+/ 30 expected skips, catalog zero delta `blocked-catalog-038-force`;
+in-build suite 4,760 OK / 30 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.38-source.zip` sha256
+`e2b466adc7abfb191bbd2b50f8304739a1e82cbf487099d4ecd6fd77cc3f3d0c`
+(14,521,497 bytes) - carries the --force forced start (`state_force.py`
+pure layer + the `force_reclaim` quarantine archive,
+`tests/test_native_state_force.py` +
+`tests/test_native_master_force.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.38-windows-portable.zip` sha256
+`df5ccfa373c8f5deb6be85f36e75941a1c0b3a9f13afae23c03f1644f9290fc4`
+(49,781,948 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`5d2cc5544eb6a29f1c3283f05e809e392d0038a1f59456c9d52f0356e519231d`,
+17,026,316 bytes) ships next to the converter); superseded 0.37 (build
 `native-20261109T154005Z-4ad8e339` cut from `main` @ `27dbf0d`,
 2026-11-09): the Master Trainer per-table process
 binding persistence (MT-28: the explicit process choice is
@@ -457,7 +498,10 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-09, 0.37 released - build
+**CT2Trainer (status 2026-11-09, 0.38 released - build
+`native-20261109T211151Z-03e89050` cut from `main` @ `da1e68f`,
+2026-11-09, in-build suite 4,760 OK / 30 expected skips, `ce_inputs:
+[]`; superseded 0.37, build
 `native-20261109T154005Z-4ad8e339` cut from `main` @ `27dbf0d`,
 2026-11-09, in-build suite 4,733 OK / 30 expected skips,
 `ce_inputs: []`; superseded 0.36, build
@@ -472,7 +516,35 @@ language used in chat.
 `ce_inputs: []`; superseded 0.33, build
 `native-20261108T200230Z-b0167049` cut from `main` @ `6e71739`,
 2026-11-08, in-build suite 4,499 OK / 30 expected skips,
-`ce_inputs: []`) - 0.37 Master Trainer per-table process
+`ce_inputs: []`) - 0.38 the --force forced start for the documented SteamOS state-lock
+dead end (the user-requested `--force` startup parameter (accepted by
+the frozen trainer EXE (`launcher.py`), the source CLI `run` + `master`
+commands (`__main__.py`) and the frozen `CT2Trainer-Master.exe`
+(`tools/native_master.py`)) skips the state-lock safety prompts: a
+recoverable stale state (dead state-lock owner) or unfinished receipts
+are archived through the tested `perform_stale_recovery` path without a
+confirmation dialog; the fence dead end (the plain `StateError` "A
+recovery transaction owns this state", incl. the "state.lock already
+exists" probe fallback) triggers the new bounded forced reclaim in the
+pure `state_force.py` layer (`force_reclaim`): every recorded
+trainer-side owner is probed with the tested process probe (one
+observation, one retry on a transient "unknown"); a proven-alive
+trainer-side owner is still refused with its named reason - the one hard
+data-safety boundary that stays even under `--force`; every other case
+(proven-dead or unprovable owner) quarantines the blocking artifacts
+(state.lock, recovery.lock, session.json, state.json.tmp,
+oneshot.json.tmp, hook receipts / global-pool, this trainer's shared
+claims) into a timestamped `forced-recovery/<UTC stamp>-<trainer id>/`
+archive next to the state folder with a full evidence document
+(`ct2trainer-forced-reclaim/v1`); the saved `state.json` (the user's
+saved wishes) is always preserved, so the saved toggles survive the
+forced reclaim; debug-log events `state-force-recovered` / `-reclaimed`
+/ `-refused` / `-failed`; on Steam / SteamOS: `--force` in the launch
+options so the Proton-wrapped trainer starts without any dialog); +27
+tests, full main suite 4,760 OK / 30 expected skips; catalog zero delta
+`blocked-catalog-038-force`), superseded 0.37 released (build
+`native-20261109T154005Z-4ad8e339` cut from `main` @ `27dbf0d`,
+2026-11-09) - 0.37 Master Trainer per-table process
 binding persistence (MT-28: the explicit process choice is
 remembered per table - `table-attach.json` schema 1 under the
 state home, keyed by the table content sha256 - the same
@@ -915,7 +987,22 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261109T154005Z-4ad8e339` (0.37,
+**Latest verified build:** `native-20261109T211151Z-03e89050` (0.38, cut
+from `main` @ `da1e68f`, 2026-11-09; in-build suite 4,760 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+per gate; source ZIP `CT2Trainer-0.38-source.zip` sha256
+`e2b466adc7abfb191bbd2b50f8304739a1e82cbf487099d4ecd6fd77cc3f3d0c`
+(14,521,497 bytes) - carries the --force forced start (`state_force.py`
+pure layer + `tests/test_native_state_force.py` +
+`tests/test_native_master_force.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.38-windows-portable.zip` sha256
+`df5ccfa373c8f5deb6be85f36e75941a1c0b3a9f13afae23c03f1644f9290fc4`
+(49,781,948 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`5d2cc5544eb6a29f1c3283f05e809e392d0038a1f59456c9d52f0356e519231d`,
+17,026,316 bytes) ships next to the converter)). 0.38 ships the --force
+forced start for the documented SteamOS state-lock dead end. Superseded
+0.37 build: `native-20261109T154005Z-4ad8e339` (0.37,
 cut from `main` @ `27dbf0d`, 2026-11-09; in-build suite 4,733 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
 kept per gate; source ZIP `CT2Trainer-0.37-source.zip` sha256

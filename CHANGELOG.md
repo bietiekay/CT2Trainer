@@ -56,6 +56,19 @@ error 299 transient read failure during a live `PatchConflict` receipt
 verification on Proton (`memory._read_exact` has no bounded retry)
 remains the upstream trigger of the stale state on Deck - see the
 0.38 ledger section in `documentation/native-progress.md`.
+- Build: 0.38 released as run
+  `native-20261109T211151Z-03e89050` (cut from `main` @ `da1e68f`,
+  2026-11-09): in-build suite 4,760 OK / 30 expected skips, 0
+  failures — fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.38-source.zip` sha256
+  `e2b466adc7abfb191bbd2b50f8304739a1e82cbf487099d4ecd6fd77cc3f3d0c`
+  (14,521,497 bytes); portable ZIP
+  `CT2Trainer-0.38-windows-portable.zip` sha256
+  `df5ccfa373c8f5deb6be85f36e75941a1c0b3a9f13afae23c03f1644f9290fc4`
+  (49,781,948 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `5d2cc5544eb6a29f1c3283f05e809e392d0038a1f59456c9d52f0356e519231d`,
+  17,026,316 bytes, ships next to the converter).
 
 ## 0.37 (2026-11-09)
 
