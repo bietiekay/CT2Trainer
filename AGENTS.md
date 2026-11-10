@@ -201,7 +201,55 @@ in-build suite 4,499 OK / 30 expected skips, `ce_inputs: []`,
 `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
 16,968,879 bytes) ships next to the converter); superseded 0.32
 (build `native-20261108T100731Z-a1d311e5` cut from `main` @
-`bfcc3a3`, 2026-11-08). 0.38 released (build `native-20261109T211151Z-03e89050` cut from `main`
+`bfcc3a3`, 2026-11-08). 0.39 released (build `native-20261110T051241Z-57bf7d47` cut from `main`
+@ `17a22f7`, 2026-11-10): the Master Trainer per-table auto-load
+policy (MT-29) + state folder / debug log quick access (MT-30) +
+the bounded transient-read retry in `memory.py` (MT-29: the
+persisted per-table auto-load policy - `table-autoload.json`
+schema 1 under the state home, keyed by the table content
+sha256 - the same identity as the MT-24/27/28 sidecars, so a
+policy survives a rename and follows a content-identical file
+to another root; only the non-default manual-only policy
+persists, the absence of an entry is the documented automatic
+default; a manual-only table is never auto-loaded: no request,
+no picker, a stable named waiting detail instead, an open
+choice dropped back to waiting; the explicit MT-10 load path is
+never affected; a table without a content sha cannot carry a
+policy; the row context menu toggle + the MT-22 details row +
+the waiting-view filter matches the persisted policy text);
+(MT-30: the two master-only waiting-view header buttons "State
+folder..." and "Debug log..." - one click opens the persisted
+state home or the current trainer debug log in the platform
+file manager / default handler; the pure `state_access.py`
+layer with named `StateAccessRefusal` codes, every refusal in
+the status line - never a dialog, never a crash); (the
+field-observed transient "ReadProcessMemory failed (Win32
+error 299)" is now retried in `memory._read_exact` with the
+bounded exponential backoff - transient set {299, 119, 1116,
+24}, exactly 4 attempts, backoff 0.05 -> 0.25 s; a partial
+result is never retried, the original error is raised
+unchanged after the budget; closing the documented open issue
+of the 0.38 ledger); +73 tests, full main suite 4,833 OK / 30
+expected skips, catalog zero delta
+`blocked-catalog-039-autoload`; in-build suite 4,833 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified`
+deliberately kept per gate; source ZIP
+`CT2Trainer-0.39-source.zip` sha256
+`14163e7475477c177be339d06fd5ba7b9a7016667405669b084faed25035a923`
+(14,549,960 bytes) - carries the MT-29 auto-load policy
+(`table_autoload.py` pure layer + `table-autoload.json`
+schema 1, `tests/test_native_master_autoload.py` +
+`tests/test_native_master_ui_mt29.py`), the MT-30 state folder
+/ debug log quick access (`state_access.py` pure layer,
+`tests/test_native_master_ui_mt30.py`) and the bounded
+transient-read retry
+(`tests/test_native_memory_read_retry.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.39-windows-portable.zip` sha256
+`7d5d7903f1be5df0eac0f1067d5c2ca596321a41ea37381e033e5deb175ec8b6`
+(49,800,752 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`e0db5b2e2f41ec816089486ca57a2c0b1424523e7ee8450335053923ab629e47`,
+17,042,819 bytes) ships next to the converter); superseded 0.38 (build `native-20261109T211151Z-03e89050` cut from `main`
 @ `da1e68f`, 2026-11-09): the --force forced start for the documented
 SteamOS state-lock dead end (the user-requested `--force` startup
 parameter (accepted by the frozen trainer EXE (`launcher.py`), the
@@ -498,7 +546,10 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-09, 0.38 released - build
+**CT2Trainer (status 2026-11-10, 0.39 released - build
+`native-20261110T051241Z-57bf7d47` cut from `main` @ `17a22f7`,
+2026-11-10, in-build suite 4,833 OK / 30 expected skips, `ce_inputs:
+[]`; superseded 0.38, build
 `native-20261109T211151Z-03e89050` cut from `main` @ `da1e68f`,
 2026-11-09, in-build suite 4,760 OK / 30 expected skips, `ce_inputs:
 []`; superseded 0.37, build
@@ -516,7 +567,48 @@ language used in chat.
 `ce_inputs: []`; superseded 0.33, build
 `native-20261108T200230Z-b0167049` cut from `main` @ `6e71739`,
 2026-11-08, in-build suite 4,499 OK / 30 expected skips,
-`ce_inputs: []`) - 0.38 the --force forced start for the documented SteamOS state-lock
+`ce_inputs: []`) - 0.39 the Master Trainer per-table auto-load
+policy (MT-29) + state folder / debug log quick access (MT-30) +
+the bounded transient-read retry in `memory.py` (the per-table
+auto-load policy `table-autoload.json` schema 1 under the state
+home, content-sha keyed - the same identity as the MT-24/27/28
+sidecars; only the non-default manual-only persists, absence =
+documented auto; a manual-only table is never auto-loaded - no
+request, no picker, a stable named waiting detail, an open
+choice dropped back to waiting; the explicit MT-10 load path is
+never affected; the orchestrator re-evaluates the policy on
+every tick; the row context menu toggle + the MT-22 details row
++ the filter matches the persisted policy text; the two
+master-only header buttons "State folder..." / "Debug log..."
+through the pure `state_access.py` layer with named
+`StateAccessRefusal` codes - every refusal in the status line,
+never a dialog, never a crash; the field-observed Win32 299
+transient read failure now retried in `memory._read_exact`:
+transient set {299, 119, 1116, 24}, 4 attempts, 0.05 -> 0.25 s
+backoff, partial never retried, original error after the budget
+- closing the documented open issue of the 0.38 ledger); +73
+tests, full main suite 4,833 OK / 30 expected skips, catalog
+zero delta `blocked-catalog-039-autoload`; in-build suite 4,833
+OK / 30 expected skips, `ce_inputs: []`, `runtime_unverified`
+deliberately kept per gate; source ZIP
+`CT2Trainer-0.39-source.zip` sha256
+`14163e7475477c177be339d06fd5ba7b9a7016667405669b084faed25035a923`
+(14,549,960 bytes) - carries the MT-29 auto-load policy
+(`table_autoload.py` pure layer + `table-autoload.json`
+schema 1, `tests/test_native_master_autoload.py` +
+`tests/test_native_master_ui_mt29.py`), the MT-30 state folder
+/ debug log quick access (`state_access.py` pure layer,
+`tests/test_native_master_ui_mt30.py`) and the bounded
+transient-read retry
+(`tests/test_native_memory_read_retry.py`) and the reviewable
+`master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.39-windows-portable.zip` sha256
+`7d5d7903f1be5df0eac0f1067d5c2ca596321a41ea37381e033e5deb175ec8b6`
+(49,800,752 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`e0db5b2e2f41ec816089486ca57a2c0b1424523e7ee8450335053923ab629e47`,
+17,042,819 bytes) ships next to the converter); superseded 0.38 released (build
+`native-20261109T211151Z-03e89050` cut from `main` @ `da1e68f`,
+2026-11-09) - 0.38 the --force forced start for the documented SteamOS state-lock
 dead end (the user-requested `--force` startup parameter (accepted by
 the frozen trainer EXE (`launcher.py`), the source CLI `run` + `master`
 commands (`__main__.py`) and the frozen `CT2Trainer-Master.exe`
@@ -987,7 +1079,28 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261109T211151Z-03e89050` (0.38, cut
+**Latest verified build:** `native-20261110T051241Z-57bf7d47` (0.39, cut
+from `main` @ `17a22f7`, 2026-11-10; in-build suite 4,833 OK / 30
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+per gate; source ZIP `CT2Trainer-0.39-source.zip` sha256
+`14163e7475477c177be339d06fd5ba7b9a7016667405669b084faed25035a923`
+(14,549,960 bytes) - carries the MT-29 auto-load policy
+(`table_autoload.py` pure layer + `table-autoload.json` schema 1,
+`tests/test_native_master_autoload.py` +
+`tests/test_native_master_ui_mt29.py`), the MT-30 state folder /
+debug log quick access (`state_access.py` pure layer,
+`tests/test_native_master_ui_mt30.py`) and the bounded
+transient-read retry (`tests/test_native_memory_read_retry.py`)
+and the reviewable `master_trainer/UI.md` - and portable ZIP
+`CT2Trainer-0.39-windows-portable.zip` sha256
+`7d5d7903f1be5df0eac0f1067d5c2ca596321a41ea37381e033e5deb175ec8b6`
+(49,800,752 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`e0db5b2e2f41ec816089486ca57a2c0b1424523e7ee8450335053923ab629e47`,
+17,042,819 bytes) ships next to the converter)). 0.39 ships the
+Master Trainer per-table auto-load policy (MT-29), the state
+folder / debug log quick access (MT-30) and the bounded
+transient-read retry in `memory.py`. Superseded
+0.38 build: `native-20261109T211151Z-03e89050` (0.38, cut
 from `main` @ `da1e68f`, 2026-11-09; in-build suite 4,760 OK / 30
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
 per gate; source ZIP `CT2Trainer-0.38-source.zip` sha256
