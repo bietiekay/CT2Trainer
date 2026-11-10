@@ -2,6 +2,67 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.41 (2026-11-10)
+
+AA typed-constant package + the digit-leading-label CE 7.5 parity fix
+— the two remaining Death Stranding "Load Table" roots (record 130605:
+root #1 the `(int)0.00` decimal-cast operand, root #2 the
+`0CurrentWeight:` digit-leading label line) whose failure blocked the
+~243-row "no unique supported provider" cascade. Typed constants: the
+full typed family `(int|float|double|dword|qword|word|byte)` as
+instruction operand, data literal and `define` value — the integer
+family follows the CE `StrToQWordEx` contract (read-only reference):
+a `0x`/`$`-prefixed or pure-hex literal parses as an integer, a
+decimal / exponent form parses as a float and truncates toward zero,
+and an out-of-range value is the named refusal "Typed constant
+exceeds the {type} representation." instead of a silent wrap; the
+float/double family stays finite-only with the named `Inf`/`-Inf` /
+`NaN` spellings, and a hex literal over a float/double type keeps the
+pre-existing cast no-op. The dialect boundary is deliberate: a typed
+constant parses pure digits DECIMAL (the CE contract), while the
+unsized AA dialect keeps its hex-by-default reading — 41 corpus rows
+now assemble with the CE-correct bytes (byte-changing parity fixes,
+every record stays supported, incl. the Borderlands3
+`cmp [flag],(byte)2` byte-compare) and the two decimal-form DS
+`(int)0.00` rows assemble for the first time; the define flow needed
+no code change (corpus census: 164 `define(` calls, exactly 7
+`(float)` idioms — the APlagueTale
+`define(movespeedmultiplierdefault,(float)0.64)` stays byte-stable as
+`0AD7233F`). Digit-leading labels: the CE 7.5 label-name contract
+(`autoassembler.pas` `getPotentialLabels` L707-730 + the main path
+L2843-2900, read-only reference) — a `name:` line is a positional
+label definition iff `trystrtoint64('$'+name)` fails — implemented as
+the `_symbol_name_token()` predicate (the `_LABEL_NAME` / `_HEX_NAME`
+/ `_LITERAL_TOKEN` shapes) at all eight cursor / symbol sites in
+`aa_program.py`: letter-starting names are byte-stable against the
+pre-fix behavior (incl. letter-leading all-hex like `ABC`); a
+digit-leading name is a program-local label only while it is not
+fully hex-parseable and not a value literal (the `0x`/`$`-hex and
+`#N`-decimal spellings the typed-constant substitution emits into
+operand streams), so `0CurrentWeight:` keeps the owned allocation
+region for the following `resb 8` padding while `0078:` / `11105:`
+keep the classic externally-provided symbol cursor and the `0x...`
+literal tokens never enter the program's requirements; the link
+walk's `key not in resolved` guard keeps digit-leading SCAN symbols
+(the Octopath1 `8PathBattleResult` / `8PathSteal` aobscanmodule
+pairs) on the classic resolution path (corpus census: 267 distinct
+digit-leading label names, 262 all-hex unchanged, 5 non-hex: the DS
+trio + the Octopath pair, both regression-guarded). +38 tests (new
+`tests/test_native_aa_typed_constants.py` 23 + new
+`tests/test_native_aa_digit_labels.py` 15 with the NASM byte pins:
+the digit-vs-letter byte-stable blocks, the DS root idiom
+`C780BC02000000000000` + 24 reservation zero bytes, the duplicate
+digit-label refusal with letter parity, the inlined Octopath
+aobscanmodule replica); full main suite 4,917 OK / 35 expected skips;
+catalog remeasure `blocked-catalog-041-digit-labels`: 117,809 total /
+117,004 supported / 12,974 headings / 103,855 actionable / 805
+blocked (-248 vs `blocked-catalog-040-process-id` — the 3-chunk delta
+audit vs the 0.40 chunks: zero newly blocked, 248 unblocked (the DS
+pair 122+121=243 rows, root record 130605 + the "no unique supported
+provider" cascade: PlayerStats, PlayerBattery, CurrentWeight, ...)
+plus 5 x `dq (double)Inf` records (AtomicHeart / HellPie / Oregon /
+Scorn / Callisto), zero reason changes).
+
 ## 0.40 (2026-11-10)
 
 Master Trainer process identification in picker + details (MT-31) +

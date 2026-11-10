@@ -86,6 +86,36 @@ _SYMBOL_TOKEN = re.compile(r"@?[A-Za-z_][A-Za-z0-9_]*\Z")
 # Program-local only (no table-wide lookup); unknown labels keep the
 # fail-closed refusal.
 _AT_LABEL = re.compile(r"@@?[A-Za-z_][A-Za-z0-9_]*\Z")
+# CE 7.5 label-name contract (autoassembler.pas getPotentialLabels
+# L707-730 and the main path L2843-2900, read-only reference): a name:
+# line is a positional label definition iff trystrtoint64('$'+name)
+# fails, i.e. the name does not parse fully as a hexadecimal literal.
+# A digit-leading name that is not all-hex (e.g. 0CurrentWeight) is
+# therefore a label name; an all-hex name (0078, 11105) stays the
+# classic externally-provided symbol cursor.  Letter-starting names
+# are unaffected by the rule below.
+_LABEL_NAME = re.compile(r"[A-Za-z0-9_]+\Z")
+_HEX_NAME = re.compile(r"[0-9A-Fa-f]+\Z")
+# Literal operand tokens (0x/$-prefixed or bare hex, #N decimal): value
+# tokens, never symbol or label names.
+_LITERAL_TOKEN = re.compile(r"(?:0[xX]|\$)?[0-9a-fA-F]+|#[0-9]+")
+
+
+def _symbol_name_token(token: str) -> bool:
+    """True when token is a symbol or positional-label name token.
+
+    Letter/underscore-starting names match the classic symbol token as
+    before.  A digit-leading name is admitted only when it is not a value
+    literal (the CE label-name contract above plus the 0x/$-prefixed hex
+    and #N decimal spellings, which the assembler always reads as values),
+    so ``0CurrentWeight`` is a label name while ``0078``, ``11105`` and
+    ``0x1F`` remain value / externally provided symbol cursors.
+    """
+    if _SYMBOL_TOKEN.fullmatch(token):
+        return True
+    return (_LABEL_NAME.fullmatch(token) is not None
+            and _HEX_NAME.fullmatch(token) is None
+            and not _LITERAL_TOKEN.fullmatch(token))
 _REGISTERS = {"rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp", "eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "ax", "bx", "cx", "dx", "si", "di", "bp", "sp", "al", "bl", "cl", "dl", "ah", "bh", "ch", "dh", "sil", "dil", "bpl", "spl", "rip", "eip", "fs", "gs", "cs", "ds", "es", "ss"}
 _REGISTERS |= {f"r{index}{suffix}" for index in range(8, 16) for suffix in ("", "d", "w", "b")}
 _REGISTERS |= {f"{kind}{index}" for kind in ("xmm", "ymm", "zmm", "mm", "k", "st", "cr", "dr") for index in range(32)}
@@ -103,7 +133,29 @@ _ST_REGISTER = re.compile(r"\(([0-7])\)")
 # WP-43: single-quoted string operand at the current token position (any
 # content; the content rules are enforced explicitly in _operand_tokens).
 _QUOTED_STRING_OPERAND = re.compile(r"'([^'\r\n]*)'")
-_FLOAT = re.compile(r"\((float|double)\)\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)", re.I)
+# Typed inline constants: the full value-constant family CE 7.5's AA admits
+# as operand and data literals.  The integer family follows the CE
+# StrToQWordEx contract (integer parse, decimal/exponent form falls back to
+# the toward-zero truncation of the float parse); float/double keep the
+# decimal/exponent grammar plus the named Inf/NaN forms (CE StrToFloatEx /
+# Delphi StrToFloat).  The trailing lookahead keeps an identifier character
+# from being swallowed into a literal.
+_TYPED = re.compile(
+    r"\((int|float|double|dword|qword|word|byte)\)\s*"
+    r"([+-]?(?:0[xX][0-9A-Fa-f]+|\$[0-9A-Fa-f]+|\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|[+-]?inf(?:inity)?|[+-]?nan)"
+    r"(?![A-Za-z0-9_$])", re.I)
+# Byte width of each typed constant in the family.
+_TYPED_WIDTHS = {
+    "byte": 1, "word": 2, "dword": 4, "int": 4,
+    "float": 4, "qword": 8, "double": 8,
+}
+# NASM size prefix injected into a memory destination carrying a typed
+# constant: the constant's type decides the operand size (CE semantics),
+# not the unsized-integer-is-dword heuristic.
+_TYPED_SIZE_PREFIX = {
+    "byte": "byte", "word": "word", "dword": "dword", "int": "dword",
+    "float": "dword", "qword": "qword", "double": "qword",
+}
 # Conditional-block directives pass through cleaning; every other {$...} token
 # stays a fail-closed refusal. Condition/define bodies are validated later by
 # the pinned block model and the strict $define grammar below.
@@ -210,23 +262,74 @@ def _expression(text: str) -> str:
     return text.strip()
 
 
-def _float_bits(text: str) -> tuple[int, int] | None:
-    match = _FLOAT.fullmatch(text.strip())
+def _typed_bits(text: str) -> tuple[int, int] | None:
+    """Static value + byte width of one typed inline constant, or None.
+
+    float/double keep the historical decimal/exponent grammar (finite only;
+    the named Inf/NaN forms are admitted, matching CE StrToFloatEx / Delphi
+    StrToFloat) and pack to IEEE-754 float32/float64.  The integer family
+    parses integer literals (decimal or hex) directly; a decimal/exponent
+    form is parsed as a float and truncated toward zero (CE StrToQWordEx
+    fallback).  The value must fit the type's two's-complement representation
+    (signed or unsigned width); an out-of-range constant is a named
+    fail-closed refusal.
+    """
+    match = _TYPED.fullmatch(text.strip())
     if match is None:
         return None
-    size = 4 if match.group(1).casefold() == "float" else 8
-    value = float(match.group(2))
-    if not math.isfinite(value):
-        raise ProgramError("Floating constants must be finite.")
-    try:
-        data = struct.pack("<f" if size == 4 else "<d", value)
-    except (OverflowError, struct.error) as exc:
-        raise ProgramError("Floating constant exceeds its representation.") from exc
-    return int.from_bytes(data, "little"), size
+    type_name, literal = match.group(1).casefold(), match.group(2)
+    width = _TYPED_WIDTHS[type_name]
+    if type_name in {"float", "double"}:
+        body = literal[1:] if literal[:1] in "+-" else literal
+        if body[:1] == "$" or body[:2].casefold() == "0x":
+            # A hex literal is not a floating constant form; it stays on the
+            # ordinary cast no-op path as an integer value (byte-stable
+            # against the WP-30 cast behavior).
+            return None
+        low = body.casefold()
+        if low in {"inf", "infinity", "nan"}:
+            value = math.nan if low == "nan" else (-math.inf if literal[:1] == "-" else math.inf)
+        else:
+            try:
+                value = float(literal)
+            except ValueError:
+                return None
+            if not math.isfinite(value):
+                raise ProgramError("Floating constants must be finite.")
+        try:
+            data = struct.pack("<f" if width == 4 else "<d", value)
+        except (OverflowError, struct.error) as exc:
+            raise ProgramError("Floating constant exceeds its representation.") from exc
+        return int.from_bytes(data, "little"), width
+    body = literal[1:] if literal[:1] in "+-" else literal
+    if body.casefold() in {"inf", "infinity", "nan"}:
+        # The named forms are floating constants only; an integer cast over
+        # a non-numeric literal is not a typed constant and stays on the
+        # ordinary cast no-op path (symbol machinery, fail-closed report).
+        return None
+    sign = -1 if literal[:1] == "-" else 1
+    if body[:1] == "$":
+        value = sign * int(body[1:], 16)
+    elif body[:2].casefold() == "0x":
+        value = sign * int(body[2:], 16)
+    else:
+        if any(char in body for char in ".eE"):
+            # CE StrToQWordEx fallback: a non-integer literal is parsed as a
+            # float and truncated toward zero.
+            try:
+                value = int(float(literal))
+            except (ValueError, OverflowError):
+                return None
+        else:
+            value = sign * int(body)
+    bits = width * 8
+    if not -(1 << (bits - 1)) <= value < 1 << bits:
+        raise ProgramError(f"Typed constant exceeds the {type_name} representation.")
+    return value & ((1 << bits) - 1), width
 
 
 def _scalar_expression(text: str) -> bool:
-    if _float_bits(text) is not None:
+    if _typed_bits(text) is not None:
         return True
 
     def scalar(node):
@@ -241,7 +344,7 @@ def _scalar_expression(text: str) -> bool:
 
 
 def _data_values(text: str, directive: str) -> list[str]:
-    values = re.findall(r'"[^"\r\n]*"|\'[^\'\r\n]*\'|\((?:float|double)\)\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|[^\s,]+', text, re.I)
+    values = re.findall(r'"[^"\r\n]*"|\'[^\'\r\n]*\'|\((?:int|float|double|dword|qword|word|byte)\)\s*(?:[+-]?(?:0[xX][0-9A-Fa-f]+|\$[0-9A-Fa-f]+|\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?|inf(?:inity)?|nan)(?![A-Za-z0-9_$])|[^\s,]+', text, re.I)
     if not values or len(values) > 65536:
         raise ProgramError("Data directives require a bounded nonempty value list.")
     reconstructed = re.sub(r"\s|,", "", text)
@@ -276,9 +379,9 @@ def _data_values(text: str, directive: str) -> list[str]:
                 continue
             raise ProgramError(
                 "Placeholder tokens are not supported in assertions or data literals.")
-        elif _float_bits(value):
-            if _float_bits(value)[1] > size:
-                raise ProgramError("Floating bit-pattern does not fit the data directive.")
+        elif _typed_bits(value):
+            if _typed_bits(value)[1] > size:
+                raise ProgramError("Typed constant does not fit the data directive.")
         else:
             _expression(value)
     return values
@@ -306,7 +409,16 @@ def _data_value_size(value: str, directive: str, placeholder_definitions: dict[s
 
 def _operand_tokens(text: str):
     text = re.sub(r"\bptr\b", "", text, flags=re.I)
-    text = _FLOAT.sub(lambda match: "0x" + format(_float_bits(match.group())[0], "X"), text)
+
+    def typed_token(match):
+        bits = _typed_bits(match.group(0))
+        if bits is None:
+            # A type over a non-literal (or a type/literal mismatch) is not
+            # a typed constant; the cast no-op path tokenizes it as before.
+            return match.group(0)
+        return "0x" + format(bits[0], "X")
+
+    text = _TYPED.sub(typed_token, text)
     position, values = 0, []
     while position < len(text):
         quoted = _QUOTED_STRING_OPERAND.match(text, position)
@@ -533,7 +645,7 @@ def _parse_line(line: str) -> dict:
                 # pattern for assert(..., bytes) references; it carries no
                 # address value, so the node keeps no "expression" key.
                 return {"op": "define", "symbol": validate_symbol(args[0]), "pattern": pattern}
-            if _float_bits(args[1]) is None:
+            if _typed_bits(args[1]) is None:
                 _expression(args[1])
             return {"op": "define", "symbol": validate_symbol(args[0]), "expression": args[1]}
         if name in {"label", "registersymbol", "unregistersymbol", "registerlabel"}:
@@ -684,7 +796,7 @@ def _node_refs(node: dict) -> list[str]:
     values = []
     for key in ("address", "expression", "near", "start", "end"):
         text = node.get(key)
-        if text and not text.startswith("@") and _float_bits(text) is None:
+        if text and not text.startswith("@") and _typed_bits(text) is None:
             values.extend(expression_symbols(text))
     if node["op"] == "data":
         for value in node["values"]:
@@ -693,7 +805,7 @@ def _node_refs(node: dict) -> list[str]:
             # symbol, so it must not enter the program's requirements.
             if is_placeholder_ref_token(value):
                 continue
-            if not value.startswith(('"', "'")) and _float_bits(value) is None:
+            if not value.startswith(('"', "'")) and _typed_bits(value) is None:
                 values.extend(expression_symbols(value))
     if node["op"] == "instruction":
         text = node["text"].split(None, 1)
@@ -712,7 +824,7 @@ def _node_refs(node: dict) -> list[str]:
             cursor += 1
             if is_placeholder_ref_token(token):
                 continue
-            if _SYMBOL_TOKEN.fullmatch(token) and token.casefold() not in _REGISTERS | _KEYWORDS and not re.fullmatch("[0-9A-Fa-f]+", token) and token.casefold() not in {"@f", "@b"}:
+            if _symbol_name_token(token) and token.casefold() not in _REGISTERS | _KEYWORDS and not _LITERAL_TOKEN.fullmatch(token) and token.casefold() not in {"@f", "@b"}:
                 values.append(token)
     return values
 
@@ -797,7 +909,7 @@ def _literal_bytes(node, memory, program):
                     raw = raw.ljust(8, b"\x00")
                 result.extend(raw)
         else:
-            floating = _float_bits(text)
+            floating = _typed_bits(text)
             value = floating[0] if floating else scalar(parse_expression(text))
             result.extend((value & ((1 << (width * 8)) - 1)).to_bytes(width, "little"))
     return bytes(result)
@@ -842,7 +954,7 @@ def _allocation_capabilities(nodes: list[dict], allocations: list[str]) -> tuple
             instruction_owners[index] = current
             pieces = node["text"].split(None, 1)
             if len(pieces) == 2 and (pieces[0].casefold().startswith("j") or pieces[0].casefold() in {"call", "loop", "loope", "loopne"}) and "[" not in pieces[1]:
-                direct_branches.extend((index, token.casefold()) for token in _operand_tokens(pieces[1]) if _SYMBOL_TOKEN.fullmatch(token))
+                direct_branches.extend((index, token.casefold()) for token in _operand_tokens(pieces[1]) if _symbol_name_token(token))
     for index, target in direct_branches:
         if target in allocated:
             unsafe.add(target)
@@ -860,7 +972,7 @@ def _allocation_capabilities(nodes: list[dict], allocations: list[str]) -> tuple
     # cursors, branch targets, or destinations, so preserve both permissions.
     for node in nodes:
         # RT-4.3 (O4): byte-pattern defines carry no expression key.
-        if node["op"] == "define" and "expression" in node and _float_bits(node["expression"]) is None:
+        if node["op"] == "define" and "expression" in node and _typed_bits(node["expression"]) is None:
             targets = {owners[symbol.casefold()] for symbol in expression_symbols(node["expression"]) if symbol.casefold() in owners}
             if targets:
                 aliases.update(targets)
@@ -1258,7 +1370,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     own_label_defs = {node["expression"].casefold()
                       for node in sections["preamble"] + sections["enable"] + sections["disable"]
                       if node["op"] == "cursor" and node["expression"] != "@@"
-                      and _SYMBOL_TOKEN.fullmatch(node["expression"])}
+                      and _symbol_name_token(node["expression"])}
     local_labels = set()
     positional_labels = set()
     locals_ = {}
@@ -1321,7 +1433,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
                     locals_[symbol.casefold()] = symbol
                 else:
                     key = expression.casefold()
-                    if _SYMBOL_TOKEN.fullmatch(expression):
+                    if _symbol_name_token(expression):
                         if key in declared_labels:
                             # A declared label keeps the current region.
                             pass
@@ -1386,7 +1498,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
             key = expression.casefold()
             if key in declared_for_phase or expression.startswith("@"):
                 named_positions.append(index)
-            elif _SYMBOL_TOKEN.fullmatch(expression) and key not in program_symbol_keys:
+            elif _symbol_name_token(expression) and key not in program_symbol_keys:
                 # WP-28: every bare positional cursor token is one of this
                 # program's own label definitions (own_label_defs pre-pass),
                 # hence a local named position for the @f/@b fallback.
@@ -1447,7 +1559,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
                 text = node.get(key)
                 # @-label cursors (``@@``, ``@Name``, ``@@Name``) are
                 # program-local names, never address expressions.
-                if text and not text.startswith("@") and _float_bits(text) is None:
+                if text and not text.startswith("@") and _typed_bits(text) is None:
                     for label in _managed_labels_in(text):
                         managed.setdefault(label.casefold(), label)
     required = {}
@@ -1475,7 +1587,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
                 "Placeholder tokens are not supported in assertions or data literals.")
         if node["op"] == "data":
             for value in node["values"]:
-                if value.startswith(('"', "'")) or _float_bits(value) is not None:
+                if value.startswith(('"', "'")) or _typed_bits(value) is not None:
                     continue
                 if is_placeholder_ref_token(value):
                     if value.casefold() not in placeholder_definitions:
@@ -1497,7 +1609,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
                         "Placeholder tokens are not supported in assertions or data literals.")
         for key in ("address", "expression", "near", "start", "end"):
             text = node.get(key)
-            if text and not text.startswith("@") and _float_bits(text) is None:
+            if text and not text.startswith("@") and _typed_bits(text) is None:
                 if _placeholder_symbols_in(text):
                     raise ProgramError(
                         "Placeholder tokens are not supported in assertions or data literals.")
@@ -1603,7 +1715,7 @@ def _symbol_map(symbols):
 
 
 def _resolve(text, memory, symbols, program):
-    floating = _float_bits(text)
+    floating = _typed_bits(text)
     return floating[0] if floating else resolve_expression(text, memory, symbols, process_name=program["process_name"], pointer_size=program["bitness"] // 8)
 
 
@@ -1818,9 +1930,9 @@ def preflight_program(program: dict, memory, symbols: Mapping[str, int] | None =
 
 
 def _translate_operands(text: str, names: dict, memory, symbols, program, backward: str | None, forward: str | None, captures: dict[str, int] | None = None) -> str:
-    typed = _FLOAT.search(text)
+    typed = _TYPED.search(text)
     if typed and "[" in text and not re.search(r"\b(?:byte|word|dword|qword)\s+(?:ptr\s+)?\[", text, re.I):
-        text = text.replace("[", ("dword " if typed.group(1).casefold() == "float" else "qword ") + "[", 1)
+        text = text.replace("[", _TYPED_SIZE_PREFIX[typed.group(1).casefold()] + " [", 1)
     output = []
     tokens = list(_operand_tokens(text))
     cursor = 0
@@ -1856,7 +1968,7 @@ def _translate_operands(text: str, names: dict, memory, symbols, program, backwa
             output.append("0x" + format(_resolve(token, memory, symbols, program), "X"))
         elif re.fullmatch(r"(?:0[xX]|\$)?[0-9a-fA-F]+|#[0-9]+", token):
             output.append("0x" + format(integer(token), "X"))
-        elif _SYMBOL_TOKEN.fullmatch(token) or _AT_LABEL.fullmatch(token):
+        elif _symbol_name_token(token) or _AT_LABEL.fullmatch(token):
             raise ProgramError(f"Unresolved instruction symbol: {token}.")
         else:
             output.append(token)
@@ -2029,7 +2141,7 @@ def _located_value(text, index, anonymous, locations, memory, symbols, program, 
             if label is None:
                 raise ProgramError("Anonymous forward label has no target.")
             output.append("0x" + format(locations[label], "X"))
-        elif token.casefold() in symbols and (_SYMBOL_TOKEN.fullmatch(token) or _AT_LABEL.fullmatch(token)):
+        elif token.casefold() in symbols and (_symbol_name_token(token) or _AT_LABEL.fullmatch(token)):
             # Compare the exact bound symbol value used by the assembler.
             output.append("0x" + format(symbols[token.casefold()], "X"))
         elif token.startswith('"') or token == "$process" or "." in token:
@@ -2445,7 +2557,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                     raise ProgramError("Local label is duplicated or has no address cursor.")
                 located.add(key)
                 current["nodes"].append((index, {"op": "location", "name": names[key]}))
-            elif _SYMBOL_TOKEN.fullmatch(expression) and key not in resolved:
+            elif _symbol_name_token(expression) and key not in resolved:
                 # A bare positional label is per-program local (WP-28): it
                 # binds to this program's own patch position, never to an
                 # externally provided symbol.  Inside a program-owned
@@ -2590,7 +2702,7 @@ def link_program(program: dict, memory, symbols: Mapping[str, int] | None = None
                         else:
                             lines.extend([f"call qword [rel tf_far_pointer_{index}]", f"jmp short tf_far_after_{index}", f"tf_far_pointer_{index}:", "dq " + target, f"tf_far_after_{index}:"])
                         continue
-                    if mnemonic in {"mov", "cmp", "test", "add", "sub", "and", "or", "xor", "adc", "sbb", "inc", "dec", "shl", "shr", "sal", "sar", "rol", "ror"} and operands.lstrip().startswith("[") and not _FLOAT.search(operands):
+                    if mnemonic in {"mov", "cmp", "test", "add", "sub", "and", "or", "xor", "adc", "sbb", "inc", "dec", "shl", "shr", "sal", "sar", "rol", "ror"} and operands.lstrip().startswith("[") and not _TYPED.search(operands):
                         pieces = _args(operands)
                         if len(pieces) == 1 or len(pieces) == 2 and not any(token.strip().casefold() in _REGISTERS for token in _operand_tokens(pieces[1])):
                             # CE's unsized integer memory operand is dword.
