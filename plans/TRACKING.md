@@ -486,6 +486,101 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- 0.41 the AA typed-constant package (the CE StrToQWordEx
+  contract) + the digit-leading-label CE 7.5 parity fix
+  (2026-11-10, root-direct on `main`; the compatibility lane
+  along the reference-table-100 roadmap - the two remaining
+  Death Stranding "Load Table" roots, record 130605: root #1
+  the `(int)0.00` decimal-cast operand and root #2 the
+  `0CurrentWeight:` digit-leading label line, whose failure
+  blocked the ~243-row "no unique supported provider"
+  cascade).
+  Typed constants: the full typed family
+  `(int|float|double|dword|qword|word|byte)` as instruction
+  operand, data literal and `define` value - the integer
+  family follows the CE `StrToQWordEx` contract (read-only
+  reference): a `0x`/`$`-prefixed or pure-hex literal parses
+  as an integer, a decimal / exponent form parses as a float
+  and truncates toward zero, and an out-of-range value is the
+  named refusal "Typed constant exceeds the {type}
+  representation." instead of a silent wrap; the float /
+  double family stays finite-only with the named `Inf` /
+  `-Inf` / `NaN` spellings, and a hex literal over a float /
+  double type keeps the pre-existing cast no-op. The dialect
+  boundary is deliberate: a typed constant parses pure digits
+  DECIMAL (the CE contract), while the unsized AA dialect
+  keeps its hex-by-default reading - 41 corpus rows now
+  assemble with the CE-correct bytes (byte-changing parity
+  fixes, every record stays supported, incl. the Borderlands3
+  `cmp [flag],(byte)2` byte-compare) and the two decimal-form
+  DS `(int)0.00` rows assemble for the first time; the define
+  flow needed no code change (corpus census: 164 `define(`
+  calls, exactly 7 `(float)` idioms - the APlagueTale
+  `define(movespeedmultiplierdefault,(float)0.64)` stays
+  byte-stable as `0AD7233F`). Digit-leading labels: the CE
+  7.5 label-name contract (`autoassembler.pas`
+  `getPotentialLabels` L707-730 + the main path L2843-2900,
+  read-only reference) - a `name:` line is a positional label
+  definition iff `trystrtoint64('$'+name)` fails - implemented
+  as the `_symbol_name_token()` predicate (the `_LABEL_NAME` /
+  `_HEX_NAME` / `_LITERAL_TOKEN` shapes) at all eight cursor /
+  symbol sites in `aa_program.py`: letter-starting names are
+  byte-stable against the pre-fix behavior (incl.
+  letter-leading all-hex like `ABC`); a digit-leading name is
+  a program-local label only while it is not fully
+  hex-parseable and not a value literal (the `0x`/`$`-hex and
+  `#N`-decimal spellings the typed-constant substitution
+  emits into operand streams), so `0CurrentWeight:` keeps the
+  owned allocation region for the following `resb 8` padding
+  while `0078:` / `11105:` keep the classic
+  externally-provided symbol cursor and the `0x...` literal
+  tokens never enter the program's requirements; the link
+  walk's `key not in resolved` guard keeps digit-leading SCAN
+  symbols (the Octopath1 `8PathBattleResult` / `8PathSteal`
+  aobscanmodule pairs) on the classic resolution path
+  (corpus census: 267 distinct digit-leading label names,
+  262 all-hex unchanged, 5 non-hex: the DS trio + the
+  Octopath pair, both regression-guarded). +38 tests (new
+  `tests/test_native_aa_typed_constants.py` 23 + new
+  `tests/test_native_aa_digit_labels.py` 15 with the NASM
+  byte pins: the digit-vs-letter byte-stable blocks, the DS
+  root idiom `C780BC02000000000000` + 24 reservation zero
+  bytes, the duplicate digit-label refusal with letter
+  parity, the inlined Octopath aobscanmodule replica); full
+  main suite 4,917 OK / 35 expected skips (4,879 from the
+  0.40 content + 38 new); catalog remeasure
+  `blocked-catalog-041-digit-labels`: 117,809 total /
+  117,004 supported / 12,974 headings / 103,855 actionable /
+  805 blocked (-248 vs `blocked-catalog-040-process-id` -
+  the 3-chunk delta audit vs the 0.40 chunks: zero newly
+  blocked, 248 unblocked (the DS pair 122+121=243 rows, root
+  record 130605 + the "no unique supported provider" cascade:
+  PlayerStats, PlayerBattery, CurrentWeight, ...) plus 5 x
+  `dq (double)Inf` records (AtomicHeart / HellPie / Oregon /
+  Scorn / Callisto), zero reason changes); feature matrix
+  unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION 0.41
+  + CHANGELOG entry in the same change (incl. the
+  `__version__` package constant sync, guarded by
+  `test_version_matches_root_version_file`). The 0.41 build
+  `native-20261110T210856Z-5811040c` cut from `main` @
+  `c724a7e` (2026-11-10): in-build suite 4,917 OK / 35
+  expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.41-source.zip` sha256
+  `05ef6cabca08adcca8a084722581b7d553966e480e28274a4a72f4b31b9c1964`
+  (14,580,191 bytes), portable ZIP
+  `CT2Trainer-0.41-windows-portable.zip` sha256
+  `533bee676d0ed5c487741cb4919af8f4370f2bee1c5c26181ed5f3f0c3753a77`
+  (49,814,303 bytes; the frozen `CT2Trainer-Master.exe`
+  sha256 `ce07c42cf22c57eeeffa08be74ff562d3a7dcfca5f4c2d14121c784acd24c6f`,
+  17,049,435 bytes, ships next to the converter). The
+  DeathStrandingDC Update31 pair (243 rows) is now fully
+  supported - the last blocked cascade of the 0.40 catalog
+  outside the documented createThread / cleanup-ownership /
+  runtime-provider rows; Octopath stays at 0 blocked; the
+  live-target runtime confirmation stays in the RT-6 / field
+  lane (`runtime_unverified` kept per gate).
 - 0.40 the Master Trainer process identification in picker +
   details (MT-31) + the bounded zero-transfer transient-write
   retry in `memory.py` (2026-11-10, root-direct on `main`; the

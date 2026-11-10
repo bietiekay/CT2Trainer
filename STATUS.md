@@ -1,6 +1,45 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-10. **0.40 released** (build
+**Updated:** 2026-11-10. **0.41 released** (build
+`native-20261110T210856Z-5811040c`, cut from `main` @ `c724a7e`,
+2026-11-10) - the AA typed-constant package (the CE
+`StrToQWordEx` contract: the full typed family
+`(int|float|double|dword|qword|word|byte)` as operand, data
+literal and `define` value; the integer family parses
+`0x`/`$` hex as an integer, decimal / exponent forms as a
+float truncated toward zero, out-of-range as the named
+refusal "Typed constant exceeds the {type} representation.";
+the float / double family finite-only with the named
+`Inf`/`-Inf`/`NaN` spellings; the deliberate dialect boundary
+- typed constants parse pure digits DECIMAL, the unsized AA
+dialect stays hex-by-default - 41 corpus rows byte-changing
+CE-parity fixes incl. the Borderlands3 `cmp [flag],(byte)2`
+byte-compare, the two decimal-form DS `(int)0.00` rows
+assemble for the first time) + the digit-leading-label CE 7.5
+parity fix (the `getPotentialLabels` contract: a `name:` line
+is a positional label definition iff
+`trystrtoint64('$'+name)` fails - the `_symbol_name_token()`
+predicate at all eight cursor / symbol sites in
+`aa_program.py`: digit-leading non-hex names are local
+labels (`0CurrentWeight:` keeps the owned region for the
+`resb 8` padding), all-hex names stay the classic
+externally-provided symbol cursor, the `0x...` literal
+tokens never enter the requirements, the link walk's
+`key not in resolved` guard keeps the Octopath `8Path*`
+scan symbols on the classic resolution path - closing the
+second Death Stranding "Load Table" root, record 130605,
+whose failure blocked the ~243-row "no unique supported
+provider" cascade); +38 tests (new
+`tests/test_native_aa_typed_constants.py` 23 + new
+`tests/test_native_aa_digit_labels.py` 15 with the NASM byte
+pins); full main suite 4,917 OK / 35 expected skips;
+in-build suite 4,917 OK / 35 expected skips, `ce_inputs: []`;
+catalog remeasure `blocked-catalog-041-digit-labels`: 117,809
+total / 117,004 supported / 12,974 headings / 103,855
+actionable / 805 blocked (-248 vs 0.40, zero newly blocked,
+248 unblocked, zero reason changes); see the 0.41 section
+below.
+Superseded 0.40 (build
 `native-20261110T093203Z-82c49872`, cut from `main` @ `e611e9e`,
 2026-11-10) - the Master Trainer process identification in
 picker + details (MT-31) + the bounded zero-transfer
@@ -291,7 +330,25 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.40, build
+**Latest verified release:** 0.41, build
+`native-20261110T210856Z-5811040c` (cut from `main` @ `c724a7e`,
+2026-11-10): the 0.41 AA typed-constant package +
+digit-leading-label CE 7.5 parity fix release - in-build
+suite 4,917 OK / 35 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.41-source.zip` sha256
+`05ef6cabca08adcca8a084722581b7d553966e480e28274a4a72f4b31b9c1964`
+(14,580,191 bytes) - carries the AA typed-constant package
+(`aa_program.py` +
+`tests/test_native_aa_typed_constants.py`) and the
+digit-leading-label CE 7.5 parity fix
+(`tests/test_native_aa_digit_labels.py`) - and portable ZIP
+`CT2Trainer-0.41-windows-portable.zip` sha256
+`533bee676d0ed5c487741cb4919af8f4370f2bee1c5c26181ed5f3f0c3753a77`
+(49,814,303 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`ce07c42cf22c57eeeffa08be74ff562d3a7dcfca5f4c2d14121c784acd24c6f`,
+17,049,435 bytes) ships next to the converter). Superseded 0.40,
+build
 `native-20261110T093203Z-82c49872` (cut from `main` @ `e611e9e`,
 2026-11-10): the 0.40 Master Trainer process identification
 in picker + details (MT-31) + the bounded zero-transfer
@@ -882,6 +939,120 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.41 released (build `native-20261110T210856Z-5811040c`, cut from `main` @
+`c724a7e`, 2026-11-10): the AA typed-constant package (the
+CE `StrToQWordEx` contract) + the digit-leading-label CE 7.5
+parity fix.**
+0.41 ships the compatibility lane along the
+reference-table-100 roadmap - the two remaining Death
+Stranding "Load Table" roots (record 130605: root #1 the
+`(int)0.00` decimal-cast operand, root #2 the
+`0CurrentWeight:` digit-leading label line) whose failure
+blocked the ~243-row "no unique supported provider" cascade.
+- **The AA typed-constant package:** the full typed family
+  `(int|float|double|dword|qword|word|byte)` as instruction
+  operand, data literal and `define` value - the integer
+  family follows the CE `StrToQWordEx` contract (read-only
+  reference): a `0x`/`$`-prefixed or pure-hex literal parses
+  as an integer, a decimal / exponent form parses as a float
+  and truncates toward zero, and an out-of-range value is
+  the named refusal "Typed constant exceeds the {type}
+  representation." instead of a silent wrap; the float /
+  double family stays finite-only with the named `Inf` /
+  `-Inf` / `NaN` spellings, and a hex literal over a float /
+  double type keeps the pre-existing cast no-op. The dialect
+  boundary is deliberate: a typed constant parses pure
+  digits DECIMAL (the CE contract), while the unsized AA
+  dialect keeps its hex-by-default reading - 41 corpus rows
+  now assemble with the CE-correct bytes (byte-changing
+  parity fixes, every record stays supported, incl. the
+  Borderlands3 `cmp [flag],(byte)2` byte-compare) and the
+  two decimal-form DS `(int)0.00` rows assemble for the
+  first time; the define flow needed no code change (corpus
+  census: 164 `define(` calls, exactly 7 `(float)` idioms -
+  the APlagueTale
+  `define(movespeedmultiplierdefault,(float)0.64)` stays
+  byte-stable as `0AD7233F`).
+- **The digit-leading-label CE 7.5 parity fix:** the CE 7.5
+  label-name contract (`autoassembler.pas`
+  `getPotentialLabels` L707-730 + the main path L2843-2900,
+  read-only reference) - a `name:` line is a positional
+  label definition iff `trystrtoint64('$'+name)` fails -
+  implemented as the `_symbol_name_token()` predicate (the
+  `_LABEL_NAME` / `_HEX_NAME` / `_LITERAL_TOKEN` shapes) at
+  all eight cursor / symbol sites in `aa_program.py`:
+  letter-starting names are byte-stable against the pre-fix
+  behavior (incl. letter-leading all-hex like `ABC`); a
+  digit-leading name is a program-local label only while it
+  is not fully hex-parseable and not a value literal (the
+  `0x`/`$`-hex and `#N`-decimal spellings the typed-constant
+  substitution emits into operand streams), so
+  `0CurrentWeight:` keeps the owned allocation region for
+  the following `resb 8` padding while `0078:` / `11105:`
+  keep the classic externally-provided symbol cursor and the
+  `0x...` literal tokens never enter the program's
+  requirements; the link walk's `key not in resolved` guard
+  keeps digit-leading SCAN symbols (the Octopath1
+  `8PathBattleResult` / `8PathSteal` aobscanmodule pairs) on
+  the classic resolution path (corpus census: 267 distinct
+  digit-leading label names, 262 all-hex unchanged, 5
+  non-hex: the DS trio + the Octopath pair, both
+  regression-guarded).
+- +38 tests (new `tests/test_native_aa_typed_constants.py`
+  23 - the `_typed_bits` contract: the integer-family
+  `StrToQWordEx` parse (0x/$ hex, decimal, exponent,
+  truncation-toward-zero), the out-of-range named refusal,
+  the finite-only float / double family, the named Inf /
+  NaN spells, the cast no-op boundaries, the NASM byte pins
+  incl. the DS root `mov [rax+000002BC],(int)0.00` ->
+  `C780BC02000000000000`; new
+  `tests/test_native_aa_digit_labels.py` 15 - the
+  `_symbol_name_token` predicate, the prepare-level label
+  binding, the all-hex symbol-cursor parity, the typed
+  literals never entering the requirements, the NASM byte
+  pins: the digit-vs-letter byte-stable blocks, the DS root
+  idiom, the duplicate digit-label refusal with letter
+  parity, the inlined Octopath aobscanmodule replica). Full
+  main suite 4,917 OK / 35 expected skips (4,879 from the
+  0.40 content + 38 new); catalog remeasure
+  `blocked-catalog-041-digit-labels`: 117,809 total /
+  117,004 supported / 12,974 headings / 103,855 actionable /
+  805 blocked (-248 vs `blocked-catalog-040-process-id` -
+  the 3-chunk delta audit vs the 0.40 chunks: zero newly
+  blocked, 248 unblocked (the DS pair 122+121=243 rows, root
+  record 130605 + the "no unique supported provider"
+  cascade: PlayerStats, PlayerBattery, CurrentWeight, ...)
+  plus 5 x `dq (double)Inf` records (AtomicHeart / HellPie /
+  Oregon / Scorn / Callisto), zero reason changes); feature
+  matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION
+  bumped to 0.41 with the changelog entry in the same change
+  (incl. the `__version__` package constant sync, guarded by
+  `test_version_matches_root_version_file`). The 0.41 build
+  `native-20261110T210856Z-5811040c` was cut from `main` @
+  `c724a7e` (2026-11-10): in-build suite 4,917 OK / 35
+  expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.41-source.zip` sha256
+  `05ef6cabca08adcca8a084722581b7d553966e480e28274a4a72f4b31b9c1964`
+  (14,580,191 bytes) - carries the AA
+  typed-constant package (`aa_program.py` +
+  `tests/test_native_aa_typed_constants.py`) and the
+  digit-leading-label CE 7.5 parity fix
+  (`tests/test_native_aa_digit_labels.py`) - and portable
+  ZIP `CT2Trainer-0.41-windows-portable.zip` sha256
+  `533bee676d0ed5c487741cb4919af8f4370f2bee1c5c26181ed5f3f0c3753a77`
+  (49,814,303 bytes; the frozen
+  `CT2Trainer-Master.exe` sha256
+  `ce07c42cf22c57eeeffa08be74ff562d3a7dcfca5f4c2d14121c784acd24c6f`,
+  17,049,435 bytes, ships next to the converter).
+- The DeathStrandingDC Update31 pair (243 rows) is now fully
+  supported - the last blocked cascade of the 0.40 catalog
+  outside the documented createThread / cleanup-ownership /
+  runtime-provider rows; Octopath stays at 0 blocked. The
+  live-target runtime confirmation stays in the RT-6 / field
+  lane (`runtime_unverified` kept per gate).
 
 **0.40 released (build `native-20261110T093203Z-82c49872`, cut from
 `main` @ `e611e9e`, 2026-11-10): the Master Trainer process

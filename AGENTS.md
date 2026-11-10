@@ -201,7 +201,55 @@ in-build suite 4,499 OK / 30 expected skips, `ce_inputs: []`,
 `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
 16,968,879 bytes) ships next to the converter); superseded 0.32
 (build `native-20261108T100731Z-a1d311e5` cut from `main` @
-`bfcc3a3`, 2026-11-08). 0.40 released (build `native-20261110T093203Z-82c49872` cut from `main`
+`bfcc3a3`, 2026-11-08). 0.41 released (build `native-20261110T210856Z-5811040c` cut from `main`
+@ `c724a7e`, 2026-11-10): the AA typed-constant package (the
+CE `StrToQWordEx` contract) + the digit-leading-label CE 7.5
+parity fix (the full typed family
+`(int|float|double|dword|qword|word|byte)` as operand, data
+literal and `define` value - the integer family follows the
+CE `StrToQWordEx` contract: a `0x`/`$`-prefixed or pure-hex
+literal parses as an integer, a decimal / exponent form
+parses as a float and truncates toward zero, an out-of-range
+value is the named refusal "Typed constant exceeds the
+{type} representation."; the float / double family
+finite-only with the named `Inf`/`-Inf`/`NaN` spellings; the
+dialect boundary - typed constants parse pure digits
+DECIMAL, the unsized AA dialect stays hex-by-default - 41
+corpus rows byte-changing CE-parity fixes incl. the
+Borderlands3 `cmp [flag],(byte)2` byte-compare, the two
+decimal-form DS `(int)0.00` rows assemble for the first
+time); (the `getPotentialLabels` contract - a `name:` line
+is a positional label definition iff
+`trystrtoint64('$'+name)` fails: the `_symbol_name_token()`
+predicate at all eight cursor / symbol sites in
+`aa_program.py`, digit-leading non-hex names local labels,
+all-hex names the classic symbol cursor, the `0x...`
+literal tokens never in the requirements, the link walk's
+`key not in resolved` guard keeps the Octopath `8Path*`
+scan symbols on the classic resolution path - closing the
+second Death Stranding "Load Table" root, record 130605,
+whose failure blocked the ~243-row "no unique supported
+provider" cascade); +38 tests, full main suite 4,917 OK /
+35 expected skips, catalog remeasure
+`blocked-catalog-041-digit-labels`: 117,809 total /
+117,004 supported / 12,974 headings / 103,855 actionable /
+805 blocked (-248 vs `blocked-catalog-040-process-id`, zero
+newly blocked, 248 unblocked, zero reason changes);
+in-build suite 4,917 OK / 35 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.41-source.zip` sha256
+`05ef6cabca08adcca8a084722581b7d553966e480e28274a4a72f4b31b9c1964`
+(14,580,191 bytes) - carries the AA
+typed-constant package (`aa_program.py` +
+`tests/test_native_aa_typed_constants.py`) and the
+digit-leading-label CE 7.5 parity fix
+(`tests/test_native_aa_digit_labels.py`) - and portable ZIP
+`CT2Trainer-0.41-windows-portable.zip` sha256
+`533bee676d0ed5c487741cb4919af8f4370f2bee1c5c26181ed5f3f0c3753a77`
+(49,814,303 bytes; the frozen
+`CT2Trainer-Master.exe` (sha256
+`ce07c42cf22c57eeeffa08be74ff562d3a7dcfca5f4c2d14121c784acd24c6f`,
+17,049,435 bytes) ships next to the converter); superseded 0.40 released (build `native-20261110T093203Z-82c49872` cut from `main`
 @ `e611e9e`, 2026-11-10): the Master Trainer process
 identification in picker + details (MT-31) + the bounded
 zero-transfer transient-write retry in `memory.py` (MT-31: the
@@ -586,7 +634,10 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-10, 0.40 released - build
+**CT2Trainer (status 2026-11-10, 0.41 released - build
+`native-20261110T210856Z-5811040c` cut from `main` @ `c724a7e`,
+2026-11-10, in-build suite 4,917 OK / 35 expected skips, `ce_inputs:
+[]`; superseded 0.40, build
 `native-20261110T093203Z-82c49872` cut from `main` @ `e611e9e`,
 2026-11-10, in-build suite 4,879 OK / 35 expected skips, `ce_inputs:
 []`; superseded 0.39, build
@@ -1163,7 +1214,25 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261110T093203Z-82c49872` (0.40, cut
+**Latest verified build:** `native-20261110T210856Z-5811040c` (0.41, cut
+from `main` @ `c724a7e`, 2026-11-10; in-build suite 4,917 OK / 35
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+per gate; source ZIP `CT2Trainer-0.41-source.zip` sha256
+`05ef6cabca08adcca8a084722581b7d553966e480e28274a4a72f4b31b9c1964`
+(14,580,191 bytes) - carries the AA typed-constant package
+(`aa_program.py` +
+`tests/test_native_aa_typed_constants.py`) and the
+digit-leading-label CE 7.5 parity fix
+(`tests/test_native_aa_digit_labels.py`)
+- and portable ZIP
+`CT2Trainer-0.41-windows-portable.zip` sha256
+`533bee676d0ed5c487741cb4919af8f4370f2bee1c5c26181ed5f3f0c3753a77`
+(49,814,303 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`ce07c42cf22c57eeeffa08be74ff562d3a7dcfca5f4c2d14121c784acd24c6f`,
+17,049,435 bytes) ships next to the converter)). 0.41 ships the
+AA typed-constant package (the CE `StrToQWordEx` contract)
+and the digit-leading-label CE 7.5 parity fix. Superseded
+0.40 build: `native-20261110T093203Z-82c49872` (0.40, cut
 from `main` @ `e611e9e`, 2026-11-10; in-build suite 4,879 OK / 35
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
 per gate; source ZIP `CT2Trainer-0.40-source.zip` sha256

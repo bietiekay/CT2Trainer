@@ -63,6 +63,23 @@ provider" cascade: PlayerStats, PlayerBattery, CurrentWeight, ...)
 plus 5 x `dq (double)Inf` records (AtomicHeart / HellPie / Oregon /
 Scorn / Callisto), zero reason changes).
 
+- Build: 0.41 released as run
+  `native-20261110T210856Z-5811040c` (cut from `main` @ `c724a7e`,
+  2026-11-10): in-build suite 4,917 OK / 35 expected skips, 0
+  failures — fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.41-source.zip` sha256
+  `05ef6cabca08adcca8a084722581b7d553966e480e28274a4a72f4b31b9c1964`
+  (14,580,191 bytes) - carries the AA typed-constant package
+  (`aa_program.py` + `tests/test_native_aa_typed_constants.py`)
+  and the digit-leading-label CE 7.5 parity fix
+  (`tests/test_native_aa_digit_labels.py`) - and portable ZIP
+  `CT2Trainer-0.41-windows-portable.zip` sha256
+  `533bee676d0ed5c487741cb4919af8f4370f2bee1c5c26181ed5f3f0c3753a77`
+  (49,814,303 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `ce07c42cf22c57eeeffa08be74ff562d3a7dcfca5f4c2d14121c784acd24c6f`,
+  17,049,435 bytes, ships next to the converter).
+
 ## 0.40 (2026-11-10)
 
 Master Trainer process identification in picker + details (MT-31) +
