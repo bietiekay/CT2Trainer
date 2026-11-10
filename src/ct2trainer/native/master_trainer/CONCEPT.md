@@ -458,6 +458,31 @@ configuration.
   refusal (missing folder / missing log, wrong kind, no desktop
   opener, a failing opener) — the status line says so, never a
   crash, no dialog.
+- **MT-31 process identification in picker + details (0.40).** The
+  process picker and the table-details "Running now" row show, per
+  candidate, the full image path, the start time ("started
+  YYYY-MM-DD HH:MM") and the bitness ("64-bit" / "32-bit") — only
+  the facts the bounded per-candidate enrichment proved. The
+  `ProcessSnapshotEntry` gains the optional identification fields
+  `path` / `creation_time` / `pointer_size` (all default `None` =
+  refused / unavailable — fail-closed: the row keeps the
+  byte-stable name + PID form, the `pid` / `name` decision fields
+  are never touched). The enrichment runs only for the bounded
+  picker / details candidate set, never per snapshot tick (the 30 s
+  auto-rescan keeps its cheap contract): the Windows backend opens
+  the process with `PROCESS_QUERY_INFORMATION` only and asks
+  `QueryFullProcessImageNameW` / `GetProcessTimes` (FILETIME ticks
+  to Unix seconds) / `IsWow64Process2` (I386 → 32-bit, AMD64 →
+  64-bit, anything else unknown); the Linux/SteamOS backend takes
+  the `/proc/<pid>/exe` link target (under Proton the
+  compatibility-prefix path of the bound Windows EXE) and the
+  `starttime` field of `/proc/<pid>/stat` plus the system `btime`
+  (the bitness is not provable from `/proc` and stays hidden
+  there). Every per-entry failure fails closed (the entry stays
+  unenriched, no error propagates); a refused fact never renders.
+  Zero load-path effect — the MT-9 gate re-checks the table
+  independently at load time; the attach decision (the PID pin) is
+  unaffected by the enrichment.
 
 ## Waiting-view usability (0.26: MT-13 / MT-14 / MT-15)
 

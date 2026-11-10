@@ -280,7 +280,13 @@ class DetailsWindowTests(_DetailsBase):
             app.analysis_worker = None
         app.analysis_store.clear()
         window._running = (self.process,)
-        window._open_table_details("zeta.ct")
+        # MT-31 (0.40): the "Running now" row renders the (bounded,
+        # per-candidate enriched) candidates; the enrichment is pinned
+        # fail-closed, so the asserted row is the name + PID form.
+        with patch("ct2trainer.native.master_trainer.master_ui"
+                   ".enrich_candidates",
+                   side_effect=lambda candidates: candidates):
+            window._open_table_details("zeta.ct")
         win = window._details_win
         self.assertIsNotNone(win)
         self.assertTrue(win.winfo_exists())
@@ -301,7 +307,10 @@ class DetailsWindowTests(_DetailsBase):
         self.assertEqual(values[5], "ok")
         self.assertEqual(values[6], "no")
         self.assertEqual(values[7], "never")
-        self.assertEqual(values[8], "PID 7")
+        # MT-31 (0.40): the "Running now" row now renders each running
+        # bound candidate as name + PID (+ the identification facts
+        # the enrichment proved - refused here, fail-closed).
+        self.assertEqual(values[8], "GameA.exe  (PID 7)")
         self.assertEqual(values[9], entry.sha256[:12] + "...")
         self.assertEqual(
             values[10], "OK (loadable - the file matches the last scan)")

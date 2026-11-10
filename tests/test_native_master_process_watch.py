@@ -10,22 +10,32 @@ logic tests run on deterministic fakes; no real processes are spawned.
 """
 from __future__ import annotations
 
+import ctypes
 import os
 import sys
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest import mock
+from unittest.mock import Mock
 
 from ct2trainer.native.master_trainer.process_watch import (
+    _FILETIME,
+    _procfs_enrich_entry,
+    _windows_enrich_entry,
     ProcessLister,
     ProcessSnapshotEntry,
     ProcessWatchError,
     ProcfsProcessLister,
     WindowsProcessLister,
+    default_process_enricher,
     default_process_lister,
+    enrich_candidates,
     match_targets,
     names_match,
+    PROCESS_QUERY_INFORMATION,
 )
 
 
@@ -392,6 +402,295 @@ class MatchTargetsTests(unittest.TestCase):
         self.assertEqual(match_targets(snapshot, {"Game.exe "}), {})
         self.assertEqual(match_targets(snapshot, {"Game"}), {})
         self.assertEqual(match_targets(snapshot, {"Game.EXEX"}), {})
+
+
+class IdentificationFieldTests(unittest.TestCase):
+    """MT-31 (0.40): the optional identification fields of the entry."""
+
+    def test_identification_fields_default_to_none(self):
+        entry = ProcessSnapshotEntry(7, "Game.exe")
+        self.assertIsNone(entry.path)
+        self.assertIsNone(entry.creation_time)
+        self.assertIsNone(entry.pointer_size)
+
+    def test_the_enrichment_never_changes_the_decision_fields(self):
+        base = ProcessSnapshotEntry(7, "Game.exe")
+        enriched = replace(base, path="C:\\games\\Game.exe",
+                           creation_time=1700000000.0, pointer_size=8)
+        self.assertEqual(enriched.path, "C:\\games\\Game.exe")
+        self.assertEqual(enriched.creation_time, 1700000000.0)
+        self.assertEqual(enriched.pointer_size, 8)
+        self.assertEqual(enriched.pid, base.pid)
+        self.assertEqual(enriched.name, base.name)
+        # The entry stays frozen.
+        with self.assertRaises(AttributeError):
+            enriched.path = "other"
+
+
+def _windows_kernel(*, path="C:\\games\\Game.exe",
+                    unix_seconds=1700000000.0,
+                    machine=0, native_machine=0x8664,
+                    open_ok=True, image_ok=True, times_ok=True,
+                    wow2=True):
+    """A deterministic kernel32 fake for the MT-31 Windows enrichment
+    seam (no OS process is touched; the handle is the integer 1)."""
+    kernel = SimpleNamespace()
+    kernel.OpenProcess = Mock(
+        side_effect=lambda mode, inherit, pid: 0 if not open_ok else 1)
+
+    def image_name(handle, flags, buffer, size):
+        if not image_ok:
+            return False
+        raw = path.encode("utf-16-le")
+        ctypes.memmove(buffer, raw, len(raw))
+        ctypes.cast(size, ctypes.POINTER(ctypes.c_uint32)).contents.value = \
+            len(path)
+        return True
+    kernel.QueryFullProcessImageNameW = Mock(side_effect=image_name)
+
+    def get_times(handle, *times):
+        if not times_ok:
+            return False
+        ticks = int((unix_seconds + 11644473600.0) * 10_000_000)
+        ctypes.cast(times[0],
+                    ctypes.POINTER(ctypes.c_uint64)).contents.value = ticks
+        return True
+    kernel.GetProcessTimes = Mock(side_effect=get_times)
+    if wow2:
+        def wow64(handle, machine_ptr, native_ptr):
+            ctypes.cast(machine_ptr,
+                        ctypes.POINTER(ctypes.c_uint16)).contents.value = \
+                machine
+            ctypes.cast(native_ptr,
+                        ctypes.POINTER(ctypes.c_uint16)).contents.value = \
+                native_machine
+            return True
+        kernel.IsWow64Process2 = Mock(side_effect=wow64)
+    kernel.CloseHandle = Mock(return_value=True)
+    return kernel
+
+
+class WindowsEnrichmentTests(unittest.TestCase):
+    """MT-31 (0.40): the bounded per-candidate Windows identification
+    query (fail-closed per fact, the decision fields untouched)."""
+
+    def test_successful_enrichment_fills_all_facts_and_closes_the_handle(self):
+        kernel = _windows_kernel()
+        out = _windows_enrich_entry(ProcessSnapshotEntry(7, "Game.exe"),
+                                    kernel)
+        self.assertEqual(out.path, "C:\\games\\Game.exe")
+        # FILETIME ticks to Unix seconds (the epoch delta is pinned).
+        self.assertAlmostEqual(out.creation_time, 1700000000.0,
+                               delta=0.001)
+        self.assertEqual(out.pointer_size, 8)
+        self.assertEqual(out.pid, 7)
+        self.assertEqual(out.name, "Game.exe")
+        # Only PROCESS_QUERY_INFORMATION is requested; the handle is
+        # always closed.
+        kernel.OpenProcess.assert_called_once_with(
+            PROCESS_QUERY_INFORMATION, False, 7)
+        kernel.CloseHandle.assert_called_once_with(1)
+
+    def test_a_refused_open_keeps_the_entry_unenriched(self):
+        entry = ProcessSnapshotEntry(7, "Game.exe")
+        kernel = _windows_kernel(open_ok=False)
+        self.assertIs(_windows_enrich_entry(entry, kernel), entry)
+        kernel.CloseHandle.assert_not_called()
+        kernel.QueryFullProcessImageNameW.assert_not_called()
+
+    def test_a_refused_image_name_query_keeps_the_other_facts(self):
+        kernel = _windows_kernel(image_ok=False)
+        out = _windows_enrich_entry(ProcessSnapshotEntry(7, "Game.exe"),
+                                    kernel)
+        self.assertIsNone(out.path)
+        self.assertAlmostEqual(out.creation_time, 1700000000.0,
+                               delta=0.001)
+        self.assertEqual(out.pointer_size, 8)
+
+    def test_zero_creation_ticks_yield_no_creation_time(self):
+        kernel = _windows_kernel()
+        kernel.GetProcessTimes = Mock(
+            side_effect=lambda handle, *times: True)  # leaves ticks zero
+        out = _windows_enrich_entry(ProcessSnapshotEntry(7, "Game.exe"),
+                                    kernel)
+        self.assertIsNone(out.creation_time)
+        self.assertEqual(out.path, "C:\\games\\Game.exe")
+
+    def test_without_wow64_process2_the_bitness_stays_unknown(self):
+        kernel = _windows_kernel(wow2=False)
+        self.assertFalse(hasattr(kernel, "IsWow64Process2"))
+        out = _windows_enrich_entry(ProcessSnapshotEntry(7, "Game.exe"),
+                                    kernel)
+        self.assertIsNone(out.pointer_size)
+        self.assertEqual(out.path, "C:\\games\\Game.exe")
+        self.assertIsNotNone(out.creation_time)
+
+    def test_the_native_amd64_machine_reports_64_bit(self):
+        # A native 64-bit process: IsWow64Process2 reports machine 0
+        # and the native machine AMD64 (0x8664).
+        kernel = _windows_kernel(machine=0, native_machine=0x8664)
+        out = _windows_enrich_entry(ProcessSnapshotEntry(7, "Game.exe"),
+                                    kernel)
+        self.assertEqual(out.pointer_size, 8)
+
+    def test_the_i386_machine_reports_32_bit(self):
+        kernel = _windows_kernel(machine=0x014C, native_machine=0x8664)
+        out = _windows_enrich_entry(ProcessSnapshotEntry(7, "Game.exe"),
+                                    kernel)
+        self.assertEqual(out.pointer_size, 4)
+
+    def test_an_unrecognized_machine_reports_no_bitness(self):
+        kernel = _windows_kernel(machine=0x01C0, native_machine=0x01C0)
+        out = _windows_enrich_entry(ProcessSnapshotEntry(7, "Game.exe"),
+                                    kernel)
+        self.assertIsNone(out.pointer_size)
+
+
+@unittest.skipUnless(SYMLINKS_OK, "os.symlink unavailable on this platform")
+class ProcfsEnrichmentTests(unittest.TestCase):
+    """MT-31 (0.40): the ``/proc`` identification over a fake tree."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name) / "proc"
+        self.root.mkdir()
+
+    @staticmethod
+    def _stat_text(pid: int, start_ticks: int) -> str:
+        # Fields 3..22 after "pid (comm)": state ... starttime, so
+        # index 19 of the split tail is the starttime field.
+        tail = "S 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 " \
+            + str(start_ticks)
+        return str(pid) + " (game.exe) " + tail + "\n"
+
+    def test_full_identification_from_the_proc_tree(self):
+        (self.root / "7").mkdir()
+        os.symlink("/home/user/.local/share/Steam/compatibility/game.exe",
+                   str(self.root / "7" / "exe"))
+        (self.root / "7" / "stat").write_text(self._stat_text(7, 42),
+                                              encoding="utf-8")
+        (self.root / "stat").write_text(
+            "cpu  0 0 0 0 0 0 0 0 0 0\nbtime 1700000000\nintr 123\n",
+            encoding="utf-8")
+        entry = ProcessSnapshotEntry(7, "game.exe")
+        # SC_CLK_TCK is patched so the conversion is deterministic on
+        # every platform (42 ticks at 100 Hz = 0.42 s).
+        with mock.patch.object(
+                "ct2trainer.native.master_trainer.process_watch.os"
+                ".sysconf", return_value=100):
+            out = _procfs_enrich_entry(entry, self.root)
+        self.assertEqual(out.path,
+                         "/home/user/.local/share/Steam/compatibility/"
+                         "game.exe")
+        self.assertAlmostEqual(out.creation_time, 1700000000.42)
+        # The bitness is not provable from /proc and stays None.
+        self.assertIsNone(out.pointer_size)
+        self.assertEqual((out.pid, out.name), (7, "game.exe"))
+
+    def test_an_unreadable_exe_link_keeps_the_entry_unenriched(self):
+        (self.root / "7").mkdir()
+        (self.root / "7" / "stat").write_text(self._stat_text(7, 42),
+                                              encoding="utf-8")
+        entry = ProcessSnapshotEntry(7, "game.exe")
+        # No exe link at all (kernel thread / exited mid-query).
+        self.assertIs(_procfs_enrich_entry(entry, self.root), entry)
+
+    def test_an_unreadable_stat_keeps_the_entry_unenriched(self):
+        (self.root / "7").mkdir()
+        os.symlink("/games/game.exe", str(self.root / "7" / "exe"))
+        entry = ProcessSnapshotEntry(7, "game.exe")
+        # The exe link is readable but no stat file exists.
+        self.assertIs(_procfs_enrich_entry(entry, self.root), entry)
+
+    def test_a_malformed_stat_keeps_the_entry_unenriched(self):
+        (self.root / "7").mkdir()
+        os.symlink("/games/game.exe", str(self.root / "7" / "exe"))
+        (self.root / "7" / "stat").write_text("no closing paren here\n",
+                                              encoding="utf-8")
+        entry = ProcessSnapshotEntry(7, "game.exe")
+        self.assertIs(_procfs_enrich_entry(entry, self.root), entry)
+
+    def test_a_missing_btime_keeps_the_path_without_a_time(self):
+        (self.root / "7").mkdir()
+        os.symlink("/games/game.exe", str(self.root / "7" / "exe"))
+        (self.root / "7" / "stat").write_text(self._stat_text(7, 42),
+                                              encoding="utf-8")
+        (self.root / "stat").write_text("cpu 0 0\nintr 9\n",
+                                        encoding="utf-8")  # no btime
+        entry = ProcessSnapshotEntry(7, "game.exe")
+        out = _procfs_enrich_entry(entry, self.root)
+        self.assertEqual(out.path, "/games/game.exe")
+        self.assertIsNone(out.creation_time)
+        self.assertIsNone(out.pointer_size)
+
+
+class EnrichCandidatesTests(unittest.TestCase):
+    """MT-31 (0.40): the bounded per-candidate enrichment wrapper."""
+
+    def test_an_injected_enricher_is_applied_to_every_entry(self):
+        a = ProcessSnapshotEntry(1, "a.exe")
+        b = ProcessSnapshotEntry(2, "b.exe")
+        out = enrich_candidates([a, b],
+                                enricher=lambda e: replace(
+                                    e, path="/opt/" + e.name))
+        self.assertEqual(out, [
+            ProcessSnapshotEntry(1, "a.exe", path="/opt/a.exe"),
+            ProcessSnapshotEntry(2, "b.exe", path="/opt/b.exe"),
+        ])
+
+    def test_a_raising_enricher_fails_closed_per_entry(self):
+        a = ProcessSnapshotEntry(1, "a.exe")
+        b = ProcessSnapshotEntry(2, "b.exe")
+
+        def enricher(entry):
+            if entry.pid == 1:
+                raise OSError("query refused")
+            return replace(entry, path="/opt/b.exe")
+        out = enrich_candidates([a, b], enricher=enricher)
+        self.assertIs(out[0], a)  # refused: unchanged
+        self.assertEqual(out[1].path, "/opt/b.exe")
+
+    def test_a_non_entry_result_is_treated_as_refused(self):
+        a = ProcessSnapshotEntry(1, "a.exe")
+        out = enrich_candidates([a], enricher=lambda e: "not an entry")
+        self.assertIs(out[0], a)
+
+    def test_an_empty_candidate_set_stays_empty(self):
+        self.assertEqual(enrich_candidates([], enricher=lambda e: e), [])
+
+    def test_the_default_enricher_never_changes_a_gone_pid_entry(self):
+        # No enricher seam: the platform default runs.  A pid that is
+        # not running anywhere must come back unenriched (the Windows
+        # backend refuses the handle, the /proc backend misses the dir)
+        # on every platform.
+        entry = ProcessSnapshotEntry(4_000_000_000,
+                                     "Zombie-Not-Running.exe")
+        out = enrich_candidates([entry])
+        self.assertEqual(len(out), 1)
+        self.assertIs(out[0], entry)
+        self.assertEqual((out[0].pid, out[0].name),
+                         (4_000_000_000, "Zombie-Not-Running.exe"))
+
+
+class DefaultEnricherTests(unittest.TestCase):
+    """MT-31 (0.40): the platform-selected enricher branches."""
+
+    def test_win32_selects_the_windows_enricher(self):
+        with mock.patch.object(sys, "platform", "win32"):
+            self.assertIs(default_process_enricher(), _windows_enrich_entry)
+
+    def test_linux_selects_the_procfs_enricher(self):
+        with mock.patch.object(sys, "platform", "linux"):
+            enricher = default_process_enricher()
+            # A gone pid: the /proc query fails closed, entry unchanged.
+            entry = ProcessSnapshotEntry(4_000_000_000, "gone.exe")
+            self.assertIs(enricher(entry), entry)
+
+    def test_unsupported_platforms_keep_the_entry(self):
+        with mock.patch.object(sys, "platform", "darwin"):
+            entry = ProcessSnapshotEntry(7, "Game.exe")
+            self.assertIs(default_process_enricher()(entry), entry)
 
 
 if __name__ == "__main__":

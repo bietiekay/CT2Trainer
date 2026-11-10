@@ -2,6 +2,78 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.40 (2026-11-10)
+
+Master Trainer process identification in picker + details (MT-31) +
+the bounded zero-transfer transient-write retry in `memory.py` — the
+adopted 0.40 candidates from the online evaluation (the Cheat Engine
+forum "Open Process By PID" thread: the multi-instance
+indistinguishability problem — several running instances of the same
+game name with no way to tell them apart; the WeMod UI threads: the
+layout / visibility / trainer-options requests remain covered by the
+0.36 multi-column grid and the 0.37 per-table process binding; the
+Game Cheats Manager front end: tags / search / filters / last-used →
+covered by MT-13/15/18/27, auto-update / online catalog → out of
+scope; the zhisync / game.cheat online catalog → out of scope; the
+game launch integration → still out of scope — no install-path data
+in the read-only table model), and the reliability lane that
+completes the 0.39 read-side symmetry. MT-31: the use case's "choose
+which table runs against which process" only works reliably when the
+user can TELL the candidates apart — the `ProcessSnapshotEntry` gains
+the optional identification fields `path` (the full image path),
+`creation_time` (the process start, Unix epoch seconds) and
+`pointer_size` (4 / 8, the target bitness), all default `None`
+(refused / unavailable — fail-closed: the display falls back to
+name + PID, the `pid` / `name` decision fields are never touched);
+the snapshot listers stay cheap (name + PID only, the 30 s
+auto-rescan tick keeps its contract). The bounded per-candidate
+enrichment runs only where the user asks for it — the process
+picker rows and the table-details "Running now" row, never per poll
+tick: `enrich_candidates` applies the platform
+`default_process_enricher` to each entry of the bounded candidate
+set, every per-entry failure fails closed (the entry stays
+unenriched, a non-entry result is refused as well); the Windows
+backend opens the process with `PROCESS_QUERY_INFORMATION` only
+(no other rights) and asks `QueryFullProcessImageNameW` /
+`GetProcessTimes` (FILETIME ticks → Unix seconds) /
+`IsWow64Process2` (I386 → 32-bit, AMD64 → 64-bit, anything else
+unknown) with the handle closed in a finally; the Linux/SteamOS
+backend takes the `/proc/<pid>/exe` link target (under Proton the
+compatibility-prefix path of the bound Windows EXE) and the
+`starttime` field of `/proc/<pid>/stat` plus the system `btime` (the
+bitness is not provable from `/proc` and stays hidden there); the
+picker rows render through `candidate_display_text` — name + PID
+always (byte-stable against the pre-0.40 row format while
+unenriched), the proved facts appended (path / "started YYYY-MM-DD
+HH:MM" / "64-bit" / "32-bit"), a refused fact never renders; the
+table-details "Running now" row renders each running bound candidate
+with its identification facts (the bare name + PID row while
+refused); the waiting-view "Running now" line keeps its cheap name +
+PID form (never enriched). Zero load-path effect — the MT-9 gate
+re-checks the table independently at load time; the attach decision
+(the PID pin) is unaffected by the enrichment. Reliability lane:
+the write-side symmetry of the 0.39 transient-read retry — a
+`WriteProcessMemory` call that FAILED with the field-observed
+transient set {299, ERROR_MORE_DATA=119, ERROR_BAD_LENGTH=1116,
+ERROR_INVALID_ID=24} and transferred NOTHING is retried in
+`memory._write_checked` with the bounded exponential backoff
+(exactly 4 attempts, backoff 0.05 → 0.25 s, the sleep under the
+caller's lock, the snapshot-retry / read-retry precedent); a partial
+transfer (a call that moved any bytes, failed or not) or any
+non-transient code is NEVER retried and lands in the existing
+uncertain-write protocol unchanged (fail-closed — the "never
+silently retries a PARTIAL write" contract holds; after the budget
+the original error surfaces as before). +46 tests (new
+`tests/test_native_master_ui_mt31.py` 12 +
+`tests/test_native_memory_write_retry.py` 7 + the MT-31 additions in
+`tests/test_native_master_process_watch.py` +23 and
+`tests/test_native_master_process_picker.py` +4; baseline pinning in
+the MT-12/MT-22/MT-28 UI tests); full main suite 4,879 OK / 35
+expected skips; catalog zero delta (the audit chunks
+byte-identical vs `blocked-catalog-039-autoload`: 117,809 total /
+116,756 supported / 60,161 staged / 1,053 blocked, zero newly
+blocked; run `blocked-catalog-040-process-id`).
+
 ## 0.39 (2026-11-10)
 
 Master Trainer per-table auto-load policy (MT-29) + state folder /

@@ -19,7 +19,9 @@ from ct2trainer.native.master_trainer.process_picker import (
     DECISION_PICK,
     DECISION_WAIT,
     attach_decision,
+    candidate_display_text,
     candidate_processes,
+    format_creation_time,
     make_pinned_memory_factory,
 )
 from ct2trainer.native.master_trainer.process_watch import ProcessSnapshotEntry
@@ -201,6 +203,50 @@ class PinnedMemoryFactoryTests(unittest.TestCase):
             with self.assertRaises(ProcessMemoryError):
                 factory("GameA.exe")
         self.assertEqual(fake.calls, [("GameA.exe", None)])
+
+
+class CandidateDisplayTextTests(unittest.TestCase):
+    """MT-31 (0.40): the picker / details row text for one candidate."""
+
+    def test_unenriched_rows_stay_byte_stable_against_the_pre_040_form(self):
+        entry = ProcessSnapshotEntry(7, "GameA.exe")
+        self.assertEqual(candidate_display_text(entry),
+                         "GameA.exe  (PID 7)")
+
+    def test_only_the_proved_facts_render(self):
+        # One fact at a time: every None field is refused (fail-closed)
+        # and never rendered.
+        entry = ProcessSnapshotEntry(
+            7, "GameA.exe", path="C:\\games\\GameA.exe")
+        self.assertEqual(
+            candidate_display_text(entry),
+            "GameA.exe  (PID 7)  -  C:\\games\\GameA.exe")
+        entry = ProcessSnapshotEntry(
+            7, "GameA.exe", creation_time=1700000000.0)
+        self.assertEqual(
+            candidate_display_text(entry),
+            "GameA.exe  (PID 7)  -  started "
+            + format_creation_time(1700000000.0))
+        entry = ProcessSnapshotEntry(7, "GameA.exe", pointer_size=4)
+        self.assertEqual(candidate_display_text(entry),
+                         "GameA.exe  (PID 7)  -  32-bit")
+
+    def test_full_identification_renders_all_facts_in_order(self):
+        entry = ProcessSnapshotEntry(
+            7, "GameA.exe", path="C:\\games\\GameA.exe",
+            creation_time=1700000000.0, pointer_size=8)
+        self.assertEqual(
+            candidate_display_text(entry),
+            "GameA.exe  (PID 7)  -  C:\\games\\GameA.exe  -  started "
+            + format_creation_time(1700000000.0) + "  -  64-bit")
+
+    def test_the_creation_time_uses_the_modified_column_style(self):
+        # 1700000000.0 is 2023-11-14 22:13:20 UTC; the local rendering
+        # keeps the year and the day may shift by one at the extremes
+        # of the timezone offsets - the format is the contract.
+        text = format_creation_time(1700000000.0)
+        self.assertRegex(text, r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$")
+        self.assertTrue(text.startswith("2023-11-1"))
 
 
 if __name__ == "__main__":

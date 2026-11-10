@@ -130,7 +130,13 @@ class AttachBindingUiTests(unittest.TestCase):
     def test_ask_mode_picker_preselects_remembered_pid(self):
         window = self._window(ATTACH_MODE_ASK, [_cand(7), _cand(9)])
         window.app.attach_store.set_binding(self.table_sha, "GameA.exe", 9)
-        window._poll()
+        # MT-31 (0.40): the picker rows carry the bounded per-candidate
+        # identification; the refused-enrichment (name + PID) row form
+        # is asserted here, so the enrichment is pinned fail-closed.
+        with patch("ct2trainer.native.master_trainer.master_ui"
+                   ".enrich_candidates",
+                   side_effect=lambda candidates: candidates):
+            window._poll()
         self.assertIsNotNone(window._proc_picker)
         self.assertEqual(window._proc_picker_origin, "auto-load")
         listbox = window._proc_picker_listbox

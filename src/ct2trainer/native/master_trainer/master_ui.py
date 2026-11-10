@@ -157,9 +157,10 @@ from .table_filter import (SORT_MODES, VIEW_MODES, UNBOUND_PROCESS_LABEL,
 from .table_status import (ATTENTION_STATUSES, filter_rows_by_status,
                            row_file_status, row_status, row_tag)
 from .process_picker import (DECISION_PICK, attach_decision,
+                             candidate_display_text,
                              candidate_processes,
                              make_pinned_memory_factory)
-from .process_watch import names_match
+from .process_watch import enrich_candidates, names_match
 from .settings_sidecar import MasterSettingsStore
 from .table_analysis import (AnalysisStore, blocked_column_text,
                              entries_column_text)
@@ -229,7 +230,9 @@ def ui_flow_text() -> str:
         "analysis has work, state home, and the attach route on "
         "non-Windows), and the live "
         "'Running now' line (which bound processes are visible right "
-        "now, with PIDs).\n"
+        "now, with PIDs; it keeps this cheap name + PID form - the "
+        "identification enrichment runs only for the bounded picker / "
+        "details candidate sets, 0.40).\n"
         "   The table tree, one row per table: Table (relative path), "
         "Folder (the indexed folder the table came from), Process "
         "name(s), Status (live right now: "
@@ -264,6 +267,8 @@ def ui_flow_text() -> str:
         "(table details - the read-only inspection window with the "
         "live load-gate preview, the entry analysis, the note / "
         "tag, the remembered process and the auto-load policy rows, "
+        "the running candidates with their identification facts - "
+        "path / started / bitness, only the proved ones, 0.40 - "
         "load, edit note - the small dialog for the per-table note "
         "and the comma-separated tags, saved with the table's content "
         "hash, the auto-load policy toggle - automatic / manual only, "
@@ -299,6 +304,18 @@ def ui_flow_text() -> str:
         "bound process run, the picker lists them and the chosen PID is "
         "pinned for the session (falling back to the name-based attach "
         "once that PID exits).\n"
+        "   Candidate identification (0.40): the picker rows (and the "
+        "table-details 'Running now' row) show, per candidate, the full "
+        "image path, the start time ('started YYYY-MM-DD HH:MM') and "
+        "the bitness ('64-bit' / '32-bit') - only the facts the "
+        "bounded per-candidate enrichment proved (Windows: the "
+        "PROCESS_QUERY_INFORMATION query only; Linux/SteamOS: the "
+        "/proc exe link + starttime + btime; the bitness is not "
+        "provable from /proc and stays hidden there).  A refused / "
+        "unproved fact never renders: the row keeps the byte-stable "
+        "'Name (PID n)' form, and the enrichment never changes the "
+        "decision fields (the chosen PID pins the session exactly as "
+        "before).\n"
         "   Startup recovery: if a previous session left a stale state "
         "lock or unfinished receipts, the trainer offers to recover "
         "(archive the old state byte-for-byte) - decline and the load "
@@ -2626,9 +2643,16 @@ class MasterWindow:
                 or (self.app.folders[0] if self.app.folders else ""))
         gate = gate_table_for_load(str(Path(base) / entry.relative_path),
                                    entry)
-        pids = [e.pid for e in self._running
-                for n in entry.process_names
-                if e.name.casefold() == n.casefold()]
+        # MT-31 (0.40): the "Running now" row carries the bounded
+        # per-candidate identification of the running bound
+        # candidates (path / started / bitness, only the facts the
+        # enrichment proved; fail-closed keeps the PID-only form).
+        running_entries = tuple(
+            e for e in self._running
+            for n in entry.process_names
+            if e.name.casefold() == n.casefold())
+        running_entries = tuple(enrich_candidates(running_entries))
+        pids = [e.pid for e in running_entries]
         last_used = dict(self.app.recent_tables).get(table_key)
         # MT-24 (0.32): the details window shows the persisted
         # background plan-analysis entry for the table's content sha
@@ -2648,7 +2672,8 @@ class MasterWindow:
                                    running_pids=pids, gate=gate,
                                    analysis=analysis,
                                    notes=self.app.notes_store.get(entry.sha256),
-                                   attach=attach, autoload=autoload)
+                                   attach=attach, autoload=autoload,
+                                   running_entries=running_entries)
         win = tk.Toplevel(self.root)
         self._details_win = win
         win.title("Table details - " + table_key)
@@ -2708,7 +2733,17 @@ class MasterWindow:
         before anything attaches) but the remembered row is preselected
         so the one-click attach is the remembered target; a stale or
         missing choice preselects the first candidate as before.
+
+        MT-31 (0.40): the rows carry the bounded per-candidate
+        identification - the full image path, the start time and the
+        bitness, only the facts the enrichment proved (fail-closed: a
+        refused enrichment keeps the name + PID row, byte-stable
+        against the pre-0.40 format).
         """
+        # MT-31 (0.40): bounded per-candidate identification
+        # enrichment for the picker rows; the candidates are the
+        # bounded display set (a few at most), never the snapshot.
+        candidates = tuple(enrich_candidates(candidates))
         top = tk.Toplevel(self.root)
         if origin == "attach":
             top.title("Which process to attach?")
@@ -2719,10 +2754,12 @@ class MasterWindow:
         tk.Label(top, text="Select the running process to attach to:",
                  anchor="w", padx=14, font=("Segoe UI", 11)
                  ).pack(fill="x", pady=(12, 4))
-        listbox = tk.Listbox(top, exportselection=False, width=48,
+        # MT-31 (0.40): the wider listbox fits the identification
+        # facts (path / started / bitness) on one row.
+        listbox = tk.Listbox(top, exportselection=False, width=76,
                              height=8, font=("Segoe UI", 10))
         for cand in candidates:
-            listbox.insert("end", cand.name + "  (PID " + str(cand.pid) + ")")
+            listbox.insert("end", candidate_display_text(cand))
         listbox.pack(padx=14, pady=4)
         if candidates:
             # MT-28 (0.37): preselect the table's remembered process

@@ -44,6 +44,7 @@ main-branch libraries; none adds trainer functionality.
 
 | MT-29 | Per-table auto-load policy | done (2026-11-10) | `table_autoload.py` (new pure decision + document layer - no OS / index / state access): the persisted `table-autoload.json` document (schema 1, under the state home; **keyed by the table content sha256** - the same identity as the MT-24 analysis, the MT-27 notes and the MT-28 attach documents, so a policy survives a rename within a root and follows a content-identical file to another root; strict key-set / field validation of the master-state discipline - an unknown field is a named `AutoLoadRefusal`, never a silent drop; checksummed canonical-JSON envelope; `AUTOLOAD_ENTRIES_LIMIT` = 1024 entries, `evict_oldest` by `updated_at`, ties by sha256 - deterministic; a refused document is treated as absent, documented, never a silent reset); only the NON-DEFAULT policy persists - one `{"policy", "updated_at"}` entry per manual-only table; the ABSENCE of an entry (and a refused document) is the documented default `AUTOLOAD_AUTO` (the same discipline as the MT-28 binding document); `AutoLoadStore` (`document` / `get` / `has` / `policy` / `set_policy` / `clear_policy` / `clear`; setting `auto` drops a persisted entry; a malformed key or an out-of-bounds policy is a named refusal, fail-closed); `details_autoload_lines` (the MT-22 details-window "Auto-load policy" row). `orchestrator.py`: the optional zero-arg `manual_only` callable (re-evaluated on every tick, so a policy change applies from the next tick) - a table whose content sha is in the set is excluded from the auto-load DECISION: no auto-load request and no picker, a stable named waiting detail ("auto-load suppressed (all N bound table(s) for this process are manual-only; load one explicitly)") instead of a re-issued request, and an open choice is dropped back to waiting; a table without a content sha cannot carry a policy and stays in the decision set; the EXPLICIT load path (`request_load` / `choose`, the MT-10 path) is never affected. `table_filter.py`: `filter_tables` gains the optional `autoload_lookup` (the persisted policy text joins the casefolded match surface; the documented default `auto` is the absence of an entry and carries no match surface; `None` is the exact pre-0.39 behavior). `table_details.py`: `table_detail_lines` gains the `autoload` argument (the policy row below the remembered-process block). `master_ui.py`: `MasterApp.autoload_store` + `_manual_only_shas` wired to the orchestrator; the row context menu offers the toggle ("Auto-load: manual only" / "Auto-load: automatic" - the label names the ACTION, the pin-toggle convention; immediate persist + status line; the disabled item "Auto-load policy (no content sha)" for a table without a content sha); the filter matches the persisted policy text; the MT-22 details window shows the row. +47 tests (`tests/test_native_master_autoload.py` 33, `tests/test_native_master_ui_mt29.py` 14). |
 | MT-30 | State folder / debug log quick access | done (2026-11-10) | `state_access.py` (new pure decision + opener layer - no window, no Tk): `StateAccessRefusal` (the stable machine-readable `code` + the displayable `detail`); `resolve_state_folder` (the state home must exist and be a directory - `state-folder-bad` / `state-folder-missing`; a genuinely fresh start has nothing persisted yet) and `resolve_debug_log` (the log must exist and be a file - `debug-log-bad` / `debug-log-missing`; debug logging is a converter option, so an un-enabled build or a fresh install has no log yet); `choose_opener` (the only OS-service boundary - `os.startfile` on Windows, `xdg-open` through a fire-and-forget subprocess on Linux / SteamOS, the named `no-opener` refusal when no desktop handler exists - e.g. a headless SteamOS session); `open_path` (the injectable opener is the test seam; a non-string / empty target is the named `bad-path`; an opener failure is contained as the named `opener-failed` - never a crash; an opener-raised `StateAccessRefusal` is re-raised unchanged). `master_ui.py`: the two waiting-view header buttons "State folder…" / "Debug log…" (master-only - the standalone trainer header stays byte-identical): they open the persisted state home (the master-state document, the table index, the per-table sidecars, and the `forced-recovery/` archives created by the 0.38 `--force` forced start) and the trainer debug log at its exact `debug_log.default_log_path()` (the frozen trainer next to the EXE, the source runtime in the working directory) in the platform file manager / default handler; every named refusal lands in the status line - never a dialog, never a crash. +20 tests (`tests/test_native_master_ui_mt30.py`). |
+| MT-31 | Process identification in picker + details | done (2026-11-10) | `process_watch.py`: `ProcessSnapshotEntry` gains the optional identification fields `path` (the full image path), `creation_time` (the process start, Unix epoch seconds) and `pointer_size` (4 / 8, the target bitness) - all default `None` (refused / unavailable, fail-closed: the display falls back to name + PID, the `pid` / `name` decision fields are never touched); the snapshot listers stay cheap (name + PID only, the 30 s auto-rescan tick keeps its contract). The BOUNDED per-candidate enrichment runs only where the user asks for it (the process picker rows, the table-details "Running now" row) - never per poll tick: `enrich_candidates(entries, enricher=None)` applies the platform `default_process_enricher()` (the injectable test seam) to each entry of the bounded candidate set, every per-entry failure fails closed (the entry stays unenriched, a non-entry result is treated as refused as well); `_windows_enrich_entry` (Windows: `OpenProcess(PROCESS_QUERY_INFORMATION)` only - no other rights - + `QueryFullProcessImageNameW` / `GetProcessTimes` (FILETIME ticks -> Unix seconds via the 11644473600 s epoch delta) / `IsWow64Process2` (0x014C -> 4, 0x8664 -> 8, anything else unknown), handle closed in a finally, a refused handle / query / missing export keeps the entry unenriched, no error propagates); `_procfs_enrich_entry` (Linux/SteamOS: the `exe` link target as the full path - under Proton the compatibility-prefix path of the bound Windows EXE - and the `starttime` field 22 of `/proc/<pid>/stat` (clock ticks) + the system `btime` (at `SC_CLK_TCK`) as the creation time; the bitness is not provable from `/proc` and stays `None`; any read failure keeps the entry unenriched). `process_picker.py`: `candidate_display_text(entry)` - name + PID always (byte-stable against the pre-0.40 row format while unenriched), the proved facts appended as `"  -  " + "  -  ".join(...)` (path / "started YYYY-MM-DD HH:MM" via `format_creation_time` / "64-bit" / "32-bit"); a `None` fact never renders. `table_details.py`: `table_detail_lines(..., running_entries=None)` - when the (enriched) candidate entries are given, the "Running now" row renders each running bound candidate with its identification facts (sorted by PID, `"; "`-joined); `None` keeps the pre-0.40 PID-only form from `running_pids`. `master_ui.py`: the process picker enriches its bounded candidate set before rendering (the listbox widens 48 -> 76 to fit the facts on one row) and the table-details window passes the enriched running entries to the row builder; the waiting-view "Running now" line keeps its cheap name + PID form (never enriched). Zero load-path effect - the MT-9 gate re-checks the table independently at load time; the attach decision (pid pin) is unaffected by the enrichment. +39 tests (`tests/test_native_master_process_watch.py` +23, `tests/test_native_master_process_picker.py` +4, `tests/test_native_master_ui_mt31.py` +12, baseline pinning in the MT-12/MT-22/MT-28 UI tests). |
 
 ## Online feature evaluation (2026-11-02)
 
@@ -618,6 +619,76 @@ bounded transient-read retry. +73 tests
 Remaining candidates (updated): the game launch integration
 (needs install-path data; out of scope for the read-only table
 model), the online catalog (out of scope - private own use).
+
+### 0.40 process identification in picker + details + bounded zero-transfer transient-write retry (evaluated 2026-11-10, adopted + implemented 2026-11-10)
+
+The 0.40 evaluation (web research over the trainer front-end
+signals: the Cheat Engine forum thread "Open Process By PID"
+(the multi-instance indistinguishability problem - several running
+instances of the same game name, no way to tell them apart in the
+process list - the direct anchor for identification facts in the
+picker), the WeMod UI threads (the layout / visibility /
+trainer-options requests remain covered by the 0.36 multi-column
+grid and the 0.37 per-table process binding), the Game Cheats
+Manager front end (tags / search / filters / last-used - covered by
+MT-13/15/18/27; auto-update / online catalog - out of scope for the
+private own-use model), the zhisync / game.cheat online catalog
+(out of scope - private own use, offline hash-verified build
+policy), the game launch integration (still out of scope - needs
+install-path data, the read-only table model has none)) found one
+open candidate for the Master Trainer use case plus the
+reliability lane that completes the 0.39 read-side symmetry:
+
+- Process identification in picker + details: **the adopted 0.40
+  candidate** - the use case's "choose which table runs against
+  which process" only works reliably when the user can TELL the
+  candidates apart: the process picker and the table-details
+  "Running now" row now show, per candidate, the full image path,
+  the start time and the bitness - the bounded per-candidate
+  enrichment (never the 30 s snapshot tick), fail-closed per fact,
+  byte-stable against the pre-0.40 name + PID row while a fact was
+  refused.  MT-31.
+- Bounded zero-transfer transient-write retry: **the reliability
+  lane of 0.40** - the write-side symmetry of the 0.39
+  transient-read retry: a `WriteProcessMemory` call that FAILED
+  with the field-observed transient set (Win32 299 on Proton plus
+  119 / 1116 / 24) and transferred NOTHING is retried with the
+  bounded exponential backoff (4 attempts, 0.05 -> 0.25 s); a
+  partial transfer (any bytes moved, failed or not) or any other
+  code is NEVER retried and lands in the existing
+  uncertain-write protocol unchanged (fail-closed, the "never
+  silently retries a PARTIAL write" contract holds).
+
+Adopted for 0.40: MT-31 (process identification in picker +
+details), and the bounded zero-transfer transient-write retry.
+Implemented as shipped (2026-11-10, 0.40 content on `main`): the
+`ProcessSnapshotEntry` identification fields (default `None` =
+refused / unavailable) + the bounded `enrich_candidates` /
+`default_process_enricher` enrichment (the Windows
+`OpenProcess(PROCESS_QUERY_INFORMATION)`-only query with
+`QueryFullProcessImageNameW` / `GetProcessTimes` /
+`IsWow64Process2`; the `/proc` `exe`-link + `starttime` + `btime`
+variant; every per-entry failure fail-closed, the decision fields
+untouched); the `candidate_display_text` row formatter (byte-stable
+name + PID base, the proved facts appended); the
+`table_detail_lines(..., running_entries=...)` enriched "Running
+now" row; the master_ui wiring (the picker enriches its bounded
+candidate set, the details window passes the enriched running
+entries, the waiting-view line stays cheap).  The `memory.py`
+bounded zero-transfer transient-write retry (the `_WRITE_*`
+constants mirroring the read retry; only a FAILED call with
+`transferred == 0` retries; the original error after the budget).
++46 tests (`tests/test_native_master_process_watch.py` +23,
+`tests/test_native_master_process_picker.py` +4,
+`tests/test_native_master_ui_mt31.py` +12,
+`tests/test_native_memory_write_retry.py` +7, baseline pinning in
+the MT-12/MT-22/MT-28 UI tests).
+
+Remaining candidates (updated): the game launch integration
+(needs install-path data; out of scope for the read-only table
+model), the online catalog (out of scope - private own use),
+global per-feature hotkeys (beyond the documented single-target
+model - the engine per-record hotkeys stay the supported surface).
 
 ## Merge & release plan (historical + current)
 

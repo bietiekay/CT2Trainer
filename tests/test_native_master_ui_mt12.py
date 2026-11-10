@@ -288,7 +288,14 @@ class ProcessPickerUiTests(unittest.TestCase):
     def test_ask_mode_auto_load_opens_the_process_picker(self):
         app = self._app(ATTACH_MODE_ASK)
         window = self._window(app)
-        window._poll()
+        # MT-31 (0.40): the picker rows carry the bounded
+        # per-candidate identification; the refused-enrichment (name +
+        # PID) row form is asserted here, so the enrichment is pinned
+        # fail-closed.
+        with patch("ct2trainer.native.master_trainer.master_ui"
+                   ".enrich_candidates",
+                   side_effect=lambda candidates: candidates):
+            window._poll()
         self.assertIsNotNone(window._proc_picker)
         listbox = window._proc_picker_listbox
         self.assertEqual(listbox.get(0), "GameA.exe  (PID 7)")

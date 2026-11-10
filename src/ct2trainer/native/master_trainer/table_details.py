@@ -58,7 +58,8 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
                        analysis=None,
                        notes=None,
                                               attach=None,
-                       autoload=None) -> list:
+                       autoload=None,
+                       running_entries=None) -> list:
     """Ordered ``(label, value)`` rows for the read-only details
     window of one indexed table.
 
@@ -85,18 +86,35 @@ def table_detail_lines(entry, *, root: str, pinned: bool,
     policy entry for the same content sha from
     ``table_autoload.AutoLoadStore`` (or None while the table carries
     the documented default) - it adds the "Auto-load policy" row
-    below the remembered-process block.
+    below the remembered-process block;
+    ``running_entries`` (MT-31, 0.40) are the (bounded, per-candidate
+    enriched) snapshot entries of the bound processes currently
+    visible - when given, the "Running now" row renders each entry
+    with its identification facts (path / started / bitness, only the
+    facts the enrichment proved) instead of the bare PID list;
+    ``None`` keeps the pre-0.40 PID-only form from ``running_pids``.
     """
     names = ", ".join(entry.process_names) or "(none found)"
     if entry.status == "ok":
         status = "ok"
     else:
         status = "unreadable: " + (entry.detail or "no detail")
-    pids = sorted(set(running_pids))
-    if pids:
-        running = "PID " + ", ".join(str(p) for p in pids)
+    # MT-31 (0.40): the enriched "Running now" form (one row per
+    # running bound candidate with the identification facts the
+    # bounded enrichment proved; None keeps the PID-only form).
+    if running_entries is not None:
+        from .process_picker import candidate_display_text
+        rows = sorted(running_entries, key=lambda e: e.pid)
+        if rows:
+            running = "; ".join(candidate_display_text(e) for e in rows)
+        else:
+            running = "not running"
     else:
-        running = "not running"
+        pids = sorted(set(running_pids))
+        if pids:
+            running = "PID " + ", ".join(str(p) for p in pids)
+        else:
+            running = "not running"
     lines = [
         ("Table", entry.relative_path),
         ("Folder", root),

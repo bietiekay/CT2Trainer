@@ -76,6 +76,22 @@ _READ_TRANSIENT_ERRORS = {299, ERROR_MORE_DATA, ERROR_BAD_LENGTH,
 _READ_MAX_ATTEMPTS = 4
 _READ_RETRY_BASE_SECONDS = 0.05
 _READ_RETRY_MAX_SECONDS = 0.25
+# Transient WRITE failures (the 0.40 reliability lane, the write-side
+# symmetry of the 0.39 transient-read retry): the same transient set
+# as the read retry (the field-observed Win32 299 on Proton plus the
+# snapshot-retry set - in-flight state while the target is still
+# changing).  A write is retried ONLY when the API call FAILED with a
+# transient code and transferred NOTHING (transferred == 0 - nothing
+# was changed, so the retry cannot double-mutate); a partial transfer
+# (a call that moved any bytes, failed or not) or any other code
+# fails immediately into the existing uncertain-write protocol
+# (fail-closed, no silent success, the original error after the
+# budget).
+_WRITE_TRANSIENT_ERRORS = {299, ERROR_MORE_DATA, ERROR_BAD_LENGTH,
+                           ERROR_INVALID_ID}
+_WRITE_MAX_ATTEMPTS = 4
+_WRITE_RETRY_BASE_SECONDS = 0.05
+_WRITE_RETRY_MAX_SECONDS = 0.25
 _DWORD = ctypes.c_uint32
 _WORD = ctypes.c_uint16
 
@@ -474,8 +490,17 @@ class ProcessMemory:
                        _rollback: bool = False) -> None:
         """Write exact bytes, restore every page protection, and verify readback.
 
-        A failure can follow a partial write. The backend then blocks additional
-        writes; it never silently retries or claims that memory was rolled back.
+        A failure can follow a partial write. The backend then blocks
+        additional writes; it never silently retries a PARTIAL write
+        (a call that moved any bytes, failed or not) or one that
+        failed with a non-transient code, and it never claims that
+        memory was rolled back.  The one documented exception is the
+        0.40 bounded zero-transfer transient retry: a call that FAILED
+        with a transient code and transferred nothing is retried with
+        the read retry's backoff (the _WRITE_* module constants) -
+        nothing was changed, so the retry cannot double-mutate; after
+        the budget the original error still lands in the uncertain
+        protocol.
         Patches are not atomic with respect to the target's running threads.
         """
         if before_kernel is not None and not callable(before_kernel):
@@ -537,8 +562,28 @@ class ProcessMemory:
                 from .restoration_budget import mutation_admission
                 mutation_admission(len(data),rollback=_rollback)
                 attempted = True
-                if not self._kernel.WriteProcessMemory(self._handle, address, buffer, len(data), ctypes.byref(transferred)):
-                    raise _windows_error("WriteProcessMemory (memory may be partially changed)")
+                # 0.40 reliability lane: the bounded zero-transfer
+                # transient-write retry.  The sleep stays under the
+                # caller's self._lock (the snapshot-retry / read-retry
+                # precedent), so no other read/write interleaves a
+                # transient retry.  Only a FAILED call with NOTHING
+                # transferred is retried; a partial transfer (a call
+                # that moved any bytes, failed or not) or a non-
+                # transient code raises the original error into the
+                # uncertain protocol below.
+                attempt = 0
+                while True:
+                    attempt += 1
+                    transferred.value = 0
+                    if self._kernel.WriteProcessMemory(self._handle, address, buffer, len(data), ctypes.byref(transferred)):
+                        break
+                    error = ctypes.get_last_error()
+                    if (error not in _WRITE_TRANSIENT_ERRORS
+                            or transferred.value != 0
+                            or attempt >= _WRITE_MAX_ATTEMPTS):
+                        raise _windows_error("WriteProcessMemory (memory may be partially changed)")
+                    time.sleep(min(_WRITE_RETRY_BASE_SECONDS * (2 ** (attempt - 1)),
+                                   _WRITE_RETRY_MAX_SECONDS))
                 if transferred.value != len(data):
                     raise ProcessMemoryError("WriteProcessMemory was partial; memory may be changed.")
             except Exception as error:

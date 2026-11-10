@@ -1,6 +1,6 @@
 # CT2Trainer Master Trainer — UI flow (reviewable)
 
-Status: 0.35 (2026-11-09). This document is the reviewable copy of the
+Status: 0.40 (2026-11-10). This document is the reviewable copy of the
 in-app "UI flow" dialog (the `ui_flow_text()` function in
 `master_ui.py`; keep both aligned when the flow changes). It describes
 the complete user flow of the Master Trainer so it can be reviewed and
@@ -62,7 +62,9 @@ survive — they are window/app state, not widget state).
   permanent MT-7 route hint (attach unavailable; the documented
   Proton-wrapped trainer route).
 - **Running now** — which bound processes are visible in the latest
-  snapshot, with PIDs.
+  snapshot, with PIDs. The line keeps its cheap name + PID form
+  (0.40, MT-31: the identification enrichment runs only for the
+  bounded picker / details candidate sets, never per snapshot tick).
 
 ### The table tree
 
@@ -90,7 +92,11 @@ keys and Enter work immediately without a first click.
 **Row context menu (right-click):** `Table details` (0.30, MT-22)
 leads the menu — a read-only Toplevel with the indexed facts for the
 row (table path, folder, size, modified, bound processes, index
-status, pin state, last used, running PIDs, content sha) plus the
+status, pin state, last used, the running candidates — since 0.40 /
+MT-31 each running bound candidate with its identification facts,
+the full image path, the start time and the bitness, only the facts
+the bounded enrichment proved; the bare name + PID row while a fact
+was refused — and the content sha) plus the
 **on-demand load-gate re-check** — the same `gate_table_for_load`
 pass MT-9 runs at load time, named refusal code + displayable
 detail — so a table can be inspected and its current loadability
@@ -195,6 +201,17 @@ refusals included — never a crash):
   remembered target).  A stale or foreign PID falls back to the
   ordinary decision; the Table-details window shows the
   “Remembered process” row.
+- **Candidate identification (0.40, MT-31)** — the picker rows (and
+  the table-details “Running now” row) show, per candidate, the full
+  image path, the start time (“started YYYY-MM-DD HH:MM”) and the
+  bitness (“64-bit” / “32-bit”) — only the facts the bounded
+  per-candidate enrichment proved (Windows: `PROCESS_QUERY_INFORMATION`
+  query only; Linux/SteamOS: the `/proc` `exe` link + `starttime` +
+  `btime`; the bitness is not provable from `/proc` and stays hidden
+  there).  A refused / unproved fact never renders: the row keeps
+  the byte-stable “Name (PID n)” form, and the enrichment never
+  changes the decision fields (the chosen PID pins the session
+  exactly as before).
 
 ### Startup recovery (named, fail-closed)
 

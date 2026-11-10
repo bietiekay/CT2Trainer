@@ -41,6 +41,37 @@ DECISION_PICK = "pick"
 DECISION_WAIT = "wait"
 
 
+def format_creation_time(creation_seconds: float) -> str:
+    """MT-31 (0.40): local 'YYYY-MM-DD HH:MM' for a Unix-epoch time
+    (the modified-column style of the waiting view)."""
+    from datetime import datetime
+    return datetime.fromtimestamp(creation_seconds).strftime(
+        "%Y-%m-%d %H:%M")
+
+
+def candidate_display_text(entry: ProcessSnapshotEntry) -> str:
+    """MT-31 (0.40): the picker / details row text for one candidate.
+
+    Name + PID always - byte-stable against the pre-0.40 row format
+    while the entry is unenriched.  The identification facts (path,
+    started time, bitness) are appended only when the bounded
+    enrichment provided them; a ``None`` field (refused / unavailable,
+    fail-closed) never renders.
+    """
+    text = entry.name + "  (PID " + str(entry.pid) + ")"
+    extras = []
+    if entry.path:
+        extras.append(entry.path)
+    if entry.creation_time is not None:
+        extras.append("started "
+                      + format_creation_time(entry.creation_time))
+    if entry.pointer_size is not None:
+        extras.append(str(entry.pointer_size * 8) + "-bit")
+    if extras:
+        text += "  -  " + "  -  ".join(extras)
+    return text
+
+
 def candidate_processes(
     snapshot: list[ProcessSnapshotEntry],
     process_names: list[str] | tuple[str, ...],
