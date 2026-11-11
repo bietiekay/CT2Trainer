@@ -41,7 +41,7 @@ from .hotkey_model import (ACTIVATION_HOTKEY_ACTIONS, VALUE_HOTKEY_ACTIONS,
                            HotkeyController, HotkeyModelError, HotKeySpec,
                            ToggleOutcome, ToggleOutcomeStatus, format_hotkey_keys,
                            vk_to_spec)
-from .memory import ScanMiss
+from .memory import ProcessMemoryError, ScanMiss, is_transient_memory_error
 from .patterns import pattern_byte_length, placeholder_spans
 
 
@@ -59,6 +59,16 @@ from .patterns import pattern_byte_length, placeholder_spans
 # stands).  Not user-configurable.
 REARM_INTERVAL_SECONDS = 30
 REARM_MAX_ATTEMPTS = 10
+# Bounded patch-verification skip streak (the 0.43 TGC field fix).  When the
+# periodic _check_patches verification hits a transient target-memory read
+# failure (memory.is_transient_memory_error) the engine skips that
+# verification tick instead of treating the failed read as an observed
+# change; the streak counts consecutive such skipped ticks and a fully
+# verified tick resets it.  When the streak reaches this limit the transient
+# read failures are persistent enough that the engine cannot verify its
+# owned receipts - it blocks fail-closed with a named refusal rather than
+# silently assuming the bytes are unchanged.  Not user-configurable.
+VERIFY_SKIP_STREAK_LIMIT = 30
 
 
 class NativeRuntimeError(RuntimeError):
@@ -1803,6 +1813,11 @@ class TrainerEngine:
             self.managed_session = None
             self.hooks: dict[int, Any] = {}
             self.retired_hooks: list[Any] = []
+            # 0.43 TGC field fix: bounded transient-read skip streak for the
+            # periodic _check_patches verification (see
+            # VERIFY_SKIP_STREAK_LIMIT); reset on every confirmed attach.
+            self._verify_skip_streak = 0
+            self._last_verify_skip = None
             self._hook_lifetime_bytes = 0
             self._hook_lifetime_count = 0
             self.global_pool=None
@@ -2658,6 +2673,10 @@ class TrainerEngine:
                                pointer_size=getattr(memory, "pointer_size", None),
                                creation_time=getattr(memory, "creation_time", None))
             self._last_attach_failure = None
+            # 0.43 TGC field fix: a confirmed (re-)attach starts a fresh
+            # verification session; reset the transient-read skip streak.
+            self._verify_skip_streak = 0
+            self._last_verify_skip = None
             if self._reattach_pending:
                 # The explicit re-attach action reached a confirmed attach:
                 # report it once and close the request bookkeeping.
@@ -3131,21 +3150,47 @@ class TrainerEngine:
         if self.global_pool is not None:
             try: self.global_pool.diagnostic()
             except Exception as exc: raise StateError('Shared-global ownership is uncertain: '+str(exc)) from exc
+        transient = None
+        transient_skips = 0
+        # Lua-owned data verification (remote target reads).  A transient
+        # read failure is NOT an observed change: it skips the rest of this
+        # verification tick (tracked, bounded) instead of blocking.
         for scope in self.lua_activations.values():
-            scope.check()
+            if transient is not None:
+                break
+            try:
+                scope.check()
+            except ProcessMemoryError as exc:
+                if is_transient_memory_error(exc):
+                    transient = exc
+                    transient_skips += 1
+                    break
+                raise
         for manager in self.retired_hooks:
+            if transient is not None:
+                break
             try:
                 manager.receipt()
             except Exception as exc:
                 raise StateError('A retired executable allocation receipt changed: '+str(exc)) from exc
         for manager in self.hooks.values():
+            if transient is not None:
+                break
             if manager.uncertain:
                 raise StateError('An executable hook receipt is uncertain')
             try:
                 manager.check_entries()
+            except ProcessMemoryError as exc:
+                if is_transient_memory_error(exc):
+                    transient = exc
+                    transient_skips += 1
+                    break
+                raise PatchConflict('An executable hook receipt could not be verified: '+str(exc)) from exc
             except Exception as exc:
                 raise PatchConflict('An executable hook receipt changed: '+str(exc)) from exc
         for identifier, patches in self.applied.items():
+            if transient is not None:
+                break
             if self.entries.get(identifier, {}).get("kind") == "code_patch":
                 # RT-5 item B: code-list records are not declarative AA
                 # patches; their own enable/disable paths re-read the live
@@ -3155,8 +3200,40 @@ class TrainerEngine:
                 # exact original-byte check.
                 continue
             for patch in patches:
-                if self.memory.read(patch.address, len(patch.changed)) != patch.changed:
+                try:
+                    observed = self.memory.read(patch.address, len(patch.changed))
+                except ProcessMemoryError as exc:
+                    if is_transient_memory_error(exc):
+                        transient = exc
+                        transient_skips += 1
+                        break
+                    raise
+                if observed != patch.changed:
                     raise PatchConflict(f"Active patch changed externally at 0x{patch.address:X}; it will not be overwritten")
+        if transient is None:
+            # A fully verified tick: the transient-read skip streak resets.
+            self._verify_skip_streak = 0
+            self._last_verify_skip = None
+            return
+        # A transient read failure: the owned receipts could not be verified
+        # this tick, but the failure is NOT an observed external change.
+        # Skip the verification (bounded, tracked) and keep the trainer
+        # usable; a persistent streak blocks fail-closed below.
+        self._verify_skip_streak += 1
+        error_text = str(transient)
+        # Deduped: a persistent transient failure reports once; a different
+        # cause or a fresh streak (after a verified tick) reports again.
+        if self._last_verify_skip != error_text:
+            self.debug_log.log('patch-verify-skipped',
+                               skips=transient_skips,
+                               streak=self._verify_skip_streak,
+                               limit=VERIFY_SKIP_STREAK_LIMIT,
+                               error=error_text)
+        self._last_verify_skip = error_text
+        if self._verify_skip_streak >= VERIFY_SKIP_STREAK_LIMIT:
+            raise StateError("Patch verification failed on transient read errors for "
+                             + str(VERIFY_SKIP_STREAK_LIMIT) + " consecutive ticks (last: "
+                             + error_text + "); the engine blocks to stay fail-closed.")
 
     def _operations(self, entry: dict, section: str) -> tuple[dict[str, int], set[str], list[_Patch]]:
         symbols = dict(self.symbols)

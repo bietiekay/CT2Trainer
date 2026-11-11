@@ -2,6 +2,75 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.43 (2026-11-11)
+
+Master Trainer minimize-to-tray + window-geometry persistence
+(MT-32/MT-33) + the TGC field fix (transient target-memory reads no
+longer block the engine). (MT-32) Minimize-to-tray: the Master
+Trainer can minimize into the system tray and restore on tray
+double-click - `master_trainer/tray.py` drives the Win32 tray icon
+(`Shell_NotifyIconW` / `RegisterClassExW` bound through
+`_bind_prototypes` with pointer-sized WPARAM/LPARAM) behind a bounded,
+named fail-closed guard: a Windows build without the
+`Shell_NotifyIconW` export (stripped user32, the Sinking City 2 0.22.1
+precedent) or a refused `RegisterClassExW` (Win32 87) is the named
+`tray-platform-unavailable` / `tray-icon-missing` / `tray-setup-failed`
+refusal in the status line - never a crash and never a dialog; the
+persisted "Minimize to tray" toggle (master-state schema 9 -> 10,
+`tray_minimize`) restores on start and persists on change, and the
+tray balloon reports the trainer's attach success / failure through
+the new `ui.py` `attach_observer` (fail-safe `_fire_attach_observer`,
+standalone trainer unchanged). (MT-33) Window-geometry persistence:
+the Master window's size / position is remembered across restarts -
+`master_trainer/window_geometry.py` pure layer, persisted in the same
+master-state document (schema 10, `window_geometry`), saved on the
+bounded `<Configure>` cadence and on close (`_save_geometry` /
+`_save_final_geometry` with defensive winfo guards so a half-destroyed
+window never writes a bogus rect), and an invalid persisted geometry
+is the named `window-geometry-invalid` refusal (the default geometry)
+rather than a crash. (TGC field fix) the 2026-11-11 Indiana Jones and
+the Great Circle (0.41) field log exposed two transient-read dead
+ends: R1 the module snapshot failed with Win32 299
+(ERROR_INTERNAL_ERROR) immediately after the first attach while the
+game was still loading its DLLs - 299 was not in the snapshot
+transient retry set, so the engine blocked with no retry and the
+stuck engine refused a close while the target lived; R2 a transient
+299 read during the periodic `_check_patches` was wrapped as "An
+executable hook receipt changed" -> `PatchConflict` -> engine
+blocked.  A failed read is not an observed change.  Fixes: F1
+(memory.py) 299 joins the bounded snapshot transient retry (8
+attempts, 0.05 -> 1.0 s backoff), every `_windows_error` carries a
+machine-readable `win32_code`, and the public
+`TRANSIENT_MEMORY_ERRORS` / `is_transient_memory_error()` classify a
+read failure as "cannot verify right now" (never "bytes changed");
+F2 (engine.py) a transient read in the periodic `_check_patches` now
+skips that verification tick instead of blocking - a bounded skip
+streak (`VERIFY_SKIP_STREAK_LIMIT = 30` consecutive ticks), a deduped
+`patch-verify-skipped` debug event (reported once per distinct cause,
+reset on a verified tick and on every confirmed (re-)attach), and a
+persistent streak is the named fail-closed refusal "Patch
+verification failed on transient read errors for 30 consecutive ticks
+(last: ...); the engine blocks to stay fail-closed."; a real byte
+mismatch and a non-transient failure still block immediately (the
+non-transient hook-read refusal is now the more specific "An
+executable hook receipt could not be verified: ..."); F2b (hooks.py)
+a transient guard read in `_check_allocation_guards` re-raises instead
+of marking the manager uncertain (which would be a permanent
+fail-closed state). +85 tests (new
+`tests/test_native_master_tray_geometry.py` 62 incl. the correctly
+session-skipped `Shell_NotifyIconW` smoke test, the master
+UI / state updates, new `tests/test_native_tgc_field_fix.py` 17, 3
+architecture snapshot tests adapted for the 299-retry contract + 1 new
+299 retry test); full main suite 5,011 OK / 36 expected skips; catalog
+remeasure `blocked-catalog-043-tgc`: 117,809 total / 117,272
+supported / 12,974 headings / 104,123 actionable / 537 blocked - zero
+delta vs `blocked-catalog-042-cleanup` (3-chunk record-level delta
+audit: 0 newly blocked, 0 unblocked, 0 reason changes, 0 tables
+added / removed).
+
+- Build: 0.43 released as run
+  (record sweep fills the build id, ZIP hashes and in-build suite).
+
 ## 0.42 (2026-11-11)
 
 CE 7.5 cleanup parity + the API-export registry extension — the two

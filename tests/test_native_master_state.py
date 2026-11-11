@@ -63,7 +63,9 @@ class MasterStateSerializeTests(unittest.TestCase):
                           "view_status": "",
                           "auto_rescan": True,
                           "table_folders": [],
-                          "grid_columns": 1})
+                          "grid_columns": 1,
+                          "tray_minimize": False,
+                          "window_geometry": None})
         canonical = json.dumps(document["payload"], sort_keys=True,
                                separators=(",", ":"), allow_nan=False,
                                ensure_ascii=True).encode("utf-8")
@@ -562,6 +564,70 @@ class MasterStateSerializeTests(unittest.TestCase):
                 master_state_from_bytes(
                     self._document(dict(base, grid_columns=bad)))
             self.assertIn("grid_columns", str(ctx.exception))
+
+    # -- schema 10 (0.43) tray minimize + window geometry (MT-32/33) ---------
+
+    def test_schema10_tray_and_geometry_roundtrip(self):
+        state = MasterState(MASTER_STATE_SCHEMA, "C:\\tables",
+                            tray_minimize=True,
+                            window_geometry={"x": 120, "y": -40,
+                                             "w": 1200, "h": 640},
+                            table_folders=("C:\\tables",))
+        raw = master_state_to_bytes(state)
+        self.assertEqual(master_state_from_bytes(raw), state)
+        # The document is byte-stable: same input, same bytes.
+        self.assertEqual(master_state_to_bytes(state), raw)
+
+    def test_schema9_document_promotes_with_tray_defaults(self):
+        # Schema-9 documents never carry the new fields; the documented
+        # defaults (opt-in False, geometry None) apply on promotion.
+        payload = {"schema": 9, "last_folder": "C:\\tables",
+                   "table_folders": ["C:\\tables"],
+                   "grid_columns": 2}
+        state = master_state_from_bytes(self._document(payload))
+        self.assertEqual(state.schema, MASTER_STATE_SCHEMA)
+        self.assertFalse(state.tray_minimize)
+        self.assertIsNone(state.window_geometry)
+        self.assertEqual(state.grid_columns, 2)
+
+    def test_from_bytes_refuses_schema9_with_tray_fields(self):
+        payload = {"schema": 9, "last_folder": None,
+                   "tray_minimize": True}
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(payload))
+        self.assertIn("unknown fields", str(ctx.exception))
+        self.assertIn("tray_minimize", str(ctx.exception))
+        payload = {"schema": 9, "last_folder": None,
+                   "window_geometry": {"x": 0, "y": 0, "w": 10, "h": 10}}
+        with self.assertRaises(MasterStateRefusal) as ctx:
+            master_state_from_bytes(self._document(payload))
+        self.assertIn("window_geometry", str(ctx.exception))
+
+    def test_from_bytes_refuses_bad_tray_minimize(self):
+        base = {"schema": MASTER_STATE_SCHEMA, "last_folder": None}
+        for bad in (1, 0, "true", None, [False]):
+            with self.assertRaises(MasterStateRefusal) as ctx:
+                master_state_from_bytes(
+                    self._document(dict(base, tray_minimize=bad)))
+            self.assertIn("tray_minimize", str(ctx.exception))
+
+    def test_from_bytes_refuses_bad_window_geometry(self):
+        base = {"schema": MASTER_STATE_SCHEMA, "last_folder": None}
+        bad_values = (
+            "null", 32, [1, 2, 3, 4],
+            {"x": 0, "y": 0, "w": 10},                      # missing key
+            {"x": 0, "y": 0, "w": 10, "h": 10, "z": 1},    # extra key
+            {"x": 0.0, "y": 0, "w": 10, "h": 10},          # float x
+            {"x": "0", "y": 0, "w": 10, "h": 10},          # string x
+            {"x": 0, "y": 0, "w": -1, "h": 10},            # negative size
+            {"x": 20000, "y": 0, "w": 10, "h": 10},        # + out of bounds
+            {"x": 0, "y": -20000, "w": 10, "h": 10},       # - out of bounds
+        )
+        for bad in bad_values:
+            with self.assertRaises(MasterStateRefusal) as ctx:
+                master_state_from_bytes(
+                    self._document(dict(base, window_geometry=bad)))
+            self.assertIn("window_geometry", str(ctx.exception))
 
 
 class MasterStateFileTests(unittest.TestCase):

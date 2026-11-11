@@ -95,7 +95,8 @@ class TrainerWindow:
                  master_back: Callable[[], None] | None = None,
                  detach_cb: Callable[[], None] | None = None,
                  columns: int = 1,
-                 on_columns_changed: Callable[[int], None] | None = None):
+                 on_columns_changed: Callable[[int], None] | None = None,
+                 attach_observer: Callable[[str], None] | None = None):
         self.root, self.engine = root, engine
         # MT-4 (Master Trainer): optional "back to the Master wait mode"
         # callback.  None keeps the standalone trainer exactly as before
@@ -118,6 +119,12 @@ class TrainerWindow:
                              + repr(columns) + ")")
         self.columns = columns
         self.on_columns_changed = on_columns_changed
+        # MT-32 (Master Trainer, 0.43): the attach/detach transition
+        # observer ("attached" / "detached"), called from the poll tick
+        # on each state change.  The Master passes its tray
+        # notification hook; None keeps the standalone trainer
+        # behavior exactly as before.
+        self.attach_observer = attach_observer
         self.columns_btn: tk.Button | None = None
         self.view = "Switches"
         self.page = 0
@@ -1147,6 +1154,12 @@ class TrainerWindow:
         # generated trainer sounds on every toggle, not only UI taps).
         if (self.engine.memory is not None and not was_attached):
             play_sound("attach")
+            self._fire_attach_observer("attached")
+        elif was_attached and self.engine.memory is None:
+            # The target exited (or the MT-12 detach was pressed on
+            # purpose): the live handle is gone again.  The observer
+            # is informative in both cases.
+            self._fire_attach_observer("detached")
         # MT-12 (Master Trainer, 0.25): keep the Detach/Attach button label in
         # sync with the live attach state; standalone trainers have no such
         # button and skip this.
@@ -1163,6 +1176,18 @@ class TrainerWindow:
         else:
             self._refresh_value_texts()
         self.root.after(POLL_MS, self.poll)
+
+    def _fire_attach_observer(self, event):
+        """MT-32 (Master Trainer, 0.43): forward one attach/detach
+        transition to the observer (the Master's tray notification).
+        An observer failure never breaks the poll tick."""
+        observer = self.attach_observer
+        if observer is None:
+            return
+        try:
+            observer(event)
+        except Exception:
+            pass
 
     def on_escape(self, _event):
         # Escape closes the expanded value editor; nothing else to pop.

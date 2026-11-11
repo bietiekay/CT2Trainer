@@ -1,7 +1,7 @@
 """Master Trainer state document (last-used folder, preferences).
 
 The state home holds one small document, ``master-settings.json``, next to
-the tables index.  Schema 9 (0.36) carries:
+the tables index.  Schema 10 (0.43) carries:
 
 - ``last_folder``  - the last-used (primary) table folder ("ask on first
   start"); always equal to the first entry of ``table_folders``;
@@ -47,9 +47,21 @@ the tables index.  Schema 9 (0.36) carries:
 - ``grid_columns`` - the persisted trainer grid column count
   (MT-21, 0.36): 1 (default), 2 or 3; handed to the trainer window
   on table load.  The standalone trainer always renders the
-  single-column layout.
+  single-column layout;
+- ``tray_minimize``- the persisted minimize-to-tray flag (MT-32,
+  0.43): true keeps the Master window in the notification tray
+  instead of the taskbar when it is minimized, with the tray balloon
+  notifications (attach / detach / attention) active; false
+  (default, opt-in) keeps the plain taskbar minimize;
+- ``window_geometry``- the persisted window geometry (MT-33, 0.43):
+  null (default, nothing stored yet) or an object with exactly the
+  four strict-integer keys ``x`` / ``y`` / ``w`` / ``h`` (the
+  window's position and outer size in screen pixels); restored
+  clamped into the primary screen bounds on start, saved debounced
+  on resize and on close.
 
-Schema 8 (0.34) documents carry the first eleven fields; schema 7
+Schema 9 (0.36) documents carry the first twelve fields; schema 8
+(0.34) documents the first eleven fields; schema 7
 (0.33) documents the first ten fields; schema 6 (0.31/0.32) documents
 the first nine; schema 5 (0.28) documents the first eight; schema 4
 (0.27) documents the first seven; schema 3 (0.26) documents the first
@@ -83,14 +95,17 @@ import hashlib
 import json
 from pathlib import Path
 
-MASTER_STATE_SCHEMA = 9
-MASTER_STATE_SCHEMA_PREVIOUS = 8
-MASTER_STATE_SCHEMA_PREVIOUS2 = 7
-MASTER_STATE_SCHEMA_PREVIOUS3 = 6
-MASTER_STATE_SCHEMA_PREVIOUS4 = 5
-MASTER_STATE_SCHEMA_PREVIOUS5 = 4
-MASTER_STATE_SCHEMA_PREVIOUS6 = 3
-MASTER_STATE_SCHEMA_PREVIOUS7 = 2
+# MT-32/33 (0.43): schema 10 adds tray_minimize + window_geometry; the
+# promotion chain covers schemas 9..2 (schema 1 is the legacy ancestor).
+MASTER_STATE_SCHEMA = 10
+MASTER_STATE_SCHEMA_PREVIOUS = 9
+MASTER_STATE_SCHEMA_PREVIOUS2 = 8
+MASTER_STATE_SCHEMA_PREVIOUS3 = 7
+MASTER_STATE_SCHEMA_PREVIOUS4 = 6
+MASTER_STATE_SCHEMA_PREVIOUS5 = 5
+MASTER_STATE_SCHEMA_PREVIOUS6 = 4
+MASTER_STATE_SCHEMA_PREVIOUS7 = 3
+MASTER_STATE_SCHEMA_PREVIOUS8 = 2
 MASTER_STATE_SCHEMA_LEGACY = 1
 MASTER_STATE_FILENAME = "master-settings.json"
 MAX_MASTER_STATE_BYTES = 1024 * 1024
@@ -190,6 +205,13 @@ class MasterState:
     # MT-21 (0.36): the persisted trainer grid column count (1, 2 or
     # 3); a fresh or promoted state home defaults to 1.
     grid_columns: int = 1
+    # MT-32 (0.43): the persisted minimize-to-tray flag; a fresh or
+    # promoted state home defaults to False (opt-in).
+    tray_minimize: bool = False
+    # MT-33 (0.43): the persisted window geometry (position + outer
+    # size in screen pixels); a fresh or promoted state home defaults
+    # to None (the documented default 1160x600 window).
+    window_geometry: dict | None = None
 
 
 def empty_master_state() -> MasterState:
@@ -209,6 +231,7 @@ def _validate_state_dict(payload: dict) -> MasterState:
             MASTER_STATE_SCHEMA_PREVIOUS5,
             MASTER_STATE_SCHEMA_PREVIOUS6,
             MASTER_STATE_SCHEMA_PREVIOUS7,
+            MASTER_STATE_SCHEMA_PREVIOUS8,
             MASTER_STATE_SCHEMA_LEGACY):
         reasons.append(f"master-state schema {schema!r} is not supported "
                        f"(expected {MASTER_STATE_SCHEMA}, legacy "
@@ -219,36 +242,43 @@ def _validate_state_dict(payload: dict) -> MasterState:
                        f"{MASTER_STATE_SCHEMA_PREVIOUS5} / "
                        f"{MASTER_STATE_SCHEMA_PREVIOUS6} / "
                        f"{MASTER_STATE_SCHEMA_PREVIOUS7} / "
+                       f"{MASTER_STATE_SCHEMA_PREVIOUS8} / "
                        f"{MASTER_STATE_SCHEMA_LEGACY} are promoted on load)")
     allowed = {"schema", "last_folder"}
     if schema == MASTER_STATE_SCHEMA:
         allowed |= {"last_table", "attach_mode", "recent_tables",
                     "view_filter", "view_sort", "view_mode",
                     "pinned_tables", "view_status", "auto_rescan",
-                    "table_folders", "grid_columns"}
+                    "table_folders", "grid_columns",
+                    "tray_minimize", "window_geometry"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS:
         allowed |= {"last_table", "attach_mode", "recent_tables",
                     "view_filter", "view_sort", "view_mode",
                     "pinned_tables", "view_status", "auto_rescan",
-                    "table_folders"}
+                    "table_folders", "grid_columns"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS2:
         allowed |= {"last_table", "attach_mode", "recent_tables",
                     "view_filter", "view_sort", "view_mode",
-                    "pinned_tables", "view_status", "auto_rescan"}
+                    "pinned_tables", "view_status", "auto_rescan",
+                    "table_folders"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS3:
         allowed |= {"last_table", "attach_mode", "recent_tables",
                     "view_filter", "view_sort", "view_mode",
-                    "pinned_tables", "view_status"}
+                    "pinned_tables", "view_status", "auto_rescan"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS4:
         allowed |= {"last_table", "attach_mode", "recent_tables",
                     "view_filter", "view_sort", "view_mode",
-                    "pinned_tables"}
+                    "pinned_tables", "view_status"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS5:
         allowed |= {"last_table", "attach_mode", "recent_tables",
-                    "view_filter", "view_sort", "view_mode"}
+                    "view_filter", "view_sort", "view_mode",
+                    "pinned_tables"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS6:
-        allowed |= {"last_table", "attach_mode", "recent_tables"}
+        allowed |= {"last_table", "attach_mode", "recent_tables",
+                    "view_filter", "view_sort", "view_mode"}
     elif schema == MASTER_STATE_SCHEMA_PREVIOUS7:
+        allowed |= {"last_table", "attach_mode", "recent_tables"}
+    elif schema == MASTER_STATE_SCHEMA_PREVIOUS8:
         allowed |= {"last_table", "attach_mode"}
     unknown = sorted(set(payload) - allowed)
     if unknown:
@@ -374,6 +404,38 @@ def _validate_state_dict(payload: dict) -> MasterState:
         reasons.append("grid_columns must be an integer in "
                        + ", ".join(str(m) for m in GRID_COLUMN_MODES)
                        + f" (got {grid_columns!r})")
+    # MT-32 (0.43): the minimize-to-tray flag (schema 10 only; strict
+    # bool).  Schema-9 documents never carry the field, so the
+    # documented default False applies on promotion.
+    tray_minimize = payload.get("tray_minimize", False)
+    if type(tray_minimize) is not bool:
+        reasons.append("tray_minimize must be a boolean (got "
+                       + repr(tray_minimize) + ")")
+    # MT-33 (0.43): the persisted window geometry (schema 10 only):
+    # null or an object with exactly the four strict-integer keys
+    # x / y / w / h within the documented bounds; schema-9 documents
+    # never carry the field, so the documented default None applies on
+    # promotion.
+    window_geometry = payload.get("window_geometry")
+    if window_geometry is not None:
+        if (type(window_geometry) is not dict
+                or set(window_geometry) != {"x", "y", "w", "h"}):
+            reasons.append("window_geometry must be null or an object "
+                           "with exactly the four keys x, y, w, h")
+        else:
+            for _gk in ("x", "y", "w", "h"):
+                if type(window_geometry.get(_gk)) is not int:
+                    reasons.append("window_geometry must carry strict "
+                                   "integer values for x, y, w, h (got "
+                                   + repr(window_geometry.get(_gk))
+                                   + " for " + _gk + ")")
+                    break
+            else:
+                if (window_geometry["w"] < 0 or window_geometry["h"] < 0
+                        or max(window_geometry.values()) > 16384
+                        or min(window_geometry.values()) < -16384):
+                    reasons.append("window_geometry values exceed the "
+                                   "documented bounds (+/- 16384)")
     if reasons:
         raise MasterStateRefusal(reasons)
     # Promote older documents (schema 7 / 6 / 5 / 4 / 3 / 2 / 1) to the
@@ -413,7 +475,9 @@ def _validate_state_dict(payload: dict) -> MasterState:
                        view_mode=view_mode, pinned_tables=tuple(pinned),
                        view_status=view_status, auto_rescan=auto_rescan,
                        table_folders=table_folders,
-                       grid_columns=grid_columns)
+                       grid_columns=grid_columns,
+                       tray_minimize=tray_minimize,
+                       window_geometry=window_geometry)
 
 
 def master_state_to_bytes(state: MasterState) -> bytes:
@@ -440,7 +504,9 @@ def master_state_to_bytes(state: MasterState) -> bytes:
                           "view_status": state.view_status,
                           "auto_rescan": state.auto_rescan,
                           "table_folders": list(state.table_folders),
-                          "grid_columns": state.grid_columns})
+                          "grid_columns": state.grid_columns,
+                          "tray_minimize": state.tray_minimize,
+                          "window_geometry": state.window_geometry})
     payload = {"schema": state.schema, "last_folder": state.last_folder,
                "last_table": state.last_table, "attach_mode": state.attach_mode,
                "recent_tables": [
@@ -453,7 +519,9 @@ def master_state_to_bytes(state: MasterState) -> bytes:
                "view_status": state.view_status,
                "auto_rescan": state.auto_rescan,
                "table_folders": list(state.table_folders),
-               "grid_columns": state.grid_columns}
+               "grid_columns": state.grid_columns,
+               "tray_minimize": state.tray_minimize,
+               "window_geometry": state.window_geometry}
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"),
                            allow_nan=False, ensure_ascii=True).encode("utf-8")
     digest = hashlib.sha256(canonical).hexdigest()
@@ -465,7 +533,7 @@ def master_state_to_bytes(state: MasterState) -> bytes:
 def master_state_from_bytes(raw: bytes) -> MasterState:
     """Strict, checksum-bound load of one master-state document.
 
-    Schema-1 through schema-8 documents are accepted and promoted to
+    Schema-1 through schema-9 documents are accepted and promoted to
     the current schema (see module docstring); every other foreign
     schema, malformed shape or tampered checksum raises the named
     :class:`MasterStateRefusal`.

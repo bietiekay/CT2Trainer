@@ -507,9 +507,11 @@ class ArchitectureMemoryTests(unittest.TestCase):
             Module32FirstW=original.Module32FirstW,
             Module32NextW=original.Module32NextW,
             CloseHandle=original.CloseHandle)
-        with patch('ctypes.get_last_error', side_effect=[299, 18, 18], create=True):
+        with patch('ctypes.get_last_error',
+                   side_effect=[299, 18, 18, 18, 18, 18], create=True), \
+             patch('time.sleep'):
             self.assertEqual(memory.module('owned.exe'), (0x100000000, 0x100))
-        self.assertEqual(snapshot_calls, [0x08 | 0x10, 0x08])
+        self.assertEqual(snapshot_calls, [0x08 | 0x10, 0x08 | 0x10, 0x08])
         memory._kernel.CloseHandle.assert_called_once_with(7)
 
     def test_module_snapshot_fails_named_when_fallback_also_fails(self):
@@ -522,7 +524,8 @@ class ArchitectureMemoryTests(unittest.TestCase):
             CreateToolhelp32Snapshot=Mock(side_effect=snapshot),
             Module32FirstW=Mock(), Module32NextW=Mock(),
             CloseHandle=Mock(return_value=True))
-        with patch('ctypes.get_last_error', side_effect=[299, 299, 299, 299], create=True):
+        with patch('ctypes.get_last_error', return_value=299, create=True), \
+             patch('time.sleep'):
             with self.assertRaisesRegex(
                     ProcessMemoryError, 'native-only fallback'):
                 memory.module('owned.exe')
@@ -547,6 +550,32 @@ class ArchitectureMemoryTests(unittest.TestCase):
             Module32NextW=original.Module32NextW,
             CloseHandle=original.CloseHandle)
         with patch('ctypes.get_last_error', side_effect=[24, 24, 18], create=True), \
+             patch('time.sleep') as sleep:
+            self.assertEqual(memory.module('owned.exe'), (0x100000000, 0x100))
+        self.assertEqual(snapshot_calls, [0x08 | 0x10, 0x08 | 0x10, 0x08 | 0x10])
+        self.assertEqual([c.args[0] for c in sleep.call_args_list], [0.05, 0.1])
+        memory._kernel.CloseHandle.assert_called_once_with(7)
+
+    def test_internal_error_snapshot_error_retries_with_backoff_until_success(self):
+        # Field case 2026-11-11 (Indiana Jones and the Great Circle, 0.41):
+        # the module snapshot failed with Win32 299 (ERROR_INTERNAL_ERROR)
+        # immediately after the first attach while the game was still loading
+        # its DLLs; 299 joins the bounded retry set (the 0.43 TGC field fix).
+        record = (0x100000000, 0x100, r'C:\owned.exe', 0x8664, 0x20b)
+        memory = self.modules([record], pointer_size=8)
+        original = memory._kernel
+        snapshot_calls = []
+        def snapshot(flags, pid):
+            snapshot_calls.append(flags)
+            if len(snapshot_calls) < 3:
+                return ctypes.c_void_p(-1).value
+            return 7
+        memory._kernel = SimpleNamespace(
+            CreateToolhelp32Snapshot=Mock(side_effect=snapshot),
+            Module32FirstW=original.Module32FirstW,
+            Module32NextW=original.Module32NextW,
+            CloseHandle=original.CloseHandle)
+        with patch('ctypes.get_last_error', side_effect=[299, 299, 18], create=True), \
              patch('time.sleep') as sleep:
             self.assertEqual(memory.module('owned.exe'), (0x100000000, 0x100))
         self.assertEqual(snapshot_calls, [0x08 | 0x10, 0x08 | 0x10, 0x08 | 0x10])
@@ -616,9 +645,11 @@ class ArchitectureMemoryTests(unittest.TestCase):
             Module32FirstW=original.Module32FirstW,
             Module32NextW=original.Module32NextW,
             CloseHandle=original.CloseHandle)
-        with patch('ctypes.get_last_error', side_effect=[299, 18, 18], create=True):
+        with patch('ctypes.get_last_error',
+                   side_effect=[299, 18, 18, 18, 18, 18], create=True), \
+             patch('time.sleep'):
             self.assertEqual(memory.module('owned.exe'), (0x1000, 0x100))
-        self.assertEqual(snapshot_calls, [0x08 | 0x10, 0x10])
+        self.assertEqual(snapshot_calls, [0x08 | 0x10, 0x08 | 0x10, 0x10])
         memory._kernel.CloseHandle.assert_called_once_with(7)
 
     def test_module_scan_time_bound_closes_snapshot_without_truncated_success(self):

@@ -537,12 +537,14 @@ class MasterWindowTests(unittest.TestCase):
             window._poll()
         engine = engine_cls.return_value
         # MT-21 (0.36): the handoff carries the persisted grid column
-        # count and the header cycle callback.
+        # count and the header cycle callback; MT-32 (0.43) adds the
+        # attach/detach transition observer for the tray balloons.
         window_cls.assert_called_once_with(
             self.root, engine, master_back=window._back_to_master,
             detach_cb=window._detach_or_attach,
             columns=app.grid_columns,
-            on_columns_changed=window._set_trainer_grid_columns)
+            on_columns_changed=window._set_trainer_grid_columns,
+            attach_observer=window._on_attach_observer)
         self.assertIs(window.engine, engine)
         self.assertIsNotNone(window.trainer_window)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
@@ -619,12 +621,14 @@ class MasterWindowTests(unittest.TestCase):
         self.assertIsNone(window._picker_selection)
         engine = engine_cls.return_value
         # MT-21 (0.36): the handoff carries the persisted grid column
-        # count and the header cycle callback.
+        # count and the header cycle callback; MT-32 (0.43) adds the
+        # attach/detach transition observer for the tray balloons.
         window_cls.assert_called_once_with(
             self.root, engine, master_back=window._back_to_master,
             detach_cb=window._detach_or_attach,
             columns=app.grid_columns,
-            on_columns_changed=window._set_trainer_grid_columns)
+            on_columns_changed=window._set_trainer_grid_columns,
+            attach_observer=window._on_attach_observer)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
         self.assertIs(window.engine, engine)
 
@@ -821,12 +825,14 @@ class TrainerHandoffTests(unittest.TestCase):
         self.assertIs(window.engine, engine)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
         # MT-21 (0.36): the handoff carries the persisted grid column
-        # count and the header cycle callback.
+        # count and the header cycle callback; MT-32 (0.43) adds the
+        # attach/detach transition observer for the tray balloons.
         window_cls.assert_called_once_with(
             self.root, engine, master_back=window._back_to_master,
             detach_cb=window._detach_or_attach,
             columns=app.grid_columns,
-            on_columns_changed=window._set_trainer_grid_columns)
+            on_columns_changed=window._set_trainer_grid_columns,
+            attach_observer=window._on_attach_observer)
         box.showerror.assert_not_called()
 
     def test_recovery_artifacts_declined_fails_start(self):
@@ -853,12 +859,14 @@ class TrainerHandoffTests(unittest.TestCase):
         self.assertIs(window.engine, engine)
         self.assertEqual(app.orchestrator.state, STATE_ACTIVE)
         # MT-21 (0.36): the handoff carries the persisted grid column
-        # count and the header cycle callback.
+        # count and the header cycle callback; MT-32 (0.43) adds the
+        # attach/detach transition observer for the tray balloons.
         window_cls.assert_called_once_with(
             self.root, engine, master_back=window._back_to_master,
             detach_cb=window._detach_or_attach,
             columns=app.grid_columns,
-            on_columns_changed=window._set_trainer_grid_columns)
+            on_columns_changed=window._set_trainer_grid_columns,
+            attach_observer=window._on_attach_observer)
         self.assertIn("unfinished receipts", str(box.askyesno.call_args))
 
     def test_recovery_failure_shows_error_and_fails_start(self):

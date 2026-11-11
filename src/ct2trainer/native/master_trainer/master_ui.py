@@ -174,6 +174,12 @@ from .table_attach import (AttachRefusal, AttachStore, binding_target)
 from .analysis_worker import AnalysisWorker
 from .steamdeck_route import (attach_gate, require_engine_attach,
                               DeckAttachUnavailableError)
+from .tray import TrayIcon, TrayRefusal, tray_available
+from .tray_model import (TRAY_EVENT_ATTENTION, TrayNotifier,
+                         minimize_decision)
+from .window_geometry import (GeometryRefusal, capture_geometry,
+                              default_geometry_spec, geometry_spec,
+                              restore_geometry)
 
 WAIT_POLL_MS = 1000
 # MT-25 (0.33): the table-folder auto-rescan interval.  One bounded
@@ -184,6 +190,9 @@ WAIT_POLL_MS = 1000
 # negligible while still surfacing added / changed / removed tables
 # quickly.  No OS file-watcher API - polling only, cross-platform.
 AUTO_RESCAN_INTERVAL_SECONDS = 30
+# MT-33 (0.43): debounce for the window-geometry save - one persist
+# per ~500 ms of quiet resizing, plus one final save on close.
+GEOMETRY_SAVE_MS = 500
 
 
 def _utc_now() -> str:
@@ -483,6 +492,15 @@ class MasterApp:
         # (schema 9); a fresh or refused state home takes the
         # documented default 1 (the single-column layout).
         self.grid_columns = (state.grid_columns if state is not None else 1)
+        # MT-32 (0.43): the persisted minimize-to-tray flag (schema 10);
+        # a fresh or refused state home takes the documented default
+        # False (the feature is opt-in).
+        self.tray_minimize = (state.tray_minimize if state is not None
+                              else False)
+        # MT-33 (0.43): the persisted window geometry (schema 10); None
+        # keeps the documented default 1160x600 window.
+        self.window_geometry = (state.window_geometry if state is not None
+                                else None)
         # MT-24 (0.32): the background plan-analysis cache under the
         # state home (table-analysis.json, schema 1, keyed by the
         # table content sha256).  The analysis worker is NOT started
@@ -580,7 +598,9 @@ class MasterApp:
                 view_status=self.view_status,
                 auto_rescan=self.auto_rescan,
                 table_folders=tuple(self.folders),
-                grid_columns=self.grid_columns),
+                grid_columns=self.grid_columns,
+                tray_minimize=self.tray_minimize,
+                window_geometry=self.window_geometry),
                 self.state_path())
         except Exception:
             pass
@@ -627,6 +647,34 @@ class MasterApp:
             raise ValueError("grid columns must be 1, 2 or 3 (got "
                              + repr(columns) + ")")
         self.grid_columns = columns
+        self.persist_state()
+
+    def set_tray_minimize(self, enabled: bool) -> None:
+        """MT-32 (0.43): switch the persisted minimize-to-tray flag
+        (schema 10) and re-persist it.  Non-booleans raise the named
+        ValueError, so the UI never persists what it would not honor."""
+        if type(enabled) is not bool:
+            raise ValueError("tray flag must be a boolean")
+        self.tray_minimize = enabled
+        self.persist_state()
+
+    def set_window_geometry(self, geometry: dict | None) -> None:
+        """MT-33 (0.43): persist the window geometry (schema 10) and
+        re-persist it.
+
+        ``geometry`` is None (clear the stored value) or a dict with
+        exactly the four strict-integer keys x / y / w / h; the
+        validation mirrors the state document, so the UI never persists
+        what the state would refuse.
+        """
+        if geometry is not None:
+            if (type(geometry) is not dict
+                    or set(geometry) != {"x", "y", "w", "h"}
+                    or any(type(geometry[k]) is not int
+                           for k in ("x", "y", "w", "h"))):
+                raise ValueError("window geometry must be null or the "
+                                 "four strict-integer keys x, y, w, h")
+        self.window_geometry = geometry
         self.persist_state()
 
     def set_view_settings(self, filter_query: str | None, sort_mode: str,
@@ -951,13 +999,56 @@ class MasterWindow:
         # restored like the other view settings and re-persisted on
         # every change through app.set_view_settings.
         self._status_filter = app.view_status
+        # MT-32 (0.43): the notification tray (opt-in, persisted in the
+        # master state).  The live icon object while active (None while
+        # off or unavailable), the dedup notifier, and the session
+        # context the balloon texts name (loaded table + bound process).
+        self._tray = None
+        self._tray_notifier = TrayNotifier()
+        self._tray_table = None
+        self._tray_process = None
+        self._tray_btn = None
+        # MT-33 (0.43): the restored window-geometry spec (applied by
+        # every waiting-view build, so a trainer return keeps the
+        # window size the user last used) + the debounced geometry save.
+        self._window_size_spec = default_geometry_spec()
+        self._geometry_reason = None
+        self._geometry_save_job = None
         try:
             icon = window_icon_path("master")
             if icon.is_file():
                 root.iconbitmap(str(icon))
         except tk.TclError:
             pass
+        # MT-33 (0.43): restore the persisted window geometry, clamped
+        # into the screen bounds so a stale or off-screen stored value
+        # can never hide the window.  A refused document keeps the
+        # default size and its named reason is surfaced in the status
+        # line after the view builds (the status line does not exist
+        # yet).
+        try:
+            self._window_size_spec = restore_geometry(
+                self.app.window_geometry,
+                self.root.winfo_screenwidth(),
+                self.root.winfo_screenheight())
+        except GeometryRefusal as exc:
+            self._window_size_spec = default_geometry_spec()
+            self._geometry_reason = exc.detail
         self._build_waiting_view()
+        if self._geometry_reason is not None:
+            self._set_status("Stored window geometry refused ("
+                             + self._geometry_reason
+                             + "); the default size is used.")
+        # MT-32 (0.43): the persisted 'on' flag arms the tray at start
+        # (a named refusal lands in the status line, the flag stays on
+        # - it is only armed on a future start when the icon exists).
+        if self.app.tray_minimize:
+            self._activate_tray()
+        # MT-32/33 (0.43): root-level minimize-to-tray intercept and
+        # debounced geometry save (child-widget events are filtered out
+        # inside the handlers).
+        self.root.bind("<Unmap>", self._on_root_unmap)
+        self.root.bind("<Configure>", self._on_root_configure)
         root.after(app.poll_ms, self._poll)
 
     # ------------------------------------------------------------------
@@ -968,7 +1059,11 @@ class MasterWindow:
         self.root.title(master_title())
         # MT-15 (0.26): the tree gained the Size / Modified / Last-used
         # columns, so the waiting view starts wider.
-        self.root.geometry("1160x600")
+        # MT-33 (0.43): the size / position come from the restored
+        # (or debounced-updated) geometry spec instead of a fixed
+        # 1160x600, so a trainer return keeps the window where the
+        # user left it.
+        self.root.geometry(self._window_size_spec)
         self.root.minsize(900, 420)
         # MT-19 (0.29): every waiting-view widget lives in this single
         # container.  Entering the trainer destroys the container, so
@@ -1171,6 +1266,16 @@ class MasterWindow:
                                         self._toggle_auto_rescan,
                                         width=16)
         self._auto_rescan_btn.pack(side="right", padx=(0, 8))
+        # MT-32 (0.43): the persisted minimize-to-tray toggle, packed
+        # directly to the left of the auto-rescan toggle.  A refused
+        # start (non-Windows platform, missing icon, failed Win32
+        # call) lands in the status line - never a dialog - and the
+        # flag stays unchanged.
+        self._tray_btn = button(status, "Tray: "
+                                        + ("on" if self.app.tray_minimize
+                                           else "off"),
+                                        self._toggle_tray, width=12)
+        self._tray_btn.pack(side="right", padx=(0, 8))
         # MT-20 (0.29): the retry-load re-arm moves into the status bar
         # next to the other waiting controls (it used to be a separate
         # root-level button below the status strip, easy to miss).
@@ -2153,6 +2258,13 @@ class MasterWindow:
                 self._fail_trainer_start(str(exc))
                 return False
         self.engine = engine
+        # MT-32 (0.43): the session context the tray balloon texts name
+        # (the loaded table + the bound process name).
+        self._tray_table = (entry.relative_path if entry is not None
+                            else (plan.get("title")
+                                  if isinstance(plan, dict) else None))
+        self._tray_process = (plan.get("process_name")
+                              if isinstance(plan, dict) else None)
         # MT-19 (0.29): the engine is up - collapse the waiting view so
         # the trainer row grid owns the full window (the waiting list no
         # longer competes for space next to the trainer rows).  The
@@ -2166,7 +2278,8 @@ class MasterWindow:
                 self.root, engine, master_back=self._back_to_master,
                 detach_cb=self._detach_or_attach,
                 columns=self.app.grid_columns,
-                on_columns_changed=self._set_trainer_grid_columns)
+                on_columns_changed=self._set_trainer_grid_columns,
+                attach_observer=self._on_attach_observer)
         except Exception as exc:
             # The engine is up but the trainer view could not be built:
             # close the engine again, restore the waiting view (torn
@@ -2238,6 +2351,9 @@ class MasterWindow:
         return prompt
 
     def _fail_trainer_start(self, error: str):
+        # MT-32 (0.43): a failed trainer start is an attention event
+        # for the tray (deduped; a post failure never matters here).
+        self._notify_tray(TRAY_EVENT_ATTENTION, detail=error)
         self.app.orchestrator.fail_load(error)
         self._set_status("Trainer start failed: " + error)
 
@@ -2949,6 +3065,183 @@ class MasterWindow:
                          + " (every "
                          + str(AUTO_RESCAN_INTERVAL_SECONDS) + " s)")
 
+    # ------------------------------------------------------------------
+    # MT-32 (0.43): minimize-to-tray + attach / detach / attention balloons
+    # ------------------------------------------------------------------
+
+    def _activate_tray(self) -> bool:
+        """Create the tray icon (best effort).  A named refusal lands in
+        the status line and the feature stays off; close always exits,
+        so a missing tray icon never traps the user."""
+        if self._tray is not None:
+            return True
+        if not tray_available():
+            self._set_status(
+                "Tray unavailable on this platform (Windows-only "
+                "feature).")
+            return False
+        try:
+            icon = window_icon_path("master")
+            if not icon.is_file():
+                raise TrayRefusal("tray-icon-missing",
+                                  "the master icon file is missing: "
+                                  + str(icon))
+            self._tray = TrayIcon(str(icon), self._tray_restore)
+        except TrayRefusal as exc:
+            self._tray = None
+            self._set_status("Tray setup failed: " + exc.detail)
+            return False
+        except Exception as exc:
+            self._tray = None
+            self._set_status("Tray setup failed: " + str(exc))
+            return False
+        return True
+
+    def _deactivate_tray(self) -> None:
+        """Remove the tray icon (idempotent; never raises)."""
+        if self._tray is not None:
+            try:
+                self._tray.remove()
+            except Exception:
+                pass
+            self._tray = None
+
+    def _toggle_tray(self):
+        """Flip the persisted minimize-to-tray flag; the icon is created
+        on the way on and removed on the way off.  A failed change
+        (named refusal) leaves the flag untouched."""
+        if self.app.tray_minimize:
+            self._deactivate_tray()
+        else:
+            if not self._activate_tray():
+                return
+        try:
+            self.app.set_tray_minimize(not self.app.tray_minimize)
+        except Exception as exc:
+            if not self.app.tray_minimize:
+                self._deactivate_tray()
+            self._set_status("Tray change failed: " + str(exc))
+            return
+        if self._tray_btn is not None:
+            self._tray_btn.configure(text="Tray: "
+                                 + ("on" if self.app.tray_minimize
+                                    else "off"))
+        self._set_status("Tray: " + ("on" if self.app.tray_minimize
+                                     else "off")
+                         + (" - minimize keeps the Master in the tray; "
+                            "click the tray icon to restore"
+                            if self.app.tray_minimize
+                            else " - minimizing minimizes to the taskbar"))
+
+    def _tray_restore(self):
+        """The tray-icon click brings the window back (deiconify +
+        lift + focus); safe on an already visible window."""
+        if not self.root.winfo_exists():
+            return
+        self.root.deiconify()
+        self.root.lift()
+        self.root.focus_force()
+
+    def _on_root_unmap(self, event):
+        """A pending minimize of the root diverts to the tray while the
+        feature is on (the window is withdrawn instead of minimized);
+        the tray-icon click restores it.  Close (X) is unaffected and
+        still exits with the save-on-close contract."""
+        if event.widget is not self.root:
+            return
+        if not minimize_decision(self.app.tray_minimize,
+                                 self.root.winfo_withdrawn()):
+            return
+        self.root.withdraw()
+
+    def _notify_tray(self, event, detail=None):
+        """Post one tray balloon through the dedup notifier (only while
+        the feature is on and the icon exists; a post failure never
+        breaks the UI loop)."""
+        if self._tray is None or not self.app.tray_minimize:
+            return
+        message = self._tray_notifier.observe(event, table=self._tray_table,
+                                              process=self._tray_process,
+                                              detail=detail)
+        if message is None:
+            return
+        try:
+            self._tray.show_balloon(message[0], message[1])
+        except Exception:
+            pass
+
+    def _on_attach_observer(self, event):
+        """The trainer attach/detach transition (TrainerWindow poll
+        tick) feeds the tray notification."""
+        self._notify_tray(event)
+
+    # ------------------------------------------------------------------
+    # MT-33 (0.43): window geometry persistence
+    # ------------------------------------------------------------------
+
+    def _on_root_configure(self, event):
+        """Debounce the window-geometry save (one persist per
+        ~GEOMETRY_SAVE_MS of quiet resizing); only the root window's
+        geometry is tracked, child-widget events are ignored."""
+        if event.widget is not self.root:
+            return
+        if self._geometry_save_job is not None:
+            try:
+                self.root.after_cancel(self._geometry_save_job)
+            except Exception:
+                self._geometry_save_job = None
+        self._geometry_save_job = self.root.after(GEOMETRY_SAVE_MS,
+                                                  self._save_geometry)
+
+    def _save_geometry(self):
+        """Persist the current window geometry (best effort) and keep
+        the spec used by waiting-view rebuilds in sync.  The
+        minimized-to-tray state is not persisted as the position."""
+        self._geometry_save_job = None
+        if self.app.closed:
+            return
+        try:
+            if not self.root.winfo_exists() or self.root.winfo_withdrawn():
+                return
+        except Exception:
+            # Best effort (a partly torn-down root widget): keep the
+            # previous stored geometry instead of persisting a degenerate
+            # one.
+            return
+        geometry = capture_geometry(self.root)
+        if geometry is None:
+            return
+        try:
+            self.app.set_window_geometry(geometry)
+        except Exception:
+            pass
+        self._window_size_spec = geometry_spec(geometry)
+
+    def _save_final_geometry(self):
+        """The last geometry save on close: cancel the debounced job
+        and persist the final window position / size (best effort)."""
+        if self._geometry_save_job is not None:
+            try:
+                self.root.after_cancel(self._geometry_save_job)
+            except Exception:
+                pass
+            self._geometry_save_job = None
+        try:
+            if not self.root.winfo_exists() or self.root.winfo_withdrawn():
+                return
+        except Exception:
+            # Best effort on the close path (a torn-down root widget):
+            # the geometry save simply does not happen; close() never
+            # raises because of it.
+            return
+        geometry = capture_geometry(self.root)
+        if geometry is None:
+            return
+        try:
+            self.app.set_window_geometry(geometry)
+        except Exception:
+            pass
+
     def _set_trainer_grid_columns(self, columns: int) -> None:
         """MT-21 (0.36): the trainer header's "Columns: N" cycle changed
         the grid column count; persist it through the app (named
@@ -3172,6 +3465,12 @@ class MasterWindow:
         self.root.after(self.app.poll_ms, self._poll)
 
     def close(self):
+        # MT-33 (0.43): persist the final window geometry before the
+        # widgets go away (the debounced save may not have fired yet).
+        self._save_final_geometry()
+        # MT-32 (0.43): the tray icon goes away with the window (a
+        # stale icon would restore a dead window).
+        self._deactivate_tray()
         # MT-24 (0.32): stop the background plan analysis first
         # (bounded join; the thread is a daemon anyway, so a stuck
         # compile can never block the process exit).

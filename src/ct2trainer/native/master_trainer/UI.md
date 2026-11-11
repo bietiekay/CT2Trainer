@@ -128,7 +128,7 @@ mode) · **`Auto-rescan: on/off`** (the persisted auto-rescan toggle,
 re-runs the incremental scan of every indexed folder every 30 s so
 added / changed / removed tables show up without a manual F5; paused
 while a trainer is attached; a manual rescan, a folder add / remove /
-set-primary, or the waiting-view rebuild restarts the 30 s clock) · **`Retry load`** (the re-arm; moved
+set-primary, or the waiting-view rebuild restarts the 30 s clock) · **`Tray: on/off`** (the persisted minimize-to-tray toggle, 0.43 MT-32 — while on, minimizing the window keeps the Master in the Windows notification tray instead of the taskbar; clicking the tray icon brings the window back to the front; the close button still exits with the save-on-close contract; while on, the attach / detach / attention events of a trainer session post a tray balloon (deduped per distinct event + text); off by default, opt-in; a refused start — non-Windows platform, missing icon, a failed Win32 call — stays in the status line with the flag unchanged) · **`Retry load`** (the re-arm; moved
 into the status bar in 0.29 — it used to be a separate button below
 the status strip, easy to miss) · `Recent: <path>` (one-click
 re-load of the most recent table, only when a recent table exists).
@@ -271,6 +271,13 @@ children never splits across columns), `Detach` (release the live
 target; in `ask` mode the process picker offers the re-attach
 target) and `⬅ Master` (the return below).
 
+While the **Tray** feature is on (0.43, MT-32), the trainer session
+reports its transitions to the notification tray: a confirmed
+attach ("Trainer attached: <table> is attached to <process>."), a
+target exit or detach ("Target detached: …"), and a failed trainer
+start ("Trainer needs attention: <named detail>"). One balloon per
+distinct event + text (deduped); a post failure never matters.
+
 ## 4) Back to Master / Detach
 
 - **`⬅ Master`** — closes the engine cleanly and rebuilds the waiting
@@ -288,6 +295,8 @@ target) and `⬅ Master` (the return below).
 | --- | --- |
 | Table folders (the indexed folder list, primary first, capped at 8; ask on first start; 0.34, MT-26) | `master-settings.json` (schema 8+) |
 | Trainer grid column count (1 / 2 / 3, default 1; the header "Columns: N" cycle; 0.36, MT-21) | `master-settings.json` (schema 9) |
+| Minimize-to-tray flag (on/off, default off — opt-in; 0.43, MT-32) | `master-settings.json` (schema 10) |
+| Window geometry (x / y / w / h, null = the documented 1160x600 default; restored clamped into the screen bounds, saved debounced on resize and on close; 0.43, MT-33) | `master-settings.json` (schema 10) |
 | Attach mode (auto/ask) | `master-settings.json` (schema 2+) |
 | Last explicit table | `master-settings.json` (schema 2+) |
 | Recent tables (≤ 10, UTC) | `master-settings.json` (schema 3+) |
@@ -343,3 +352,17 @@ where the context needs it) — never a crash.
   queue until its content changes. This is a display-side observation
   only: it never blocks, alters, or delays the MT-9 load gate, which
   re-checks the table independently at load time.
+- **Tray refused** (0.43, MT-32): a named refusal in the status line,
+  the flag stays unchanged and the feature stays off — never a dialog
+  and never a crash: `tray-platform-unavailable` (non-Windows),
+  `tray-icon-missing` (the master icon could not be loaded),
+  `tray-setup-failed` (a Win32 call failed, incl. a user32 build
+  without the Shell_NotifyIconW export). The tray is a convenience,
+  not a dependency: the load path and the close-always-exits contract
+  are unaffected.
+- **Window geometry refused** (0.43, MT-33): a stored geometry that
+  fails validation (malformed shape, non-strict integer, negative
+  size, out of the documented +/- 16384 bounds) is refused with the
+  named `window-geometry-invalid` reason, the window keeps the
+  documented 1160x600 default, and the reason is surfaced in the
+  status line at start.

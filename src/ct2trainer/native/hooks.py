@@ -23,7 +23,7 @@ from typing import Any, Protocol
 import uuid
 
 from .lua_work_budget import broker_checkpoint
-from .memory import _checked_write
+from .memory import _checked_write, is_transient_memory_error
 from .patterns import validate_placeholder_captures
 
 
@@ -870,6 +870,14 @@ class HookManager:
                         raise HookError("Immutable owned cave code or padding changed externally.")
                     cursor = offset + length
         except Exception as exc:
+            if is_transient_memory_error(exc):
+                # 0.43 TGC field fix: a transient guard read is "cannot
+                # verify right now", not an ownership uncertainty; the
+                # engine's _check_patches tick-skip handles it with a
+                # bounded streak.  Wrapping it in _fail_uncertain here
+                # would turn a transient blip into a permanent fail-closed
+                # manager state.
+                raise
             raise self._fail_uncertain(exc) from exc
 
     def data_ranges(self) -> tuple[tuple[int, int, int, int], ...]:

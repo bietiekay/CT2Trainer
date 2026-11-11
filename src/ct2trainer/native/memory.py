@@ -51,11 +51,18 @@ ERROR_NO_MORE_FILES = 18
 ERROR_BAD_LENGTH = 1116
 ERROR_INVALID_ID = 24
 ERROR_MORE_DATA = 119
+ERROR_INTERNAL_ERROR = 299
 # Transient module-snapshot failures: Microsoft documents ERROR_BAD_LENGTH as
 # the retry-until-success code, and the 0.16.2 field log (The Sinking City 2,
 # 2026-10-22) observed the same transient form - in-flight DLL loading while
 # the target is still initializing - as Win32 error 24 (ERROR_INVALID_ID).
-_SNAPSHOT_TRANSIENT_ERRORS = {ERROR_BAD_LENGTH, ERROR_INVALID_ID, ERROR_MORE_DATA}
+# The 0.43 TGC field log (Indiana Jones and the Great Circle, 2026-11-11)
+# observed Win32 299 (ERROR_INTERNAL_ERROR) from CreateToolhelp32Snapshot
+# immediately after the first attach while the game was still loading its
+# DLLs: the target's module table is mid-change - the same transient form -
+# so 299 joins the bounded snapshot retry (8 attempts, 0.05 -> 1.0 s backoff).
+_SNAPSHOT_TRANSIENT_ERRORS = {ERROR_BAD_LENGTH, ERROR_INVALID_ID, ERROR_MORE_DATA,
+                              ERROR_INTERNAL_ERROR}
 _SNAPSHOT_MAX_ATTEMPTS = 8
 _SNAPSHOT_RETRY_BASE_SECONDS = 0.05
 _SNAPSHOT_RETRY_MAX_SECONDS = 1.0
@@ -92,6 +99,17 @@ _WRITE_TRANSIENT_ERRORS = {299, ERROR_MORE_DATA, ERROR_BAD_LENGTH,
 _WRITE_MAX_ATTEMPTS = 4
 _WRITE_RETRY_BASE_SECONDS = 0.05
 _WRITE_RETRY_MAX_SECONDS = 0.25
+# The transient set the trainer ENGINE uses to decide "this memory read failed
+# transiently; do not treat it as an observed change" (the 0.43 TGC field
+# fix).  It is exactly the read/write retry set: Win32 299 (the field-
+# observed transient code, the 0.39 reliability lane) plus the module-
+# snapshot transient codes.  A read failure carrying one of these codes means
+# "cannot verify at this instant" (mid-decommit / mid-DLL-load / target-exit
+# race) - the engine skips the patch-verification tick and tracks a bounded
+# streak; it is NEVER a "bytes changed" signal.  Every other code is a real,
+# non-transient failure and blocks immediately.
+TRANSIENT_MEMORY_ERRORS = {ERROR_INTERNAL_ERROR, ERROR_MORE_DATA,
+                           ERROR_BAD_LENGTH, ERROR_INVALID_ID}
 _DWORD = ctypes.c_uint32
 _WORD = ctypes.c_uint16
 
@@ -178,7 +196,30 @@ def _api() -> object:
 
 def _windows_error(operation: str) -> ProcessMemoryError:
     code = ctypes.get_last_error()
-    return ProcessMemoryError(f"{operation} failed (Win32 error {code}).")
+    error = ProcessMemoryError(f"{operation} failed (Win32 error {code}).")
+    # Carry the machine-readable Win32 code on the exception so callers can
+    # classify transient-vs-fatal without parsing the message: the 0.43
+    # engine tick-skip decision (is_transient_memory_error) reads it back.
+    error.win32_code = code
+    return error
+
+
+def is_transient_memory_error(exc: BaseException) -> bool:
+    """True when exc is a transient target-memory failure.
+
+    A transient failure is a ProcessMemoryError carrying a Win32 code in
+    TRANSIENT_MEMORY_ERRORS: the target memory could not be read at this
+    instant (mid-decommit / mid-DLL-load / target-exit race).  That is NOT
+    "the bytes changed" - it is "cannot verify right now."  The trainer
+    engine uses this to skip a patch-verification tick (tracking a bounded
+    streak) instead of treating the failure as an observed external change
+    (TGC field case 2026-11-11).  Any other exception - including a
+    ProcessMemoryError with a non-transient or absent code - is not
+    transient and blocks immediately.
+    """
+    if not isinstance(exc, ProcessMemoryError):
+        return False
+    return getattr(exc, "win32_code", None) in TRANSIENT_MEMORY_ERRORS
 
 
 def _basename(name: str, *, executable: bool = False) -> str:

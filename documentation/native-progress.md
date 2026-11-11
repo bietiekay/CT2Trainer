@@ -2564,6 +2564,117 @@ kept per gate; source ZIP `CT2Trainer-0.25-source.zip` sha256
 `8736f73e762b57a8f337bf8fa04c2c16f8622c4d99e7dd7f2167b2c9999e3d8f`,
 16,912,561 bytes, ships next to the converter).
 
+### 0.43 content: Master Trainer minimize-to-tray + window-geometry persistence (MT-32/MT-33) + the TGC field fix (2026-11-11, root-direct on `main`)
+
+0.43 ships the Master Trainer tray icon + window-geometry
+persistence and the TGC field fix (transient target-memory reads no
+longer block the engine).
+
+- **MT-32 Minimize-to-tray:** the Master Trainer can minimize into the
+  system tray and restore on tray double-click. `master_trainer/tray.py`
+  drives the Win32 tray icon - `Shell_NotifyIconW` /
+  `RegisterClassExW` / `DestroyIcon` bound through `_bind_prototypes`
+  with pointer-sized WPARAM/LPARAM (64-bit clean) - behind a bounded,
+  named fail-closed guard: a Windows build without the
+  `Shell_NotifyIconW` export (stripped user32, the Sinking City 2
+  0.22.1 hotkey-bridge precedent) is the named
+  `tray-platform-unavailable` refusal, a refused `RegisterClassExW`
+  (Win32 87) is `tray-setup-failed`, a missing icon is
+  `tray-icon-missing` - every refusal lands in the status line, never
+  a crash and never a dialog, and the toggle simply stays off. The
+  persisted "Minimize to tray" preference (master-state schema 9 ->
+  10, `tray_minimize`, default off) restores on start and persists on
+  change; the status-bar cycle button + the window `<Unmap>` binding
+  drive it, and `_activate_tray` (on a persisted on preference)
+  minimizes into the tray at start. The tray balloon reports the
+  trainer's attach success / failure through the new `ui.py`
+  `attach_observer` (default `None`; fail-safe
+  `_fire_attach_observer` in `poll()`), so the standalone trainer
+  header and behavior stay byte-identical.
+- **MT-33 Window-geometry persistence:** the Master window's size /
+  position is remembered across restarts. `master_trainer/
+  window_geometry.py` is the pure layer (parse / validate / clamp of
+  the persisted rect); the geometry persists in the same master-state
+  document (schema 10, `window_geometry`), saved on the bounded
+  `<Configure>` cadence and on close (`_save_geometry` /
+  `_save_final_geometry` with defensive winfo guards so a
+  half-destroyed window never writes a bogus rect). An invalid
+  persisted geometry is the named `window-geometry-invalid` refusal
+  (the default geometry is used) rather than a crash. `close()` saves
+  the final geometry and deactivates the tray icon.
+- **The TGC field fix:** the 2026-11-11 Indiana Jones and the Great
+  Circle (0.41) field log (target `TheGreatCircle.exe`) exposed two
+  transient-read dead ends that dead-ended the trainer until a manual
+  restart. R1: the module snapshot failed with Win32 299
+  (ERROR_INTERNAL_ERROR) immediately after the first attach while the
+  game was still loading its DLLs - 299 was NOT in the snapshot
+  transient retry set `{1116, 24, 119}`, so the engine got zero
+  retries, became `engine-blocked`, and (by design, fail-closed) the
+  stuck engine refused a `close()` while the target still lived - the
+  only escape was a full trainer restart (which then also needed the
+  `StaleStateRecoverable` prompt). R2: a transient 299 read during the
+  periodic `_check_patches` (after the 0.39 read-retry budget) was
+  wrapped as "An executable hook receipt changed" -> `PatchConflict`
+  -> `engine-blocked`. A failed read must never be equated with an
+  observed change. Fixes: **F1** (`memory.py`) 299
+  (`ERROR_INTERNAL_ERROR`) joins the bounded snapshot transient retry
+  (8 attempts, 0.05 -> 1.0 s backoff); every `_windows_error` now
+  carries a machine-readable `win32_code` attribute; the public
+  `TRANSIENT_MEMORY_ERRORS = {299, 119, 1116, 24}` set +
+  `is_transient_memory_error(exc)` (an `isinstance`
+  `ProcessMemoryError` with a `win32_code` in the set) classify a read
+  failure as "cannot verify right now" - never "bytes changed".
+  **F2** (`engine.py`) a transient read in the periodic
+  `_check_patches` now skips that verification tick instead of
+  blocking: a bounded skip streak (`VERIFY_SKIP_STREAK_LIMIT = 30`
+  consecutive ticks, reset on every verified tick and on every
+  confirmed (re-)attach), a deduped `patch-verify-skipped` debug
+  event (reported once per distinct cause, carrying
+  `skips`/`streak`/`limit`/`error`), and a persistent streak is the
+  named fail-closed refusal "Patch verification failed on transient
+  read errors for 30 consecutive ticks (last: ...); the engine blocks
+  to stay fail-closed." A real byte mismatch and a non-transient
+  failure still block immediately (unchanged contract); the
+  non-transient hook-read refusal is now the more specific "An
+  executable hook receipt could not be verified: ..." (a genuine
+  receipt mismatch keeps "An executable hook receipt changed: ...").
+  **F2b** (`hooks.py`) a transient guard read in
+  `_check_allocation_guards` re-raises instead of calling
+  `_fail_uncertain` (which would mark the manager `uncertain` - a
+  permanent fail-closed state) - the engine's tick-skip then handles
+  it with the bounded streak. The `reattach()` / `close()` refusal
+  semantics are deliberately unchanged (fail-closed stands); F1/F2
+  make the observed blocked states unreachable in the field case.
+- **Smart App Control field observation (no code fix):** Windows 11
+  Smart App Control blocked the freshly built unsigned 0.41 trainer
+  EXE while the older 0.31 build ran. This is an OS-level
+  per-new-unsigned-binary-hash block, not a code defect - there is
+  nothing to fix in the trainer. Documented workaround for the user:
+  Windows Security -> App & browser control -> Smart App Control ->
+  allow the app; a new version is a new binary hash, so it may need
+  re-allowing each release. Recorded here so the field finding is not
+  mistaken for an attach defect.
+- +85 tests (new `tests/test_native_master_tray_geometry.py` 62 incl.
+  the correctly session-skipped `Shell_NotifyIconW` smoke test - this
+  Windows build lacks the export, the same stripped-user32 precedent
+  as the SC2 hotkey bridge - plus the master UI / state updates; new
+  `tests/test_native_tgc_field_fix.py` 17: the transient
+  classification, the engine tick-skip / dedup / reset /
+  persistent-block / real-mismatch / non-transient / re-attach-reset
+  scenarios, and the F2b guard re-raise; 3 architecture snapshot
+  tests adapted for the 299-retry contract + 1 new 299 retry test).
+  Full main suite 5,011 OK / 36 expected skips (4,926 from the 0.42
+  content + 67 MT-32/33 + 18 TGC); catalog remeasure
+  `blocked-catalog-043-tgc`: 117,809 total / 117,272 supported /
+  12,974 headings / 104,123 actionable / 537 blocked - zero delta vs
+  `blocked-catalog-042-cleanup` (3-chunk record-level delta audit: 0
+  newly blocked, 0 unblocked, 0 reason changes, 0 tables added /
+  removed; 0.43 touches no plan-compile path). Feature matrix
+  unchanged (42/42, 7,475/7,475 over `w4b4-case30-20261020081722Z`);
+  AP-11 0/6,143. VERSION bumped to 0.43 with the changelog entry in
+  the same change (incl. the `__version__` package constant sync,
+  guarded by `test_version_matches_root_version_file`).
+
 ### 0.42 content: CE 7.5 cleanup parity + the API-export registry extension (2026-11-11, root-direct on `main`)
 
 0.42 ships the two remaining bounded compatibility classes of the
