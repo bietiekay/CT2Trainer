@@ -1524,6 +1524,18 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
     # externally owned symbols; the expansion is the whole boundary and no
     # static refusal is needed.  The explicit external-release error for a
     # named symbol (below) is unchanged.
+    # 0.42 (B): CE 7.5 cleanup parity (autoassembler.pas L2492-2525
+    # unregistersymbol / L2625-2669 dealloc, read-only reference): a
+    # disable-phase cleanup name that NO program owns is a silent no-op in
+    # CE - unregistersymbol() appends it to the deletion list without an
+    # ownership check, and dealloc() searches only this program's own
+    # allocation set.  Such names are dropped from the node and recorded in
+    # the program's ``unowned_cleanup_dropped`` field instead of refusing.
+    # A name owned by another supported record (``external_owned``) still
+    # keeps the WP-37 named refusal below: the owning record releases the
+    # symbol exactly once on its own deactivation, so a second release is a
+    # real cross-record hazard, not a no-op.
+    unowned_cleanup = []
     for node in sections["disable"]:
         if node["op"] in {"alloc", "globalalloc", "register", "scan", "scan_region", "scan_process"}:
             raise ProgramError("Disable may not allocate, scan or register new symbols.")
@@ -1549,7 +1561,10 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
                     raise ProgramError(
                         f"Program may not unregister or deallocate the externally owned symbol {external[0]}{suffix}.")
                 if foreign:
-                    raise ProgramError("Cleanup may only release symbols/allocations owned by this program.")
+                    # CE 7.5: nobody owns these names - a silent no-op.
+                    unowned_cleanup.extend(foreign)
+                    node["symbols"] = [symbol for symbol in node["symbols"]
+                                       if symbol.casefold() in owned]
     if sum(node["op"] == "scan_process" for node in sections["enable"]) > MAX_PROCESS_SCANS:
         raise ProgramError("Program exceeds its 16 complete process-scan bound.")
     managed = {}
@@ -1634,7 +1649,7 @@ def prepare_program(source: str, process_name: str | None = None, *, bitness: in
         if node["op"] == "globalalloc":
             allocation_executable[node["symbol"]] = False
             allocation_writable[node["symbol"]] = True
-    program = {"schema": SCHEMA, "bitness": bitness, "process_name": process_name, "source": source, "source_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(), "defines": defines, "conditional_decisions": [{"line": decision.line, "condition": decision.condition, "chosen": decision.chosen} for decision in pruned.decisions], **sections, "one_shot": one_shot, "requires": sorted(required.values(), key=str.casefold), "provides": sorted(provides.values(), key=str.casefold), "managed_method_labels": sorted(managed.values(), key=str.casefold), "allocations": allocations, "allocation_executable": allocation_executable, "allocation_writable": allocation_writable, "capabilities": capabilities, "requires_coordinator": True}
+    program = {"schema": SCHEMA, "bitness": bitness, "process_name": process_name, "source": source, "source_sha256": hashlib.sha256(source.encode("utf-8")).hexdigest(), "defines": defines, "conditional_decisions": [{"line": decision.line, "condition": decision.condition, "chosen": decision.chosen} for decision in pruned.decisions], **sections, "one_shot": one_shot, "requires": sorted(required.values(), key=str.casefold), "provides": sorted(provides.values(), key=str.casefold), "managed_method_labels": sorted(managed.values(), key=str.casefold), "allocations": allocations, "allocation_executable": allocation_executable, "allocation_writable": allocation_writable, "capabilities": capabilities, "requires_coordinator": True, "unowned_cleanup_dropped": sorted(set(unowned_cleanup), key=str.casefold)}
     # WP-29: a named allocation-only init profile (ENABLE carries allocs and
     # registered symbols but no code/data).  The record stays a supported
     # provider for its registered symbols; consumers resolve as usual.

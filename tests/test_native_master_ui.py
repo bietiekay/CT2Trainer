@@ -79,6 +79,43 @@ class _FakeLister(ProcessLister):
         return list(self.entries)
 
 
+class _StubAnalysisWorker:
+    """MT-24 race guard: queue bookkeeping without the daemon thread.
+
+    ``_rescan`` renders synchronously on the calling thread while the
+    real analysis worker compiles on its own; for a one-entry table the
+    worker can finish before the assertions, making the pending "…"
+    marker racy.  The stub records the enqueue (same dedupe rule) but
+    never writes an analysis entry, so the row stays pending
+    deterministically.  The worker itself is covered in
+    test_native_master_analysis.py.
+    """
+
+    def __init__(self):
+        self._queued = []
+
+    def enqueue(self, table_key, sha, process_name):
+        if any(queued_sha == sha for _, queued_sha, _ in self._queued):
+            return False
+        self._queued.append((table_key, sha, process_name))
+        return True
+
+    def pending_count(self):
+        return len(self._queued)
+
+    def drain_results(self):
+        return []
+
+    def pause(self):
+        pass
+
+    def resume(self):
+        pass
+
+    def stop(self):
+        pass
+
+
 def _make_app(folder, state_home, entries=(), compiler=None, error=None):
     if compiler is None:
         def compiler(entry, name):
@@ -386,6 +423,11 @@ class MasterWindowTests(unittest.TestCase):
     def test_rescan_rerenders_after_content_change(self):
         app = _make_app(self.folder, self.state_home)
         window = MasterWindow(self.root, app)
+        # MT-24 race guard: stop the real daemon worker and replace it
+        # with the queue-only stub so the changed table's analysis
+        # cannot finish before the pending-marker assertions below.
+        app.analysis_worker.stop()
+        app.analysis_worker = _StubAnalysisWorker()
         (self.folder / "a.ct").write_text(CT_GAMEA.replace("GameA", "GameZ"),
                                           encoding="utf-8")
         window._rescan()

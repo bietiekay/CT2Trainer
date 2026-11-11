@@ -2,6 +2,70 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.42 (2026-11-11)
+
+CE 7.5 cleanup parity + the API-export registry extension — the two
+remaining bounded compatibility classes of the 805-row root-cause
+census. (B) Cleanup parity: a disable-phase cleanup name that NO
+program owns is a silent no-op in CE 7.5 (`autoassembler.pas`
+L2492-2525 `unregistersymbol` appends it to the deletion list without
+an ownership check; L2625-2669 `dealloc` searches only this program's
+allocation set, read-only reference) — CT2Trainer now matches it: the
+name is dropped from the program node and recorded in the new program
+field `unowned_cleanup_dropped` (sorted, deduped, casefold) instead of
+refusing the program, and the record stays supported. A name
+live-registered by another supported record keeps the WP-37 handover
+refusal — the owning record releases that symbol exactly once on its
+own deactivation, so a second release from a foreign program is a
+real cross-record hazard, not a CE no-op. Because the first-pass entry
+compile runs without the table-wide ownership context, the drop is
+only provisional there: a plan-level re-check (compiler, after the
+Wave B1 loop) re-blocks a first-pass-supported record when one of its
+dropped names is (a) a WP-37 handover name (record-Lua
+registerSymbol/unregisterSymbol pairs or allocation-only programs —
+the owner may be the record itself, whose record-Lua registration is
+invisible to its static program) or (b) in any other supported
+record's entry-level `provides` (luaCall AOB symbols, ordinary AA
+registrations) — with the named single-form reason "Program may not
+unregister or deallocate the externally owned symbol X (owned by
+record N)." (the "Static AA envelope: " prefix kept for envelope
+records); the old Wave B1 doubled-composite reasons no longer occur.
+(C) API-export registry: the bounded Windows API export registry
+(RT-4.2 R7) gains `sleep` (kernel32.dll) and `showwindow`
+(user32.dll) — the corpus thread idioms (HorizonForbiddenWest
+records `mov rcx,10 / call Sleep`; APlagueTaleRequiem / Resonance
+console-open threads `call ShowWindow`) now resolve with the exact
+`api_exports` marker, the same contract as the existing user32
+entries (requires == [export], link-time resolution against the
+target's live PE export table, named fail-closed refusal on an absent
+export; a bare API name in a value address expression keeps the
+classic unsupported-provider refusal). +9 tests (new
+`tests/test_native_aa_cleanup_parity.py`: the program-level no-op
+shapes incl. sorted/dedup + wildcard/external scoping + the label-only
+re2 trigger; the plan-level handover re-block + the unowned cascade
+unblock (the re2 12997 root shape — the provider stays supported and
+the dependent `rootsym+8` resolves with dependency_ids [1]); the
+Sleep/ShowWindow markers; the value-expression boundary) and 4
+modules updated (`test_native_assembler`,
+`test_native_luacall_symbol_only`,
+`test_native_rt42_runtime_provider`,
+`test_native_lua_symbol_handover` — the single named reason), plus
+the deterministic MT-24 race guard in `test_native_master_ui` (a
+queue-only stub analysis worker for the rescan pending-marker test —
+the daemon thread could finish the one-entry table's compile before
+the assertion, making the "…" marker racy). Full main suite 4,926
+OK / 35 expected skips; catalog remeasure
+`blocked-catalog-042-cleanup`: 117,809 total / 117,272 supported /
+12,974 headings / 104,123 actionable / 537 blocked (-268 vs
+`blocked-catalog-041-digit-labels`; the 3-chunk delta audit vs the
+0.41 chunks: zero newly blocked, 268 unblocked — 26 `Sleep` + 2
+`ShowWindow` + 24 direct cleanup-ownership rows + 216 provider
+cascades: the HFW `pInventoryItemResource` / `pAttackInfo` /
+`PlayerCharacter` thread cascades, the DS2 `KeyHandlerThread`
+dependents, the re2 `rootsym` cascade — 12 still-blocked rows carry
+the more specific named handover reason: DS2 `KeyHandlerThread` x10
+(record 87498) + x1 (record 87500), `pBase` x1 (record 1337263367)).
+
 ## 0.41 (2026-11-10)
 
 AA typed-constant package + the digit-leading-label CE 7.5 parity fix

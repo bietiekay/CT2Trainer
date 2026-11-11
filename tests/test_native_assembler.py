@@ -124,8 +124,15 @@ class ProgramTests(unittest.TestCase):
                 prepare_program("[ENABLE]\n1000:\n" + line + "\n[DISABLE]\n1000:\n db 90")
 
     def test_cleanup_cannot_remove_foreign_resources(self):
+        # 0.42 cleanup parity: without an ownership context the unowned
+        # name is the CE 7.5 no-op - dropped and recorded; with the
+        # external context the same name keeps the WP-37 named refusal.
+        program = prepare_program(OWNED_HOOK.replace("dealloc(*)", "dealloc(foreign)"))
+        self.assertEqual(program["unowned_cleanup_dropped"], ["foreign"])
         with self.assertRaisesRegex(ProgramError, "owned"):
-            prepare_program(OWNED_HOOK.replace("dealloc(*)", "dealloc(foreign)"))
+            prepare_program(OWNED_HOOK.replace("dealloc(*)", "dealloc(foreign)"),
+                             external_owned=frozenset({"foreign"}),
+                             external_owners={"foreign": 7})
 
     def test_ir_mutation_rejected(self):
         program = prepare_program(OWNED_HOOK)
@@ -933,12 +940,34 @@ class DirectiveGrammarTests(unittest.TestCase):
         node = next(node for node in program["disable"] if node["op"] == "dealloc")
         self.assertEqual(node["symbols"], ["memory", "other"])
         # A valid-but-unowned name parses as a name (CE ignores unknown
-        # names only when they are not valid symbols), then the
-        # cleanup-ownership check keeps it refused with the named reason.
+        # names only when they are not valid symbols).  CE 7.5 parity
+        # (0.42 B, autoassembler.pas L2625-2669, read-only reference):
+        # dealloc() searches only this program's own allocation set, so a
+        # name nobody owns is a silent no-op - the program succeeds, the
+        # node keeps only the owned names, and the dropped name is
+        # recorded in unowned_cleanup_dropped.
+        program = prepare_program("[ENABLE]\nalloc(memory,0x100)\n[DISABLE]\ndealloc(memory,zz)",
+                                  "Target.exe")
+        node = next(node for node in program["disable"] if node["op"] == "dealloc")
+        self.assertEqual(node, {"op": "dealloc", "symbols": ["memory"]})
+        self.assertEqual(program["unowned_cleanup_dropped"], ["zz"])
+        # The same parity covers unregistersymbol(): a label-only name that
+        # was never registersymbol-ed (the re2 trigger shape) is a no-op.
+        program = prepare_program("[ENABLE]\nalloc(memory,0x100)\nregistersymbol(memory)\n"
+                                  "memory:\ndb 0\n"
+                                  "[DISABLE]\ndealloc(*)\nunregistersymbol(memory,zz)",
+                                  "Target.exe")
+        node = next(node for node in program["disable"] if node["op"] == "unregister")
+        self.assertEqual(node, {"op": "unregister", "symbols": ["memory"]})
+        self.assertEqual(program["unowned_cleanup_dropped"], ["zz"])
+        # A name owned by another record (external context) still keeps the
+        # WP-37 named handover refusal - only the unowned no-op changed.
         with self.assertRaisesRegex(ProgramError,
-                "Cleanup may only release symbols/allocations owned by this program."):
+                "externally owned symbol zz \\(owned by record 7\\)."):
             prepare_program("[ENABLE]\nalloc(memory,0x100)\n[DISABLE]\ndealloc(memory,zz)",
-                            "Target.exe")
+                            "Target.exe",
+                            external_owned=frozenset({"zz"}),
+                            external_owners={"zz": 7})
 
     def test_dealloc_name_list_rejections(self):
         for line, needle in (

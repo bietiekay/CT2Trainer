@@ -91,6 +91,21 @@ once). Families are grouped by owning root cause.
 | 2 | `Malformed or empty directive arguments` | diagnostics |
 | 1 | `Unsupported assembler directive: dq` | `dq`/`resb` reservation (§4.3) |
 
+> 0.42 (B) cleanup-parity note: the generic
+> `Cleanup may only release symbols/allocations owned by this program`
+> refusal no longer fires for names that NO record owns — CE 7.5 treats
+> those as a silent no-op (`unregistersymbol` appends to the deletion
+> list unchecked; `dealloc` searches only this program's allocation
+> set), and CT2Trainer now matches it (the names are dropped and
+> recorded in the program's `unowned_cleanup_dropped` field, so those
+> rows unblock along with their provider cascades). The refusal
+> survives only for names live-registered by another supported record,
+> where it is emitted in the named handover form
+> `Program may not unregister or deallocate the externally owned
+> symbol <sym> (owned by record <id>).` — a deliberate safety
+> narrowing, since a second release of a live symbol races the owning
+> record's deactivation.
+
 ### 3.1 Dropdown / value-record families (Lane A, exact recompilation)
 
 | Entries | Block reason | True sub-cause |

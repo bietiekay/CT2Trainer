@@ -436,18 +436,21 @@ class R4PlanTests(RT42EngineBase):
                          "RtLua42.")
 
     def test_real_aa_enable_with_foreign_release_stays_blocked(self):
-        # The fail-closed boundary: the static envelope carries real enable
-        # content, so the cleanup gate (not the no-content rescue) fires on
-        # the foreign unregistersymbol; the record stays blocked with the
-        # exact named reason and the symbol is not a provider.
+        # The fail-closed boundary (0.42 cleanup parity): the static
+        # envelope carries real enable content, so the first pass drops the
+        # foreign unregistersymbol name as the CE no-op; the table-wide
+        # re-check then re-blocks the record because RtReal42 is owned by
+        # this record's own Lua handover (exactly one live releaser - the
+        # record's own Lua - may release it).  The symbol is not a provider.
         body = script_record(1, R4_BLOCKED, "blocked provider") \
             + value_record(2, "RtReal42+4")
         plan = compile_table(write_table(self.root, body), PROCESS)
         e = by_id(plan)
         self.assertFalse(e[1]["supported"])
         self.assertEqual(e[1]["reason"],
-                         "Static AA envelope: Cleanup may only release "
-                         "symbols/allocations owned by this program.")
+                         "Static AA envelope: Program may not unregister "
+                         "or deallocate the externally owned symbol "
+                         "RtReal42 (owned by record 1).")
         self.assertFalse(e[2]["supported"])
         self.assertEqual(e[2]["reason"],
                          "Required symbol has no unique supported provider: "

@@ -155,14 +155,13 @@ class ExternalOwnedPlanTests(unittest.TestCase):
             + value_record(2, "HandoverSym+4"))
         self.assertTrue(plan["entries"][0]["supported"])
         self.assertFalse(plan["entries"][1]["supported"])
-        # Wave B1 re-derives both halves of the compound wave-A reason with
-        # the external-ownership context; the data-dialect half raises the
-        # named handover refusal, so it surfaces in both halves.
+        # 0.42 cleanup parity: the first pass drops the foreign name as the
+        # CE no-op; the table-wide re-check then re-blocks the record with
+        # the single named handover refusal (no composite prefix).
         self.assertEqual(plan["entries"][1]["reason"],
                          "Program may not unregister or deallocate the "
-                         "externally owned symbol HandoverSym (owned by record 0). "
-                         "Native assembly: Program may not unregister or "
-                         "deallocate the externally owned symbol HandoverSym (owned by record 0).")
+                         "externally owned symbol HandoverSym "
+                         "(owned by record 0).")
         self.assertTrue(plan["entries"][2]["supported"], plan["entries"][2]["reason"])
         self.assertEqual(plan["entries"][2]["dependency_ids"], [0])
         self.assertEqual(plan["external_owned_providers"], {"handoversym": 0})
@@ -179,10 +178,13 @@ class ExternalOwnedPlanTests(unittest.TestCase):
                                 + script_record(1, consumer))
         self.assertTrue(plan["entries"][0]["supported"])
         self.assertFalse(plan["entries"][1]["supported"])
+        # 0.42 cleanup parity: the first pass drops the foreign dealloc name
+        # as the CE no-op; the table-wide re-check re-blocks the record with
+        # the single named handover refusal.
         self.assertEqual(plan["entries"][1]["reason"],
-                         "Unsupported AA directive: alloc. Native assembly: "
                          "Program may not unregister or deallocate the "
-                         "externally owned symbol HandoverSym (owned by record 0).")
+                         "externally owned symbol HandoverSym "
+                         "(owned by record 0).")
         self.assertEqual(plan["external_owned_providers"], {"handoversym": 0})
 
     def test_wildcard_cleanup_scopes_to_owned_names_with_external_require(self):

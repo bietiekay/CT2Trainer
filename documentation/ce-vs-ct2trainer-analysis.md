@@ -264,12 +264,18 @@ census: `{$lua}` 6,844 (114 tables), `{$asm}` 3,722 (73), `{$STRICT}` 86
   directive — 0 hits in the 7.5 tree — reported as out of parity scope,
   4 rows).
 - **alloc/dealloc and allocation model.** `alloc`/`globalalloc` compile
-  to synthetic private addresses (documented); program cleanup is
-  ownership-scoped: a `dealloc`/`unregistersymbol` list may only release
-  symbols and allocations owned by the program. CE permits cross-program
-  cleanup unconditionally; CT2Trainer keeps the ownership gate with
-  actionable diagnostics naming the owning program (O5 class, 31 baseline
-  rows; RT-4.5 — documented deliberate divergence).
+  to synthetic private addresses (documented); program cleanup matches
+  the CE 7.5 semantics (0.42, `autoassembler.pas` L2492–2525
+  `unregistersymbol` / L2625–2669 `dealloc`, read-only reference): a
+  cleanup name that NO program owns is a silent no-op — CE appends it
+  to the deletion list without an ownership check, and `dealloc`
+  searches only this program's allocation set; CT2Trainer drops such
+  names from the program and records them in
+  `unowned_cleanup_dropped`. A name live-registered by another
+  supported record keeps the named handover refusal (the owning record
+  releases it exactly once on its own deactivation, so a second release
+  races it) — the deliberate safety narrowing, now single-form and
+  naming the owning record (O5 class; RT-4.5; 0.42 (B)).
 - **Symbol/provider model.** CE dedupes symbol registration
   (`dupIgnore`, `autoassembler.pas:338/345`) while its AA runtime
   registration is delete-then-add (last-wins). CT2Trainer's documented
@@ -527,8 +533,11 @@ composes, per the documented class outcomes, of:
   field `user_symbols`) covers the user-configured subset.
 - **Documented policy divergences** — the O5 cross-program cleanup rows
   keep the ownership-gate refusal with actionable diagnostics naming
-  the owning program (CE permits cross-program cleanup; deliberate
-  safety narrowing).
+  the owning record (CE permits cross-program cleanup; deliberate
+  safety narrowing). Since 0.42 (B) the CE 7.5 no-op semantics are
+  matched exactly for names nobody owns (dropped silently, recorded in
+  `unowned_cleanup_dropped`); only names live-registered by another
+  supported record are refused.
 - **Deliberate capability gates** — O11 `Custom` vartype (6 rows,
   AP-08.7 converter/write gate), O15 `usemono` (4 rows, newer-CE
   directive with 0 hits in the 7.5 tree), O22
@@ -602,7 +611,7 @@ B in inventory section 4.9 and §4.1 above.
 | 8 | **`getCEVersion` pinned to 7.5** | Returns the running CE version as a number | Returns the number **7.5** (item C2 supersedes the item-C string pin '7.5') | The product implements the CE 7.5 surface; tables use the value as a CE-version gate and the corpus gates numerically (string usages coerce through Lua). Evidence: item C (commit `0167825`) + item C2 (merge `dde9f04`). |
 | 9 | **`readStringLocal` maxsize / NUL semantics** | Default maxsize 50 bytes; NUL truncation on read | Omitted/negative maxsize returns the full content; no NUL truncation | The content is the embedded asset itself — a 50-byte default would break the corpus' full-file loads, and NUL truncation would corrupt binary assets. Documented clean-room deviations, both corpus-compatible. Evidence: item A update (merge `479977c`). |
 | 10 | **Keep-first duplicate-provider policy** | `dupIgnore` dedupe of the registration list (`autoassembler.pas:338/345`, verified this session) + delete-then-add runtime registration (last-wins, `autoassembler.pas:4164-4208`) | Keep-first: the first supported registration wins; a later duplicate registration is shadowed while the entry's other registrations still take effect | CE's last-wins can let a later script silently steal a symbol the plan already committed to; keep-first is the documented safe narrowing with the same observable result for the corpus. Evidence: RT-4.1 (2026-10-22); `lua_symbol_providers.py`; catalog 2,698 → 1,858. |
-| 11 | **Cross-program cleanup refusal** | `dealloc` / cleanup may release symbols/allocs owned by other programs unconditionally | Ownership gate: a program's cleanup may only release its own symbols/allocs; foreign references are reported with the owning program | Cross-program release can free memory another record still uses — a silent corruption path; the gate is a deliberate safety narrowing with named, catalog-visible reasons. Evidence: O5 class (31 baseline rows); RT-4.5 (2026-10-24). |
+| 11 | **Cross-program cleanup refusal** | `dealloc` / cleanup may release symbols/allocs owned by other programs unconditionally; a name nobody owns is a silent no-op (appended to the deletion list without an ownership check) | CE 7.5 no-op parity for unowned names (0.42 (B): dropped from the program and recorded in `unowned_cleanup_dropped`); an ownership gate for names live-registered by another supported record (the plan-level re-check re-blocks with the named handover reason "…externally owned symbol X (owned by record N).", which the compiler names from the entry-level `provides` merge) | CE's no-op for unowned names is harmless (the deletion list entry finds nothing); cross-program release of a live symbol can free memory another record still uses — a silent corruption path, so that class keeps the deliberate safety narrowing. The re-check closes the first-pass gap where the table-wide ownership context was not yet available, so a first-pass no-op never ships as a live cross-record release. Evidence: 0.42 catalog remeasure `blocked-catalog-042-cleanup` (805 → 537 blocked, +268 supported, zero newly blocked, 12 still-blocked rows with the more specific named reason); `tests/test_native_aa_cleanup_parity.py`. |
 | 12 | **`usemono()` out of parity scope** | N/A — 0 hits in the CE 7.5 tree (newer-CE directive) | Named refusal: reported as targeting a CE newer than 7.5 | Parity is defined against CE 7.5; a directive CE 7.5 cannot execute is out of scope by definition. Evidence: O15 class (4 rows, ForgottonAnne + 小猫咪); RT-4.5; CE tree census (0 hits). |
 | 13 | **O11 custom-type gate (RE2 family)** | CE resolves Lua-registered custom types at runtime | The 6 `Custom`-vartype records (re2 / re2_testicles) stay staged behind the AP-08.7 converter/write gate (`CustomTypeAbort` payload) | Runtime-only type definitions need a converter/write gate before they can be exercised safely; a deliberate documented gate, not a silent gap. Evidence: inventory §4.13; RT-4.4 update (gate unchanged by design). |
 | 14 | **Process-info answer-shape deviations** | `getProcessIDFromProcessName` answers nil for a non-matching name; `enumModules` reports the OS `PathToFile`; `disassemble` lines in CE's uppercase style | `0` for a non-matching name (corpus tolerates both shapes); `PathToFile` falls back to the EXE name when the backend reports no image path; disassemble lines in pinned iced Intel syntax (lowercase) | Single-target model: the APIs answer only from the attached target; the iced syntax is the pinned decoder's canonical output. All three are documented per-API deviations. Evidence: item C update (commit `0167825`). |

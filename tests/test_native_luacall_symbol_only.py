@@ -160,15 +160,17 @@ class SymbolOnlyCompilerTests(unittest.TestCase):
                          "Static AA envelope: Enable section has no executable patch or data.")
 
     def test_static_enable_content_stays_on_the_static_path(self):
-        # The static program is valid again, so the symbol-only admission
-        # never runs; the envelope refusal comes from the static program's
-        # own cleanup ownership gate.
+        # The static program is valid on the first pass, so the symbol-only
+        # admission never runs; the 0.42 cleanup-parity re-check then blocks
+        # the record again: aobt2 is live-registered by record 100's luaCall
+        # handover, so the foreign static cleanup keeps the named handover
+        # refusal instead of the old generic cleanup-ownership refusal.
         entry = self._entry(102)
         self.assertFalse(entry["supported"])
         self.assertEqual(
             entry["reason"],
-            "Static AA envelope: Cleanup may only release symbols/allocations"
-            " owned by this program.")
+            "Static AA envelope: Program may not unregister or deallocate "
+            "the externally owned symbol aobt2 (owned by record 100).")
 
 
 class SymbolOnlyEngineTests(unittest.TestCase):

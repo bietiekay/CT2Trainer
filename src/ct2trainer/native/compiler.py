@@ -202,19 +202,23 @@ _CALL_TARGET = re.compile(
     r"\bcall\s+(?:(?:near|short|abs|far)\s+)*([A-Za-z_$][A-Za-z0-9_]*)(?![A-Za-z0-9_.$\-])",
     re.IGNORECASE)
 
-# RT-4.2 (R7): bounded Windows API export registry.  A bare call target
-# (no record, table-Lua or user-symbol provider) that names one of these
-# system exports is a static known target: the plan carries an explicit
-# ``api_exports`` marker (exact source spelling + owning module basename),
-# the engine resolves it against the attached target's live PE export
-# table at link time, and an absent export fails closed with a named,
-# actionable refusal before any target memory is touched.  The registry is
-# deliberately minimal (the corpus only needs user32 entries) and
-# extensible by adding a casefolded name; names outside it keep the
-# classic unsupported-provider refusal.
+# RT-4.2 (R7) / 0.42 (C): bounded Windows API export registry.  A bare
+# call target (no record, table-Lua or user-symbol provider) that names
+# one of these system exports is a static known target: the plan carries
+# an explicit ``api_exports`` marker (exact source spelling + owning
+# module basename), the engine resolves it against the attached target's
+# live PE export table at link time, and an absent export fails closed
+# with a named, actionable refusal before any target memory is touched.
+# The registry is deliberately minimal (the corpus needs user32 +
+# kernel32 entries - the corpus threads call ``Sleep`` and the console-
+# open scripts call ``ShowWindow``) and extensible by adding a
+# casefolded name; names outside it keep the classic unsupported-provider
+# refusal.
 _API_EXPORT_MODULES = {
     "getasynckeystate": ("user32.dll", "GetAsyncKeyState"),
     "findwindowa": ("user32.dll", "FindWindowA"),
+    "sleep": ("kernel32.dll", "Sleep"),
+    "showwindow": ("user32.dll", "ShowWindow"),
 }
 
 
@@ -2276,6 +2280,66 @@ def compile_table(path: str | Path, process_name: str, title: str | None = None,
             new_reason = str(exc)
         if new_reason is not None and _EXTERNAL_RELEASE_REASON in new_reason:
             entry["reason"] = new_reason
+    # 0.42 (B): CE 7.5 cleanup-parity re-check.  The first-pass entry
+    # compile runs without the table-wide ownership context, so the
+    # unowned-cleanup no-op (disable-phase names dropped from the program
+    # and recorded in its ``unowned_cleanup_dropped`` field) is only
+    # provisional there.  Against the table-wide ownership picture, a
+    # dropped name that IS live-registered by a supported record is a
+    # real cross-record hazard, not a CE no-op, and re-blocks the record
+    # with the named handover reason (byte-identical to the refusal the
+    # context-aware compile raises): the owning record releases that
+    # symbol exactly once on its own deactivation, so a second release
+    # from a foreign program races it.  Two ownership classes count:
+    # (a) WP-37 handover names (external_context: record-Lua
+    # registerSymbol/unregisterSymbol pairs and allocation-only programs -
+    # the owner may be the record itself, whose record-Lua registration is
+    # invisible to its static program); (b) any other supported record's
+    # entry-level provides (luaCall AOB symbols, ordinary AA
+    # registersymbol, allocation-only).  A name nobody supports keeps the
+    # first-pass no-op (the CE 7.5 parity): it stays dropped and the
+    # record stays supported, byte-stable for every unowned-only program.
+    provider_ids_by_symbol: dict[str, list[int]] = {}
+    for entry in entries:
+        if not entry["supported"] or entry["kind"] != "script":
+            continue
+        for symbol in entry.get("provides", []):
+            provider_ids_by_symbol.setdefault(symbol.casefold(), []).append(entry["id"])
+    for entry in entries:
+        if not entry["supported"] or entry["kind"] != "script":
+            continue
+        static = None
+        program = entry.get("program")
+        if isinstance(program, dict):
+            static = program
+        else:
+            lua_program = entry.get("lua_program")
+            if (isinstance(lua_program, dict)
+                    and isinstance(lua_program.get("static_program"), dict)):
+                static = lua_program["static_program"]
+        if static is None:
+            continue
+        dropped = static.get("unowned_cleanup_dropped")
+        if not dropped:
+            continue
+        is_envelope = program is None
+        for symbol in dropped:
+            owner = external_owner_ids.get(symbol.casefold())
+            if owner is None:
+                others = [provider for provider in
+                          provider_ids_by_symbol.get(symbol.casefold(), [])
+                          if provider != entry["id"]]
+                if others:
+                    owner = others[0]
+            if owner is None:
+                continue
+            reason = (f"Program may not unregister or deallocate the "
+                      f"externally owned symbol {symbol} "
+                      f"(owned by record {owner}).")
+            if is_envelope:
+                reason = _LUA_ENVELOPE_PREFIX + reason
+            _block(entry, reason)
+            break
     async_ids = {source.id for source in table.entries
                  if source.kind == "script" and source.async_script}
     # WP-46 (part 1): table-level <UserdefinedSymbols> act as static symbol
