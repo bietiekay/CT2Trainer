@@ -753,11 +753,35 @@ Mapping onto the use case:
 - **Overlay / smartphone remote / telemetry / multi-launcher**: out of
   scope (local-only, offline, single-window, process-name binding).
 
-Adopted as the 0.43 candidate (to confirm with the user):
+Adopted as the 0.43 candidate (confirmed and shipped 2026-11-11
+as the 0.43 release - see the 0.43 release section below):
 minimize-to-tray with attach / attention notifications, plus window
 geometry persistence. Remaining candidates (evaluated, not yet
 adopted): per-session hotkey management (disable-all /
 reset-to-default).
+
+### 0.43 release (shipped 2026-11-11): Master Trainer minimize-to-tray
++ window-geometry persistence (MT-32/MT-33) + the TGC field fix
+
+0.43 is a Master Trainer feature release: minimize-to-tray with
+attach / attention notifications (MT-32 - the persisted "Minimize to
+tray" toggle, master-state schema 9 -> 10 `tray_minimize`, the Win32
+tray icon behind a bounded, named fail-closed guard, restore on tray
+double-click, the tray balloon reports attach success / failure)
+and window-geometry persistence (MT-33 - window size / position
+remembered across restarts in the same master-state document,
+`window_geometry`), plus the TGC field fix (transient target-memory
+reads no longer block the engine - Win32 299 joins the bounded
+snapshot transient retry set, the transient set {299, 119, 1116, 24}
+is never treated as an observed change, a real mismatch or a
+non-transient error blocks immediately, the bounded verify-skip
+streak limit of 30 ticks names the condition instead of looping). The
+Master Trainer load path is unchanged (the MT-9 gate re-checks each
+table independently at load time); catalog remeasure
+`blocked-catalog-043-tgc`: zero delta vs `blocked-catalog-042-cleanup`
+(537 blocked, zero newly blocked). The per-session hotkey management
+candidate remains the remaining evaluated candidate for a later
+cycle.
 
 ## Merge & release plan (historical + current)
 

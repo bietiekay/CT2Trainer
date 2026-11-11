@@ -486,6 +486,86 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- 0.43 the Master Trainer minimize-to-tray + window-geometry
+  persistence (MT-32/MT-33) + the TGC field fix (2026-11-11,
+  root-direct on `main`). MT-32: the Master Trainer can minimize
+  into the system tray and restore on tray double-click -
+  `master_trainer/tray.py` drives the Win32 tray icon
+  (`Shell_NotifyIconW` / `RegisterClassExW` bound through
+  `_bind_prototypes` with pointer-sized WPARAM/LPARAM) behind a
+  bounded, named fail-closed guard: a Windows build without the
+  `Shell_NotifyIconW` export (stripped user32, the Sinking City 2
+  0.22.1 hotkey-bridge precedent) is the named
+  `tray-platform-unavailable` refusal, a refused `RegisterClassExW`
+  (Win32 87) is `tray-setup-failed`, a missing icon is
+  `tray-icon-missing` - every refusal lands in the status line,
+  never a crash and never a dialog; the persisted "Minimize to
+  tray" preference (master-settings.json schema 9 -> 10,
+  `tray_minimize`, default off) restores on start and persists on
+  every change, and a persisted on preference minimizes into the
+  tray at start; the tray balloon reports the trainer attach
+  success / failure through the new `ui.py` `attach_observer`
+  (fail-safe `_fire_attach_observer` in `poll()`), so the
+  standalone trainer header and behavior stay byte-identical.
+  MT-33: the Master window size / position is remembered across
+  restarts - `master_trainer/window_geometry.py` pure layer (parse
+  / validate / clamp), persisted in the same master-state document
+  (schema 10, `window_geometry`), saved on the bounded
+  `<Configure>` cadence and on close (defensive winfo guards so a
+  half-destroyed window never writes a bogus rect); an invalid
+  persisted geometry is the named `window-geometry-invalid`
+  refusal (the default geometry) rather than a crash. TGC field
+  fix: the 2026-11-11 Indiana Jones and the Great Circle (0.41)
+  field log (target TheGreatCircle.exe) exposed two transient-read
+  dead ends - R1 the module snapshot failed with Win32 299
+  immediately after the first attach while the game was still
+  loading its DLLs (299 was not in the snapshot transient retry
+  set), R2 a transient 299 read during the periodic
+  `_check_patches` was wrapped as a hook-receipt change ->
+  PatchConflict -> engine-blocked; a failed read is not an
+  observed change: F1 (`memory.py`) 299 joins the bounded snapshot
+  transient retry (8 attempts, 0.05 -> 1.0 s backoff), the public
+  `TRANSIENT_MEMORY_ERRORS = {299, 119, 1116, 24}` set +
+  `is_transient_memory_error(exc)` classify a read failure as
+  "cannot verify right now" - never "bytes changed"; F2
+  (`engine.py`) a transient read in the periodic `_check_patches`
+  skips that verification tick with a bounded skip streak
+  (`VERIFY_SKIP_STREAK_LIMIT = 30` consecutive ticks, reset on
+  every verified tick and on every confirmed (re-)attach), a
+  deduped `patch-verify-skipped` debug event, and a persistent
+  streak is the named fail-closed refusal; a real byte mismatch
+  and a non-transient failure still block immediately (unchanged
+  contract); F2b (`hooks.py`) a transient guard read in
+  `_check_allocation_guards` re-raises instead of calling
+  `_fail_uncertain`. +85 tests (new
+  `tests/test_native_master_tray_geometry.py` (62, incl. the
+  correctly session-skipped Shell_NotifyIconW smoke test) +
+  `tests/test_native_tgc_field_fix.py` (17) + 6 in the
+  `tests/test_native_architecture.py` /
+  `tests/test_native_master_state.py` updates). Full main suite
+  5,011 OK / 36 expected skips; catalog remeasure
+  `blocked-catalog-043-tgc`: 117,809 total / 117,272 supported /
+  12,974 headings / 104,123 actionable / 537 blocked - zero delta
+  vs `blocked-catalog-042-cleanup` (3-chunk record-level delta
+  audit: 0 newly blocked, 0 unblocked, 0 reason changes, 0 tables
+  added / removed; 0.43 touches no plan-compile path); feature
+  matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION 0.43 +
+  CHANGELOG entry in the same change (incl. the `__version__`
+  package constant sync, guarded by
+  `test_version_matches_root_version_file`). The 0.43 build
+  `native-20261111T184600Z-3bf9d8aa` cut from `main` @
+  `0df2607` (2026-11-11): in-build suite 5,011 OK / 36
+  expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.43-source.zip` sha256
+  `c0011d10a5a60b78067b0cdd1a622a134088fee325ac4d544efd3ec8101438ca`
+  (14,617,762 bytes), portable ZIP
+  `CT2Trainer-0.43-windows-portable.zip` sha256
+  `dc7a4062b56be99ea887a77ffd23e7c2c1ff38935e471d7f124ed4d775a022e9`
+  (49,849,139 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `4846d7568ef4eba091261b21e678c13ab5cecbbf3468a0a57ba30d84fc7e91a4`,
+  17,072,494 bytes, ships next to the converter).
 - 0.42 the CE 7.5 cleanup parity + the API-export registry
   extension (2026-11-11, root-direct on `main`; the second wave
   of the CE 7.5 parity program - the two remaining bounded

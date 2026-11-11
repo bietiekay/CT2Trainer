@@ -69,7 +69,22 @@ audit: 0 newly blocked, 0 unblocked, 0 reason changes, 0 tables
 added / removed).
 
 - Build: 0.43 released as run
-  (record sweep fills the build id, ZIP hashes and in-build suite).
+  `native-20261111T184600Z-3bf9d8aa` (cut from `main` @ `0df2607`,
+  2026-11-11): in-build suite 5,011 OK / 36 expected skips, 0
+  failures - fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.43-source.zip` sha256
+  `c0011d10a5a60b78067b0cdd1a622a134088fee325ac4d544efd3ec8101438ca`
+  (14,617,762 bytes) - carries the MT-32/MT-33 tray + geometry
+  (`master_trainer/tray.py` + `master_trainer/window_geometry.py` +
+  `tests/test_native_master_tray_geometry.py`) and the TGC field fix
+  (`memory.py` + `engine.py` + `hooks.py` +
+  `tests/test_native_tgc_field_fix.py`) - and portable ZIP
+  `CT2Trainer-0.43-windows-portable.zip` sha256
+  `dc7a4062b56be99ea887a77ffd23e7c2c1ff38935e471d7f124ed4d775a022e9`
+  (49,849,139 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+  `4846d7568ef4eba091261b21e678c13ab5cecbbf3468a0a57ba30d84fc7e91a4`,
+  17,072,494 bytes) ships next to the converter).
 
 ## 0.42 (2026-11-11)
 
