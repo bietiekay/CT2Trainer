@@ -66,6 +66,22 @@ dependents, the re2 `rootsym` cascade — 12 still-blocked rows carry
 the more specific named handover reason: DS2 `KeyHandlerThread` x10
 (record 87498) + x1 (record 87500), `pBase` x1 (record 1337263367)).
 
+- Build: 0.42 released as run
+  `native-20261111T044023Z-04112d15` (cut from `main` @ `377f760`,
+  2026-11-11): in-build suite 4,926 OK / 35 expected skips, 0
+  failures — fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.42-source.zip` sha256
+  `f44d248303b302b8621e80efc7c6faff476d0f27887b729546bf42c639839415`
+  (14,589,013 bytes) - carries the CE 7.5 cleanup parity fix
+  (`aa_program.py` + `compiler.py` + `tests/test_native_aa_cleanup_parity.py`)
+  and the API-export registry extension (`sleep` / `showwindow`) - and
+  portable ZIP `CT2Trainer-0.42-windows-portable.zip` sha256
+  `305832ddc03487542c9a889e150b96f45c1576fa5e56819276da54b9388a5c40`
+  (49,821,481 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+  `35389c7611715b494418b2c5bcdbd48e84f8d55a55f3deab556c4aa4d6aefd1c`,
+  17,051,026 bytes) ships next to the converter).
+
 ## 0.41 (2026-11-10)
 
 AA typed-constant package + the digit-leading-label CE 7.5 parity fix

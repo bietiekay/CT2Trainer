@@ -201,7 +201,7 @@ in-build suite 4,499 OK / 30 expected skips, `ce_inputs: []`,
 `59961d511d3964b075c968a3c577117ffa235970d65976f66d7e34e0eae010a9`,
 16,968,879 bytes) ships next to the converter); superseded 0.32
 (build `native-20261108T100731Z-a1d311e5` cut from `main` @
-`bfcc3a3`, 2026-11-08). 0.41 released (build `native-20261110T210856Z-5811040c` cut from `main`
+`bfcc3a3`, 2026-11-08). 0.42 released (build `native-20261111T044023Z-04112d15` cut from `main` @ `377f760`, 2026-11-11): the CE 7.5 cleanup parity (a disable-phase cleanup name that NO program owns is a silent no-op, matching CE `unregistersymbol` / `dealloc` - read-only reference: `autoassembler.pas` L2492-2525 / L2625-2669; the name is dropped from the program and recorded in the new program field `unowned_cleanup_dropped` instead of refusing the program, while a name live-registered by another supported record keeps the named WP-37 handover refusal - a plan-level re-check re-blocks a first-pass-supported record whose dropped name is a handover name or in another supported record's entry-level `provides`, with the single-form reason "Program may not unregister or deallocate the externally owned symbol X (owned by record N).") + the bounded Windows API-export registry extension (RT-4.2 R7: `sleep` / kernel32.dll, `showwindow` / user32.dll - the corpus thread idioms (HorizonForbiddenWest `call Sleep`, APlagueTaleRequiem / Resonance `call ShowWindow`) resolve with the exact `api_exports` marker + link-time PE export resolution); +9 tests, full main suite 4,926 OK / 35 expected skips, catalog remeasure `blocked-catalog-042-cleanup`: 117,809 total / 117,272 supported / 12,974 headings / 104,123 actionable / 537 blocked (-268 vs `blocked-catalog-041-digit-labels`, zero newly blocked, 268 unblocked: 26 `Sleep` + 2 `ShowWindow` + 24 direct cleanup-ownership rows + 216 provider cascades; 12 still-blocked rows carry the more specific named handover reason); in-build suite 4,926 OK / 35 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per gate; source ZIP `CT2Trainer-0.42-source.zip` sha256 `f44d248303b302b8621e80efc7c6faff476d0f27887b729546bf42c639839415` (14,589,013 bytes) - carries the CE 7.5 cleanup parity (`aa_program.py` + `compiler.py` + `tests/test_native_aa_cleanup_parity.py`) and the API-export registry extension (`sleep` / `showwindow`) - and portable ZIP `CT2Trainer-0.42-windows-portable.zip` sha256 `305832ddc03487542c9a889e150b96f45c1576fa5e56819276da54b9388a5c40` (49,821,481 bytes; the frozen `CT2Trainer-Master.exe` (sha256 `35389c7611715b494418b2c5bcdbd48e84f8d55a55f3deab556c4aa4d6aefd1c`, 17,051,026 bytes) ships next to the converter); superseded 0.41 released (build `native-20261110T210856Z-5811040c` cut from `main`
 @ `c724a7e`, 2026-11-10): the AA typed-constant package (the
 CE `StrToQWordEx` contract) + the digit-leading-label CE 7.5
 parity fix (the full typed family
@@ -634,7 +634,10 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-10, 0.41 released - build
+**CT2Trainer (status 2026-11-11, 0.42 released - build
+`native-20261111T044023Z-04112d15` cut from `main` @ `377f760`,
+2026-11-11, in-build suite 4,926 OK / 35 expected skips, `ce_inputs:
+[]`; superseded 0.41, build
 `native-20261110T210856Z-5811040c` cut from `main` @ `c724a7e`,
 2026-11-10, in-build suite 4,917 OK / 35 expected skips, `ce_inputs:
 []`; superseded 0.40, build
@@ -1214,7 +1217,25 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261110T210856Z-5811040c` (0.41, cut
+**Latest verified build:** `native-20261111T044023Z-04112d15` (0.42, cut
+from `main` @ `377f760`, 2026-11-11; in-build suite 4,926 OK / 35
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+per gate; source ZIP `CT2Trainer-0.42-source.zip` sha256
+`f44d248303b302b8621e80efc7c6faff476d0f27887b729546bf42c639839415`
+(14,589,013 bytes) - carries the CE 7.5 cleanup parity
+(`aa_program.py` + `compiler.py` +
+`tests/test_native_aa_cleanup_parity.py`) and the API-export
+registry extension (`sleep` / `showwindow`) - and portable ZIP
+`CT2Trainer-0.42-windows-portable.zip` sha256
+`305832ddc03487542c9a889e150b96f45c1576fa5e56819276da54b9388a5c40`
+(49,821,481 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`35389c7611715b494418b2c5bcdbd48e84f8d55a55f3deab556c4aa4d6aefd1c`,
+17,051,026 bytes) ships next to the converter)). 0.42 ships the
+CE 7.5 cleanup parity (unowned cleanup names are a silent no-op,
+recorded in `unowned_cleanup_dropped`; live cross-record names keep
+the named handover refusal) and the API-export registry extension
+(`sleep` / `showwindow`). Superseded
+0.41 build: `native-20261110T210856Z-5811040c` (0.41, cut
 from `main` @ `c724a7e`, 2026-11-10; in-build suite 4,917 OK / 35
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
 per gate; source ZIP `CT2Trainer-0.41-source.zip` sha256

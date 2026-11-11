@@ -486,6 +486,96 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- 0.42 the CE 7.5 cleanup parity + the API-export registry
+  extension (2026-11-11, root-direct on `main`; the second wave
+  of the CE 7.5 parity program - the two remaining bounded
+  compatibility classes of the 805-row root-cause census).
+  Cleanup parity: a disable-phase cleanup name that NO program
+  owns is a silent no-op in CE 7.5 (`autoassembler.pas`
+  L2492-2525 `unregistersymbol` appends it to the deletion list
+  without an ownership check; L2625-2669 `dealloc` searches only
+  this program's allocation set, read-only reference);
+  CT2Trainer now drops the name from the program node and
+  records it in the new program field `unowned_cleanup_dropped`
+  (sorted, deduped, casefold) instead of refusing the program,
+  so the record stays supported. A name live-registered by
+  another supported record keeps the WP-37 handover refusal -
+  the owning record releases that symbol exactly once on its
+  own deactivation, so a second release from a foreign program
+  is a real cross-record hazard, not a CE no-op. Because the
+  first-pass entry compile runs without the table-wide
+  ownership context, the drop is only provisional there: a
+  plan-level re-check (after the Wave B1 loop) re-blocks a
+  first-pass-supported record when one of its dropped names is
+  (a) a WP-37 handover name (record-Lua
+  registerSymbol/unregisterSymbol pairs or allocation-only
+  programs - the owner may be the record itself) or (b) in any
+  other supported record's entry-level `provides` (luaCall AOB
+  symbols, ordinary AA registrations) - with the named
+  single-form reason "Program may not unregister or
+  deallocate the externally owned symbol X (owned by record
+  N)." (the "Static AA envelope: " prefix kept for envelope
+  records). API-export registry extension (RT-4.2 R7): the
+  bounded Windows API export registry gains `sleep`
+  (kernel32.dll) and `showwindow` (user32.dll) - the corpus
+  thread idioms (HorizonForbiddenWest records `mov rcx,10 /
+  call Sleep`; APlagueTaleRequiem / Resonance console-open
+  threads `call ShowWindow`) now resolve with the exact
+  `api_exports` marker, the same contract as the existing
+  user32 entries (requires == [export], link-time resolution
+  against the target's live PE export table, named fail-closed
+  refusal on an absent export; a bare API name in a value
+  address expression keeps the classic unsupported-provider
+  refusal); the CE 7.5 tree has no GetProcAddress/kernel32 AA
+  handling (it resolves via the symbol handler over target
+  modules), so the bounded registry + link-time resolution is
+  the clean-room equivalent. +9 tests (new
+  `tests/test_native_aa_cleanup_parity.py`: the
+  program-level no-op shapes incl. sorted/dedup +
+  wildcard/external scoping + the label-only re2 trigger; the
+  plan-level handover re-block + the unowned cascade unblock
+  (the re2 12997 root shape - the provider stays supported and
+  the dependent `rootsym+8` resolves with dependency_ids [1]);
+  the Sleep/ShowWindow markers; the value-expression boundary)
+  and 4 modules updated (`test_native_assembler`,
+  `test_native_luacall_symbol_only`,
+  `test_native_rt42_runtime_provider`,
+  `test_native_lua_symbol_handover` - the single named
+  reason), plus the deterministic MT-24 race guard in
+  `test_native_master_ui` (a queue-only stub analysis worker
+  for the rescan pending-marker test - the daemon thread could
+  finish the one-entry table's compile before the assertion,
+  making the "..." marker racy). Full main suite 4,926 OK / 35
+  expected skips (4,917 from the 0.41 content + 9 new);
+  catalog remeasure `blocked-catalog-042-cleanup`: 117,809
+  total / 117,272 supported / 12,974 headings / 104,123
+  actionable / 537 blocked (-268 vs
+  `blocked-catalog-041-digit-labels` - the 3-chunk delta audit
+  vs the 0.41 chunks: zero newly blocked, 268 unblocked - 26
+  `Sleep` + 2 `ShowWindow` + 24 direct cleanup-ownership rows +
+  216 provider cascades: the HFW `pInventoryItemResource` /
+  `pAttackInfo` / `PlayerCharacter` thread cascades, the DS2
+  `KeyHandlerThread` dependents, the re2 `rootsym` cascade - 12
+  still-blocked rows carry the more specific named handover
+  reason: DS2 `KeyHandlerThread` x10 (record 87498) + x1
+  (record 87500), `pBase` x1 (record 1337263367)); feature
+  matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143. VERSION 0.42
+  + CHANGELOG entry in the same change (incl. the `__version__`
+  package constant sync, guarded by
+  `test_version_matches_root_version_file`). The 0.42 build
+  `native-20261111T044023Z-04112d15` cut from `main` @
+  `377f760` (2026-11-11): in-build suite 4,926 OK / 35
+  expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.42-source.zip` sha256
+  `f44d248303b302b8621e80efc7c6faff476d0f27887b729546bf42c639839415`
+  (14,589,013 bytes), portable ZIP
+  `CT2Trainer-0.42-windows-portable.zip` sha256
+  `305832ddc03487542c9a889e150b96f45c1576fa5e56819276da54b9388a5c40`
+  (49,821,481 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `35389c7611715b494418b2c5bcdbd48e84f8d55a55f3deab556c4aa4d6aefd1c`,
+  17,051,026 bytes, ships next to the converter).
 - 0.41 the AA typed-constant package (the CE StrToQWordEx
   contract) + the digit-leading-label CE 7.5 parity fix
   (2026-11-10, root-direct on `main`; the compatibility lane

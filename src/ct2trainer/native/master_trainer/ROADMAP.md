@@ -690,6 +690,75 @@ model), the online catalog (out of scope - private own use),
 global per-feature hotkeys (beyond the documented single-target
 model - the engine per-record hotkeys stay the supported surface).
 
+### 0.42 compatibility lane (shipped 2026-11-11; no Master Trainer effect)
+
+0.42 is a pure compatibility lane (no Master Trainer feature): CE 7.5
+cleanup parity (a disable-phase cleanup name that NO program owns is a
+silent no-op, matching CE `unregistersymbol` / `dealloc`; the names are
+recorded in the program's `unowned_cleanup_dropped` field, while a name
+live-registered by another supported record keeps the named WP-37
+handover refusal) plus the bounded API-export registry extension
+(`sleep` / kernel32, `showwindow` / user32). Catalog remeasure
+`blocked-catalog-042-cleanup`: 805 -> 537 blocked, +268 supported, zero
+newly blocked. The Master Trainer load path is unchanged (the MT-9 gate
+re-checks each table independently at load time).
+
+### 0.43 candidate (evaluated 2026-11-11)
+
+The 0.43 online evaluation (web research over all-in-one trainer front
+ends and trainer-manager UX, 2026-11-11) re-checked the standing use
+case ("detach the trainer; choose which table runs and which process it
+attaches to; configurable, and it remembers what was set once") against
+the current feature set (MT-1..MT-31):
+
+- **WeMod (features page)** - automatic game detection (covered by
+  MT-1/MT-2/MT-3); fine-grained control + "save your selections for
+  next time" (covered by MT-5/MT-6/MT-15/MT-16); in-game overlay and
+  the smartphone "second screen" remote app (out of scope: local-only,
+  offline, single-window model, no telemetry); multi-launcher support
+  (Steam / Xbox / Uplay / GOG / Epic / Rockstar) - the Master binds
+  process names, not launchers, and process detection is already
+  covered.
+- **WeMod community QoL (2026-06)** - hotkey-management QoL: a
+  "reset to default" button, a "disable all hotkeys" toggle, and
+  per-hotkey individual toggles (removing many hotkeys one by one is
+  tedious); custom launch options (mimic Steam "Launch Options").
+- **unstore.io 2026 comparison** - WeMod / Cheat Engine / FLiNG /
+  PLITCH / Special K / MrAntiFun / ArtMoney; corroborates the front-end
+  feature landscape (detection, attach, hotkeys, saved selections).
+- **GameTrainerLauncher** - search by title, a local library with
+  ordering / launch / removal / cover backfill / status feedback.
+
+Mapping onto the use case:
+
+- **Minimize-to-tray + attach / attention notifications** (ADOPTED as
+  the 0.43 candidate): the all-in-one "always-running" pattern (WeMod
+  keeps running in the background). The user minimizes the Master to the
+  system tray while it keeps watching processes and auto-attaching; a
+  tray notification surfaces attach / detach / attention-needed. This
+  directly serves "detach the trainer" while keeping the always-on
+  watch. In scope, local, no network.
+- **Window geometry persistence** (ADOPTED as the 0.43 candidate): a
+  small, standard expectation - remember the waiting-view window
+  position / size across restarts.
+- **Per-session hotkey management** (evaluated, not yet adopted): the
+  WeMod QoL - a per-session "disable all hotkeys" / "reset to the
+  table's defaults" inside the attached trainer. The engine already
+  supports per-record hotkeys; a global OS-level registration surface
+  stays out of scope. A reasonable in-scope candidate for a later
+  cycle.
+- **Custom launch options / game launch** (deferred, unchanged): the
+  index binds process names, not install paths, so a launch
+  integration cannot be proven fail-closed.
+- **Overlay / smartphone remote / telemetry / multi-launcher**: out of
+  scope (local-only, offline, single-window, process-name binding).
+
+Adopted as the 0.43 candidate (to confirm with the user):
+minimize-to-tray with attach / attention notifications, plus window
+geometry persistence. Remaining candidates (evaluated, not yet
+adopted): per-session hotkey management (disable-all /
+reset-to-default).
+
 ## Merge & release plan (historical + current)
 
 1. MT-1..MT-5 shipped on `main` with the 0.21 release (2026-10-31);
