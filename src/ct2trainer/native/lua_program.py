@@ -733,6 +733,54 @@ def lua_symbol_provides(source: str, *, one_shot: bool | None = None) -> list[st
     return extract_lua_symbol_providers(parts, one_shot=one_shot)
 
 
+# Lane A (shape 1): bounded detection of the AA symbol names a record's
+# ENABLE Lua proves to DEFINE at activation by returning a
+# ``define(<ident>, <expr>)`` string.  The CE contract (LuaHandler.pas
+# L4291: the returned Lua text is spliced into the AA program as AA text,
+# so a returned define becomes an AA define directive) means the record's
+# own static envelope may reference the defined symbol even though no
+# record in the table statically registers it: the value is runtime-derived
+# (a scan result), so the bounded plan evidence is the identifier itself.
+# The defined name is a local AA define, never a cross-record provider.
+# Pure text; no Lua is executed.
+_RETURN_STATEMENT = re.compile(r"\breturn\b")
+_RETURN_EXPR_END = re.compile(r"[\n;]")
+_RETURNED_DEFINE = re.compile(r"define\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*,")
+
+
+def lua_returned_define_symbols(parts) -> list[str]:
+    """The AA symbol names a record's ENABLE Lua proves to define by
+    returning a ``define(<ident>, <expr>)`` string.
+
+    ``parts`` are the parsed ``_Part`` objects from ``_parse``; only the
+    ``enable``-phase ``lua`` parts are inspected.  A define is adopted only
+    when it appears in the expression of a ``return`` statement (the value
+    the section splices into the AA program), never in an unrelated string
+    or comment.  ``string.format("define(x, %X)", ...)`` and the plain
+    ``"define(x, 0x...)"`` literal are both admitted; the format argument
+    is ignored (its runtime value is not statically evaluable).  Returns a
+    sorted name list, or an empty list when nothing is proven.  More than
+    MAX_PROVIDERS distinct names are unproven (empty result), never
+    truncated — the same bounded safety valve as the provider extractors.
+    """
+    from .lua_symbol_providers import MAX_PROVIDERS, _without_comments
+    defined: set[str] = set()
+    for part in parts:
+        if part.kind != "lua" or part.phase != "enable" or not part.text:
+            continue
+        text = _without_comments(part.text)
+        for ret in _RETURN_STATEMENT.finditer(text):
+            start = ret.end()
+            end_match = _RETURN_EXPR_END.search(text, start)
+            end = end_match.start() if end_match is not None else len(text)
+            expression = text[start:end]
+            for match in _RETURNED_DEFINE.finditer(expression):
+                defined.add(match.group(1))
+    if len(defined) > MAX_PROVIDERS:
+        return []
+    return sorted(defined, key=str.casefold)
+
+
 # WP-50 (GC-E8): bounded static extraction of the direct address-write
 # idioms by which a record's Lua publishes a live base into a sibling
 # record's address field (``AddressList['<label>'].address = <expr>`` or a
@@ -960,6 +1008,18 @@ def prepare_lua_program(source: str, process_name: str, bitness: int = 64, *,
     if lua_provides:
         result['provides'] = sorted(set(result['provides']) | set(lua_provides),
                                     key=str.casefold)
+    # Lane A (shape 1): the record's own ENABLE Lua splices a define into
+    # the static AA envelope at activation, so the record self-satisfies its
+    # reference to the defined symbol (WP-49 own-reference rule, Lua-defined
+    # variant).  The defined name is a local AA define, never a cross-record
+    # provider, so it is removed from requires only and recorded in the
+    # deterministic plan marker for observability and validator re-derivation.
+    returned_defines = lua_returned_define_symbols(parts)
+    if returned_defines:
+        owned = {name.casefold() for name in returned_defines}
+        result['requires'] = [name for name in result['requires']
+                              if name.casefold() not in owned]
+        result['lua_define_symbols'] = returned_defines
     if definitions:
         locals_ = set()
         for node in [] if static_program is None else static_program['preamble'] + static_program['enable']:

@@ -858,10 +858,9 @@ class EmbeddedFilesRuntimeTests(unittest.TestCase):
              "readStringLocal wide flag must be boolean"),
             ("readStringLocal('ct2tf:9')",
              "readStringLocal token does not name an embedded file"),
-            ("createTableFile('rt5new.lua')",
-             "createTableFile is outside this profile"),
-            ("CreateTableFile('rt5new.lua')",
-             "createTableFile is outside this profile"),
+            # Lane A: createTableFile/CreateTableFile no longer refuse -
+            # they create bounded in-memory table files (covered in
+            # tests/test_native_lua_name_list_providers.py).
             ("local sl = createStringList()\n"
              "sl:destroy()\n"
              "sl.Text = 'x'",

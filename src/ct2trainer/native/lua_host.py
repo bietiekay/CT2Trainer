@@ -699,12 +699,84 @@ _G.OpenProcess=function(...) return call('openProcess',...) end
 _G.ShellExecute=function(...) return call('shellExecute',...) end
 _G.MessageDialog=function(...) return call('messageDialog',...) end
 _G.ReadStringLocal=function(...) return call('readStringLocal',...) end
--- RT-5 item A: embedded table files are static plan data.  Creating new
--- table files would mutate the persistent table, so the call is a named
--- fail-closed refusal (CE registers the name on both first-letter
--- spellings, so both are defined).
-function createTableFile(...) error('createTableFile is outside this profile',2) end
-function CreateTableFile(...) error('createTableFile is outside this profile',2) end
+-- Lane A (GoW): createTableFile creates a bounded in-memory table file.
+-- The RT-5 item A refusal (a new table file would mutate the persistent
+-- table) is superseded for the single-target model: the stream stores
+-- bytes in host memory only, is never persisted (saveToFile stays a
+-- named refusal) and is never read back through findTableFile (which
+-- answers embedded <Files> plan data), so no persistent table is ever
+-- mutated; the object is discarded on detach.  The embedded <Files>
+-- read surface (findTableFile -> tablefile_object) stays read-only as
+-- before.  CE registers the name on both first-letter spellings, so
+-- both are defined.
+local tablefiles, tablefile_count=setmetatable({}, {__mode='k'}),0
+local function tablefile_inert(name)
+  if type(name)~='string' or name=='' then
+    error('createTableFile requires a non-empty table name',2)
+  end
+  if tablefile_count>=4096 then error('Table file object limit exceeded',2) end
+  local data={position=0,bytes={},dead=false}
+  local stream=setmetatable({}, {
+    __index=function(_,key)
+      if data.dead then error('Table file is destroyed',2) end
+      if key=='Position' or key=='position' then return data.position end
+      if key=='Size' or key=='size' then return #data.bytes end
+      if key=='write' then return function(values,count)
+        if type(values)~='table' then
+          error('Table-file stream write requires a byte table',2)
+        end
+        local n=count or #values
+        if type(n)~='number' or n<0 or n%1~=0 then
+          error('Table-file stream write count must be a non-negative integer',2)
+        end
+        for i=1,n do
+          local b=values[i]
+          if type(b)~='number' or b<0 or b>255 or b%1~=0 then
+            error('Table-file stream write requires byte values',2)
+          end
+          data.bytes[data.position+i]=math.floor(b)
+        end
+        data.position=data.position+n
+      end end
+      error('Unsupported table-file stream property: '..tostring(key),2)
+    end,
+    __newindex=function(_,key,value)
+      if data.dead then error('Table file is destroyed',2) end
+      if key=='Position' or key=='position' then
+        if type(value)~='number' or value<0 or value%1~=0 then
+          error('Table-file stream position requires a non-negative integer',2)
+        end
+        data.position=math.floor(value)
+        return
+      end
+      error('Table-file stream is read-only',2)
+    end
+  })
+  local object
+  object=setmetatable({name=name},{
+    __index=function(_,key)
+      if key=='Stream' or key=='stream' then return stream end
+      if key=='name' or key=='Name' then return name end
+      if key=='delete' or key=='Delete' then
+        return function()
+          if data.dead then return end
+          data.dead=true; data.bytes={}; data.position=0
+          tablefiles[object]=nil; tablefile_count=tablefile_count-1
+        end
+      end
+      if key=='saveToFile' then
+        error('Table-file persistence is outside this profile',2)
+      end
+      error('Unsupported table-file property: '..tostring(key),2)
+    end,
+    __newindex=function() error('Table-file object is read-only',2) end,
+    __metatable='CT2Trainer in-memory table file'
+  })
+  tablefiles[object]=data; tablefile_count=tablefile_count+1
+  return object
+end
+function createTableFile(name) return tablefile_inert(name) end
+function CreateTableFile(name) return createTableFile(name) end
 -- RT-5 item C: process-info family (bounded single-target model).
 -- getCEVersion: ROOT DECISION (RT-5 item C2 supersession) — the corpus
 -- gates on the number (Borderlands3/Octopath2 'getCEVersion() < 7.2',
@@ -887,6 +959,13 @@ function getLuaEngine()
       if key=='processName' then return data.process end
       if key=='clickMenuItem' then return function(name) call('luaEngine.menuClick',name) end end
       if type(key)=='string' and key:match('^MenuItem%d+$') then return engine_menu_item(key) end
+      -- Lane A (GoW): the CE update-engine object also exposes show/hide
+      -- (UI visibility, no-op in the owned trainer) and the Component
+      -- collection (menu components; the WP-56 no-op menu surface answers
+      -- property reads and stores writes so toggle logic completes).
+      if key=='show' or key=='Show' then return function() end end
+      if key=='hide' or key=='Hide' then return function() end end
+      if key=='Component' or key=='component' then return inert_menu_object() end
       error('Unsupported trainer engine property: '..tostring(key),2)
     end,
     __newindex=function() error('Trainer engine is read-only',2) end,
@@ -913,6 +992,84 @@ function AOBScan(pattern,protection,alignmentType,alignmentParameter)
     __newindex=function() error('Scan results are read-only',2) end,
     __metatable='CT2Trainer scan result'
   })
+end
+-- Lane A: bounded clean-room CE globals the dynamic-symbol-registration
+-- records (Witcher3 returned define / GoW literal name-list) need at
+-- activation.  Each is a pure read or an inert host-side object; nothing
+-- here persists or mutates the target beyond the owned scan/disassembly
+-- probes.
+function stringToByteTable(s)
+  if type(s)~='string' then error('stringToByteTable requires text',2) end
+  local t={}
+  for i=1,#s do t[i]=s:byte(i) end
+  return t
+end
+function getUpdateTimer()
+  local interval=100
+  return setmetatable({}, {
+    __index=function(_,key)
+      if key=='Interval' or key=='interval' then return interval end
+      if key=='SetInterval' then return function(ms)
+        if type(ms)~='number' then error('SetInterval requires a number',2) end
+        interval=ms
+      end end
+      if key=='Active' or key=='active' then return false end
+      error('Unsupported update-timer property: '..tostring(key),2)
+    end,
+    __newindex=function(_,key,value)
+      if key=='Interval' or key=='interval' then
+        if type(value)~='number' then error('Interval requires a number',2) end
+        interval=value
+        return
+      end
+      if key=='Active' or key=='active' then return end
+      error('Unsupported update-timer property: '..tostring(key),2)
+    end,
+    __metatable='CT2Trainer update timer (inert)'
+  })
+end
+function createDisassembler()
+  local last=nil
+  return setmetatable({}, {
+    __index=function(_,key)
+      if key=='disassemble' then return function(addr)
+        last=call('disassembler.disassemble',addr)
+      end end
+      if key=='getLastDisassembleData' or key=='LastDisassembleData' then
+        return function()
+          if last==nil then error('Disassembler has no result',2) end
+          return last
+        end
+      end
+      error('Unsupported disassembler property: '..tostring(key),2)
+    end,
+    __newindex=function() error('Disassembler is read-only',2) end,
+    __metatable='CT2Trainer disassembler'
+  })
+end
+function getNameFromAddress(addr)
+  return call('symbol.nameFromAddress',addr)
+end
+function AOBScanModuleUnique(module,pattern,protection,alignmentType,alignmentParam)
+  if type(pattern)~='string' or pattern=='' then return nil end
+  local mods=call('enumModules')
+  local mod
+  if type(module)=='string' and module~='' then
+    for i=1,#mods do
+      if mods[i].Name:lower()==module:lower() then mod=mods[i]; break end
+    end
+    if mod==nil then return nil end
+  else
+    mod=mods[1]
+  end
+  if mod==nil then return nil end
+  -- The firstScan stop address is inclusive on the CE-facing side, so the
+  -- module range [Address, Address+Size) is scanned with Size-1 as stop.
+  local addresses=call('scan.firstScan',soExactValue,vtByteArray,rtRounded,pattern,nil,
+    mod.Address,mod.Address+mod.Size-1,protection or '',alignmentType or fsmNotAligned,
+    alignmentParam or '',true,false,false,false)
+  if type(addresses)~='table' or #addresses~=1 then return nil end
+  return tonumber(addresses[1],16)
 end
 -- Timers are driven by the owner's serialized scheduler, never an unowned OS thread.
 local timers, nextid={},0
@@ -1216,6 +1373,10 @@ class _ReadOnlyBroker:
         # disassembly) — pure reads, safe under syntax checking.
         'getProcessIDFromProcessName', 'getProcessList', 'targetIs64Bit',
         'enumModules', 'disassemble',
+        # Lane A: bounded one-instruction operand disassembly and the
+        # owned symbol reverse lookup are pure reads, safe under syntax
+        # checking.
+        'disassembler.disassemble', 'symbol.nameFromAddress',
         # RT-5 item C2: dynamic-record lookups (journal reads only).  The
         # journal-mutation names (createMemoryRecord, record.delete,
         # record.reparent, record.offsetSet/offsetTextSet) are refused below
@@ -1841,6 +2002,75 @@ def _disassemble_lines(memory, address: int, count: int,
             'disassemble could not decode %d instruction(s) at 0x%X '
             '(bounded read ends first)' % (count, address))
     return lines
+
+
+def _disassembler_operand_address(memory, address: int,
+                                  pointer_size: int) -> dict:
+    """Bounded iced disassembly of one instruction; the absolute-address
+    operand of a memory reference (RIP-relative, or direct in 32-bit).
+
+    Answers the CE ``getLastDisassembleData`` shape the GoW record's
+    ``getAddressFromOpcode`` consumes: ``modrmValue`` / ``parameterValue``
+    carry the absolute address (0 when the instruction carries no
+    absolute memory operand).  A read that cannot cover the instruction,
+    an invalid instruction, or a non-32/64-bit target is a named refusal;
+    nothing is partially returned.  Read-only target probe.
+    """
+    import iced_x86
+
+    from .aa_directives import (ADDRESS_LIMIT_32, ADDRESS_LIMIT_64,
+                                MAX_INSTRUCTION_BYTES)
+    bitness = 64 if pointer_size == 8 else 32
+    if bitness not in (32, 64):
+        raise LuaHostError('disassembler requires a 32- or 64-bit target')
+    limit = ADDRESS_LIMIT_32 if bitness == 32 else ADDRESS_LIMIT_64
+    if type(address) is not int or not 0 < address <= limit:
+        raise LuaHostError(
+            'disassembler requires a resolved bounded integer address')
+    probe = min(MAX_INSTRUCTION_BYTES, limit - address + 1)
+    while True:
+        try:
+            raw = memory.read(address, probe)
+            break
+        except Exception:
+            if probe <= 1:
+                raise LuaHostError(
+                    'disassembler target memory read failed at 0x%X' % address)
+            probe //= 2
+    if type(raw) is not bytes or len(raw) != probe:
+        raise LuaHostError(
+            'disassembler target memory read returned the wrong byte count')
+    decoder = iced_x86.Decoder(bitness, raw, ip=address)
+    if not decoder.can_decode:
+        raise LuaHostError(
+            'disassembler could not decode an instruction at 0x%X' % address)
+    instruction = decoder.decode()
+    if instruction.code == iced_x86.Code.INVALID:
+        raise LuaHostError(
+            'disassembler invalid instruction at 0x%X' % instruction.ip)
+    if instruction.is_ip_rel_memory_operand:
+        absolute = instruction.ip_rel_memory_address
+    elif int(instruction.memory_base) == 0 and instruction.memory_displacement:
+        absolute = instruction.memory_displacement
+    else:
+        absolute = 0
+    return {
+        'modrmValue': absolute,
+        'parameterValue': absolute,
+        'address': address,
+        'length': instruction.len,
+        'text': str(instruction),
+    }
+
+
+def _symbol_name_from_address(symbols, address: int):
+    """The registered symbol name at an exact address (casefolded key), or
+    None when the address carries no registered symbol.  Bounded reverse
+    lookup over the owned symbol registry; a pure read."""
+    for name, value in symbols.items():
+        if value == address:
+            return name
+    return None
 
 
 class EngineLuaBroker:
@@ -2699,6 +2929,27 @@ class EngineLuaBroker:
             if len(arguments) == 1:
                 return lines[0]
             return lines
+        if name == 'disassembler.disassemble':
+            # Lane A (GoW): the createDisassembler() object's disassemble()
+            # method.  Bounded one-instruction disassembly over target
+            # memory; returns the getLastDisassembleData shape (modrmValue /
+            # parameterValue = the absolute-address operand).  Read-only
+            # probe, admissible under syntax checking.
+            if len(arguments) != 1:
+                raise LuaHostError(
+                    'disassembler.disassemble takes exactly one address')
+            addr = address(arguments[0])
+            return _disassembler_operand_address(
+                memory, addr, memory.pointer_size)
+        if name == 'symbol.nameFromAddress':
+            # Lane A (GoW): the CE getNameFromAddress() global.  Bounded
+            # reverse lookup of the owned symbol registry; returns the
+            # registered name at the address or None.  Pure read.
+            if len(arguments) != 1:
+                raise LuaHostError(
+                    'symbol.nameFromAddress takes exactly one address')
+            addr = address(arguments[0])
+            return _symbol_name_from_address(e.symbols, addr)
         raise LuaHostError('Unsupported CE Lua API: '+name)
 
     def _mutate(self, address: int, data: bytes, syntaxcheck: bool) -> bool:
