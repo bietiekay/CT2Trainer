@@ -583,7 +583,8 @@ def validate_plan(plan: dict) -> None:
                     from .address_expression import parse_expression, expression_symbols as expression_refs
                     from .compiler import (_dynamic_address_binding,
                                           _dynamic_provider_binding,
-                                          _runtime_base_marker_ok)
+                                          _runtime_base_marker_ok,
+                                          _runtime_base_placeholder_name)
                     parse_expression(entry['address'])
                     if entry['address'].lstrip().startswith(('+','-')):
                         # WP-38/WP-50/RT-4.3: relative expression addresses
@@ -628,6 +629,22 @@ def validate_plan(plan: dict) -> None:
                     raise NativeRuntimeError("Invalid pointer offsets")
             expected = {name.casefold() for name in expression_refs(entry["address"])}
             expected.update(name.casefold() for name in offset_refs)
+            if (entry.get("runtime_base_required") is True
+                    and _runtime_base_marker_ok(by_id, entry)):
+                # Lane B: the nested staged chain resolves through its
+                # deterministic runtime-base placeholder (plan metadata,
+                # injected per activation call by the engine); the
+                # placeholder is not a dependency and is dropped from the
+                # expected set.  A flat relative total (starts with +/-)
+                # carries no placeholder and keeps the existing form.
+                placeholder = _runtime_base_placeholder_name(
+                    entry["runtime_base_anchor"])
+                if not entry["address"].lstrip().startswith(("+", "-")):
+                    if placeholder.casefold() not in expected:
+                        raise NativeRuntimeError(
+                            "Staged relative chain must resolve through its "
+                            "runtime-base placeholder.")
+                    expected.discard(placeholder.casefold())
             if ({name.casefold() for name in entry.get("requires", [])} != expected
                     or entry.get("provides")):
                 raise NativeRuntimeError("Value symbol dependencies do not match its address")
@@ -5864,7 +5881,8 @@ class TrainerEngine:
         if entry.get('address_profile') == 'expression/v1':
             from .address_expression import resolve_expression
             from .compiler import (_dynamic_address_binding,
-                                   _dynamic_provider_binding)
+                                   _dynamic_provider_binding,
+                                   _runtime_base_placeholder_name)
             address = entry['address']
             if address.lstrip().startswith(('+','-')):
                 # WP-38: a relative expression address inherits its base from
@@ -5918,6 +5936,36 @@ class TrainerEngine:
                         "the table scripts that write the group base must run "
                         "first; activation names the anchor while it is missing.")
                 raise NativeRuntimeError('Flattened address profiles require resolved inherited bases')
+            # Lane B: a nested staged chain (offset-carrying levels or a
+            # non-hex relative literal on the chain) resolves through its
+            # deterministic runtime-base placeholder; the anchor heading's
+            # live base is injected per activation call - never into the
+            # persisted symbol table - so a symbol registered under the
+            # placeholder name is a collision, named fail-closed.
+            if entry.get("runtime_base_required") is True:
+                anchor_id = entry.get("runtime_base_anchor")
+                if type(anchor_id) is not int or anchor_id not in self.entries:
+                    raise NativeRuntimeError(
+                        "Staged runtime-base row has an invalid anchor record.")
+                placeholder = _runtime_base_placeholder_name(anchor_id)
+                if (placeholder.casefold()
+                        in {key.casefold() for key in self.symbols}):
+                    raise NativeRuntimeError(
+                        "Staged runtime-base placeholder collides with a "
+                        "registered symbol.")
+                if anchor_id in self.dynamic_addresses:
+                    injected = dict(self.symbols)
+                    injected[placeholder.casefold()] = (
+                        self.dynamic_addresses[anchor_id])
+                    return resolve_expression(address, self.memory, injected,
+                                              process_name=self.plan['process_name'],
+                                              pointer_size=self.memory.pointer_size)
+                anchor_entry = self.entries[anchor_id]
+                raise NativeRuntimeError(
+                    f"Runtime base for group record {anchor_id} "
+                    f"('{anchor_entry.get('label', '')}') is not provided yet: "
+                    "the table scripts that write the group base must run "
+                    "first; activation names the anchor while it is missing.")
             return resolve_expression(entry['address'],self.memory,self.symbols,
                                       process_name=self.plan['process_name'],pointer_size=self.memory.pointer_size)
         offsets = [self._resolve_pointer_offset(offset) if isinstance(offset, str) else offset
