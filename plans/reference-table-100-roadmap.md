@@ -986,6 +986,42 @@ Each Witcher3 table keeps its single `createthread` RT-5G residual
 (class c gate, O22). Full main suite 5,036 OK / 36 expected skips
 after the merge.
 
+Nested relative-address staging ratification (2026-11-12, Lane B,
+merged as `285fb8a`): the 134 rows of the Octopath2
+relative-address census - the last lead case of the 537-blocked
+cycle - are proven and staged: the staging walk folds relative
+ancestors with offset-carrying levels and index-times-stride own
+literals (`+00*04`) through the deterministic synthetic symbol
+`__ct2_rtbase_<anchor_id>` (plan metadata, never a dependency; the
+engine injects the anchor heading's live base per activation call,
+inert and named fail-closed while it is missing, a registered
+symbol under the placeholder name the named collision); the
+byte-stable flat signed-hex total is kept while every level is a
+plain-hex relative literal with no pointer offsets anywhere (the
+RT-4.3 O9/O1 form, unchanged - the Death Stranding 2 and The
+Sinking City plan entries byte-identical against the pre-lane
+main); intermediate headings are never staged and addressless
+headings with pointer offsets keep the byte-for-byte ambiguous-base
+refusal. Proven on the synthetic shapes (flat / nested / stride /
+deep-chain plan folds, the placeholder proven out of the symbol
+table, byte-exact engine resolution at analysis-derived
+pointer-chain addresses, UDS collision, forged-marker refusal at
+both plan gates, two-compile determinism). Catalog remeasure
+`blocked-catalog-lane-b`: 117,809 total / 117,588 supported /
+12,974 headings / 104,439 actionable / 221 blocked (-134 vs
+`blocked-catalog-lane-a`, zero newly blocked, zero reason changes;
+exactly the 1 Octopath2 table changed, 134 -> 0, the other 150
+byte-identical). Full main suite 5,049 OK / 36 expected skips after
+the merge. With Lane B all three lead cases of the 537-row census
+(Lane A 182, Lane B 134, Lane C 80 by design) are closed; the
+remaining 221 blocked rows are the documented design/gate residuals
+(80 `BaseAddress` class-d by design, 79 required symbols not
+defined in their table, 23 no-unique-supported-provider, 11
+KeyHandlerThread WP-37, 6 RE2 AP-08.7, 4 usemono > 7.5, 2 + 2
+relative-ancestor refusals kept by design, 2 createthread RT-5G, 1
+pBase Cronos, 5 trailing-token, 6 single-row AA-syntax / DISABLE
+re-init).
+
 Suggested execution order: RT-4.1 (820, lowest risk and the largest
 guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),
 RT-4.6 (219), and RT-4.2 (1,085) last — its AA_HIDDEN portion cleared

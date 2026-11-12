@@ -54,8 +54,27 @@ headings / 104,305 actionable / 355 blocked (-182 vs
 32 -> 0, Witcher3 4.03 77 -> 1, Witcher3 4.02HF1 75 -> 1, the other
 148 tables byte-identical; each Witcher3 table keeps its single
 `createthread` RT-5G residual, blocked by design). Lane B (Octopath2
-relative-address staging, 134 rows) is in progress (branch
-`native-lane-b-reladdr`; compiler.py overlap deferred it behind Lane A).
+relative-address staging, 134 rows) merged into `main` as `285fb8a`
+(2026-11-12): full main suite 5,049 OK / 36 expected skips, catalog
+remeasure `blocked-catalog-lane-b` 117,809 total / 117,588 supported /
+12,974 headings / 104,439 actionable / 221 blocked (-134 vs
+`blocked-catalog-lane-a`, zero newly blocked, zero reason changes;
+3-chunk record-level delta: exactly the 1 Octopath2 table changed -
+134 -> 0, all the
+"Relative address cannot skip an addressless script/value
+ancestor." rows staged, the other 150 tables byte-identical): the
+staging walk now folds relative ancestors with offset-carrying
+levels and index-times-stride own literals (`+00*04`) through the
+deterministic synthetic symbol `__ct2_rtbase_<anchor_id>` (plan
+metadata, never a dependency; the engine injects the anchor
+heading's live base per activation call, a registered symbol under
+the placeholder name is the named fail-closed collision); the
+byte-stable flat signed-hex total is kept while every level is a
+plain-hex relative literal with no pointer offsets anywhere,
+addressless headings with pointer offsets keep their
+byte-for-byte ambiguous-base refusal, and the Death Stranding 2 /
+The Sinking City plan entries are byte-identical against the
+pre-lane main.
 Superseded 0.42 (build
 `native-20261111T044023Z-04112d15`, cut from `main` @ `377f760`,
 2026-11-11) - the CE 7.5 cleanup parity (a disable-phase cleanup

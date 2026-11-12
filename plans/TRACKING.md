@@ -486,6 +486,89 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- Lane B (2026-11-12, lane `native-lane-b-reladdr` @ `75a6443`,
+  merged into `main` as `285fb8a`): the Octopath2 relative-address
+  census (134 rows, the last lead case of the post-0.43
+  compatibility cycle). compiler.py: the staging walk now folds
+  relative ancestors into the chain whether or not they carry
+  pointer offsets, and the record's own pointer offsets no longer
+  block staging (they fold into the nested expression). Two forms:
+  while every level of the chain is a plain-hex relative literal
+  and no level carries pointer offsets, the byte-stable flat
+  signed-hex total is kept (the RT-4.3 O9/O1 form, unchanged - the
+  Death Stranding 2 and The Sinking City plan entries are
+  byte-identical against the pre-lane main); otherwise the chain
+  folds through the deterministic synthetic symbol
+  `__ct2_rtbase_<anchor_id>` (`_stage_nested_chain` mirrors
+  `_effective_address` composition level for level - the
+  anchor-side intermediate folds first, then the record's own
+  relative literal - and every level's offset slots wrap the folded
+  expression: integer offsets as hex, expression slots verbatim
+  parenthesized; fully fail-closed on any parser error). The
+  relative-literal predicate covers the plain-hex fast path plus
+  corpus shapes such as `+00*04` (index-times-stride); a symbol
+  base, cast, deref or any non-integer arithmetic keeps the
+  original named relative-address refusal. The placeholder is plan
+  metadata, never a dependency: `requires` = expression symbols
+  minus the placeholder (each `validate_symbol`-checked, the named
+  refusal "Unsupported address expression in the staged relative
+  chain." keeps an unexpressible fold fail-closed); an addressless
+  heading carrying pointer offsets below a relative record keeps
+  its byte-for-byte ambiguous-base refusal; the intermediate
+  headings themselves are never staged (they stay supported
+  navigation headings with their original relative address). Both
+  plan validators gate the placeholder (compiler
+  `_validate_value_address` + engine `validate_plan`): on a
+  `runtime_base_required` row whose address is not a flat +/-
+  total, the placeholder must be the chain's innermost token and is
+  dropped from the expected symbol set (named refusal "Staged
+  relative chain must resolve through its runtime-base
+  placeholder."); a forged anchor or a dependency mismatch is named
+  at both validators. engine.py: `_value_address` gains the
+  `runtime_base_required` branch after the flat relative branch -
+  anchor validity, the named placeholder-name collision
+  ("Staged runtime-base placeholder collides with a registered
+  symbol.") outranking the missing-base condition, then per-call
+  injection of the anchor heading's live base into a dict copy of
+  the symbol table (never into `self.symbols`) with the existing
+  named inert text while it is unprovided. tests:
+  `tests/test_native_staged_pointer_chain.py` (new, 13 tests / 4
+  classes: plan fold shape + requires + marker contract (flat
+  byte-stable, nested pointer-offset levels, `+00*04` stride, deep
+  4-offset-slot chains, expression offset slots riding the UDS
+  dependency machinery); engine inert refusal + byte-exact live
+  resolution at analysis-derived pointer-chain addresses, the
+  placeholder proven out of the symbol table, the UDS
+  `__CT2_RTBASE_1` collision named before any memory access;
+  forged plans refused at both plan validators; two-compile
+  determinism). Full main suite after the merge: 5,049 OK / 36
+  expected skips (baseline 5,036 + 13). Catalog remeasure
+  `blocked-catalog-lane-b`: 117,809 total / 117,588 supported /
+  12,974 headings / 104,439 actionable / 221 blocked (-134 vs
+  `blocked-catalog-lane-a`: 3-chunk record-level delta - exactly
+  the 1 Octopath2 table changed, 134 -> 0, all the "Relative
+  address cannot skip an addressless script/value ancestor." rows
+  staged, the other 150 tables byte-identical; zero newly blocked,
+  zero reason changes). The staged rows stay inert until the
+  table's own scripts write the group base at runtime
+  (`set_dynamic_address`); the proof is static at plan level (no
+  target attach, no Lua execution); AP-11 stays open by
+  definition. The remaining 221 blocked rows are the documented
+  design/gate residuals: 80 `BaseAddress` rows (Lane C class d,
+  blocked by design until the documented user import), 79 required
+  symbols not defined in their table, 23 no-unique-supported-
+  provider, 11 KeyHandlerThread external ownership (WP-37, DS2),
+  6 RE2 custom value types (AP-08.7), 4 usemono > 7.5 (out of
+  parity scope), 2 Horizon Forbidden West "cannot skip
+  addressless ancestor" rows (no structurally clean staging shape
+  - keep the named refusal by design), 2 SOTTR "no
+  address-bearing ancestor" rows, 2 createthread/threadWait gate
+  (RT-5G, Witcher3), 1 pBase external ownership (Cronos), 5
+  Unexpected trailing address expression tokens, and 6 single-row
+  named AA-syntax / DISABLE re-init refusals (AtomicHeart,
+  Cyberpunk2077 x2, P3R-v4, SonicFrontiers, The Sinking City).
+  With Lane B all three lead cases of the 537-row census (Lane A
+  182, Lane B 134, Lane C 80 by design) are closed.
 - Lane A (2026-11-12, lane `native-lane-a-lua-define` @ `1b652d6`,
   merged into `main` as `ff6e8d6`): the dynamic Lua symbol
   registration proof - the 182 rows of the two lead cases of the
@@ -541,7 +624,7 @@ game-facing action.
   (pinned unregistered-menu-item refusal; UI-only, out of scope). The
   proof is static (no target attach, no Lua execution); AP-11 stays
   open by definition. Lane B (Octopath2 relative-address staging,
-  134 rows) is next, on `native-lane-b-reladdr`.
+  134 rows) merged as `285fb8a` (see the Lane B work item above).
 - Lane C (2026-11-12, lane `native-lane-c-baseaddress` @ `7f81094`,
   merged into `main` as `7d92482`): roadmap class-d ratification of
   the `BaseAddress` user-symbol import (tests only; new
@@ -572,8 +655,8 @@ game-facing action.
   static: no target attach, no Lua execution). Lane A (Witcher3 /
   GoW dynamic Lua symbol registration, 182 rows) merged as
   `ff6e8d6` (see the Lane A work item above); Lane B (Octopath2
-  relative-address staging, 134 rows) in progress on
-  `native-lane-b-reladdr`.
+  relative-address staging, 134 rows) merged as `285fb8a` (see the
+  Lane B work item above).
 - 0.43 the Master Trainer minimize-to-tray + window-geometry
   persistence (MT-32/MT-33) + the TGC field fix (2026-11-11,
   root-direct on `main`). MT-32: the Master Trainer can minimize
