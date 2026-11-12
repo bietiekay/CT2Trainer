@@ -45,8 +45,17 @@ user imports the symbol through the documented `<UserdefinedSymbols>`
 path, byte-exact through the engine, while the as-is rows keep the
 exact named class-d block (by design; the block message names the
 remedy). Lane A (Witcher3 / GoW dynamic Lua symbol registration, 182
-rows) is in progress; Lane B (Octopath2 relative-address staging, 134
-rows) is queued after Lane A (compiler.py overlap).
+rows) merged into `main` as `ff6e8d6` (2026-11-12): full main suite
+5,036 OK / 36 expected skips, catalog remeasure
+`blocked-catalog-lane-a` 117,809 total / 117,454 supported / 12,974
+headings / 104,305 actionable / 355 blocked (-182 vs
+`blocked-catalog-lane-c`, zero newly blocked, zero reason changes;
+3-chunk record-level delta: exactly the 3 Lane A tables changed - GoW
+32 -> 0, Witcher3 4.03 77 -> 1, Witcher3 4.02HF1 75 -> 1, the other
+148 tables byte-identical; each Witcher3 table keeps its single
+`createthread` RT-5G residual, blocked by design). Lane B (Octopath2
+relative-address staging, 134 rows) is in progress (branch
+`native-lane-b-reladdr`; compiler.py overlap deferred it behind Lane A).
 Superseded 0.42 (build
 `native-20261111T044023Z-04112d15`, cut from `main` @ `377f760`,
 2026-11-11) - the CE 7.5 cleanup parity (a disable-phase cleanup

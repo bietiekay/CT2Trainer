@@ -486,6 +486,62 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- Lane A (2026-11-12, lane `native-lane-a-lua-define` @ `1b652d6`,
+  merged into `main` as `ff6e8d6`): the dynamic Lua symbol
+  registration proof - the 182 rows of the two lead cases of the
+  537-blocked census. Shape 1 (Witcher3, `lua_program.py`): bounded
+  detection of the AA symbol names a record's ENABLE Lua proves to
+  define by returning a `define(<ident>, ...)` string (expression
+  position only - a bare `name:` label keeps the program-owned
+  contract); the adopted idents leave `requires` (the record
+  self-satisfies its own define) and are recorded in the
+  deterministic `lua_define_symbols` plan marker. Shape 2 (GoW,
+  `lua_symbol_providers.py`): the bounded literal name-list
+  derivation - a same-source function returns a literal table of
+  string tuples (directly or one local hop) and the constant-string
+  column is registered through the exact `X[i][k]` indexed call
+  argument (constant integer k, `local X = f()` binding); call forms
+  mirror the house evidence regexes (case-insensitive; CE
+  first-letter spellings + the WP-46 dotted form); derived names join
+  the same register-and-release rule (one-shot adopts
+  registration-only; >64 names unproven, never truncated; indirect
+  local names, non-string cells and unbound sources stay unproven);
+  both plan validators re-derive and JSON-compare the whole program,
+  so forged `provides` / `lua_define_symbols` are refused at both
+  gates. Runtime hosting (`lua_host.py`): `AOBScanModuleUnique`
+  (inclusive end bound), `stringToByteTable`, `getUpdateTimer`,
+  `createDisassembler` (the `getLastDisassembleData` shape,
+  `modrmValue` / `parameterValue` = the absolute-address operand),
+  `getNameFromAddress`, the bounded in-memory `createTableFile`
+  stream (never persisted; `saveToFile` stays a named refusal; the
+  RT-5 item A refusal is superseded for the single-target model) and
+  the `GetLuaEngine` inert show/hide/Component surface (`doClick`
+  keeps the pinned menu refusal contract); `encodeFunction` /
+  `decodeFunction` stay unhosted (named refusal). +16 tests
+  (`tests/test_native_lua_define_providers.py` +7,
+  `tests/test_native_lua_name_list_providers.py` +9; the two
+  createTableFile refusal cases in
+  `tests/test_native_rt5_embedded_files.py` replaced by the
+  hosted-stream coverage). 3-table static audit (GoW + Witcher3 4.03
+  + Witcher3 4.02HF1, sha256-pinned inputs, originals verified
+  unchanged): 184 -> 2 blocked (GoW 57/57 supported; each Witcher3
+  table down to its single `createthread` RT-5G residual, blocked by
+  design). Full main suite after the merge: 5,036 OK / 36 expected
+  skips (baseline 5,020 + 16 new). Catalog remeasure
+  `blocked-catalog-lane-a`: 117,809 total / 117,454 supported /
+  12,974 headings / 104,305 actionable / 355 blocked (-182 vs
+  `blocked-catalog-lane-c`: 3-chunk record-level delta - exactly the 3
+  Lane A tables changed, GoW 32 -> 0, Witcher3 4.03 77 -> 1, Witcher3
+  4.02HF1 75 -> 1, the other 148 byte-identical; zero newly blocked,
+  zero reason changes). Documented residuals (engine follow-up,
+  outside lane file ownership): the real GoW pre-enable
+  `unregisterSymbol` idempotency (CE `DeleteUserdefinedSymbol` is a
+  silent no-op; the record-scope ownership contract keeps the named
+  refusal) and the real record's `luaEngine.MenuItem5.doClick()`
+  (pinned unregistered-menu-item refusal; UI-only, out of scope). The
+  proof is static (no target attach, no Lua execution); AP-11 stays
+  open by definition. Lane B (Octopath2 relative-address staging,
+  134 rows) is next, on `native-lane-b-reladdr`.
 - Lane C (2026-11-12, lane `native-lane-c-baseaddress` @ `7f81094`,
   merged into `main` as `7d92482`): roadmap class-d ratification of
   the `BaseAddress` user-symbol import (tests only; new
@@ -514,9 +570,10 @@ game-facing action.
   tables by design until the user imports the symbol; a real in-game
   import + effect (AP-11) remains open by definition (this proof is
   static: no target attach, no Lua execution). Lane A (Witcher3 /
-  GoW dynamic Lua symbol registration, 182 rows) in progress; Lane B
-  (Octopath2 relative-address staging, 134 rows) queued after Lane A
-  (compiler.py overlap).
+  GoW dynamic Lua symbol registration, 182 rows) merged as
+  `ff6e8d6` (see the Lane A work item above); Lane B (Octopath2
+  relative-address staging, 134 rows) in progress on
+  `native-lane-b-reladdr`.
 - 0.43 the Master Trainer minimize-to-tray + window-geometry
   persistence (MT-32/MT-33) + the TGC field fix (2026-11-11,
   root-direct on `main`). MT-32: the Master Trainer can minimize

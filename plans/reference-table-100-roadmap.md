@@ -962,6 +962,30 @@ message names the remedy). Catalog zero delta `blocked-catalog-lane-c`
 keep their original reasons. Full main suite 5,020 OK / 36 expected
 skips after the merge.
 
+Dynamic Lua symbol registration ratification (2026-11-12, Lane A,
+merged as `ff6e8d6`): the 182 rows of the two dynamic
+symbol-registration shapes of the 537-blocked census are proven and
+staged - the Witcher3 returned-define shape (the ENABLE Lua returns a
+`define(<ident>, <expr>)` string spliced into the AA section per the
+CE contract, so the record's own envelope may reference the defined
+symbol: the adopted idents leave `requires`, recorded in the
+deterministic `lua_define_symbols` plan marker, expression position
+only - a bare `name:` label keeps the program-owned contract) and the
+GoW literal name-list shape (the bounded derivation of the
+constant-string column registered through the exact `X[i][k]` indexed
+call argument; the same register-and-release rule as the WP-14
+extraction; >64 names stay unproven). Proven on the synthetic shapes
+(plan adoption, the expression-position vs bare-label boundary,
+forged-metadata refusal at both plan gates, byte-exact engine
+roundtrip with the hosted registration surface). Catalog remeasure
+`blocked-catalog-lane-a`: 117,809 total / 117,454 supported / 12,974
+headings / 104,305 actionable / 355 blocked (-182 vs
+`blocked-catalog-lane-c`, zero newly blocked, zero reason changes;
+exactly the 3 Lane A tables changed, the other 148 byte-identical).
+Each Witcher3 table keeps its single `createthread` RT-5G residual
+(class c gate, O22). Full main suite 5,036 OK / 36 expected skips
+after the merge.
+
 Suggested execution order: RT-4.1 (820, lowest risk and the largest
 guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),
 RT-4.6 (219), and RT-4.2 (1,085) last — its AA_HIDDEN portion cleared
