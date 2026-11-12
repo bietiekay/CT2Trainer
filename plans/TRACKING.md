@@ -486,6 +486,37 @@ game-facing action.
   (49,654,613 bytes; the frozen `CT2Trainer-Master.exe` sha256
   `9762c8bdc2298c16bd82779f206d9a885a449261a6428187c3bd2155fc5bf1bc`,
   16,929,639 bytes, ships next to the converter).
+- Lane C (2026-11-12, lane `native-lane-c-baseaddress` @ `7f81094`,
+  merged into `main` as `7d92482`): roadmap class-d ratification of
+  the `BaseAddress` user-symbol import (tests only; new
+  `tests/test_native_baseaddress_import.py` +378 lines, 9 tests / 3
+  classes). The 80 `BaseAddress` rows of the five UE5
+  script-template tables (AtomicHeart v1.2, HellPie v1.0, Oregon
+  v1.1, Scorn v1.0, The Callisto Protocol v1.2 - 16 per table) are
+  blocked by design with the exact named class-d message while
+  `BaseAddress` is undefined, and become fully supported once a
+  `<UserdefinedSymbols>` `BaseAddress` entry exists - not staged
+  (the UDS address is static), `dependency_ids=[]`,
+  `requires=['BaseAddress']`, resolved byte-exactly through the
+  engine read / write roundtrip; forged out-of-range and
+  duplicate-casefold maps are refused with the named reasons. Static
+  audit over the five real-table temp copies (originals
+  sha256-verified unchanged): 83 as-is blocked (80 `BaseAddress` + 3
+  out-of-scope) -> 3 blocked after import (all out-of-scope
+  residual, original reasons intact), +16 supported per table, zero
+  newly blocked, zero reason changes. Full main suite after the
+  merge: 5,020 OK / 36 expected skips (baseline 5,011 + 9). Catalog
+  remeasure `blocked-catalog-lane-c`: 117,809 total / 117,272
+  supported / 12,974 headings / 104,123 actionable / 537 blocked -
+  zero delta vs `blocked-catalog-043-tgc` (3-chunk record-level
+  delta: 0 newly blocked, 0 unblocked, 0 reason changes, 0 tables
+  added / removed). The 80 rows stay blocked in the shipped (as-is)
+  tables by design until the user imports the symbol; a real in-game
+  import + effect (AP-11) remains open by definition (this proof is
+  static: no target attach, no Lua execution). Lane A (Witcher3 /
+  GoW dynamic Lua symbol registration, 182 rows) in progress; Lane B
+  (Octopath2 relative-address staging, 134 rows) queued after Lane A
+  (compiler.py overlap).
 - 0.43 the Master Trainer minimize-to-tray + window-geometry
   persistence (MT-32/MT-33) + the TGC field fix (2026-11-11,
   root-direct on `main`). MT-32: the Master Trainer can minimize

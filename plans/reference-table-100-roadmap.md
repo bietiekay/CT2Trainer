@@ -948,6 +948,20 @@ zero delta — UI-only change); per the user decision 2026-10-24 the
 work is the RT-5 implementation items A-E per the inventory (roadmap
 RT-5 row).
 
+Class-d ratification (2026-11-12, Lane C, merged as `7d92482`): the 80
+`BaseAddress` rows of R6 (five UE5 script-template tables x 16) are
+blocked by design until the user imports the symbol; the test-only
+lane `native-lane-c-baseaddress` proves the documented user-symbol
+import path end-to-end - with a `<UserdefinedSymbols>` `BaseAddress`
+entry the same rows are fully supported (not staged; static UDS
+address, `requires=['BaseAddress']`), byte-exact through the engine,
+and the as-is rows keep the exact named class-d block (the block
+message names the remedy). Catalog zero delta `blocked-catalog-lane-c`
+(vs `blocked-catalog-043-tgc`); the residual 3 rows (2
+`MapLastLeftClickCoordinates_Pointer`, 1 `r15l`) are out of scope and
+keep their original reasons. Full main suite 5,020 OK / 36 expected
+skips after the merge.
+
 Suggested execution order: RT-4.1 (820, lowest risk and the largest
 guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),
 RT-4.6 (219), and RT-4.2 (1,085) last — its AA_HIDDEN portion cleared

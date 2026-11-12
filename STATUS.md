@@ -31,6 +31,22 @@ skips, `ce_inputs: []`; catalog zero delta `blocked-catalog-043-tgc`
 (117,809 total / 117,272 supported / 12,974 headings / 104,123
 actionable / 537 blocked - zero newly blocked, zero unblocked, zero
 reason changes); see the 0.43 section below.
+Post-0.43 (2026-11-12): the deferred compatibility-lane cycle against
+the 537-blocked census started - Lane C (roadmap class d: the
+`BaseAddress` user-symbol import proof, tests only, +9 tests in
+`tests/test_native_baseaddress_import.py`) merged into `main` as
+`7d92482`: full main suite 5,020 OK / 36 expected skips, catalog zero
+delta `blocked-catalog-lane-c` (117,809 total / 117,272 supported /
+12,974 headings / 104,123 actionable / 537 blocked - 0 newly blocked,
+0 unblocked, 0 reason changes): the 80 `BaseAddress` rows of the five
+UE5 script-template tables (16 per table) are proven fully supported -
+not staged, static UDS address, `requires=['BaseAddress']` - once the
+user imports the symbol through the documented `<UserdefinedSymbols>`
+path, byte-exact through the engine, while the as-is rows keep the
+exact named class-d block (by design; the block message names the
+remedy). Lane A (Witcher3 / GoW dynamic Lua symbol registration, 182
+rows) is in progress; Lane B (Octopath2 relative-address staging, 134
+rows) is queued after Lane A (compiler.py overlap).
 Superseded 0.42 (build
 `native-20261111T044023Z-04112d15`, cut from `main` @ `377f760`,
 2026-11-11) - the CE 7.5 cleanup parity (a disable-phase cleanup
