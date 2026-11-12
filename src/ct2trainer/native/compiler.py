@@ -818,6 +818,23 @@ def _validate_value_address(entry: dict, allow_empty: bool = False,
             raise NativeCompileError("Invalid pointer offsets.")
     expected = {symbol.casefold() for symbol in address_symbols}
     expected.update(symbol.casefold() for symbol in offset_symbols)
+    if (entry.get("runtime_base_required") is True
+            and _runtime_base_marker_ok(by_id or {}, entry)):
+        # Lane B: a nested staged chain resolves through its
+        # deterministic runtime-base placeholder (the anchor heading's
+        # live base, injected per activation call by the engine).  The
+        # placeholder is plan metadata, never a dependency - it must be
+        # the chain's innermost token and is dropped from the expected
+        # symbol set.  A flat relative total (starts with +/-) carries
+        # no placeholder and keeps the existing empty-expected form.
+        placeholder = _runtime_base_placeholder_name(
+            entry["runtime_base_anchor"])
+        if not entry["address"].lstrip().startswith(("+", "-")):
+            if placeholder.casefold() not in expected:
+                raise NativeCompileError(
+                    "Staged relative chain must resolve through its "
+                    "runtime-base placeholder.")
+            expected.discard(placeholder.casefold())
     if {symbol.casefold() for symbol in entry["requires"]} != expected or entry["provides"]:
         raise NativeCompileError("Value symbol dependencies do not match the address.")
 
@@ -1494,6 +1511,60 @@ def _adopt_dynamic_address_providers(entries: list[dict], sources: dict[int, Ent
 _STAGE_RELATIVE_RE = re.compile(r"^[+-]?[0-9A-Fa-f]+\Z")
 
 
+def _stage_relative_literal(text) -> bool:
+    """Lane B: the relative-literal predicate of the staging walk.
+
+    True when the address text is a signed relative literal that the
+    bounded expression grammar parses as pure integer arithmetic (integer
+    nodes, unary +/-, binary + - * /) - the plain-hex
+    ``_STAGE_RELATIVE_RE`` fast path plus corpus shapes such as
+    ``+00*04`` (index-times-stride) that the relative-address dialect
+    allows and the runtime expression evaluator resolves.  A symbol base,
+    a cast, a deref or any other token is not a relative literal; such a
+    record keeps its named relative-address refusal fail-closed.
+    """
+    if not isinstance(text, str):
+        return False
+    stripped = text.strip()
+    if not stripped.startswith(("+", "-")):
+        return False
+    try:
+        tree = parse_expression(stripped)
+    except AddressExpressionError:
+        return False
+    stack = [tree]
+    while stack:
+        node = stack.pop()
+        kind = node.get("kind")
+        if kind == "integer":
+            continue
+        if kind == "unary":
+            if node.get("operator") not in ("+", "-"):
+                return False
+            stack.append(node["value"])
+            continue
+        if kind == "binary":
+            if node.get("operator") not in ("+", "-", "*", "/"):
+                return False
+            stack.append(node["left"])
+            stack.append(node["right"])
+            continue
+        return False
+    return True
+
+
+def _runtime_base_placeholder_name(anchor_id: int) -> str:
+    """Lane B: the deterministic synthetic symbol of a nested staged chain.
+
+    The innermost token of the nested staged expression is this
+    placeholder; the engine injects it per activation call with the
+    anchor heading's live base (never into the persisted symbol table),
+    so the plan-level ``requires`` never names it.  ``validate_symbol``
+    accepts the name (ASCII letters/digits/underscore, not all-hex).
+    """
+    return f"__ct2_rtbase_{anchor_id}"
+
+
 def _anchor_parent_provides_symbols(by_id: dict[int, dict],
                                     parent_id: int | None) -> bool:
     """RT-4.3 (O9/O1): the WP-38 provider-group-shape gate for staging.
@@ -1522,10 +1593,48 @@ def _anchor_parent_provides_symbols(by_id: dict[int, dict],
             and "registerSymbol(" in program["source"])
 
 
+def _stage_nested_chain(source: Entry, intermediates: list[int],
+                        sources: dict[int, Entry], anchor_id: int) -> str | None:
+    """Lane B: fold a relative-address chain onto the runtime-base
+    placeholder.
+
+    Mirrors the composition order of ``_effective_address`` level for
+    level - the anchor-side intermediate folds first, then the record's
+    own relative literal - but instead of resolving the anchor heading's
+    static address, the chain resolves through the deterministic
+    placeholder token of ``_runtime_base_placeholder_name``.  Every
+    level's pointer-offset slots wrap the folded expression exactly the
+    way the flat fold does (integer offsets as hex, expression slots
+    verbatim parenthesized).  Returns None when the fold is not
+    expressible within the bounded grammar (the caller keeps the
+    original named refusal fail-closed).
+    """
+    try:
+        expr = _runtime_base_placeholder_name(anchor_id)
+        for level_id in list(reversed(intermediates)) + [source.id]:
+            level = sources[level_id]
+            expr = "(" + expr + ")" + (level.address or "").strip()
+            for offset in reversed(_offsets(level.pointer_offsets)):
+                if isinstance(offset, str):
+                    # RT-4.3 (O3) / Lane B: an expression offset stays
+                    # verbatim (parenthesized); the runtime evaluator
+                    # resolves it against the live symbol table.
+                    expr = f"[{expr}]+({offset})"
+                else:
+                    expr = ("[" + expr + "]"
+                            + (f"+{offset:X}" if offset > 0
+                               else f"-{abs(offset):X}"
+                               if offset < 0 else ""))
+        parse_expression(expr)
+    except (AAError, AddressExpressionError):
+        return None
+    return expr
+
+
 def _stage_runtime_base_markers(entries: list[dict], sources: dict[int, Entry],
                                 nodes: dict[int, ET.Element],
                                 by_id: dict[int, dict]) -> None:
-    """RT-4.3 (O9/O1): stage structurally clean relative-address values.
+    """RT-4.3 (O9/O1) + Lane B: stage structurally clean relative values.
 
     Runs after WP-38/WP-50 provider adoption over every remaining blocked
     value whose refusal is one of the two relative-address refusals:
@@ -1536,22 +1645,29 @@ def _stage_runtime_base_markers(entries: list[dict], sources: dict[int, Entry],
       record's own pointer offsets are inlined into the folded expression
       by ``_effective_address``; a symbol base rides the ordinary
       dependency machinery.
-    - no address-bearing ancestor at all, no pointer offsets on the record
-      or anywhere on the chain: the record is staged on the runtime-base
-      marker — its address becomes the folded signed-hex relative total on
-      the expression profile, the nearest heading ancestor is marked
-      ``runtime_base_target`` and the engine resolves
-      ``anchor base + offset`` at activation once the table scripts have
-      written the anchor's live base (``set_dynamic_address``).  Until then
-      the row is visible but inert; activation names the missing anchor.
+    - no address-bearing ancestor at all: the record is staged on the
+      runtime-base marker, the nearest heading ancestor is marked
+      ``runtime_base_target`` and the engine resolves the address at
+      activation once the table scripts have written the anchor's live
+      base (``set_dynamic_address``).  Until then the row is visible but
+      inert; activation names the missing anchor.  Two forms: while every
+      level of the chain is a plain-hex relative literal and no level
+      carries pointer offsets, the address is the folded signed-hex
+      relative total (byte-stable).  Otherwise - offset-carrying
+      intermediates, the record's own offsets, or a non-plain-hex relative
+      literal (index-times-stride such as ``+00*04``) - the chain folds
+      through the deterministic runtime-base placeholder
+      (``_stage_nested_chain``) and every level's offset slots wrap the
+      folded expression; the placeholder is plan metadata, never a
+      dependency (the engine injects it per activation call).
 
     An addressless heading carrying pointer offsets below a relative record
     keeps its byte-for-byte refusal (ambiguous inherited base); a relative
-    ancestor with a non-hex address (symbol, cast, expression) is not
-    folded and the record stays blocked.  Addressless script/value
-    ancestors on the chain are transparent for the staging walk; the
-    base-provenance question is decided per anchor: an anchor heading that
-    hangs directly under a supported addressless script with
+    ancestor whose address is not pure integer arithmetic (symbol base,
+    cast, deref) is not folded and the record stays blocked.  Addressless
+    script/value ancestors on the chain are transparent for the staging
+    walk; the base-provenance question is decided per anchor: an anchor
+    heading that hangs directly under a supported addressless script with
     symbol-registration intent is the WP-38 provider-group shape - the
     table intends that script's runtime symbol as the group's base - so
     its rows keep the named refusal fail-closed instead of being
@@ -1568,7 +1684,8 @@ def _stage_runtime_base_markers(entries: list[dict], sources: dict[int, Entry],
             continue
         source = sources[entry["id"]]
         own = (source.address or "").strip()
-        if not _STAGE_RELATIVE_RE.match(own):
+        if not (_STAGE_RELATIVE_RE.match(own)
+                or _stage_relative_literal(own)):
             continue
         # Walk the source ancestry once, classifying it (the source model
         # is canonical for addresses; the plan only contributes the
@@ -1589,19 +1706,29 @@ def _stage_runtime_base_markers(entries: list[dict], sources: dict[int, Entry],
                 break
             visited.add(parent_id)
             anc = sources[parent_id]
-            if anc.pointer_offsets:
-                ambiguous = True
             addr = (anc.address or "").strip()
             if addr:
-                if addr.startswith(("+", "-")) and _STAGE_RELATIVE_RE.match(addr):
+                if addr.startswith(("+", "-")) and (
+                        _STAGE_RELATIVE_RE.match(addr)
+                        or _stage_relative_literal(addr)):
+                    # Lane B: a relative ancestor joins the folded
+                    # chain whether or not it carries pointer offsets;
+                    # its offsets wrap the folded expression in the
+                    # nested fold (the flat total cannot express them).
                     intermediates.append(parent_id)
                     cur = anc
                     continue
+                # A non-relative address-bearing ancestor is the base:
+                # the skip-fold path below is unchanged.
                 address_ancestor = parent_id
                 break
-            if anc.is_group_header:
-                if anchor_id is None:
-                    anchor_id = parent_id
+            if anc.pointer_offsets:
+                # An addressless heading carrying pointer offsets has a
+                # genuinely ambiguous inherited base; the named refusal
+                # stays byte-for-byte.
+                ambiguous = True
+            if anc.is_group_header and anchor_id is None:
+                anchor_id = parent_id
             cur = anc
         profile = None
         if source.variable_type in _PROFILE_VALUE_TYPES:
@@ -1666,10 +1793,11 @@ def _stage_runtime_base_markers(entries: list[dict], sources: dict[int, Entry],
                 entry["dropdown"] = {"choices": [], "read_only": False}
                 entry.pop("value_profile", None)
             continue
-        if ambiguous or source.pointer_offsets:
-            # An addressless heading with pointer offsets on the chain - or
-            # the record's own pointer offsets - cannot be expressed as the
-            # flat staged total; the named refusal stays byte-for-byte.
+        if ambiguous:
+            # An addressless heading with pointer offsets on the chain has
+            # a genuinely ambiguous inherited base; the named refusal
+            # stays byte-for-byte.  The record's own pointer offsets no
+            # longer block: they fold into the nested expression below.
             continue
         if anchor_id is None:
             continue
@@ -1686,20 +1814,59 @@ def _stage_runtime_base_markers(entries: list[dict], sources: dict[int, Entry],
             # the group; the named relative-address refusal stays
             # fail-closed.
             continue
-        total = int(own.lstrip("+-") or "0", 16)
-        if own[0] == "-":
-            total = -total
-        for mid_id in intermediates:
-            mid_addr = (sources[mid_id].address or "").strip()
-            if not _STAGE_RELATIVE_RE.match(mid_addr):
+        # Lane B: the flat staged total is the byte-stable form only
+        # while every level of the chain is a plain-hex relative literal
+        # and no level carries pointer offsets; anything else (an index-
+        # times-stride own literal, offset-carrying intermediates, or the
+        # record's own offsets) folds through the runtime-base
+        # placeholder instead.
+        flat_eligible = (bool(_STAGE_RELATIVE_RE.match(own))
+                         and not source.pointer_offsets)
+        if flat_eligible:
+            for mid_id in intermediates:
+                mid_addr = (sources[mid_id].address or "").strip()
+                if (not _STAGE_RELATIVE_RE.match(mid_addr)
+                        or sources[mid_id].pointer_offsets):
+                    flat_eligible = False
+                    break
+        staged_requires: list[str] = []
+        if flat_eligible:
+            total = int(own.lstrip("+-") or "0", 16)
+            if own[0] == "-":
+                total = -total
+            for mid_id in intermediates:
+                mid_addr = (sources[mid_id].address or "").strip()
+                value = int(mid_addr.lstrip("+-"), 16)
+                if mid_addr[0] == "-":
+                    value = -value
+                total += value
+            if abs(total) > 0x7FFFFFFFFFFFFFFF:
                 continue
-            value = int(mid_addr.lstrip("+-"), 16)
-            if mid_addr[0] == "-":
-                value = -value
-            total += value
-        if abs(total) > 0x7FFFFFFFFFFFFFFF:
-            continue
-        staged_address = f"+{total:X}" if total >= 0 else f"-{abs(total):X}"
+            staged_address = f"+{total:X}" if total >= 0 else f"-{abs(total):X}"
+        else:
+            staged_address = _stage_nested_chain(source, intermediates,
+                                                 sources, anchor_id)
+            if staged_address is None:
+                continue
+            placeholder = _runtime_base_placeholder_name(anchor_id)
+            staged_requires = [symbol for symbol
+                               in advanced_expression_symbols(staged_address)
+                               if symbol.casefold() != placeholder.casefold()]
+            rejected = False
+            for symbol in staged_requires:
+                try:
+                    validate_symbol(symbol)
+                except AAError:
+                    rejected = True
+                    break
+            if rejected:
+                entry["kind"] = "blocked"
+                entry["supported"] = False
+                entry["reason"] = ("Unsupported address expression in the "
+                                   "staged relative chain.")
+                entry.pop("value_profile", None)
+                entry["dropdown"] = {"choices": [], "read_only": False}
+                continue
         entry["kind"] = "value"
         entry["supported"] = True
         entry["reason"] = (
@@ -1711,7 +1878,7 @@ def _stage_runtime_base_markers(entries: list[dict], sources: dict[int, Entry],
         entry["address"] = staged_address
         entry["address_profile"] = "expression/v1"
         entry["pointer_offsets"] = []
-        entry["requires"] = []
+        entry["requires"] = staged_requires
         entry["dependency_ids"] = []
         entry["runtime_base_required"] = True
         entry["runtime_base_anchor"] = anchor_id
