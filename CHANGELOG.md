@@ -2,6 +2,66 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.44 (2026-11-13)
+
+The deferred compatibility-lane cycle against the 537-blocked
+post-0.43 census - the three lead cases, all closed on `main`.
+(Lane C, roadmap class d, test-only; merged as `7d92482`): the
+80 `BaseAddress` rows of the five UE5 script-template tables
+(16 per table) are blocked by design until the user imports the
+symbol, and the documented `<UserdefinedSymbols>` import path is
+proven end-to-end - with the entry the same rows are fully
+supported (not staged; static UDS address,
+`requires=['BaseAddress']`), byte-exact through the engine,
+while the as-is rows keep the exact named class-d block (the
+block message names the remedy); catalog zero delta
+`blocked-catalog-lane-c`. (Lane A; merged as `ff6e8d6`): the
+182 rows of the two dynamic Lua symbol registration shapes -
+the Witcher3 returned-define shape (the ENABLE Lua returns a
+`define(<ident>, <expr>)` string spliced into the AA section
+per the CE contract, so the record's own envelope may reference
+the defined symbol: the adopted idents leave `requires`,
+recorded in the deterministic `lua_define_symbols` plan
+marker, expression position only - a bare `name:` label keeps
+the program-owned contract) and the GoW literal name-list
+shape (the bounded derivation of the constant-string column
+registered through the exact `X[i][k]` indexed call argument;
+the same register-and-release rule as the WP-14 extraction;
+>64 names stay unproven) - plus the runtime hosting of the
+registration path (`AOBScanModuleUnique`, `stringToByteTable`,
+`getUpdateTimer`, `createDisassembler`, `getNameFromAddress`,
+the bounded in-memory `createTableFile` stream, the inert
+`GetLuaEngine` show/hide / Component surface). (Lane B; merged
+as `285fb8a`): the 134 rows of the Octopath2 relative-address
+census - the staging walk now folds relative ancestors into
+the chain whether or not they carry pointer offsets, and the
+record's own pointer offsets no longer block staging; while
+every level is a plain-hex relative literal with no pointer
+offsets anywhere the byte-stable flat signed-hex total is kept
+(the RT-4.3 O9/O1 form, unchanged), otherwise the chain folds
+through the deterministic synthetic symbol
+`__ct2_rtbase_<anchor_id>` (plan metadata, never a dependency;
+the engine injects the anchor heading's live base per
+activation call, a registered symbol under the placeholder name
+is the named fail-closed collision; intermediate headings are
+never staged, and addressless headings with pointer offsets
+keep the byte-for-byte ambiguous-base refusal). Catalog
+remeasure `blocked-catalog-lane-b`: 117,809 total / 117,588
+supported / 12,974 headings / 104,439 actionable / 221 blocked
+(net -316 vs `blocked-catalog-043-tgc`: 182 + 134 unblocked,
+zero newly blocked, zero reason changes; exactly the 4 lane
+tables changed, the other 147 byte-identical). Full main suite
+5,049 OK / 36 expected skips. The remaining 221 blocked rows
+are the documented design / gate residuals (80 `BaseAddress`
+by design until the documented user import, 79 required
+symbols not defined in their table, 23 no-unique-supported-
+provider, 11 KeyHandlerThread WP-37 external ownership, 6 RE2
+AP-08.7 custom value types, 5 trailing-token, 4 usemono > 7.5
+out of parity scope, 2 + 2 relative-ancestor refusals kept by
+design, 2 createthread / threadWait RT-5G, 1 pBase Cronos, 6
+single-row named AA-syntax / DISABLE re-init refusals); AP-11
+stays open by definition (0/6,143).
+
 ## 0.43 (2026-11-11)
 
 Master Trainer minimize-to-tray + window-geometry persistence
