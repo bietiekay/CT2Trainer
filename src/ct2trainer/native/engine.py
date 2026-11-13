@@ -1596,6 +1596,12 @@ class TrainerEngine:
         self._hotkey_bridge_faults: set[str] = set()
         self._hotkey_live: set[int] = set()
         self._hotkey_owner = plan["trainer_id"]
+        # MT-34 (0.45): the per-session hotkey switch (the trainer header
+        # "Hotkeys: on/off" control; disable-all / reset-to-defaults).
+        # Session-scoped by design - never persisted; a fresh engine
+        # starts with the table hotkeys live.  "off" reconciles the
+        # published bindings to an empty live set (see _hotkey_sync).
+        self.session_hotkeys_enabled = True
         self.hotkey_controller = HotkeyController(
             _HotkeyGate(self),
             focus_provider=lambda: self.memory is not None,
@@ -6434,11 +6440,21 @@ class TrainerEngine:
         id).  Deliberate scope limit: no automatic re-claim - when the
         winning record disables, its binding is dropped and the losing
         claimant keeps no binding until its own liveness changes again.
+
+        MT-34 (0.45): while the per-session hotkey switch is off
+        (``session_hotkeys_enabled`` False), the live set is forced empty
+        - every published model binding and OS registration is released
+        and nothing new is published.  The plan-level bindings are never
+        mutated, so switching back on re-publishes the table defaults of
+        the live records.
         """
         if self.closed:
             return
-        live = {record_id for record_id in self.entries
-                if self._hotkey_record_live(record_id)}
+        if self.session_hotkeys_enabled:
+            live = {record_id for record_id in self.entries
+                    if self._hotkey_record_live(record_id)}
+        else:
+            live = set()
         for record_id in sorted(self._hotkey_live - live):
             self.hotkey_controller.unregister(self._hotkey_owner, record_id)
             # WP-53 (GC-D7): release the OS registrations the record had
@@ -6675,6 +6691,29 @@ class TrainerEngine:
         """
         toggles, self._hotkey_ui_toggles = self._hotkey_ui_toggles, []
         return toggles
+
+    def set_session_hotkeys(self, enabled: bool) -> bool:
+        """MT-34 (0.45): the per-session hotkey switch (trainer header
+        "Hotkeys: on/off" control).
+
+        Switching off reconciles the published bindings to an empty live
+        set (``_hotkey_sync`` releases every model binding and its OS
+        mirror - disable-all); switching on re-publishes the table
+        declared hotkeys of the live records (reset to the table's
+        defaults - there is no per-record override surface).  The
+        plan-level bindings are never mutated, so the switch loses
+        nothing.  Session-scoped by design: never persisted, a fresh
+        engine starts with the table hotkeys live.
+
+        Returns the resulting state (bool).
+        """
+        enabled = bool(enabled)
+        if enabled == self.session_hotkeys_enabled:
+            return self.session_hotkeys_enabled
+        self.session_hotkeys_enabled = enabled
+        self.debug_log.log("hotkeys-session-switched", enabled=enabled)
+        self._hotkey_sync()
+        return self.session_hotkeys_enabled
 
     def _set_recursive_value(self, identifier: int, entry: dict, text: str) -> str:
         """Apply one moRecursiveSetValue write across the value-descendant closure.

@@ -109,6 +109,11 @@ class TrainerWindow:
         # keeps the label in sync).
         self.detach_cb = detach_cb
         self.detach_btn: tk.Button | None = None
+        # MT-34 (0.45): the per-session hotkey switch control (every
+        # trainer, standalone + Master - like "Re-attach", no
+        # standalone byte-identity test exists).  The label mirrors the
+        # engine's session_hotkeys_enabled state.
+        self.hotkeys_btn: tk.Button | None = None
         # MT-21 (Master Trainer, 0.36): the trainer grid column count
         # (1 / 2 / 3) and the optional persistence callback.  The Master
         # passes both (persisted preference + the header cycle control);
@@ -220,6 +225,15 @@ class TrainerWindow:
         # budget) without restarting the trainer.
         self._button(self.header, "Re-attach", self.on_reattach,
                      width=10).pack(side="right")
+        # MT-34 (0.45): the per-session hotkey switch ("Hotkeys: on/off")
+        # in every trainer header (standalone + Master), like Re-attach;
+        # the label mirrors the current state (poll tick keeps it in
+        # sync).  Off releases every published binding (model + OS
+        # mirror), on re-publishes the table defaults of live records.
+        self.hotkeys_btn = self._button(self.header, "Hotkeys: on",
+                                        self._toggle_session_hotkeys,
+                                        width=12)
+        self.hotkeys_btn.pack(side="right")
         # MT-12 (Master Trainer, 0.25): explicit detach/attach control.
         # Present only when the Master passes its handler; the standalone
         # trainer header stays byte-identical.  The label mirrors the
@@ -931,6 +945,18 @@ class TrainerWindow:
         # action too, so it plays the same native-trainer tick character.
         play_sound("on" if identifier in self.engine.applied else "off")
 
+    def _toggle_session_hotkeys(self):
+        # MT-34 (0.45): the per-session hotkey switch (header control).
+        # Off releases every published hotkey binding (model + OS
+        # mirror) for the session; on re-publishes the table-declared
+        # hotkeys of the live records (the table's defaults - there is
+        # no per-record override surface).  Session-scoped by design,
+        # never persisted; the label mirrors the resulting state.
+        on = self.engine.set_session_hotkeys(
+            not self.engine.session_hotkeys_enabled)
+        self.hotkeys_btn.configure(
+            text="Hotkeys: " + ("on" if on else "off"))
+
     def _toggle_value_editor(self, identifier):
         if identifier in self.expanded_values:
             self.expanded_values = self.expanded_values - {identifier}
@@ -1167,6 +1193,13 @@ class TrainerWindow:
             label = "Detach" if self.engine.memory is not None else "Attach"
             if str(self.detach_btn.cget("text")) != label:
                 self.detach_btn.configure(text=label)
+        # MT-34 (0.45): keep the Hotkeys button label in sync with the
+        # engine's per-session hotkey switch.
+        if getattr(self, "hotkeys_btn", None) is not None:
+            label = "Hotkeys: " + (
+                "on" if self.engine.session_hotkeys_enabled else "off")
+            if str(self.hotkeys_btn.cget("text")) != label:
+                self.hotkeys_btn.configure(text=label)
         for toggle_id, on in self.engine.pop_hotkey_ui_toggles():
             play_sound("on" if on else "off")
         self._status_text.set(self.engine.status)

@@ -19,8 +19,9 @@ Covered:
 - synthesis: valid 8-bit mono WAV, exact frame counts, deterministic
   and cached, distinct per kind, pitch ordering, click-free fades,
   the attach double-tick shape, named refusals;
-- playback: winsound memory+async flags, named refusals, never
-  raises, non-Windows skip, cached buffers;
+- playback: winmm.PlaySoundW memory+async flags against the persistent
+  cached buffer, named refusals (unavailable winmm / Win32 code on a
+  failed call), never raises, non-Windows skip, live winmm smoke;
 - engine surface: confirmed hotkey activation toggles are recorded
   and popped (value-action hotkeys are not);
 - UI wiring (real Tk window): the attach transition plays the attach
@@ -144,48 +145,108 @@ class TickSynthesisTests(unittest.TestCase):
 
 
 @unittest.skipUnless(sys.platform == "win32",
-                     "winsound playback is Windows-only")
+                     "winmm playback is Windows-only")
 class PlaybackTests(unittest.TestCase):
-    def test_play_returns_played_and_uses_memory_async_flags(self):
-        trainer_sounds.clear_sound_cache()
-        with mock.patch("winsound.PlaySound") as play:
-            self.assertEqual(trainer_sounds.play_sound("on"), "played")
-        self.assertEqual(play.call_count, 1)
-        buffer, flags = play.call_args.args
-        self.assertEqual(buffer[:4], b"RIFF")
-        self.assertEqual(flags, 4 | 1)  # SND_MEMORY | SND_ASYNC
-        import winsound
-        self.assertEqual(flags, winsound.SND_MEMORY | winsound.SND_ASYNC)
+    """The winmm.PlaySoundW seam (2026-11-13 field fix).
 
-    def test_play_uses_the_cached_buffer_across_calls(self):
+    The stdlib winsound wrapper refuses SND_MEMORY | SND_ASYNC outright
+    (RuntimeError), so playback goes through the directly bound winmm
+    export against one persistent ctypes buffer per kind.  These tests
+    mock the binding, not the OS call.
+    """
+
+    def setUp(self):
+        self._saved_fn = trainer_sounds._PLAY_SOUND_W
+        self._saved_lib = trainer_sounds._WINMM_LIB
+        trainer_sounds._PLAY_SOUND_W = None
+        trainer_sounds._WINMM_LIB = None
         trainer_sounds.clear_sound_cache()
-        with mock.patch("winsound.PlaySound") as play:
+
+    def tearDown(self):
+        trainer_sounds._PLAY_SOUND_W = self._saved_fn
+        trainer_sounds._WINMM_LIB = self._saved_lib
+        trainer_sounds.clear_sound_cache()
+
+    def test_play_returns_played_and_uses_memory_async_flags(self):
+        calls = []
+
+        def fake_play(buffer, hmodule, flags):
+            calls.append((buffer, hmodule, flags))
+            return True
+
+        with mock.patch.object(trainer_sounds, "_bind_play_sound_w",
+                               return_value=fake_play):
+            self.assertEqual(trainer_sounds.play_sound("on"), "played")
+        self.assertEqual(len(calls), 1)
+        buffer, hmodule, flags = calls[0]
+        self.assertIsNone(hmodule)
+        self.assertEqual(flags,
+                         trainer_sounds.SND_MEMORY | trainer_sounds.SND_ASYNC)
+        self.assertEqual(flags, 5)  # 0x4 | 0x1
+        data = trainer_sounds._SOUND_CACHE["on"]
+        self.assertEqual(data[:4], b"RIFF")
+        self.assertEqual(bytes(buffer)[: len(data)], data)
+
+    def test_play_uses_the_persistent_buffer_across_calls(self):
+        buffers = []
+
+        def fake_play(buffer, hmodule, flags):
+            buffers.append(buffer)
+            return True
+
+        with mock.patch.object(trainer_sounds, "_bind_play_sound_w",
+                               return_value=fake_play):
             trainer_sounds.play_sound("attach")
             trainer_sounds.play_sound("attach")
-        self.assertEqual(play.call_count, 2)
-        self.assertEqual(play.call_args_list[0].args[0],
-                         trainer_sounds._SOUND_CACHE["attach"])
-        self.assertIs(play.call_args_list[0].args[0],
-                      play.call_args_list[1].args[0])
+        self.assertEqual(len(buffers), 2)
+        self.assertIs(buffers[0], buffers[1])
 
     def test_play_failure_never_raises(self):
-        with mock.patch("winsound.PlaySound",
-                        side_effect=OSError("no audio device")):
+        def fake_play(buffer, hmodule, flags):
+            raise OSError("no audio device")
+
+        with mock.patch.object(trainer_sounds, "_bind_play_sound_w",
+                               return_value=fake_play):
             self.assertEqual(trainer_sounds.play_sound("off"),
                              "refused: audio unavailable")
+
+    def test_failed_call_is_named_with_the_win32_error(self):
+        with mock.patch.object(trainer_sounds, "_bind_play_sound_w",
+                               return_value=lambda b, h, f: False), \
+                mock.patch("ctypes.get_last_error", return_value=87):
+            self.assertEqual(
+                trainer_sounds.play_sound("on"),
+                "refused: PlaySoundW failed (Win32 87)")
+
+    def test_unavailable_winmm_is_a_named_refusal(self):
+        with mock.patch.object(trainer_sounds, "_bind_play_sound_w",
+                               return_value=None):
+            self.assertEqual(trainer_sounds.play_sound("on"),
+                             "refused: winmm unavailable")
 
     def test_play_skips_on_non_windows(self):
         with mock.patch.object(trainer_sounds.sys, "platform", "linux"):
             self.assertEqual(trainer_sounds.play_sound("on"),
                              "skipped: non-windows platform")
 
-    def test_unknown_kind_is_refused_without_audio_call(self):
-        with mock.patch("winsound.PlaySound") as play:
-            self.assertEqual(trainer_sounds.play_sound("nope"),
-                             "refused: Unknown trainer sound: 'nope'")
-        play.assert_not_called()
+    def test_unknown_kind_is_refused_without_playback(self):
+        buffers = []
+        with mock.patch.object(
+                trainer_sounds, "_bind_play_sound_w",
+                return_value=lambda b, h, f: buffers.append(b) or True):
+            self.assertEqual(
+                trainer_sounds.play_sound("nope"),
+                "refused: Unknown trainer sound: 'nope'")
+        self.assertEqual(buffers, [])
 
-
+    def test_real_winmm_playback_never_raises(self):
+        # Live smoke on the actual export: the result is either
+        # "played" or a named refusal (audio-device state of the test
+        # host); it must never raise.  The pre-fix stdlib path raised
+        # RuntimeError("Cannot play asynchronously from memory") here.
+        result = trainer_sounds.play_sound("on")
+        self.assertTrue(result == "played" or result.startswith("refused: "),
+                        result)
 class HotkeyUiToggleSurfaceTests(unittest.TestCase):
     """The engine surfaces confirmed hotkey activation toggles to the UI."""
 

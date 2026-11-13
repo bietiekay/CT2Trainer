@@ -2,6 +2,43 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.45 (2026-11-13)
+
+Per-session hotkey management (MT-34) + the trainer-tick-sound field
+fix. (MT-34, the WeMod QoL from the 0.43 candidate list, adopted as
+the 0.45 candidate): the trainer header gains one control, "Hotkeys:
+on/off", in every trainer (standalone + Master - no header
+byte-identity test exists; the label mirrors the state and the poll
+tick keeps it in sync).  Off releases every published hotkey binding
+for the session: the engine's `_hotkey_sync` reconciles the model
+controller to an empty live set and releases the OS bridge mirror,
+and nothing new is published while off; on re-publishes the
+table-declared hotkeys of the live records in activation order - the
+table's defaults, since no per-record override surface exists.  The
+plan-level bindings are never mutated, the state is session-scoped
+and never persisted (a fresh engine starts on), the ordinary toggle /
+dispatch paths stay fully functional while off, and the row hotkey
+display shows the live registration state; the switch logs a
+`hotkeys-session-switched` debug event.  +10 tests in
+`tests/test_native_hotkey_session_switch.py` (engine + real-Tk UI).
+(Sound field fix, 2026-11-13): the stdlib winsound `PlaySound`
+wrapper raises
+`RuntimeError("Cannot play asynchronously from memory")` for
+`SND_MEMORY | SND_ASYNC`, so every on / off / attach tick silently
+failed in the field (swallowed by the never-raises guard, returned
+"refused: audio unavailable").  Playback now goes through
+`winmm.PlaySoundW` directly via ctypes (the house attribute-access
+binding pattern, see `hotkey_bridge`) against one persistent
+per-kind buffer, with named refusals ("refused: winmm unavailable"
+/ "refused: PlaySoundW failed (Win32 <code>)"); the reworked
+`tests/test_native_trainer_sounds.py` PlaybackTests mock the binding
+seam, not the OS call (+3 tests, incl. a live winmm smoke that
+accepts "played" or a named refusal and never raises). Full main
+suite 5,062 OK / 36 expected skips. Catalog unchanged at 117,809
+total / 117,588 supported / 221 blocked (MT-34 and the sound fix
+touch no table-parsing path; the MT-9 gate re-checks each table
+independently at load time).
+
 ## 0.44 (2026-11-13)
 
 The deferred compatibility-lane cycle against the 537-blocked

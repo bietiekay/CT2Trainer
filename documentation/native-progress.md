@@ -2708,6 +2708,79 @@ Lane C is the test-only ratification lane of the deferred compatibility-lane cyc
 
 0.44 is the release that ships the deferred compatibility-lane cycle against the 537-blocked post-0.43 census - all three lead cases (Lane C class-d `BaseAddress` import proof, Lane A dynamic Lua symbol registration, Lane B nested relative-address staging; see the three Lane sections above). The build was cut offline with `scripts/Build-Native.ps1`: in-build suite 5,049 OK / 36 expected skips, 0 failures - fully green at the canonical build path (identical to the main suite after the Lane B merge), `ce_inputs: []`, `runtime_unverified` deliberately kept per gate. Source ZIP `CT2Trainer-0.44-source.zip` sha256 `026886a700282a56c40568f30d2a4ebc57d6390a59cd59c42fd3f7f5dc8d49ff` (14,648,668 bytes) - carries the deferred compatibility-lane cycle (Lane C `tests/test_native_baseaddress_import.py`, Lane A `lua_program.py` + `lua_symbol_providers.py` + `tests/test_native_lua_define_providers.py` + `tests/test_native_lua_name_list_providers.py`, Lane B `compiler.py` + `engine.py` + `tests/test_native_staged_pointer_chain.py`) - and portable ZIP `CT2Trainer-0.44-windows-portable.zip` sha256 `656bf7106fd86a5a21532cf476b91f82cfafe2287ef5bf3d3ba41b6d2d9d6f36` (49,885,729 bytes; the frozen `CT2Trainer-Master.exe` sha256 `02e4731ef30ce320f71594f37cb176402be64849a90656c785d474dbc50d6112`, 17,084,284 bytes, ships next to the converter). Catalog state at release: `blocked-catalog-lane-b` 117,809 total / 117,588 supported / 12,974 headings / 104,439 actionable / 221 blocked (net -316 vs `blocked-catalog-043-tgc`: 182 + 134 unblocked, zero newly blocked, zero reason changes; exactly the 4 lane tables changed, the other 147 byte-identical). The remaining 221 blocked rows are the documented design / gate residuals (80 `BaseAddress` by design until the documented user import, 79 required symbols not defined in their table, 23 no-unique-supported-provider, 11 KeyHandlerThread WP-37 external ownership, 6 RE2 AP-08.7 custom value types, 5 trailing-token, 4 usemono > 7.5 out of parity scope, 2 + 2 relative-ancestor refusals kept by design, 2 createthread / threadWait RT-5G, 1 pBase Cronos, 6 single-row named AA-syntax / DISABLE re-init refusals); AP-11 stays open by definition (0/6,143).
 
+### 0.45 content: per-session hotkey switch (MT-34) + the
+trainer-tick-sound field fix (2026-11-13, root-direct on `main`)
+
+0.45 ships the per-session hotkey management adopted from the 0.43
+candidate list (MT-34) and the trainer-tick-sound field fix.
+
+- **MT-34 Per-session hotkey management:** the trainer header gains
+  one control, "Hotkeys: on/off", in every trainer (standalone +
+  Master - no header byte-identity test exists, same treatment as
+  "Re-attach").  The engine carries the new session flag
+  `session_hotkeys_enabled` (default True; a fresh engine starts on;
+  never persisted - session-scoped by design).  The new public
+  `set_session_hotkeys(enabled)` flips the flag, logs the
+  `hotkeys-session-switched` debug event, and reconciles through the
+  existing `_hotkey_sync`: "off" forces the published-binding live
+  set empty, so every model binding is unregistered from the
+  controller AND its OS mirror released from the bridge (the existing
+  disable path - nothing new is published while off); "on"
+  re-publishes the table-declared hotkeys of the live records in
+  activation order (the table's defaults - there is no per-record
+  override surface, so disable-all and reset-to-defaults converge on
+  one switch).  The plan-level bindings are never mutated, the
+  ordinary toggle / dispatch paths are unaffected while off (an
+  activation still applies its memory effect; it simply publishes no
+  hotkey until the switch returns), and the row hotkey display
+  (`hotkey_registered_keys`) reads back the live registration state -
+  with the switch off every row shows unregistered, which is the
+  intended signal.  The UI handler `_toggle_session_hotkeys` (ui.py)
+  flips the engine flag and mirrors the label; the poll tick keeps
+  the label in sync with the engine state (the `detach_btn` pattern).
+- **The trainer-tick-sound field fix (2026-11-13):** the 0.24 tick
+  sounds (on / off / attach) were silently dead in the field -
+  verified on this machine (Python 3.15): the stdlib
+  `winsound.PlaySound` wrapper raises
+  `RuntimeError("Cannot play asynchronously from memory")` for
+  `SND_MEMORY | SND_ASYNC`, so every `play_sound` call was swallowed
+  by the never-raises guard and returned "refused: audio
+  unavailable" (the UI ignored the result - total silence, manual
+  toggles, group toggles, hotkey toggles AND the attach tick alike).
+  `trainer_sounds.py` now mirrors the CE 7.5 reference behavior
+  (RCDATA ticks played asynchronously from memory) clean-room: bind
+  `winmm.PlaySoundW` directly via ctypes - the house attribute-access
+  pattern (explicit `argtypes` / `restype`, `use_last_error`, guarded
+  like `hotkey_bridge`; the Python 3.15 two-arg prototype constructor
+  is dead, attribute access is the working seam) - against one
+  persistent `create_string_buffer` per kind (the SND_MEMORY buffer
+  must outlive the async playback); named refusals "refused: winmm
+  unavailable" and "refused: PlaySoundW failed (Win32 <code>)"
+  (via `ctypes.get_last_error`); `clear_sound_cache()` drops the
+  buffer cache too.  Live-verified: all three kinds return
+  "played".
+- +13 tests: new `tests/test_native_hotkey_session_switch.py` (10:
+  the engine default-on / off-releases-all (model + OS mirror, named
+  unbound dispatch, display rows unregistered, plan byte-untouched,
+  activation state unaffected) / on-restores-table-defaults /
+  activations-while-off-publish-nothing (first-wins intact on
+  re-enable) / double-set-no-op / toggle-path-unaffected-while-off,
+  plus the real-Tk UI: button present with the "Hotkeys: on" label,
+  click flips flag + label, off/on through the control
+  release/restore the baseline binding set, poll keeps the label in
+  sync) and the reworked `tests/test_native_trainer_sounds.py`
+  PlaybackTests (5 -> 8: the winmm seam mocked at
+  `_bind_play_sound_w` - memory+async flags + persistent buffer,
+  the Win32-code named refusal, the unavailable-winmm refusal, and a
+  live winmm smoke that accepts "played" or a named refusal, never
+  a raise).  Full main suite 5,062 OK / 36 expected skips
+  (5,049 + 13).  Catalog unchanged: MT-34 and the sound fix touch no
+  table-parsing path (`blocked-catalog-lane-b` stands: 117,809 total
+  / 117,588 supported / 221 blocked); the MT-9 gate re-checks each
+  table independently at load time.  VERSION 0.44 -> 0.45 with the
+  changelog entry + `__version__` package constant sync in the same
+  change (guarded by `test_version_matches_root_version_file`).
+
 ### 0.42 content: CE 7.5 cleanup parity + the API-export registry extension (2026-11-11, root-direct on `main`)
 
 0.42 ships the two remaining bounded compatibility classes of the

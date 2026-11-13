@@ -22,7 +22,10 @@ attach plus the manual on/off toggle sounds).
 
 Playback is best-effort: Windows-only, never raises into the UI, and
 returns a stable named result string so callers can log or display
-it.
+it.  The actual playback uses ``winmm.PlaySoundW`` directly (ctypes)
+with a persistent in-memory buffer: the stdlib ``winsound`` wrapper
+refuses ``SND_MEMORY | SND_ASYNC`` outright (RuntimeError), which made
+every tick silently fail in the field (2026-11-13 fix).
 """
 from __future__ import annotations
 
@@ -44,11 +47,76 @@ _OFF_MS = 28
 _ATTACH_FREQ = _OFF_FREQ
 _ATTACH_TICK_MS = 20
 _ATTACH_GAP_MS = 12
+# Win32 winmm flags: play from an in-memory WAV buffer, asynchronously.
+SND_ASYNC = 0x1
+SND_MEMORY = 0x4
 
 # Pre-synthesized sound buffers, kept in module scope for the whole
 # process: SND_MEMORY requires the buffer to stay alive for the whole
 # playback.
 _SOUND_CACHE: dict[str, bytes] = {}
+
+# winmm binding + stable in-memory playback buffers (2026-11-13 field
+# fix).  The stdlib ``winsound.PlaySound`` wrapper REFUSES
+# ``SND_ASYNC`` from memory ("Cannot play asynchronously from memory",
+# RuntimeError) because it cannot guarantee a temporary buffer's
+# lifetime; the CE 7.5 reference instead plays its built-in ticks
+# asynchronously from fixed memory.  We mirror that: bind
+# ``winmm.PlaySoundW`` directly and hand it a pointer to one persistent
+# ctypes buffer per kind, kept here for the whole process so it stays
+# valid for the whole asynchronous playback.  On the old winsound path
+# every play_sound() call raised, was swallowed by the "never raises"
+# guard and returned "refused: audio unavailable" - i.e. no tick ever
+# played, neither on manual toggles nor on attach.
+_WINMM_LIB = None
+_PLAY_SOUND_W = None  # lazily bound PlaySoundW (None while unbound)
+_BUFFER_CACHE: dict[str, object] = {}  # kind -> persistent ctypes buffer
+
+
+def _bind_play_sound_w():
+    """Lazily bind ``winmm.PlaySoundW``; returns None when unavailable.
+
+    The house Win32 pattern (see ``hotkey_bridge``): attribute access on
+    the loaded DLL with explicit argtypes/restype, guarded so a stripped
+    or missing winmm build is a named refusal, never a crash.
+    ``PlaySoundW`` returns BOOL; with ``SND_MEMORY`` the first parameter
+    is a pointer to the WAV bytes (RIFF header first) and ``hModule`` is
+    NULL.  The DLL is loaded with ``use_last_error`` so a failed call
+    can be named with its Win32 error code.
+    """
+    global _WINMM_LIB, _PLAY_SOUND_W
+    if _PLAY_SOUND_W is not None:
+        return _PLAY_SOUND_W
+    try:
+        import ctypes
+        import ctypes.wintypes
+        lib = ctypes.WinDLL("winmm", use_last_error=True)
+        fn = lib.PlaySoundW
+        fn.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
+                       ctypes.wintypes.DWORD]
+        fn.restype = ctypes.wintypes.BOOL
+    except Exception:
+        _WINMM_LIB = None
+        _PLAY_SOUND_W = None
+        return None
+    _WINMM_LIB = lib
+    _PLAY_SOUND_W = fn
+    return fn
+
+
+def _sound_buffer(kind: str, data: bytes):
+    """The persistent in-memory buffer for one sound kind.
+
+    ``create_string_buffer`` copies the WAV bytes into a ctypes array
+    we own; caching it keeps the pointer stable across asynchronous
+    playbacks (SND_MEMORY requires the buffer to outlive the call).
+    """
+    import ctypes
+    buffer = _BUFFER_CACHE.get(kind)
+    if buffer is None:
+        buffer = ctypes.create_string_buffer(data)
+        _BUFFER_CACHE[kind] = buffer
+    return buffer
 
 
 def tick_frames(freq: float, ms: int, rate: int = TICK_RATE,
@@ -129,8 +197,10 @@ def sound_bytes(kind: str) -> bytes:
 
 
 def clear_sound_cache() -> None:
-    """Test seam: drop all cached buffers."""
+    """Test seam: drop all cached buffers (WAV bytes + the persistent
+    winmm memory buffers)."""
     _SOUND_CACHE.clear()
+    _BUFFER_CACHE.clear()
 
 
 def play_sound(kind: str) -> str:
@@ -141,6 +211,15 @@ def play_sound(kind: str) -> str:
     ``refused: <reason>`` (unknown kind / audio unavailable).  The
     buffer is a module-level cache entry, so it stays alive for the
     whole asynchronous playback.
+
+    2026-11-13 field fix: the stdlib ``winsound.PlaySound`` wrapper
+    raises ``RuntimeError("Cannot play asynchronously from memory")``
+    for ``SND_MEMORY | SND_ASYNC``, so every play call silently failed
+    (swallowed by the never-raises guard) and no tick ever reached the
+    user.  Playback now goes through ``winmm.PlaySoundW`` directly via
+    ctypes against the persistent cached buffer (see module docstring
+    and the CE 7.5 reference behavior: RCDATA ticks played
+    asynchronously from memory).
     """
     try:
         data = sound_bytes(kind)
@@ -148,9 +227,16 @@ def play_sound(kind: str) -> str:
         return "refused: " + str(exc)
     if sys.platform != "win32":
         return "skipped: non-windows platform"
+    play = _bind_play_sound_w()
+    if play is None:
+        return "refused: winmm unavailable"
+    buffer = _sound_buffer(kind, data)
     try:
-        import winsound
-        winsound.PlaySound(data, winsound.SND_MEMORY | winsound.SND_ASYNC)
+        ok = play(buffer, None, SND_MEMORY | SND_ASYNC)
     except Exception:
         return "refused: audio unavailable"
+    if not ok:
+        import ctypes
+        code = ctypes.get_last_error()
+        return "refused: PlaySoundW failed (Win32 %d)" % code
     return "played"

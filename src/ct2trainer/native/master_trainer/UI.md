@@ -263,8 +263,15 @@ The exact standalone-trainer row grid, now owning the full window
   toggle pill only where a `parent_activation` exists;
 - **info rows** — dim rows for blocked / unselected records.
 
-Header: the standalone trainer header plus, in Master mode only,
-`Columns: N` (0.36, MT-21 - cycles the trainer row grid
+Header: the standalone trainer header - `Re-attach` (the bounded
+re-arm, 0.22) and `Hotkeys: on/off` (0.45, MT-34 - the per-session
+hotkey switch, in every trainer: "off" releases every published
+hotkey binding for the session (model + OS mirror), so no hotkey
+acts until it is switched back on; "on" re-publishes the
+table-declared hotkeys of the live records, i.e. the table's
+defaults; session-scoped, never persisted, the label mirrors the
+state) - plus, in Master mode only, `Columns: N` (0.36, MT-21 -
+cycles the trainer row grid
 1 -> 2 -> 3 -> 1; the requested count persists; a narrow window
 renders fewer columns than requested, and a section with its
 children never splits across columns), `Detach` (release the live
