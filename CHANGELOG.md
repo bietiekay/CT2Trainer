@@ -39,6 +39,23 @@ total / 117,588 supported / 221 blocked (MT-34 and the sound fix
 touch no table-parsing path; the MT-9 gate re-checks each table
 independently at load time).
 
+- Build: 0.45 released as run
+  `native-20261113T144426Z-572d5b30` (cut from `main` @ `58d6c8f`,
+  2026-11-13): in-build suite 5,062 OK / 36 expected skips, 0
+  failures - fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.45-source.zip` sha256
+  `3bdd783359623d273de15e90f4f0acc524d3ecbda64f925c3cf59de9d4e27416`
+  (14,657,388 bytes) - carries MT-34 (`engine.py` +
+  `ui.py` + `tests/test_native_hotkey_session_switch.py`) and the
+  trainer-tick-sound field fix (`trainer_sounds.py` +
+  `tests/test_native_trainer_sounds.py`) - and portable ZIP
+  `CT2Trainer-0.45-windows-portable.zip` sha256
+  `58bac73098b219e3049668b55877e8a3e4fd758e6e1917b058da128e416eb4e2`
+  (49,854,120 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+  `f882add64b2fc0f9d66cb88ed2142684e71736de326b28f72ddb007186aa2d05`,
+  17,069,125 bytes) ships next to the converter).
+
 ## 0.44 (2026-11-13)
 
 The deferred compatibility-lane cycle against the 537-blocked

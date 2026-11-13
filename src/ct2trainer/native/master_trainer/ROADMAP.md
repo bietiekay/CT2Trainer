@@ -741,12 +741,16 @@ Mapping onto the use case:
 - **Window geometry persistence** (ADOPTED as the 0.43 candidate): a
   small, standard expectation - remember the waiting-view window
   position / size across restarts.
-- **Per-session hotkey management** (evaluated, not yet adopted): the
-  WeMod QoL - a per-session "disable all hotkeys" / "reset to the
-  table's defaults" inside the attached trainer. The engine already
-  supports per-record hotkeys; a global OS-level registration surface
-  stays out of scope. A reasonable in-scope candidate for a later
-  cycle.
+- **Per-session hotkey management** (adopted, shipped as MT-34 with
+  the 0.45 release, 2026-11-13): the WeMod QoL - a per-session
+  "disable all hotkeys" / "reset to the table's defaults" inside the
+  attached trainer. Implemented as the header control "Hotkeys:
+  on/off" in every trainer (standalone + Master, like Re-attach):
+  off releases every published binding (model + OS mirror), on
+  re-publishes the table-declared hotkeys of the live records; the
+  plan-level bindings are never mutated and the state is never
+  persisted. A per-record override surface and a global OS-level
+  registration surface stay out of scope.
 - **Custom launch options / game launch** (deferred, unchanged): the
   index binds process names, not install paths, so a launch
   integration cannot be proven fail-closed.
@@ -756,9 +760,10 @@ Mapping onto the use case:
 Adopted as the 0.43 candidate (confirmed and shipped 2026-11-11
 as the 0.43 release - see the 0.43 release section below):
 minimize-to-tray with attach / attention notifications, plus window
-geometry persistence. Remaining candidates (evaluated, not yet
-adopted): per-session hotkey management (disable-all /
-reset-to-default).
+geometry persistence. Per-session hotkey management (disable-all /
+reset-to-default) was adopted as the next candidate and shipped as
+MT-34 with the 0.45 release (2026-11-13 - see the 0.45 release
+section below).
 
 ### 0.43 release (shipped 2026-11-11): Master Trainer minimize-to-tray
 + window-geometry persistence (MT-32/MT-33) + the TGC field fix
@@ -803,6 +808,39 @@ byte-identical. The Master Trainer load path is unchanged (the MT-9
 gate re-checks each table independently at load time). The per-session
 hotkey management candidate remains the remaining evaluated candidate
 for a later cycle.
+
+### 0.45 release (shipped 2026-11-13): per-session hotkey switch
+(MT-34) + the trainer-sound field fix
+
+0.45 adopts the per-session hotkey management from the 0.43
+candidate list (MT-34): the trainer header gains one control,
+"Hotkeys: on/off", in every trainer (standalone + Master - no header
+byte-identity test exists).  Off releases every published hotkey
+binding for the session (the model controller and its OS bridge
+mirror are reconciled to an empty live set, nothing new is
+published); on re-publishes the table-declared hotkeys of the live
+records in activation order - the table's defaults, since no
+per-record override surface exists.  The plan-level bindings are
+never mutated, the state is session-scoped and never persisted (a
+fresh engine starts on), and the ordinary toggle / dispatch paths
+stay fully functional while the switch is off; the row hotkey
+display shows the live registration state.  The engine logs the
+switch as a `hotkeys-session-switched` debug event; +10 tests in
+`tests/test_native_hotkey_session_switch.py` (engine + real-Tk UI).
+No Master Trainer load-path effect (the MT-9 gate re-checks each
+table independently at load time); catalog unaffected.
+
+Also in 0.45: the trainer-tick-sound field fix (2026-11-13).  The
+stdlib winsound `PlaySound` wrapper raises
+`RuntimeError("Cannot play asynchronously from memory")` for
+`SND_MEMORY | SND_ASYNC`, so every on / off / attach tick silently
+failed in the field (swallowed by the never-raises guard, returned
+"refused: audio unavailable").  Playback now goes through
+`winmm.PlaySoundW` directly via ctypes (the house attribute-access
+binding pattern, see hotkey_bridge) against one persistent per-kind
+buffer, with named refusals ("winmm unavailable" / "PlaySoundW
+failed (Win32 <code>)"); the reworked `tests/test_native_trainer_sounds.py`
+PlaybackTests mock the binding seam, not the OS call (+3 tests).
 
 ## Merge & release plan (historical + current)
 

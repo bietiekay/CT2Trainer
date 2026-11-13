@@ -1022,6 +1022,24 @@ relative-ancestor refusals kept by design, 2 createthread RT-5G, 1
 pBase Cronos, 5 trailing-token, 6 single-row AA-syntax / DISABLE
 re-init).
 
+0.45 release record (2026-11-13, run
+`native-20261113T144426Z-572d5b30` cut from `main` @ `58d6c8f`):
+the per-session hotkey switch (MT-34) + the trainer-tick-sound
+field fix ships as the 0.45 release - in-build suite 5,062 OK /
+36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.45-source.zip` sha256
+`3bdd783359623d273de15e90f4f0acc524d3ecbda64f925c3cf59de9d4e27416`
+(14,657,388 bytes), portable ZIP
+`CT2Trainer-0.45-windows-portable.zip` sha256
+`58bac73098b219e3049668b55877e8a3e4fd758e6e1917b058da128e416eb4e2`
+(49,854,120 bytes; the frozen `CT2Trainer-Master.exe` sha256
+`f882add64b2fc0f9d66cb88ed2142684e71736de326b28f72ddb007186aa2d05`,
+17,069,125 bytes, ships next to the converter). Catalog unchanged
+at `blocked-catalog-lane-b` (117,588 supported / 221 blocked -
+MT-34 and the sound fix touch no table-parsing path); the
+remaining 221 blocked rows are the documented
+design / gate residuals and AP-11 stays open by definition.
 0.44 release record (2026-11-13, run
 `native-20261112T233337Z-1dc678c6` cut from `main` @ `ab11893`):
 the compatibility-lane cycle above ships as the 0.44 release -

@@ -657,7 +657,52 @@ game-facing action.
   `ff6e8d6` (see the Lane A work item above); Lane B (Octopath2
   relative-address staging, 134 rows) merged as `285fb8a` (see the
   Lane B work item above).
-- 0.44 the deferred compatibility-lane cycle release (2026-11-13,
+- 0.45 the per-session hotkey switch (MT-34) + the
+  trainer-tick-sound field fix release (2026-11-13, content commit
+  `58d6c8f`, build record below): VERSION 0.45 + CHANGELOG 0.45
+  entry in the same change (incl. the `__version__` package
+  constant sync, guarded by
+  `test_version_matches_root_version_file`). MT-34 (adopted from
+  the 0.43 candidate list): the trainer header gains "Hotkeys:
+  on/off" in every trainer (standalone + Master, like Re-attach):
+  off releases every published hotkey binding for the session
+  (model controller + OS bridge mirror reconciled to an empty
+  live set, nothing new published), on re-publishes the
+  table-declared hotkeys of the live records (table defaults - no
+  per-record override surface); the plan-level bindings are never
+  mutated, the state is session-scoped and never persisted, the
+  ordinary toggle / dispatch paths stay functional while off;
+  +10 tests in
+  `tests/test_native_hotkey_session_switch.py`. Sound field fix:
+  the stdlib winsound `PlaySound` wrapper raises
+  RuntimeError("Cannot play asynchronously from memory") for
+  SND_MEMORY | SND_ASYNC (every 0.24 on / off / attach tick
+  silently dead in the field, "refused: audio unavailable");
+  playback now goes through `winmm.PlaySoundW` directly via
+  ctypes (house attribute-access binding pattern, one persistent
+  buffer per kind, named refusals "winmm unavailable" /
+  "PlaySoundW failed (Win32 <code>)") with the reworked
+  `tests/test_native_trainer_sounds.py` PlaybackTests (5 -> 8,
+  +3 tests). Full main suite 5,062 OK / 36 expected skips
+  (5,049 + 13). The 0.45 build `native-20261113T144426Z-572d5b30` cut from `main` @ `58d6c8f`
+  (2026-11-13): in-build suite 5,062 OK / 36 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per
+  gate; source ZIP
+  `CT2Trainer-0.45-source.zip` sha256
+  `3bdd783359623d273de15e90f4f0acc524d3ecbda64f925c3cf59de9d4e27416`
+  (14,657,388 bytes), portable ZIP
+  `CT2Trainer-0.45-windows-portable.zip` sha256
+  `58bac73098b219e3049668b55877e8a3e4fd758e6e1917b058da128e416eb4e2`
+  (49,854,120 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `f882add64b2fc0f9d66cb88ed2142684e71736de326b28f72ddb007186aa2d05`,
+  17,069,125 bytes, ships next to the converter). Catalog state at
+  release `blocked-catalog-lane-b`: 117,809 total / 117,588
+  supported / 12,974 headings / 104,439 actionable / 221 blocked
+  (zero delta - MT-34 and the sound fix touch no table-parsing
+  path); the remaining 221 blocked rows are the documented design
+  / gate residuals; feature matrix unchanged (42/42, 7,475/7,475
+  over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143.- 0.44 the deferred compatibility-lane cycle release (2026-11-13,
   content commit `ab11893`, build record below): VERSION 0.44 +
   CHANGELOG 0.44 entry in the same change (incl. the `__version__`
   package constant sync, guarded by
