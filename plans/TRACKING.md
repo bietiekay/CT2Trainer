@@ -657,6 +657,34 @@ game-facing action.
   `ff6e8d6` (see the Lane A work item above); Lane B (Octopath2
   relative-address staging, 134 rows) merged as `285fb8a` (see the
   Lane B work item above).
+- 0.44 the deferred compatibility-lane cycle release (2026-11-13,
+  content commit `ab11893`, build record below): VERSION 0.44 +
+  CHANGELOG 0.44 entry in the same change (incl. the `__version__`
+  package constant sync, guarded by
+  `test_version_matches_root_version_file`); the three lanes (Lane C
+  class-d `BaseAddress` import proof, Lane A dynamic Lua symbol
+  registration 182 rows, Lane B nested relative-address staging
+  134 rows - see the three lane work items above) are the 0.44
+  content. The 0.44 build `native-20261112T233337Z-1dc678c6` cut
+  from `main` @ `ab11893` (2026-11-13): in-build suite 5,049 OK /
+  36 expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.44-source.zip` sha256
+  `026886a700282a56c40568f30d2a4ebc57d6390a59cd59c42fd3f7f5dc8d49ff`
+  (14,648,668 bytes), portable ZIP
+  `CT2Trainer-0.44-windows-portable.zip` sha256
+  `656bf7106fd86a5a21532cf476b91f82cfafe2287ef5bf3d3ba41b6d2d9d6f36`
+  (49,885,729 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `02e4731ef30ce320f71594f37cb176402be64849a90656c785d474dbc50d6112`,
+  17,084,284 bytes, ships next to the converter). Catalog state at
+  release `blocked-catalog-lane-b`: 117,809 total / 117,588
+  supported / 12,974 headings / 104,439 actionable / 221 blocked
+  (net -316 vs `blocked-catalog-043-tgc`: 182 + 134 unblocked, zero
+  newly blocked, zero reason changes, exactly the 4 lane tables
+  changed, the other 147 byte-identical); the remaining 221 blocked
+  rows are the documented design / gate residuals; feature matrix
+  unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`); AP-11 0/6,143.
 - 0.43 the Master Trainer minimize-to-tray + window-geometry
   persistence (MT-32/MT-33) + the TGC field fix (2026-11-11,
   root-direct on `main`). MT-32: the Master Trainer can minimize

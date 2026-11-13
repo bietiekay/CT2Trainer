@@ -1,6 +1,27 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-11. **0.43 released** (build
+**Updated:** 2026-11-13. **0.44 released** (build
+`native-20261112T233337Z-1dc678c6`, cut from `main` @ `ab11893`,
+2026-11-13) - the deferred compatibility-lane cycle against the
+537-blocked post-0.43 census, all three lead cases shipped (Lane C
+class-d `BaseAddress` import proof, test-only; Lane A dynamic Lua
+symbol registration, 182 rows; Lane B nested relative-address
+staging, 134 rows, through the `__ct2_rtbase_<anchor_id>`
+runtime-base placeholder); catalog remeasure
+`blocked-catalog-lane-b`: 117,809 total / 117,588 supported /
+12,974 headings / 104,439 actionable / 221 blocked (net -316 vs
+`blocked-catalog-043-tgc`: 182 + 134 unblocked, zero newly
+blocked, zero reason changes; exactly the 4 lane tables changed,
+the other 147 byte-identical); full main suite 5,049 OK / 36
+expected skips; in-build suite 5,049 OK / 36 expected skips,
+`ce_inputs: []`; the remaining 221 blocked rows are the documented
+design / gate residuals (80 `BaseAddress` by design, 79 required
+symbols not defined, 23 no-unique-supported-provider, 11
+KeyHandlerThread WP-37, 6 RE2 AP-08.7, 5 trailing-token, 4 usemono
+> 7.5, 2 + 2 relative-ancestor refusals kept by design, 2
+createthread / threadWait RT-5G, 1 pBase Cronos, 6 single-row
+AA-syntax / DISABLE re-init); see the 0.44 section below.
+Superseded 0.43 (build
 `native-20261111T184600Z-3bf9d8aa`, cut from `main` @ `0df2607`,
 2026-11-11) - the Master Trainer minimize-to-tray +
 window-geometry persistence (MT-32: the persisted "Minimize to tray"
@@ -436,7 +457,23 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.43, build
+**Latest verified release:** 0.44, build
+`native-20261112T233337Z-1dc678c6` (cut from `main` @ `ab11893`,
+2026-11-13): the 0.44 deferred compatibility-lane cycle release -
+in-build suite 5,049 OK / 36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.44-source.zip` sha256
+`026886a700282a56c40568f30d2a4ebc57d6390a59cd59c42fd3f7f5dc8d49ff`
+(14,648,668 bytes) - carries the deferred compatibility-lane cycle
+(Lane C `tests/test_native_baseaddress_import.py`, Lane A
+`lua_program.py` + `lua_symbol_providers.py` + the two lane A test
+files, Lane B `compiler.py` + `engine.py` +
+`tests/test_native_staged_pointer_chain.py`) - and portable ZIP
+`CT2Trainer-0.44-windows-portable.zip` sha256
+`656bf7106fd86a5a21532cf476b91f82cfafe2287ef5bf3d3ba41b6d2d9d6f36`
+(49,885,729 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`02e4731ef30ce320f71594f37cb176402be64849a90656c785d474dbc50d6112`,
+17,084,284 bytes) ships next to the converter). Superseded 0.43, build
 `native-20261111T184600Z-3bf9d8aa` (cut from `main` @ `0df2607`,
 2026-11-11): the 0.43 Master Trainer minimize-to-tray +
 window-geometry persistence (MT-32/MT-33) + TGC field fix release -
@@ -1077,6 +1114,48 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.44 released (build `native-20261112T233337Z-1dc678c6`, cut from `main` @
+`ab11893`, 2026-11-13): the deferred compatibility-lane cycle against
+the 537-blocked post-0.43 census - all three lead cases shipped.**
+0.44 ships the three compatibility lanes (merged on `main` before the
+content commit): Lane C (roadmap class d, test-only) proves the
+documented `<UserdefinedSymbols>` `BaseAddress` import path
+end-to-end while the 80 rows stay blocked by design until the import
+(merged `7d92482`); Lane A adopts the dynamic Lua symbol
+registration shapes - the Witcher3 returned-define shape and the GoW
+literal name-list shape, 182 rows (merged `ff6e8d6`); Lane B stages
+the 134-row Octopath2 relative-address census through the
+deterministic synthetic symbol `__ct2_rtbase_<anchor_id>`
+runtime-base placeholder (merged `285fb8a`). Catalog remeasure
+`blocked-catalog-lane-b`: 117,809 total / 117,588 supported /
+12,974 headings / 104,439 actionable / 221 blocked (net -316 vs
+`blocked-catalog-043-tgc`: 182 + 134 unblocked, zero newly blocked,
+zero reason changes; exactly the 4 lane tables changed, the other
+147 byte-identical). Full main suite 5,049 OK / 36 expected skips;
+in-build suite 5,049 OK / 36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate. Source ZIP
+`CT2Trainer-0.44-source.zip` sha256
+`026886a700282a56c40568f30d2a4ebc57d6390a59cd59c42fd3f7f5dc8d49ff`
+(14,648,668 bytes) - carries the deferred compatibility-lane cycle
+(Lane C `tests/test_native_baseaddress_import.py`, Lane A
+`lua_program.py` + `lua_symbol_providers.py` + the two lane A test
+files, Lane B `compiler.py` + `engine.py` +
+`tests/test_native_staged_pointer_chain.py`) - and portable ZIP
+`CT2Trainer-0.44-windows-portable.zip` sha256
+`656bf7106fd86a5a21532cf476b91f82cfafe2287ef5bf3d3ba41b6d2d9d6f36`
+(49,885,729 bytes; the frozen `CT2Trainer-Master.exe` sha256
+`02e4731ef30ce320f71594f37cb176402be64849a90656c785d474dbc50d6112`,
+17,084,284 bytes, ships next to the converter). The remaining 221
+blocked rows are the documented design / gate residuals (80
+`BaseAddress` by design until the documented user import, 79
+required symbols not defined in their table, 23
+no-unique-supported-provider, 11 KeyHandlerThread WP-37 external
+ownership, 6 RE2 AP-08.7 custom value types, 5 trailing-token, 4
+usemono > 7.5 out of parity scope, 2 + 2 relative-ancestor
+refusals kept by design, 2 createthread / threadWait RT-5G, 1 pBase
+Cronos, 6 single-row named AA-syntax / DISABLE re-init refusals);
+AP-11 stays open by definition (0/6,143).
 
 **0.43 released (build `native-20261111T184600Z-3bf9d8aa`, cut from `main` @
 `0df2607`, 2026-11-11): the Master Trainer minimize-to-tray +

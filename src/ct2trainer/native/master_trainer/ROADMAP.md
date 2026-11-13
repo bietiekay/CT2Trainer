@@ -783,6 +783,27 @@ table independently at load time); catalog remeasure
 candidate remains the remaining evaluated candidate for a later
 cycle.
 
+### 0.44 compatibility lane cycle (shipped 2026-11-13; no Master
+Trainer effect)
+
+0.44 is a pure compatibility-lane cycle (no Master Trainer feature):
+the three lead cases of the 537-blocked post-0.43 census - Lane C
+(roadmap class d, test-only) proves the documented
+`<UserdefinedSymbols>` `BaseAddress` import path end-to-end while the
+80 rows stay blocked by design until the import (merged `7d92482`);
+Lane A (182 rows) adopts the dynamic Lua symbol registration shapes -
+the Witcher3 returned-define shape and the GoW literal name-list
+shape (merged `ff6e8d6`); Lane B (134 rows) stages the Octopath2
+relative-address census through the deterministic synthetic symbol
+`__ct2_rtbase_<anchor_id>` runtime-base placeholder (merged
+`285fb8a`). Catalog remeasure `blocked-catalog-lane-b`: 537 -> 221
+blocked (-316: 182 + 134 unblocked), zero newly blocked, zero reason
+changes; exactly the 4 lane tables changed, the other 147
+byte-identical. The Master Trainer load path is unchanged (the MT-9
+gate re-checks each table independently at load time). The per-session
+hotkey management candidate remains the remaining evaluated candidate
+for a later cycle.
+
 ## Merge & release plan (historical + current)
 
 1. MT-1..MT-5 shipped on `main` with the 0.21 release (2026-10-31);

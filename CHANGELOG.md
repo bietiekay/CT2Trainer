@@ -62,6 +62,26 @@ design, 2 createthread / threadWait RT-5G, 1 pBase Cronos, 6
 single-row named AA-syntax / DISABLE re-init refusals); AP-11
 stays open by definition (0/6,143).
 
+- Build: 0.44 released as run
+  `native-20261112T233337Z-1dc678c6` (cut from `main` @ `ab11893`,
+  2026-11-13): in-build suite 5,049 OK / 36 expected skips, 0
+  failures - fully green at the canonical build path,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate.
+  Source ZIP `CT2Trainer-0.44-source.zip` sha256
+  `026886a700282a56c40568f30d2a4ebc57d6390a59cd59c42fd3f7f5dc8d49ff`
+  (14,648,668 bytes) - carries the deferred compatibility-lane
+  cycle (Lane C `tests/test_native_baseaddress_import.py`, Lane A
+  `lua_program.py` + `lua_symbol_providers.py` +
+  `tests/test_native_lua_define_providers.py` +
+  `tests/test_native_lua_name_list_providers.py`, Lane B
+  `compiler.py` + `engine.py` +
+  `tests/test_native_staged_pointer_chain.py`) - and portable ZIP
+  `CT2Trainer-0.44-windows-portable.zip` sha256
+  `656bf7106fd86a5a21532cf476b91f82cfafe2287ef5bf3d3ba41b6d2d9d6f36`
+  (49,885,729 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+  `02e4731ef30ce320f71594f37cb176402be64849a90656c785d474dbc50d6112`,
+  17,084,284 bytes) ships next to the converter).
+
 ## 0.43 (2026-11-11)
 
 Master Trainer minimize-to-tray + window-geometry persistence

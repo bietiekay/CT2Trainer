@@ -1022,6 +1022,23 @@ relative-ancestor refusals kept by design, 2 createthread RT-5G, 1
 pBase Cronos, 5 trailing-token, 6 single-row AA-syntax / DISABLE
 re-init).
 
+0.44 release record (2026-11-13, run
+`native-20261112T233337Z-1dc678c6` cut from `main` @ `ab11893`):
+the compatibility-lane cycle above ships as the 0.44 release -
+in-build suite 5,049 OK / 36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.44-source.zip` sha256
+`026886a700282a56c40568f30d2a4ebc57d6390a59cd59c42fd3f7f5dc8d49ff`
+(14,648,668 bytes), portable ZIP
+`CT2Trainer-0.44-windows-portable.zip` sha256
+`656bf7106fd86a5a21532cf476b91f82cfafe2287ef5bf3d3ba41b6d2d9d6f36`
+(49,885,729 bytes; the frozen `CT2Trainer-Master.exe` sha256
+`02e4731ef30ce320f71594f37cb176402be64849a90656c785d474dbc50d6112`,
+17,084,284 bytes, ships next to the converter). With 0.44 the full
+deferred compatibility-lane cycle of the post-0.43 census is
+released; the remaining 221 blocked rows are the documented
+design / gate residuals and AP-11 stays open by definition.
+
 Suggested execution order: RT-4.1 (820, lowest risk and the largest
 guaranteed delta) first, then RT-4.3 (452), RT-4.4 (65), RT-4.5 (57),
 RT-4.6 (219), and RT-4.2 (1,085) last — its AA_HIDDEN portion cleared
