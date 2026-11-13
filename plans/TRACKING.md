@@ -657,6 +657,52 @@ game-facing action.
   `ff6e8d6` (see the Lane A work item above); Lane B (Octopath2
   relative-address staging, 134 rows) merged as `285fb8a` (see the
   Lane B work item above).
+- 0.46 the AA extended-register `l` alias + `dqword`
+  size-keyword parity release (2026-11-13, content commits
+  `7616218` + `b348184`, build record below): VERSION 0.46 +
+  CHANGELOG 0.46 entry in the same change (incl. the
+  `__version__` package constant sync, guarded by
+  `test_version_matches_root_version_file`). The
+  compatibility lane against the 221-row post-0.44 census:
+  CE `getreg` (Assemblerunit.pas L3160-3167) accepts the
+  `l` 32-bit alias R8L..R15L and CE `dqword` is the
+  128-bit operand size, while the clean-room token sets
+  admitted neither, so the nine direct "Required symbol"
+  rows (DS2 `r13l`, HellPie / RAGE2 / Sinking City `r15l`,
+  SOTTR `r8l` + `r11l`, YakuzaLikeADragon `r9l`, Fallout4 +
+  SOTTR `dqword`) blocked. `r8l`..`r15l` join the register
+  set and `dqword` the size-keyword set; the NASM source
+  generation normalizes the CE spellings to `rXd` /
+  `oword` via the bounded `_CE_TO_NASM_SPELLING` table (the
+  pinned NASM assembles neither CE spelling);
+  byte-identical through the pinned NASM (`mov r13l, eax`
+  == `mov r13d, eax` `41 89 C5`; `movdqu dqword [rsp],
+  xmm0` == `movdqu oword [rsp], xmm0` `F3 0F 7F 04 24`).
+  +9 tests in `tests/test_native_aa_register_aliases.py`.
+  Full main suite 5,071 OK / 36 expected skips (5,062 + 9).
+  Catalog remeasure `blocked-catalog-046-regsize`:
+  117,809 total / 117,599 supported / 12,974 headings /
+  104,450 actionable / 210 blocked (net -11 vs
+  `blocked-catalog-lane-b`: exactly 11 rows unblocked - the
+  9 direct register / size rows plus 2 provider cascades,
+  Fallout4 record 1057 (`fZoomIntevalMultiplier`) and SOTTR
+  record 15385 (`dMinHealth`), whose symbol providers are
+  the two now-supported dqword records; zero newly
+  blocked, zero reason changes). The 0.46 build
+  `native-20261113T185658Z-e543af1a` cut from `main` @
+  `b348184` (2026-11-13): in-build suite 5,071 OK / 36
+  expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.46-source.zip` sha256
+  `c49323d56d8feab0652f676d86a739fb6204cff6ddeed8e4b326e43020ee4d62`
+  (14,661,247 bytes), portable ZIP
+  `CT2Trainer-0.46-windows-portable.zip` sha256
+  `1b130db71508e42b98c4127ebcec766bc79cd65aabdd563ed59d4b058bfc9fe9`
+  (49,857,331 bytes; the frozen `CT2Trainer-Master.exe`
+  sha256 `18306034231d6632ba15f4f23f62e611dd2c9b73e14db634d99f6cdccb7e8857`,
+  17,069,499 bytes, ships next to the converter). Feature
+  matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`).
 - 0.45 the per-session hotkey switch (MT-34) + the
   trainer-tick-sound field fix release (2026-11-13, content commit
   `58d6c8f`, build record below): VERSION 0.45 + CHANGELOG 0.45

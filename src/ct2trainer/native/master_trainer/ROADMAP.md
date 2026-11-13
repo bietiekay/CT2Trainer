@@ -842,6 +842,25 @@ buffer, with named refusals ("winmm unavailable" / "PlaySoundW
 failed (Win32 <code>)"); the reworked `tests/test_native_trainer_sounds.py`
 PlaybackTests mock the binding seam, not the OS call (+3 tests).
 
+### 0.46 compatibility lane (shipped 2026-11-13; no Master
+Trainer effect)
+
+0.46 is a pure compatibility lane (no Master Trainer feature):
+the AA extended-register `l` alias + `dqword` size-keyword
+parity (the nine direct "Required symbol" rows of the
+221-row post-0.44 census - CE `getreg` accepts the `l`
+32-bit alias R8L..R15L and CE `dqword` is the 128-bit
+operand size, while the pinned NASM assembles neither
+spelling; `r8l`..`r15l` join the register set and `dqword`
+the size-keyword set, and the NASM source generation
+normalizes the CE spellings to `rXd` / `oword`,
+byte-identical through the pinned NASM). Catalog remeasure
+`blocked-catalog-046-regsize`: 221 -> 210 blocked (-11: the
+9 direct register / size rows + 2 provider cascades
+unblocked), zero newly blocked, zero reason changes. The
+Master Trainer load path is unchanged (the MT-9 gate
+re-checks each table independently at load time).
+
 ## Merge & release plan (historical + current)
 
 1. MT-1..MT-5 shipped on `main` with the 0.21 release (2026-10-31);

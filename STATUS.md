@@ -1,6 +1,23 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-13. **0.45 released** (build
+**Updated:** 2026-11-13. **0.46 released** (build
+`native-20261113T185658Z-e543af1a`, cut from `main` @ `b348184`,
+2026-11-13) - the AA extended-register `l` alias + `dqword`
+size-keyword parity (the compatibility lane against the 221-row
+post-0.44 census: CE `getreg` accepts the `l` 32-bit alias
+R8L..R15L and CE `dqword` is the 128-bit size, while the pinned
+NASM assembles neither spelling - `r8l`..`r15l` join the register
+set and `dqword` the size-keyword set, and the NASM source
+generation normalizes the CE spellings to `rXd` / `oword`,
+byte-identical through the pinned NASM); full main suite 5,071
+OK / 36 expected skips; in-build suite 5,071 OK / 36 expected
+skips, `ce_inputs: []`; catalog remeasure
+`blocked-catalog-046-regsize`: 117,809 total / 117,599 supported /
+12,974 headings / 104,450 actionable / 210 blocked (net -11 vs
+`blocked-catalog-lane-b`: the 9 direct register / size rows +
+2 provider cascades unblocked, zero newly blocked, zero reason
+changes); see the 0.46 section below.
+Superseded 0.45 (build
 `native-20261113T144426Z-572d5b30`, cut from `main` @ `58d6c8f`,
 2026-11-13) - the per-session hotkey switch (MT-34, the WeMod QoL
 from the 0.43 candidate list: the trainer header gains "Hotkeys:
@@ -476,7 +493,22 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.45, build
+**Latest verified release:** 0.46, build
+`native-20261113T185658Z-e543af1a` (cut from `main` @ `b348184`,
+2026-11-13): the 0.46 AA extended-register `l` alias + `dqword`
+size-keyword parity release - in-build suite 5,071 OK /
+36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source ZIP
+`CT2Trainer-0.46-source.zip` sha256
+`c49323d56d8feab0652f676d86a739fb6204cff6ddeed8e4b326e43020ee4d62`
+(14,661,247 bytes) - carries the register / size parity lane
+(`aa_program.py` +
+`tests/test_native_aa_register_aliases.py`) - and portable ZIP
+`CT2Trainer-0.46-windows-portable.zip` sha256
+`1b130db71508e42b98c4127ebcec766bc79cd65aabdd563ed59d4b058bfc9fe9`
+(49,857,331 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`18306034231d6632ba15f4f23f62e611dd2c9b73e14db634d99f6cdccb7e8857`,
+17,069,499 bytes) ships next to the converter). Superseded 0.45, build
 `native-20261113T144426Z-572d5b30` (cut from `main` @ `58d6c8f`,
 2026-11-13): the 0.45 per-session hotkey switch (MT-34) +
 trainer-tick-sound field fix release - in-build suite 5,062 OK /
@@ -1149,6 +1181,56 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.46 released (build `native-20261113T185658Z-e543af1a`, cut from `main` @
+`b348184`, 2026-11-13): the AA extended-register `l` alias +
+`dqword` size-keyword parity (compatibility lane).**
+0.46 ships the compatibility lane against the 221-row
+post-0.44 census: the nine direct "Required symbol" rows of
+the CE register / size spellings the clean-room token sets
+did not admit - seven `rXl` low-dword register spellings
+(DS2 `r13l`, HellPie / RAGE2 / Sinking City `r15l`, SOTTR
+`r8l` + `r11l`, YakuzaLikeADragon `r9l`) and two `dqword`
+128-bit operand-size spellings (Fallout4, SOTTR) - were
+blocked because CE `TSingleLineAssembler.getreg`
+(Assemblerunit.pas) accepts the `l` 32-bit alias R8L..R15L
+and CE `dqword` is the 128-bit operand size, while the
+pinned NASM 3.02 assembles neither spelling. Recognition
+(`r8l`..`r15l` into the register set, `dqword` into the
+size-keyword set) drops the tokens out of every program's
+symbol requires; the NASM source generation normalizes the
+CE spellings via the bounded `_CE_TO_NASM_SPELLING` table
+(`rXl` -> `rXd`, `dqword` -> `oword`, the same 128-bit size
+CE's `xmmword` already maps to). Byte correctness proven
+through the pinned NASM: `mov r13l, eax` assembles
+byte-identically to `mov r13d, eax` (`41 89 C5`, the REX.B
+low-dword encoding), `movdqu dqword [rsp], xmm0` to
+`movdqu oword [rsp], xmm0` (`F3 0F 7F 04 24`). +9 tests in
+`tests/test_native_aa_register_aliases.py` (recognition,
+normalization, symbol-requirement, byte-identity). Full main
+suite 5,071 OK / 36 expected skips; in-build suite 5,071 OK
+/ 36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate. Source ZIP
+`CT2Trainer-0.46-source.zip` sha256
+`c49323d56d8feab0652f676d86a739fb6204cff6ddeed8e4b326e43020ee4d62`
+(14,661,247 bytes) - carries the lane (`aa_program.py` +
+`tests/test_native_aa_register_aliases.py`) - and portable
+ZIP `CT2Trainer-0.46-windows-portable.zip` sha256
+`1b130db71508e42b98c4127ebcec766bc79cd65aabdd563ed59d4b058bfc9fe9`
+(49,857,331 bytes; the frozen `CT2Trainer-Master.exe`
+sha256 `18306034231d6632ba15f4f23f62e611dd2c9b73e14db634d99f6cdccb7e8857`,
+17,069,499 bytes, ships next to the converter). Catalog
+remeasure `blocked-catalog-046-regsize`: 117,809 total /
+117,599 supported / 12,974 headings / 104,450 actionable /
+210 blocked (net -11 vs `blocked-catalog-lane-b`: exactly
+11 rows unblocked - the 9 direct register / size rows plus
+2 provider cascades, Fallout4 record 1057
+(`fZoomIntevalMultiplier`) and SOTTR record 15385
+(`dMinHealth`), whose symbol providers are the two
+now-supported dqword records; zero newly blocked, zero
+reason changes); the remaining 210 blocked rows are the
+documented design / gate residuals; AP-11 stays open by
+definition (0/6,143).
 
 **0.45 released (build `native-20261113T144426Z-572d5b30`, cut from `main` @
 `58d6c8f`, 2026-11-13): the per-session hotkey switch (MT-34) +

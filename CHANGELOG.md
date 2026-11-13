@@ -36,6 +36,23 @@ register / size rows plus 2 provider cascades, Fallout4 record
 dqword records; zero newly blocked, zero reason changes, the other
 147 tables byte-identical).
 
+- Build: 0.46 released as run
+  `native-20261113T185658Z-e543af1a` (cut from `main` @
+  `b348184`, 2026-11-13): in-build suite 5,071 OK / 36
+  expected skips, 0 failures - fully green at the canonical
+  build path, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate. Source ZIP
+  `CT2Trainer-0.46-source.zip` sha256
+  `c49323d56d8feab0652f676d86a739fb6204cff6ddeed8e4b326e43020ee4d62`
+  (14,661,247 bytes) - carries the AA extended-register /
+  size-keyword parity lane (`aa_program.py` +
+  `tests/test_native_aa_register_aliases.py`) - and portable
+  ZIP `CT2Trainer-0.46-windows-portable.zip` sha256
+  `1b130db71508e42b98c4127ebcec766bc79cd65aabdd563ed59d4b058bfc9fe9`
+  (49,857,331 bytes; the frozen `CT2Trainer-Master.exe`
+  (sha256 `18306034231d6632ba15f4f23f62e611dd2c9b73e14db634d99f6cdccb7e8857`,
+  17,069,499 bytes) ships next to the converter).
+
 ## 0.45 (2026-11-13)
 
 Per-session hotkey management (MT-34) + the trainer-tick-sound field

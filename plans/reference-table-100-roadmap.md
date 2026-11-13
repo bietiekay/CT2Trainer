@@ -1022,6 +1022,29 @@ relative-ancestor refusals kept by design, 2 createthread RT-5G, 1
 pBase Cronos, 5 trailing-token, 6 single-row AA-syntax / DISABLE
 re-init).
 
+0.46 release record (2026-11-13, run `native-20261113T185658Z-e543af1a`
+cut from `main` @ `b348184`): the AA extended-register
+`l` alias + `dqword` size-keyword parity ships as the
+0.46 release (the compatibility lane against the
+221-row post-0.44 census) - in-build suite 5,071 OK /
+36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; source
+ZIP `CT2Trainer-0.46-source.zip` sha256
+`c49323d56d8feab0652f676d86a739fb6204cff6ddeed8e4b326e43020ee4d62`
+(14,661,247 bytes), portable ZIP
+`CT2Trainer-0.46-windows-portable.zip` sha256
+`1b130db71508e42b98c4127ebcec766bc79cd65aabdd563ed59d4b058bfc9fe9`
+(49,857,331 bytes; the frozen `CT2Trainer-Master.exe`
+sha256 `18306034231d6632ba15f4f23f62e611dd2c9b73e14db634d99f6cdccb7e8857`,
+17,069,499 bytes, ships next to the converter). Catalog
+remeasure `blocked-catalog-046-regsize`: 117,809 total /
+117,599 supported / 12,974 headings / 104,450 actionable /
+210 blocked (net -11 vs `blocked-catalog-lane-b`: the 9
+direct register / size rows + 2 provider cascades
+unblocked, zero newly blocked, zero reason changes); the
+remaining 210 blocked rows are the documented
+design / gate residuals and AP-11 stays open by
+definition.
 0.45 release record (2026-11-13, run
 `native-20261113T144426Z-572d5b30` cut from `main` @ `58d6c8f`):
 the per-session hotkey switch (MT-34) + the trainer-tick-sound
