@@ -117,9 +117,19 @@ def _symbol_name_token(token: str) -> bool:
             and _HEX_NAME.fullmatch(token) is None
             and not _LITERAL_TOKEN.fullmatch(token))
 _REGISTERS = {"rax", "rbx", "rcx", "rdx", "rsi", "rdi", "rbp", "rsp", "eax", "ebx", "ecx", "edx", "esi", "edi", "ebp", "esp", "ax", "bx", "cx", "dx", "si", "di", "bp", "sp", "al", "bl", "cl", "dl", "ah", "bh", "ch", "dh", "sil", "dil", "bpl", "spl", "rip", "eip", "fs", "gs", "cs", "ds", "es", "ss"}
-_REGISTERS |= {f"r{index}{suffix}" for index in range(8, 16) for suffix in ("", "d", "w", "b")}
+_REGISTERS |= {f"r{index}{suffix}" for index in range(8, 16) for suffix in ("", "d", "w", "b", "l")}
 _REGISTERS |= {f"{kind}{index}" for kind in ("xmm", "ymm", "zmm", "mm", "k", "st", "cr", "dr") for index in range(32)}
-_KEYWORDS = {"byte", "word", "dword", "qword", "tword", "oword", "xmmword", "yword", "ymmword", "zword", "zmmword", "short", "near", "far", "strict", "rel", "abs", "to"}
+_KEYWORDS = {"byte", "word", "dword", "qword", "tword", "oword", "xmmword", "yword", "ymmword", "zword", "zmmword", "dqword", "short", "near", "far", "strict", "rel", "abs", "to"}
+# CE Auto Assembler register/size spellings that the pinned NASM does not
+# accept, mapped to the equivalent NASM spelling so the generated program
+# assembles the identical bytes CE would.  CE getreg accepts the `l` 32-bit
+# alias R8L..R15L (NASM spells the 32-bit form R8D..R15D); CE `dqword` is
+# the 128-bit operand size that NASM spells `oword` (the same size CE's
+# xmmword already maps to here).
+_CE_TO_NASM_SPELLING = {
+    "xmmword": "oword", "ymmword": "yword", "zmmword": "zword",
+    "dqword": "oword", **{f"r{index}l": f"r{index}d" for index in range(8, 16)},
+}
 _FORBIDDEN = {"bits", "org", "section", "segment", "global", "extern", "common", "equ", "times", "incbin", "include", "resw", "resd", "resq", "istruc", "struc", "endstruc", "iend", "absolute", "default", "cpu", "warning", "map", "alignb"}
 # RT-4.3 (O10): hyphenated module basenames (Octopath_Traveler-Win64-
 # Shipping.exe) are one operand atom; the .exe/.dll suffix anchors the match
@@ -1976,7 +1986,7 @@ def _translate_operands(text: str, names: dict, memory, symbols, program, backwa
             # register in input. Register spellings retain priority otherwise.
             output.append(names[token])
         elif key in _REGISTERS | _KEYWORDS:
-            output.append({"xmmword": "oword", "ymmword": "yword", "zmmword": "zword"}.get(key, key))
+            output.append(_CE_TO_NASM_SPELLING.get(key, key))
         elif key in names:
             output.append(names[key])
         elif token.startswith('"') or token == "$process" or "." in token:

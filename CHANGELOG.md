@@ -2,6 +2,40 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.46 (2026-11-13)
+
+AA extended-register `l` alias + `dqword` size-keyword parity
+(compatibility lane against the 221-row post-0.44 census): the nine
+direct "Required symbol" rows of the CE register / size spellings
+the clean-room token sets did not admit - seven `rXl` low-dword
+register spellings (DS2 `r13l`, HellPie / RAGE2 / Sinking City
+`r15l`, SOTTR `r8l` + `r11l`, YakuzaLikeADragon `r9l`) and two
+`dqword` 128-bit operand-size spellings (Fallout4, SOTTR) - were
+blocked because CE `TSingleLineAssembler.getreg` (Assemblerunit.pas)
+accepts the `l` 32-bit alias R8L..R15L and CE `dqword` is the
+128-bit operand size, while the pinned NASM 3.02 assembles neither
+spelling.  Recognition - `r8l`..`r15l` join the register set and
+`dqword` the size-keyword set - drops the tokens out of every
+program's symbol requires; the NASM source generation normalizes
+the CE spellings to the NASM spellings they map to (`rXl` ->
+`rXd`, `dqword` -> `oword`, the same 128-bit size CE's `xmmword`
+already maps to) via the new bounded `_CE_TO_NASM_SPELLING` table.
+Byte correctness is proven through the pinned NASM: `mov r13l, eax`
+assembles byte-identically to `mov r13d, eax` (`41 89 C5`, the
+REX.B low-dword encoding) and `movdqu dqword [rsp], xmm0` to
+`movdqu oword [rsp], xmm0` (`F3 0F 7F 04 24`).  +9 tests in
+`tests/test_native_aa_register_aliases.py` (recognition,
+normalization, symbol-requirement and byte-identity).  Full main
+suite 5,071 OK / 36 expected skips.  Catalog remeasure
+`blocked-catalog-046-regsize`: 117,809 total / 117,599 supported /
+12,974 headings / 104,450 actionable / 210 blocked (net -11 vs
+`blocked-catalog-lane-b`: exactly 11 rows unblocked - the 9 direct
+register / size rows plus 2 provider cascades, Fallout4 record
+1057 (`fZoomIntevalMultiplier`) and SOTTR record 15385
+(`dMinHealth`), whose symbol providers are the two now-supported
+dqword records; zero newly blocked, zero reason changes, the other
+147 tables byte-identical).
+
 ## 0.45 (2026-11-13)
 
 Per-session hotkey management (MT-34) + the trainer-tick-sound field
