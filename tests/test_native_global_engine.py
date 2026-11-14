@@ -114,11 +114,18 @@ class Tests(unittest.TestCase):
         self.assertFalse(e.blocked,e.error)
         self.assertEqual(e.desired,set())
 
-    def test_compatible_duplicate_declarers_share_without_ambiguous_external_admission(self):
+    def test_compatible_duplicate_declarers_collapse_keep_first_and_share(self):
+        # 0.50 shared-global parity (CE globalalloc reuses the existing
+        # same-process allocation by name): the compatible duplicate set
+        # collapses keep-first, so the external value record binds to the
+        # document-first declarer instead of the old ambiguity refusal;
+        # the engine still reuses the same pool member for every declarer.
         p=self.table((source(),source(initializer=False,entry=0x2000)),('shared',))
         self.assertTrue(p['entries'][0]['supported'])
         self.assertTrue(p['entries'][1]['supported'])
-        self.assertFalse(p['entries'][2]['supported'])
+        self.assertTrue(p['entries'][2]['supported'],p['entries'][2]['reason'])
+        self.assertEqual(p['entries'][2]['dependency_ids'],[1])
+        validate_plan(p)
         e=self.engine(p)
         e.toggle(1,True)
         base=e.symbols['shared']

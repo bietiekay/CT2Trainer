@@ -328,10 +328,12 @@ def _without_comments(script: str) -> str:
                 clean.append(ch)
             index += 1
         output.append("".join(clean))
-    if in_comment:
-        raise AAError("Unterminated AA comment.")
-    if in_block:
-        raise AAError("Unterminated C block comment.")
+    # CE 7.5 parity (autoassembler.pas removecomments L732-798, read-only
+    # reference): the comment state persists across lines to the end of the
+    # text and there is no error path for an unterminated comment, so a
+    # comment-to-EOF tail is stripped silently (the loop above already
+    # blanked its content); the section/shape contracts below keep judging
+    # what the stripped text may contain.
     return "\n".join(output)
 
 

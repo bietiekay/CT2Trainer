@@ -2,6 +2,85 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.50 (2026-11-14)
+
+The Provider-21 compatibility lane against the 21-row
+"no unique supported provider" census of the post-0.49 catalog
+(two source parity fixes + the tests-only ratification of the 17
+by-design rows). Fix 1 - CE 7.5 comment-to-EOF parity in the AA
+source scanners (``aa_program._clean_source`` + ``aa._without_comments``):
+an unterminated ``{ ... }`` or ``/* ... */`` block comment is stripped
+silently to the end of the source, because CE ``removecomments``
+(read-only reference: autoassembler.pas L732-798) keeps the comment
+state across lines to the end of the text and has no error path for
+it; the quoted-string-without-closing-quote refusal stays named, and
+a comment that swallows a section marker still removes that section,
+so the section contract refuses the stripped program with its own
+named reason ("Both ENABLE and DISABLE sections are required.").
+This unblocks the SonicFrontiers 1337230409 "Pin Ball" provider
+(valid program + trailing unterminated brace comment) and its two
+``pPinBall`` dependents (1337230410 "Score" / 1337230411 "Lives").
+Fix 2 - CE 7.5 shared-globalalloc parity in
+``compiler._dependencies``: a compatible duplicate provider set
+(every declarer allocates the same shared global with the same size
+and flags, the ``global_alloc.shared_provider_compatible`` contract)
+now collapses keep-first instead of refusing the dependents as
+ambiguously provided - CE ``globalalloc`` (read-only reference:
+autoassembler.pas L2103-2148) calls the symbol lookup-first
+``SetUserdefinedSymbolAllocSize`` (symbolhandler.pas L3713+) and
+reuses the existing same-process allocation by name, and
+CT2Trainer's ``GlobalPool.acquire`` keeps the same name-keyed,
+exact-flag contract, so every compatible declarer resolves to the
+identical address regardless of activation order; the keep-first
+scope (``provider_alternatives``) now covers the compatible sets as
+well, so the RT-4.2 (R3) fallback reaches them too - when the kept
+(document-first) declarer is itself blocked, the dependent hands its
+requirement to the first still-supported alternative declarer, which
+is runtime-equivalent because the pool reuses the global by name;
+the "Unselected symbol provider conflicts with the selected shared
+global" branch stays reachable only for full sets the compatibility
+check rejects.  This unblocks the two Cyberpunk2077 ``weaponPtr``
+dependents (380 "Item Level 1" / 381 "Item Level 2") whose
+compatible shared-global declarers were previously the ambiguity
+refusal.  Catalog remeasure ``blocked-catalog-050-provider21``:
+117,809 total / 117,616 supported / 12,974 headings / 104,467
+actionable / 193 blocked (net -5 vs ``blocked-catalog-049-variable``:
+exactly the 5 rows above unblocked, zero newly blocked, zero reason
+changes, the other 148 tables byte-identical).  The ratification lane
+(``tests/test_native_provider21_ratification.py``, 14 tests, 7
+clusters, synthetic fixtures mirroring the real-table shapes) pins
+the 17 remaining rows as blocked by design - each cluster with the
+provider's exact block reason, the dependents' exact generic
+refusal, and the counter-proof that the rows resolve once the
+documented provider condition is met (no hidden second gate): Cronos
+``gun`` x3 (provider releases the externally owned ``pBase`` - the
+WP-37 named handover), Cyberpunk ``healthPtr`` x4 (the table's own
+``aobscanmodule(..., $proces, ...)`` typo - CE fails the same row:
+``getmodulebyname`` misses, the ``getAddressFromName`` fallback
+misses, the aobscanmodule handler aborts with rsAAModuleNotFound,
+autoassembler.pas L1073-1145, no ``$proces`` special case anywhere
+in CE), DS2 ``KeyHandlerThread`` x3 (the Lua providers' static AA
+envelope releases the externally owned symbol - the prefixed
+handover), DS2 ``freecam_enabled`` (provider references the
+nowhere-registered ``g_Instance`` - the actionable per-symbol
+report), DS2 ``InventoryItemProperties_call_dest`` (bare call target
+in the table source only - the generic wording, not the
+missing-definition report), ForgottonAnne usemono x3 (the provider
+targets a Cheat Engine newer than 7.5 - out of parity scope by
+design), and RiftApart ``HeroHealthVFTable`` x2 (encoded embedded-Lua
+registration with a ``createThread`` entry point - out of scope by
+design, RT-5G; the documented static-import remedy is the
+counter-proof). +16 tests total (named-refusal re-pins 4 -> 5
+incl. the new comment-to-EOF pins, the data-dialect re-pin in
+``tests/test_native_aa_literals.py``, the rt42 keep-first pins
+21 -> 22 incl. the new compatible-set fallback pin, the 14
+ratification tests) plus two in-place parity re-pins in the
+existing files (the trailing unterminated C-comment inertness in
+``tests/test_native_assembler.py`` and the compatible-declarer
+keep-first binding in
+``tests/test_native_global_engine.py``). Full main suite 5,171 OK
+/ 36 expected skips.
+
 ## 0.49 (2026-11-14)
 
 The Fallout4 "Player Editor" dynamic-variable symbol lane (shape 3 of

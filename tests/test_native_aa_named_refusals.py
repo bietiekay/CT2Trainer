@@ -10,7 +10,13 @@ directive/script coverage lane:
   directive first (Witcher3 id 192 shape).
 - O24: assert argument-count validation of the static AA envelope of a
   Lua record (Cyberpunk 159 shape).
-- O25: unterminated source block comment (Sonic 1337230409 shape).
+- O25: the unterminated source block comment is a CE 7.5 comment-to-EOF
+  parity (autoassembler.pas removecomments L732-798, read-only reference:
+  the comment state persists to the end of the source, there is no error
+  path) — the Sonic 1337230409 shape (valid program + trailing
+  unterminated brace comment) loads, while a comment that swallows a
+  section marker removes that section, so the section contract still
+  applies with its own named refusal.
 
 Self-contained synthetic CT; no TableReferences, no CE inputs.
 """
@@ -70,7 +76,26 @@ ASSERT_ARGCOUNT_SCRIPT = (
     "db 00\n"
 )
 
-UNCLOSED_COMMENT_SCRIPT = (
+# O25 (SonicFrontiers 1337230409 shape, 0.50 CE parity re-pin): the
+# complete program comes first; the trailing brace comment that never
+# closes is stripped to the end of the source, exactly like CE 7.5
+# removecomments does, so the record loads.
+TRAILING_UNCLOSED_COMMENT_SCRIPT = (
+    "[ENABLE]\n"
+    "FixtureTarget.exe+0x10:\n"
+    "db 01\n"
+    "[DISABLE]\n"
+    "FixtureTarget.exe+0x10:\n"
+    "db 00\n"
+    "{\n"
+    "// ORIGINAL CODE - INJECTION POINT (unterminated by design)\n"
+)
+
+# The same parity seen from the section contract: a block comment that
+# opens before [DISABLE] and never closes swallows the marker, so the
+# stripped program loses its disable section and the named section
+# refusal fires instead of a comment refusal.
+COMMENT_SWALLOWS_DISABLE_SCRIPT = (
     "[ENABLE]\n"
     "/* this comment never closes\n"
     "assert(FixtureTarget.exe+0x10,00)\n"
@@ -91,7 +116,10 @@ class NamedRefusalTests(unittest.TestCase):
             table_xml(record(100, '"usemono"', USEMONO_SCRIPT)
                       + record(101, '"createthread"', CREATE_THREAD_SCRIPT)
                       + record(102, '"assert argcount"', ASSERT_ARGCOUNT_SCRIPT)
-                      + record(103, '"unclosed comment"', UNCLOSED_COMMENT_SCRIPT)),
+                      + record(103, '"trailing unclosed comment"',
+                              TRAILING_UNCLOSED_COMMENT_SCRIPT)
+                      + record(104, '"comment swallows DISABLE"',
+                              COMMENT_SWALLOWS_DISABLE_SCRIPT)),
             encoding="utf-8")
         self.plan = compile_table(self.path, PROCESS)
 
@@ -123,10 +151,25 @@ class NamedRefusalTests(unittest.TestCase):
             entry["reason"],
             "Static AA envelope: Line 2: assert has an invalid argument count.")
 
-    def test_unterminated_block_comment_is_refused_named(self):
+    def test_trailing_unterminated_block_comment_is_comment_to_eof(self):
+        # CE 7.5 parity: the unterminated brace comment at the end of the
+        # source is stripped to EOF, so the complete program before it
+        # loads (SonicFrontiers 1337230409 "Pin Ball" shape).
         entry = self._entry(103)
+        self.assertTrue(entry["supported"])
+
+    def test_comment_that_swallows_the_disable_marker_is_a_section_refusal(self):
+        # The same parity from the section contract: the comment-to-EOF
+        # strip removes the swallowed [DISABLE] marker, so the program
+        # loses its disable section and the named section refusal fires
+        # (no comment refusal any more).
+        entry = self._entry(104)
         self.assertFalse(entry["supported"])
-        self.assertEqual(entry["reason"], "Unterminated source block comment.")
+        self.assertEqual(
+            entry["reason"],
+            "Both ENABLE and DISABLE sections are required. "
+            "Native assembly: Program requires explicit ENABLE and "
+            "DISABLE sections.")
 
 
 if __name__ == '__main__':

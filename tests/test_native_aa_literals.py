@@ -164,9 +164,17 @@ class DataDialectCCommentTests(unittest.TestCase):
         with self.assertRaisesRegex(AAError, "Unmatched C block comment terminator."):
             compile_script("[ENABLE]\n*/\n[DISABLE]\n")
 
-    def test_unterminated_block_comment_refused(self):
-        with self.assertRaisesRegex(AAError, "Unterminated C block comment."):
+    def test_unterminated_block_comment_is_comment_to_eof(self):
+        # CE 7.5 parity (removecomments): an unterminated block comment
+        # extends to the end of the text; the swallowed [DISABLE] marker
+        # stays comment, so the section contract refuses the stripped
+        # program with its own named reason (no comment refusal any more).
+        with self.assertRaisesRegex(
+                AAError, "Both ENABLE and DISABLE sections are required."):
             compile_script("[ENABLE]\n/* a\n[DISABLE]\n")
+        clean = aadata._without_comments("Anchor:\n/* trailing\n[DISABLE]")
+        self.assertIn("Anchor:", clean)
+        self.assertNotIn("[DISABLE]", clean)
 
     def test_compiler_directives_still_refused_inside_block_comment(self):
         with self.assertRaisesRegex(AAError, "Lua, C and compiler/preprocessor directives are unsupported."):

@@ -158,8 +158,13 @@ class ProgramTests(unittest.TestCase):
     def test_c_comment_directives_are_inert(self):
         source = "/* [ENABLE]\n%include bad */\n" + OWNED_HOOK
         self.assertEqual(prepare_program(source)["provides"], ["anchor", "code"])
-        with self.assertRaisesRegex(ProgramError, "Unterminated"):
-            prepare_program(OWNED_HOOK + "\n/*")
+        # CE 7.5 parity (removecomments, 0.50 comment-to-EOF): a trailing
+        # unterminated C block comment extends to the end of the source and
+        # is stripped silently, so the complete program before it compiles
+        # unchanged (the old "Unterminated source block comment." refusal
+        # is gone).
+        trailing = prepare_program(OWNED_HOOK + "\n/*")
+        self.assertEqual(trailing["provides"], ["anchor", "code"])
 
     def test_assert_wildcards_capture_actual_bytes(self):
         source = OWNED_HOOK.replace("alloc(cave", "assert(anchor,8? 5F ??)\nalloc(cave")

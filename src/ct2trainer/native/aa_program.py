@@ -543,8 +543,12 @@ def _clean_source(source: str) -> str:
         else:
             output.append(source[index])
         index += 1
-    if block in {"c", "brace"}:
-        raise ProgramError("Unterminated source block comment.")
+    # CE 7.5 parity (autoassembler.pas removecomments L732-798, read-only
+    # reference): the comment state persists across lines to the end of the
+    # source and there is no error path for an unterminated { ... } or
+    # /* ... */ block, so a comment-to-EOF tail is stripped silently (the
+    # scanner above already blanked its content).  A quoted string without
+    # its closing quote stays a named refusal.
     if quote:
         raise ProgramError("Unterminated quoted string.")
     return "".join(output)

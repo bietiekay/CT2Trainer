@@ -894,9 +894,14 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
     providers: dict[str, list[dict]] = {}
     # RT-4.2 (R3): the ordered keep-first scope per symbol, retained so a
     # dependent can fall back to the first still-supported candidate when
-    # the kept (document-order first) provider is itself blocked.  Only
-    # non-compatible duplicate sets get an entry; the shared-global
-    # (compatible) branch is untouched and keeps its ambiguity refusal.
+    # the kept (document-order first) provider is itself blocked.  Every
+    # duplicate set gets an entry — including the compatible shared-global
+    # sets, whose keep-first collapse is runtime-safe: CE 7.5 globalalloc
+    # (autoassembler.pas L2103-2148, read-only reference) reuses the
+    # existing same-process allocation by name (symbolhandler.pas
+    # SetUserdefinedSymbolAllocSize L3713+) and CT2Trainer's
+    # GlobalPool.acquire keeps the same name-keyed, exact-flag contract,
+    # so every compatible declarer resolves to the identical address.
     provider_alternatives: dict[str, list[dict]] = {}
     for entry in entries:
         if entry["supported"] and entry["kind"] == "script":
@@ -906,13 +911,16 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
     for symbol, candidates in providers.items():
         if len(candidates) > 1:
             from .global_alloc import shared_provider_compatible
-            if shared_provider_compatible(candidates,symbol):
-                continue
             chosen=[candidate for candidate in candidates if selected is not None and candidate['id'] in selected]
-            if chosen and shared_provider_compatible(chosen,symbol):
+            if (chosen and not shared_provider_compatible(candidates, symbol)
+                    and shared_provider_compatible(chosen, symbol)):
                 # Explicit global selection can exclude a table's older,
                 # ordinary provider alternative. It cannot select both or
                 # silently import an unselected conflicting definition.
+                # Only reachable for a full set the compatibility check
+                # rejects: a compatible full set collapses keep-first
+                # below (0.50 shared-global parity, see the keep-first
+                # note after this branch).
                 for candidate in candidates:
                     if candidate not in chosen:
                         _block(candidate,f"Unselected symbol provider conflicts with the selected shared global: {symbol}.")
@@ -947,6 +955,20 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
             # stay byte-stable).  Unselected duplicates stay supported:
             # the engine activates selected entries only, so the kept
             # provider cannot shadow them at runtime.
+            # CE 7.5 shared-global parity (0.50): a compatible duplicate
+            # set (every declarer allocates the same global with the same
+            # size and flags) also collapses keep-first, instead of
+            # refusing the dependents as ambiguously provided.  CE
+            # globalalloc (autoassembler.pas L2103-2148, read-only
+            # reference) calls SetUserdefinedSymbolAllocSize, which looks
+            # the symbol up first and reuses the existing same-process
+            # allocation (symbolhandler.pas L3713+); CT2Trainer's
+            # GlobalPool.acquire keeps the same name-keyed, exact-flag
+            # contract, so every compatible declarer resolves to the
+            # identical address regardless of which one activates first.
+            # The dependents therefore resolve against the kept declarer,
+            # and the R3 fallback below covers a blocked kept provider
+            # with the first still-supported alternative declarer.
             scope = chosen if chosen else candidates
             kept = scope[0]
             # RT-4.2 (R3): keep the ordered scope for the dependency
@@ -1027,9 +1049,12 @@ def _dependencies(entries: list[dict], selected: set[int] | None = None,
                 # first still-supported candidate in keep-first scope order
                 # takes over the requirement; the dependent's activation
                 # ordering follows that provider, so static resolution and
-                # runtime registration stay in agreement.  The shared-global
-                # branch never reaches here (its candidates stay in
-                # ``providers`` and keep the unique-provider refusal).
+                # runtime registration stay in agreement.  The fallback
+                # reaches the compatible shared-global scope as well (0.50
+                # shared-global parity): the alternatives are
+                # runtime-equivalent declarers of the same address, so
+                # handing the requirement to the first still-supported
+                # one never changes the resolved value.
                 alternative = [candidate for candidate in
                                provider_alternatives.get(key, ())
                                if candidate["supported"] and candidate["id"] != entry["id"]]

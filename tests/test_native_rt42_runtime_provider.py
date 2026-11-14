@@ -196,11 +196,15 @@ R3_KEPT_HEALTHY = (
     + value_record(3, "RtAlt42+4"))
 
 # Identical shared-global declarers (the compatible duplicate branch,
-# global_alloc.shared_provider_compatible short-circuit): both records
-# stay supported and share the globalalloc pool, so the duplicate set is
-# NOT collapsed keep-first — the dependent sees two supported providers
-# and keeps the ambiguity refusal; the R3 scope fallback never applies
-# to compatible sets.
+# global_alloc.shared_provider_compatible): both records stay supported
+# and share the globalalloc pool.  Since CE 7.5 globalalloc reuses the
+# existing same-process allocation by name (autoassembler.pas
+# L2103-2148, read-only reference: SetUserdefinedSymbolAllocSize looks
+# the symbol up first) and GlobalPool.acquire keeps the same name-keyed,
+# exact-flag contract, the set collapses keep-first (0.50 shared-global
+# parity) — the dependent binds to the document-first declarer, and the
+# R3 scope fallback hands it to the next still-supported declarer if
+# that one is blocked (identical address either way).
 R3_GLOBAL_DUPLICATES_SCRIPT = (
     "[ENABLE]\n"
     "label(RtDone42)\n"
@@ -211,6 +215,32 @@ R3_GLOBAL_DUPLICATES_SCRIPT = (
     "RtCave42:\n"
     "mov rcx, RtGlb42\n"
     "mov eax, [rcx]\n"
+    "jmp RtDone42\n"
+    "0x1000:\n"
+    "jmp RtCave42\n"
+    "RtDone42:\n"
+    "[DISABLE]\n"
+    "0x1000:\n"
+    "db B8 01 00 00 00\n"
+    "dealloc(RtCave42)\n"
+    "dealloc(RtGlb42)\n"
+)
+
+# The kept (document-first) shared-global declarer of RtGlb42; its body
+# references a symbol no record registers, so the fixed-point pass blocks
+# it after the provider map is built, while its globalalloc declaration
+# keeps the duplicate set compatible with the fallback declarer.
+R3_GLOBAL_DUPLICATES_KEPT_BLOCKED_SCRIPT = (
+    "[ENABLE]\n"
+    "label(RtDone42)\n"
+    "globalalloc(RtGlb42, 4)\n"
+    "RtGlb42:\n"
+    "dd #100\n"
+    "alloc(RtCave42, 1000)\n"
+    "RtCave42:\n"
+    "mov rcx, RtGlb42\n"
+    "mov eax, [rcx]\n"
+    "mov rdx, RtMissing42\n"
     "jmp RtDone42\n"
     "0x1000:\n"
     "jmp RtCave42\n"
@@ -573,12 +603,12 @@ class R3PlanTests(RT42EngineBase):
         validate_plan(plan)
         validate_runtime_plan(plan)
 
-    def test_shared_global_compatible_duplicates_keep_ambiguity_refusal(self):
-        # Identical shared-global declarers form a compatible duplicate set:
-        # both stay supported and share the pool, and the set is NOT
-        # collapsed keep-first, so the dependent sees two supported
-        # providers and keeps the ambiguity refusal — the R3 scope fallback
-        # only applies to non-compatible duplicate sets.
+    def test_shared_global_compatible_duplicates_collapse_keep_first(self):
+        # Identical shared-global declarers form a compatible duplicate set
+        # (0.50 shared-global parity): both stay supported and share the
+        # pool, the set collapses keep-first, so the dependent binds to
+        # the document-first declarer instead of refusing as ambiguously
+        # provided.
         body = (script_record(1, R3_GLOBAL_DUPLICATES_SCRIPT,
                               "Global provider A")
                 + script_record(2, R3_GLOBAL_DUPLICATES_SCRIPT,
@@ -588,10 +618,31 @@ class R3PlanTests(RT42EngineBase):
         e = by_id(plan)
         self.assertTrue(e[1]["supported"], e[1]["reason"])
         self.assertTrue(e[2]["supported"], e[2]["reason"])
-        self.assertFalse(e[3]["supported"])
-        self.assertEqual(
-            e[3]["reason"],
-            "Required symbol has no unique supported provider: RtGlb42.")
+        self.assertTrue(e[3]["supported"], e[3]["reason"])
+        self.assertEqual(e[3]["dependency_ids"], [1])
+        self.assertEqual(e[3]["staged"]["provider_ids"], [1])
+        validate_plan(plan)
+        validate_runtime_plan(plan)
+
+    def test_shared_global_compatible_fallback_reaches_blocked_kept_declarer(self):
+        # The R3 scope fallback now reaches the compatible shared-global
+        # scope (0.50): the kept (document-first) declarer is blocked by a
+        # symbol no record registers, so the dependent takes over to the
+        # first still-supported alternative declarer — the same address,
+        # because the pool reuses the global by name.
+        body = (script_record(1, R3_GLOBAL_DUPLICATES_KEPT_BLOCKED_SCRIPT,
+                              "kept global provider (blocked)")
+                + script_record(2, R3_GLOBAL_DUPLICATES_SCRIPT,
+                                "fallback global provider")
+                + value_record(3, "RtGlb42+4"))
+        plan = compile_table(write_table(self.root, body), PROCESS)
+        e = by_id(plan)
+        self.assertFalse(e[1]["supported"])
+        self.assertIn("RtMissing42", e[1]["reason"])
+        self.assertTrue(e[2]["supported"], e[2]["reason"])
+        self.assertTrue(e[3]["supported"], e[3]["reason"])
+        self.assertEqual(e[3]["dependency_ids"], [2])
+        self.assertEqual(e[3]["staged"]["provider_ids"], [2])
         validate_plan(plan)
         validate_runtime_plan(plan)
 
