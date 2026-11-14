@@ -46,6 +46,27 @@ blocked (net -4 vs the 0.47 baseline: exactly the four qt-ds rows
 unblocked, zero newly blocked, zero reason changes, the other 149
 tables byte-identical; the rayman row stays blocked by design).
 
+- Build: 0.48 released as run
+  `native-20261114T133842Z-8ee6999f` (cut from `main` @
+  `5d467dc`, 2026-11-14): in-build suite 5,127 OK / 36
+  expected skips, 0 failures - fully green at the canonical
+  build path, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate. The build ran unsigned by
+  default (no certificate on this machine; `code_signing`
+  report: converter / master signed false, reason
+  not-configured) - the signed path activates with a
+  user-supplied trusted-CA PFX. Source ZIP
+  `CT2Trainer-0.48-source.zip` sha256
+  `feb962e5628027f1ee79acbc16cb10a4dfe36ef5a3de7f4cf4f3681d9cc37f0b`
+  (14,682,168 bytes) - carries the trailing-offset parity
+  lane (`address_expression.py` +
+  `tests/test_native_trailing_offsets.py`) - and portable
+  ZIP `CT2Trainer-0.48-windows-portable.zip` sha256
+  `352069d184e93f19f6ec56ce9236bedc168b09e66da7c3ac2af15b13615d3a85`
+  (49,879,644 bytes; the frozen `CT2Trainer-Master.exe`
+  (sha256 `9843d6dce2445af3bc883f12b9b16f6b5eb2c0fbfa2c86dae986c77c65383f10`,
+  17,066,255 bytes) ships next to the converter).
+
 ## 0.47 (2026-11-14)
 
 Optional code signing for the frozen and generated trainer

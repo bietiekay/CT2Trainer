@@ -762,6 +762,63 @@ game-facing action.
   17,066,832 bytes, ships next to the converter). Feature
   matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`).
+- 0.48 the CE 7.5 trailing-offset parity compatibility-lane
+  release (2026-11-14, content commit `5d467dc`, build record
+  below): VERSION 0.48 + CHANGELOG 0.48 entry in the same
+  change (incl. the `__version__` package constant sync,
+  guarded by `test_version_matches_root_version_file`).
+  The compatibility lane against the 210-row post-0.47
+  catalog census: the five "Unexpected trailing address
+  expression tokens." rows - the four `[mats]20` / `[mats]28`
+  value-record addresses of qt-ds-1 + qt-ds-2 (records 130674
+  + 130675 each, next to their supported `[mats]` /
+  `[mats]+8` / `[mats]+10` / `[mats]+18` siblings) plus the
+  raymanlegends_dvt `Made by` string address - were blocked
+  because the clean-room expression grammar required an
+  explicit operator after a closing bracket. CE `TSymhandler`
+  (read-only reference: symbolhandler.pas L3073-3140 tokenize,
+  L5516-5553 `]` pointer dereference, L5603-5655 arithmetic
+  accumulation with `+` as the default operation) splits
+  `[mats]20` into the tokens `[`, `mats`, `]`, `20` and reads
+  it as `[mats]+0x20` (hex default); the bounded grammar
+  extension in `address_expression.parse_expression` gives
+  one value atom directly after a `]` token an implicit `+`
+  operand - unless it is an explicit operator (`+` `-` `*`
+  `/`), a closing or repeating bracket, a `(` (CE resolves
+  that through its record-by-description lookup path,
+  L5461-5494, out of parity scope), or a 0x/$/#-prefixed
+  number; a `[` after `]` is included (CE resolves both
+  dereferences and adds their values). Byte stability: no
+  supported expression can contain `]` followed by a value
+  atom, so every supported address parses byte-identically -
+  only expressions that failed to parse before change shape.
+  Documented clean-room extension: `[[mats]20]` parses as the
+  regular `[[mats]+20]` (CE's nested digit-merge concatenates
+  the hex digits); the rayman `Made by` two-atom shape (no
+  closing bracket) stays refused by design - authoring junk
+  CE also fails. +19 tests in
+  `tests/test_native_trailing_offsets.py`. Full main suite
+  5,127 OK / 36 expected skips (5,108 + 19). Catalog remeasure
+  `blocked-catalog-048-trailing`: 117,809 total / 117,603
+  supported / 12,974 headings / 104,454 actionable / 206
+  blocked (net -4 vs the 0.47 baseline: exactly the four
+  qt-ds rows unblocked, zero newly blocked, zero reason
+  changes, the other 149 tables byte-identical; the rayman
+  row stays blocked by design). The 0.48 build
+  `native-20261114T133842Z-8ee6999f` cut from `main` @
+  `5d467dc` (2026-11-14): in-build suite 5,127 OK / 36
+  expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.48-source.zip` sha256
+  `feb962e5628027f1ee79acbc16cb10a4dfe36ef5a3de7f4cf4f3681d9cc37f0b`
+  (14,682,168 bytes), portable ZIP
+  `CT2Trainer-0.48-windows-portable.zip` sha256
+  `352069d184e93f19f6ec56ce9236bedc168b09e66da7c3ac2af15b13615d3a85`
+  (49,879,644 bytes; the frozen `CT2Trainer-Master.exe`
+  sha256 `9843d6dce2445af3bc883f12b9b16f6b5eb2c0fbfa2c86dae986c77c65383f10`,
+  17,066,255 bytes, ships next to the converter). Feature
+  matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`).
 - 0.45 the per-session hotkey switch (MT-34) + the
   trainer-tick-sound field fix release (2026-11-13, content commit
   `58d6c8f`, build record below): VERSION 0.45 + CHANGELOG 0.45

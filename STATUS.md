@@ -1,6 +1,35 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-14. **0.47 released** (build
+**Updated:** 2026-11-14. **0.48 released** (build
+`native-20261114T133842Z-8ee6999f`, cut from `main` @ `5d467dc`,
+2026-11-14) - the CE 7.5 trailing-offset parity (the
+compatibility lane against the 210-row post-0.47 catalog
+census): the four `[mats]20` / `[mats]28` value-record
+addresses of qt-ds-1 + qt-ds-2 (next to their supported
+`[mats]` / `[mats]+8` / `[mats]+10` / `[mats]+18` siblings)
+were blocked because the clean-room expression grammar
+required an explicit operator after a closing bracket - CE
+`TSymhandler` (symbolhandler.pas L3073-3140 tokenize,
+L5516-5553 `]` pointer dereference, L5603-5655 arithmetic
+accumulation with `+` as the default operation) reads
+`[mats]20` as `[mats]+0x20` (hex default); the bounded
+grammar extension in `address_expression.parse_expression`
+gives one value atom directly after a `]` token an implicit
+`+` operand (explicit operators, a closing/repeating
+bracket, a `(` and 0x/$/#-prefixed numbers stay refused;
+byte stability: no supported expression can contain `]`
+followed by a value atom); the fifth census row (the rayman
+`Made by` string address without a closing bracket) stays
+blocked by design; +19 tests; full main suite 5,127 OK / 36
+expected skips; in-build suite 5,127 OK / 36 expected
+skips, `ce_inputs: []`; catalog remeasure
+`blocked-catalog-048-trailing`: 117,809 total / 117,603
+supported / 12,974 headings / 104,454 actionable / 206
+blocked (net -4 vs the 0.47 baseline: exactly the four
+qt-ds rows unblocked, zero newly blocked, zero reason
+changes, the other 149 tables byte-identical; the rayman
+row stays blocked by design); see the 0.48 section below.
+Superseded 0.47 (build
 `native-20261114T011046Z-ee5cecee`, cut from `main` @ `6e1940e`,
 2026-11-14) - the optional code signing for the frozen and
 generated trainer executables (the Smart App Control handling,
@@ -517,7 +546,25 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.47, build
+**Latest verified release:** 0.48, build
+`native-20261114T133842Z-8ee6999f` (cut from `main` @ `5d467dc`,
+2026-11-14): the 0.48 CE 7.5 trailing-offset parity release -
+in-build suite 5,127 OK / 36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; the build ran
+unsigned by default (`code_signing` report: converter / master
+signed false, reason not-configured - no certificate on this
+machine; the signed path activates with a user-supplied
+trusted-CA PFX); source ZIP
+`CT2Trainer-0.48-source.zip` sha256
+`feb962e5628027f1ee79acbc16cb10a4dfe36ef5a3de7f4cf4f3681d9cc37f0b`
+(14,682,168 bytes) - carries the trailing-offset parity
+lane (`address_expression.py` +
+`tests/test_native_trailing_offsets.py`) - and portable
+ZIP `CT2Trainer-0.48-windows-portable.zip` sha256
+`352069d184e93f19f6ec56ce9236bedc168b09e66da7c3ac2af15b13615d3a85`
+(49,879,644 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`9843d6dce2445af3bc883f12b9b16f6b5eb2c0fbfa2c86dae986c77c65383f10`,
+17,066,255 bytes) ships next to the converter). Superseded 0.47, build
 `native-20261114T011046Z-ee5cecee` (cut from `main` @ `6e1940e`,
 2026-11-14): the 0.47 optional code signing release (Smart App
 Control handling) - in-build suite 5,108 OK /
@@ -1226,6 +1273,76 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.48 released (build `native-20261114T133842Z-8ee6999f`, cut from `main` @
+`5d467dc`, 2026-11-14): the CE 7.5 trailing-offset parity
+(compatibility lane).**
+0.48 ships the compatibility lane against the 210-row
+post-0.47 catalog census: the five "Unexpected trailing
+address expression tokens." rows - the four value-record
+addresses `[mats]20` / `[mats]28` of qt-ds-1 and qt-ds-2
+(records 130674 + 130675 in each, next to their supported
+`[mats]` / `[mats]+8` / `[mats]+10` / `[mats]+18` siblings)
+plus the raymanlegends_dvt `Made by` string address - were
+blocked because the clean-room expression grammar required
+an explicit operator after a closing bracket. CE
+`TSymhandler` (read-only reference: symbolhandler.pas
+L3073-3140 tokenize, L5516-5553 `]` pointer dereference,
+L5603-5655 arithmetic accumulation with `+` as the default
+operation) splits `[mats]20` into the tokens `[`, `mats`,
+`]`, `20` and reads it as `[mats]+0x20` (hex default), while
+the 0x/$/#-prefixed spellings fail the CE arithmetic and a
+`(` after `]` enters CE's record-by-description lookup path
+(L5461-5494, out of parity scope). The bounded grammar
+extension in `address_expression.parse_expression` gives
+one value atom directly after a `]` token an implicit `+`
+operand - unless it is an explicit operator (`+` `-` `*`
+`/`), a closing or repeating bracket, a `(`, or a
+0x/$/#-prefixed number; a `[` after `]` is included (CE
+resolves both dereferences and adds their values). Byte
+stability: no supported expression can contain `]`
+followed by a value atom, so every supported address
+parses byte-identically - only expressions that failed to
+parse before change shape. Documented clean-room
+extension: `[[mats]20]` parses as the regular
+`[[mats]+20]` (CE's nested digit-merge concatenates the
+hex digits); the rayman `Made by` two-atom shape (no
+closing bracket) stays refused by design - authoring junk
+CE also fails. +19 tests in
+`tests/test_native_trailing_offsets.py` (AST identity with
+the explicit-plus form, the CE hex default, byte-exact
+deref+offset resolution against a fake pointer memory, the
+synthetic qt-ds plan shape fully supported with the symbol
+requirement, and every refused shape pinned with the exact
+named reason). Full main suite 5,127 OK / 36 expected
+skips; in-build suite 5,127 OK / 36 expected skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept
+per gate. Source ZIP `CT2Trainer-0.48-source.zip` sha256
+`feb962e5628027f1ee79acbc16cb10a4dfe36ef5a3de7f4cf4f3681d9cc37f0b`
+(14,682,168 bytes) - carries the trailing-offset parity
+lane (`address_expression.py` +
+`tests/test_native_trailing_offsets.py`) - and portable
+ZIP `CT2Trainer-0.48-windows-portable.zip` sha256
+`352069d184e93f19f6ec56ce9236bedc168b09e66da7c3ac2af15b13615d3a85`
+(49,879,644 bytes; the frozen `CT2Trainer-Master.exe`
+sha256 `9843d6dce2445af3bc883f12b9b16f6b5eb2c0fbfa2c86dae986c77c65383f10`,
+17,066,255 bytes, ships next to the converter). Catalog
+remeasure `blocked-catalog-048-trailing`: 117,809 total /
+117,603 supported / 12,974 headings / 104,454 actionable /
+206 blocked (net -4 vs the 0.47 baseline: exactly the four
+qt-ds rows unblocked, zero newly blocked, zero reason
+changes, the other 149 tables byte-identical; the rayman
+row stays blocked by design); the remaining 206 blocked
+rows are the documented design / gate residuals (80
+`BaseAddress` by design until the documented user import,
+70 required symbols not defined in their table, 21
+no-unique-supported-provider, 11 KeyHandlerThread WP-37
+external ownership, 6 RE2 AP-08.7 custom value types, 1
+trailing-token (the rayman `Made by` row, by design), 4
+usemono > 7.5 out of parity scope, 2 + 2
+relative-ancestor refusals kept by design, 2
+createthread / threadWait RT-5G, 1 pBase Cronos, 6
+single-row named AA-syntax / DISABLE re-init refusals).
 
 **0.47 released (build `native-20261114T011046Z-ee5cecee`, cut from `main` @
 `6e1940e`, 2026-11-14): the optional code signing for the frozen

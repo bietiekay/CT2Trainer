@@ -1022,6 +1022,82 @@ relative-ancestor refusals kept by design, 2 createthread RT-5G, 1
 pBase Cronos, 5 trailing-token, 6 single-row AA-syntax / DISABLE
 re-init).
 
+Trailing-offset parity ratification (2026-11-14, post-0.47 residual
+lane, `main` @ `5d467dc`): the four fixable "Unexpected trailing
+address expression tokens." rows of the 210-blocked post-0.47
+census (qt-ds-1 + qt-ds-2, records 130674 + 130675: the value-record
+addresses `[mats]20` / `[mats]28` next to their supported `[mats]`
+/ `[mats]+8` / `[mats]+10` / `[mats]+18` siblings) are proven
+against the CE 7.5 source: `TSymhandler.tokenize`
+(symbolhandler.pas L3073-3140) splits `[mats]20` into the tokens
+`[`, `mats`, `]`, `20`; the `]` pointer dereference (L5516-5553)
+resolves the bracket range to the dereferenced hex value, and the
+arithmetic accumulation (L5603-5655) computes each remaining
+non-operator token with `StrToQWordEx('$'+token)` and adds it (`+`
+is the default operation) - CE reads `[mats]20` as
+`[mats]+0x20` (hex default), while the 0x/$/#-prefixed spellings
+fail the arithmetic and a `(` after `]` enters CE's record-by-
+description lookup path (L5461-5494, out of parity scope). The
+bounded grammar extension in `address_expression.parse_expression`
+gives one value atom directly after a `]` token an implicit `+`
+operand unless it is an explicit operator, a closing/repeating
+bracket, a `(` or a 0x/$/#-prefixed number; a `[` after `]` is
+included (CE resolves both dereferences and adds their values).
+Byte stability: no supported expression can contain `]` followed by
+a value atom, so every supported address parses byte-identically.
+Documented clean-room extension: `[[mats]20]` parses as the regular
+`[[mats]+20]` (CE's nested digit-merge concatenates the hex
+digits). The fifth census row (raymanlegends_dvt `Made by`, a
+two-atom string address without a closing bracket) stays blocked by
+design - authoring junk CE also fails. +19 tests
+(`tests/test_native_trailing_offsets.py`). Catalog remeasure
+`blocked-catalog-048-trailing`: 117,809 total / 117,603 supported /
+12,974 headings / 104,454 actionable / 206 blocked (-4 vs the 0.47
+baseline: exactly the four qt-ds rows unblocked, zero newly blocked,
+zero reason changes, the other 149 tables byte-identical). Full main
+suite 5,127 OK / 36 expected skips. Shipped as the 0.48 release.
+
+0.48 release record (2026-11-14, run `native-20261114T133842Z-8ee6999f`
+cut from `main` @ `5d467dc`): the CE 7.5 trailing-offset parity
+ships as the 0.48 release - the compatibility lane against the
+210-row post-0.47 catalog census: the four `[mats]20` /
+`[mats]28` value-record rows of qt-ds-1 + qt-ds-2 (records
+130674 + 130675 each, next to their supported `[mats]` /
+`[mats]+8` / `[mats]+10` / `[mats]+18` siblings) are proven
+against the CE 7.5 source and closed by the bounded grammar
+extension in `address_expression.parse_expression` (one value
+atom directly after a `]` token takes an implicit `+` operand
+- the CE `TSymhandler` contract: symbolhandler.pas L3073-3140
+tokenize, L5516-5553 `]` dereference, L5603-5655 arithmetic
+accumulation with `+` as the default operation, hex default;
+explicit operators, a closing/repeating bracket, a `(` and
+0x/$/#-prefixed numbers stay refused; byte-stable: no
+supported expression can contain `]` followed by a value
+atom); the fifth census row (raymanlegends_dvt `Made by`, a
+two-atom string address without a closing bracket) stays
+blocked by design - authoring junk CE also fails; +19 tests,
+in-build suite 5,127 OK / 36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; the build
+ran unsigned by default (no code-signing certificate on this
+machine; `build.json` `code_signing`: converter / master
+signed false, reason not-configured - the signed path
+activates with a user-supplied trusted-CA PFX); source
+ZIP `CT2Trainer-0.48-source.zip` sha256
+`feb962e5628027f1ee79acbc16cb10a4dfe36ef5a3de7f4cf4f3681d9cc37f0b`
+(14,682,168 bytes), portable ZIP
+`CT2Trainer-0.48-windows-portable.zip` sha256
+`352069d184e93f19f6ec56ce9236bedc168b09e66da7c3ac2af15b13615d3a85`
+(49,879,644 bytes; the frozen `CT2Trainer-Master.exe`
+sha256 `9843d6dce2445af3bc883f12b9b16f6b5eb2c0fbfa2c86dae986c77c65383f10`,
+17,066,255 bytes, ships next to the converter). Catalog
+remeasure `blocked-catalog-048-trailing`: 117,809 total /
+117,603 supported / 12,974 headings / 104,454 actionable /
+206 blocked (net -4 vs the 0.47 baseline: exactly the four
+qt-ds rows unblocked, zero newly blocked, zero reason
+changes, the other 149 tables byte-identical; the rayman row
+stays blocked by design); the remaining 206 blocked rows are
+the documented design / gate residuals and AP-11 stays open
+by definition.
 0.47 release record (2026-11-14, run `native-20261114T011046Z-ee5cecee`
 cut from `main` @ `6e1940e`): the optional code signing for the
 frozen and generated trainer executables (the Smart App
@@ -1173,8 +1249,13 @@ package (roadmap rule).
 ### Caveats
 
 1. Five trailing-token rows (qt-ds-1/qt-ds-2 ×2 each,
-   raymanlegends_dvt 1) could not be inspected entry-wise (scripts not
-   retrievable by plan entry ID) → root unverified; counted under O4.
+   raymanlegends_dvt 1): resolved 2026-11-14 by the trailing-offset
+   parity lane (0.48, `main` @ `5d467dc`) - the four `[mats]20` /
+   `[mats]28` rows are CE 7.5 implicit-addition offsets (proven in
+   symbolhandler.pas, see the trailing-offset ratification above)
+   and are supported; the rayman `Made by` string address stays
+   blocked by design (authoring junk CE also fails); counted under
+   O4.
 2. Cyberpunk O24 (assert argument count, entry 159): the assert lives in
    a hybrid `{$lua}` section whose body was not fully dumped → (a)
    classification is from the reason shape; details unverified.
