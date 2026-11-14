@@ -123,6 +123,35 @@ def parse_expression(text: str, *, max_deref: int = 32) -> dict:
             raise AddressExpressionError(f"Invalid address expression near {text[position:position + 20]!r}.")
         tokens.append(match.group(1))
         position = match.end()
+    # CE 7.5 trailing-offset parity: TSymhandler.tokenize
+    # (symbolhandler.pas L3073-3140) splits a closing bracket and a bare
+    # following value atom into separate tokens ("[mats]20" -> "[",
+    # "mats", "]", "20"); the pointer dereference happens at "]"
+    # (L5516-5553) and the arithmetic accumulation (L5603-5655) computes
+    # each remaining non-operator token with StrToQWordEx('$'+token) and
+    # adds it ("+" is the default operation), so CE reads "[mats]20" as
+    # "[mats]+0x20" (hex default) while "[mats]0x20", "[mats]$20" and
+    # "[mats]#42" fail the arithmetic.  Bounded equivalent: one value atom
+    # directly after a "]" token takes an implicit "+" operand, unless it
+    # is an explicit operator, a closing/repeating bracket, a "(" (which
+    # CE resolves through its record-by-description lookup path,
+    # L5461-5494, out of parity scope), or a 0x/$/#-prefixed number.
+    # A "[" after "]" is included (CE resolves the two dereferences and
+    # adds their values).  Only expressions that failed to parse before
+    # change shape: no supported expression can contain "]" followed by a
+    # value atom, so every supported address parses byte-identically.
+    # A longer bare trailing run ("[a]20 b") and the CE nested digit-merge
+    # ("[[a]20]" concatenates the hex digits) stay fail-closed /
+    # clean-room extensions respectively.
+    if "]" in tokens:
+        expanded = []
+        for index, token in enumerate(tokens):
+            expanded.append(token)
+            if (token == "]" and index + 1 < len(tokens)
+                    and tokens[index + 1] not in {"+", "-", "*", "/", "]", ")", "("}
+                    and not tokens[index + 1].startswith(("0x", "0X", "$", "#"))):
+                expanded.append("+")
+        tokens = expanded
     if len(tokens) > 256:
         raise AddressExpressionError("Address expression contains too many tokens.")
     if tokens.count("[") > max_deref:

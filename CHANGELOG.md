@@ -2,6 +2,50 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.48 (2026-11-14)
+
+CE 7.5 trailing-offset parity (compatibility lane against the
+210-row post-0.47 catalog census): the five "Unexpected trailing
+address expression tokens." rows - the four value-record addresses
+``[mats]20`` / ``[mats]28`` of qt-ds-1 and qt-ds-2 (records 130674
++ 130675 in each, next to their supported ``[mats]`` / ``[mats]+8``
+/ ``[mats]+10`` / ``[mats]+18`` siblings) plus the
+raymanlegends_dvt ``Made by`` string address - were blocked because
+the clean-room expression grammar required an explicit operator
+after a closing bracket. CE ``TSymhandler`` (read-only reference:
+symbolhandler.pas L3073-3140 tokenize, L5516-5553 ``]`` pointer
+dereference, L5603-5655 arithmetic accumulation with ``+`` as the
+default operation) splits ``[mats]20`` into the tokens ``[``,
+``mats``, ``]``, ``20`` and reads it as ``[mats]+0x20`` (hex
+default). The bounded grammar extension in
+``address_expression.parse_expression`` gives one value atom
+directly after a ``]`` token an implicit ``+`` operand - unless it
+is an explicit operator (``+`` ``-`` ``*`` ``/``), a closing or
+repeating bracket, a ``(`` (CE resolves that through its
+record-by-description lookup path, L5461-5494, out of parity scope),
+or a 0x/$/#-prefixed number (CE's StrToQWordEx arithmetic rejects
+those spellings); a ``[`` after ``]`` is included (CE resolves both
+dereferences and adds their values). Byte stability: no supported
+expression can contain ``]`` followed by a value atom, so every
+supported address parses byte-identically - only expressions that
+failed to parse before change shape. Documented clean-room
+extensions: ``[[mats]20]`` parses as the regular ``[[mats]+20]``
+(CE's nested digit-merge concatenates the hex digits), and the
+rayman ``Made by`` two-atom shape (no closing bracket) stays
+refused by design - authoring junk CE also fails. +19 tests in
+``tests/test_native_trailing_offsets.py`` (AST identity with the
+explicit-plus form, the CE hex default, byte-exact deref+offset
+resolution against a fake pointer memory, the synthetic qt-ds plan
+shape - ``alloc(mats,8,...)`` + ``registersymbol(mats)`` + the
+trailing-offset records - fully supported with the symbol
+requirement, and every refused shape pinned with the exact named
+reason). Full main suite 5,127 OK / 36 expected skips. Catalog
+remeasure ``blocked-catalog-048-trailing``: 117,809 total /
+117,603 supported / 12,974 headings / 104,454 actionable / 206
+blocked (net -4 vs the 0.47 baseline: exactly the four qt-ds rows
+unblocked, zero newly blocked, zero reason changes, the other 149
+tables byte-identical; the rayman row stays blocked by design).
+
 ## 0.47 (2026-11-14)
 
 Optional code signing for the frozen and generated trainer
