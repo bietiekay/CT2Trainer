@@ -1098,6 +1098,138 @@ changes, the other 149 tables byte-identical; the rayman row
 stays blocked by design); the remaining 206 blocked rows are
 the documented design / gate residuals and AP-11 stays open
 by definition.
+
+Shape-3 variable-symbol ratification (2026-11-14, post-0.48
+residual lane, `main` @ `20c63c1`): the two fixable classes of
+the 206-blocked post-0.48 census are closed. The 8 Fallout4
+"Player Editor" stat rows (Fallout4.CT ids 946-952 + 956) are
+the lead case of the shape-3 embedded-Lua symbol provider: a
+record's `{$lua}` walks a runtime table and registers each
+entry under its name through a variable that ranges over a
+flat literal string array (`local pointers =
+{"str","per","end","cha","int","agi","luck","xp"}`,
+`local ptr = pointers[id]`, `unregisterSymbol(ptr)` /
+`registerSymbol(ptr, i + 4, true)`). The bounded static
+derivation in
+`lua_symbol_providers.extract_lua_symbol_providers` (flat
+string arrays only, string constants only, the exact
+`local var = ARRAY[i]` single-index binding with a variable
+index, one binding per variable, one array definition per
+name, same part) makes the array's string constants the
+record's staged provides; the table re-keying (`ARRAY[k] =
+v`) changes no value and is ignored; out of bound (unproven,
+dependents keep the named missing-provider block): row
+tables, numeric or identifier cells, constant indices (the
+full array would over-prove), double-index tails (the
+shape-2 indirect form), re-bound variables, unbound arrays,
+non-local bindings, call arguments, more than MAX_PROVIDERS
+derived names - every shape pinned; registration evidence
+from the preamble + enable lua parts, release evidence from
+the disable phase only (the enable-phase
+`unregisterSymbol(var)` is the re-entrance guard, not a
+deactivation release); the strict-pair / one-shot adoption
+rule and the MAX_PROVIDERS valve unchanged. The 17 residual
+class-d value-symbol rows (roadmap class d: "probed: no
+Delphi handling - user/Lua symbol") are ratified on the
+documented `<UserdefinedSymbols>` import path in the tests-
+only lane `tests/test_native_user_symbol_import_remaining.py`:
+6 x `g_GameLibSystemAssets` (HorizonForbiddenWest, both file
+instances carry the identical row shape), 5 x `HeroSystem`
+(RiftApart), 3 x `pGrav` (YLILWin64), 2 x
+`MapLastLeftClickCoordinates_Pointer` (AtomicHeart v1.2), and
+the one Kena module-qualified operand
+`Kena-Win64-Shipping.UResourcesComponent::FreeResources`
+(decomposed by the dependency walk into three symbol parts -
+FreeResources, Kena, Win64; the full managed name as a single
+user symbol does NOT cover the decomposition, the progressive
+remedy names the next missing part each time): every row
+blocked as-is with the exact named class-d message, fully
+supported (and NOT staged - the UDS address is static) and
+free of record dependencies (the WP-46 UDS zero-candidate
+fallback in `compiler._dependencies`) once the import
+exists, resolved byte-exactly through the engine (the
+flattened expression chains and the offset-list
+`resolve_pointer` path). The 2 `HeroHealthVFTable` rows of
+RiftApart (921 / 1030) stay out of scope: their
+registration lives in an encoded embedded-Lua block
+(`loadTableFiles` -> `findTableFile`, Ascii85 `<Files>`)
+with a `createThread` entry point, not a static symbol
+import. +28 tests (15 shape-3 in
+`tests/test_native_lua_variable_symbol_providers.py` + 13
+ratification). Catalog remeasure
+`blocked-catalog-049-variable`: 117,809 total / 117,611
+supported / 12,974 headings / 104,462 actionable / 198
+blocked (net -8 vs `blocked-catalog-048-trailing`: exactly
+the 8 Fallout4 "Player Editor" stat rows unblocked, zero
+newly blocked, zero reason changes, the other 150 tables
+byte-identical). Full main suite 5,155 OK / 36 expected
+skips. Shipped as the 0.49 release.
+
+0.49 release record (2026-11-14, run `native-20261114T184922Z-4b721a9e`
+cut from `main` @ `20c63c1`): the FO4 "Player Editor"
+shape-3 dynamic-variable Lua symbol provider + the remaining
+class-d user-symbol import ratification ship as the 0.49
+release - shape 3 in
+`lua_symbol_providers.extract_lua_symbol_providers` (a
+record's `{$lua}` registers each entry under its name
+through a variable that ranges over a flat literal string
+array - the array's string constants are the record's
+staged provides; strictly bounded: flat string arrays only,
+the exact `local var = ARRAY[i]` single-index binding with
+a variable index, one binding per variable, one array
+definition per name, same part; out of bound: row tables,
+numeric or identifier cells, constant indices, double-index
+tails, re-bound variables, unbound arrays, non-local
+bindings, call arguments, more than MAX_PROVIDERS derived
+names - every shape pinned; registration evidence from
+preamble + enable lua parts, release from the disable phase
+only) closes the 8 Fallout4 "Player Editor" stat rows, and
+the tests-only ratification lane
+(`tests/test_native_user_symbol_import_remaining.py`) proves
+the documented `<UserdefinedSymbols>` import path on the 17
+residual class-d value-symbol rows (6
+`g_GameLibSystemAssets` / 5 `HeroSystem` / 3 `pGrav` / 2
+`MapLastLeftClickCoordinates_Pointer` / 1 Kena three-part
+`FreeResources` + `Kena` + `Win64` module-qualified operand):
+blocked as-is with the exact named message, supported /
+unstaged / dependency-free with the import, byte-exact
+through the engine; the 2 `HeroHealthVFTable` rows stay out
+of scope (encoded embedded-Lua registration with a
+`createThread` entry point, not a static symbol import);
++28 tests, in-build suite 5,155 OK / 36 expected skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; the build ran unsigned by default (no code-signing
+certificate on this machine; `build.json`
+`code_signing`: converter / master signed false, reason
+not-configured - the signed path activates with a
+user-supplied trusted-CA PFX); source ZIP
+`CT2Trainer-0.49-source.zip` sha256
+`e2adfb4d6153d0293e1be70e43d15f71a5b8ecd6889b7ecb74ec79cc9179ce24`
+(14,699,553 bytes), portable ZIP
+`CT2Trainer-0.49-windows-portable.zip` sha256
+`4139bf2079f11ca7fba8c41b1d0c1bd201d146abdd3f8171bbafa18a7a931675`
+(49,888,023 bytes; the frozen `CT2Trainer-Master.exe`
+sha256 `d3ada53a7ebc6c160be55608046a286ba98028a1858cc2d950a64327a529d63b`,
+17,070,681 bytes, ships next to the converter). Catalog
+remeasure `blocked-catalog-049-variable`: 117,809 total /
+117,611 supported / 12,974 headings / 104,462 actionable /
+198 blocked (net -8 vs the 0.48 baseline: exactly the 8
+Fallout4 "Player Editor" stat rows unblocked, zero newly
+blocked, zero reason changes, the other 150 tables
+byte-identical; the 17 class-d rows stay blocked by design
+until the user imports the symbols); the remaining 198
+blocked rows are the documented design / gate residuals
+(80 `BaseAddress` by design until the documented user
+import, 28 DS2 encoded-Lua + 15 CatValues out of scope, 17
+class-d value-symbol rows ratified by the 0.49 import-
+ratification lane, 2 HeroHealthVFTable out of scope, 21
+no-unique-supported-provider, 11 KeyHandlerThread WP-37
+external ownership, 6 RE2 AP-08.7 custom value types, 4
+usemono > 7.5 out of parity scope, 2 + 2 relative-ancestor
+refusals kept by design, 2 createthread / threadWait RT-5G,
+1 pBase Cronos, 1 trailing-token (the rayman `Made by` row,
+by design), 6 single-row named AA-syntax / DISABLE re-init
+refusals) and AP-11 stays open by definition.
 0.47 release record (2026-11-14, run `native-20261114T011046Z-ee5cecee`
 cut from `main` @ `6e1940e`): the optional code signing for the
 frozen and generated trainer executables (the Smart App

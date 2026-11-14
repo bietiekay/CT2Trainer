@@ -86,6 +86,30 @@ other 150 tables byte-identical; the 17 class-d rows stay
 blocked by design until the user imports the symbols, as
 ratified by the lane).
 
+- Build: 0.49 released as run
+  `native-20261114T184922Z-4b721a9e` (cut from `main` @
+  `20c63c1`, 2026-11-14): in-build suite 5,155 OK / 36
+  expected skips, 0 failures - fully green at the canonical
+  build path, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate. The build ran unsigned by
+  default (no certificate on this machine; `code_signing`
+  report: converter / master signed false, reason
+  not-configured) - the signed path activates with a
+  user-supplied trusted-CA PFX. Source ZIP
+  `CT2Trainer-0.49-source.zip` sha256
+  `e2adfb4d6153d0293e1be70e43d15f71a5b8ecd6889b7ecb74ec79cc9179ce24`
+  (14,699,553 bytes) - carries the shape-3 dynamic-variable
+  Lua symbol provider lane (`lua_symbol_providers.py` +
+  `tests/test_native_lua_variable_symbol_providers.py`) and
+  the remaining class-d user-symbol import ratification
+  (`tests/test_native_user_symbol_import_remaining.py`) -
+  and portable ZIP
+  `CT2Trainer-0.49-windows-portable.zip` sha256
+  `4139bf2079f11ca7fba8c41b1d0c1bd201d146abdd3f8171bbafa18a7a931675`
+  (49,888,023 bytes; the frozen `CT2Trainer-Master.exe`
+  (sha256 `d3ada53a7ebc6c160be55608046a286ba98028a1858cc2d950a64327a529d63b`,
+  17,070,681 bytes) ships next to the converter).
+
 ## 0.48 (2026-11-14)
 
 CE 7.5 trailing-offset parity (compatibility lane against the
