@@ -2,6 +2,90 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.49 (2026-11-14)
+
+The Fallout4 "Player Editor" dynamic-variable symbol lane (shape 3 of
+the embedded-Lua symbol providers) + the remaining class-d
+user-symbol import ratification (tests-only, against the 198-row
+post-0.48 catalog census). Shape 3 in
+``lua_symbol_providers.extract_lua_symbol_providers``: a record's
+``{$lua}`` walks a runtime table and registers each entry under its
+name through a variable that ranges over a flat literal string
+array - the exact lead-case shape (``local pointers =
+{"str","per","end","cha","int","agi","luck","xp"}``,
+``local ptr = pointers[id]``, ``unregisterSymbol(ptr)`` /
+``registerSymbol(ptr, i + 4, true)``). The bounded static
+derivation (flat string arrays only, string constants only, the
+exact ``local var = ARRAY[i]`` single-index binding with a variable
+index, one binding per variable, one array definition per name,
+same part) makes the array's string constants the record's staged
+provides; the lead case's table re-keying (``ARRAY[k] = v``)
+changes no value and is ignored. Out of bound (unproven,
+dependents keep the named missing-provider block): row tables,
+numeric or identifier cells, constant indices (the full array
+would over-prove), double-index tails (the shape-2 indirect form),
+re-bound variables, unbound arrays, non-local bindings, call
+arguments, more than MAX_PROVIDERS derived names - every shape
+pinned. Registration evidence is collected from the preamble +
+enable lua parts (the logic may live in preamble-defined
+functions, shape-2 precedent); release evidence from the
+disable-phase lua parts only - an enable-phase
+``unregisterSymbol(var)`` next to the registration is the
+re-entrance guard (unregister-before-register), not a
+deactivation release (the literal-shape release phasing). The
+strict-pair / one-shot adoption rule and the MAX_PROVIDERS valve
+are unchanged: the derived names join the same sets; the
+WP-56 first-letter spellings count as the same call. +15 tests in
+``tests/test_native_lua_variable_symbol_providers.py`` (FO4-shape
+one-shot + re-entrance-guard pin, strict-pair, all 9 out-of-bound
+shapes, the MAX_PROVIDERS valve, WP-56 spelling, forged
+``provides`` refused by both validators; engine: byte-exact
+activation through the hosted Lua surface + the scan-miss
+fail-closed named "did not confirm its declared symbol exports"
+refusal with no target writes). The class-d ratification lane
+(analysis, tests only) proves the documented import path for the
+17 residual class-d value-symbol rows on synthetic shapes
+mirroring the real tables (roadmap class d: "probed: no Delphi
+handling -- user/Lua symbol"): 6 x ``g_GameLibSystemAssets``
+(HorizonForbiddenWest, both file instances carry the identical
+row shape - the [ Pointers/Structures ] heading chain, the
++0 / +0+80 / +0+88 leaves), 5 x ``HeroSystem`` (RiftApart - the
+HeroSystem -> HeroLocal -> HeroHealth / HeroTimeScaleManager /
+HeroXPManager heading chain, the branch rows' 2-hop offset lists
+flattened into single expressions by the compiler), 3 x ``pGrav``
+(YLILWin64 - the bare offset-list row, the nested expression row
+``[[pGrav]+20]+18`` and the one-dereference row ``[pGrav]+10``),
+2 x ``MapLastLeftClickCoordinates_Pointer`` (AtomicHeart v1.2 -
+the ``[symbol]``-dereference heading chain), and the one Kena
+module-qualified operand
+``Kena-Win64-Shipping.UResourcesComponent::FreeResources``, whose
+dependency walk names three symbol parts (FreeResources, Kena,
+Win64 - importing all three unblocks the row, the full managed
+name as a single user symbol does NOT cover the decomposition,
+the progressive remedy names the next missing part each time,
+probed against the real table). Every row blocked with the exact
+named class-d message while the symbol is undefined, fully
+supported (and NOT staged - the UDS address is static) once the
+``<UserdefinedSymbols>`` entries exist, free of record
+dependencies (the WP-46 UDS zero-candidate fallback in
+``compiler._dependencies``), resolved byte-exactly through the
+engine (the flattened expression chains and the offset-list
+``resolve_pointer`` path); the 2 HeroHealthVFTable rows of
+RiftApart (921 / 1030) stay out of scope: their registration
+lives in an encoded embedded-Lua block (``loadTableFiles`` ->
+``findTableFile``, Ascii85 ``<Files>``) with a ``createThread``
+entry point, not a static symbol import. +13 tests in
+``tests/test_native_user_symbol_import_remaining.py``. Full main
+suite 5,155 OK / 36 expected skips. Catalog remeasure
+``blocked-catalog-049-variable``: 117,809 total / 117,611
+supported / 12,974 headings / 104,462 actionable / 198 blocked
+(net -8 vs ``blocked-catalog-048-trailing``: exactly the 8
+Fallout4 "Player Editor" stat rows unblocked (Fallout4.CT ids
+946-952 + 956), zero newly blocked, zero reason changes, the
+other 150 tables byte-identical; the 17 class-d rows stay
+blocked by design until the user imports the symbols, as
+ratified by the lane).
+
 ## 0.48 (2026-11-14)
 
 CE 7.5 trailing-offset parity (compatibility lane against the

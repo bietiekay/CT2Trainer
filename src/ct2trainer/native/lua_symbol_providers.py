@@ -60,6 +60,29 @@ deleted only when parameters:=lua_gettop(L) == 1; a 2-/3-argument call
 is a no-op), so the strict-pair regex stays the only Lua release
 evidence.  The strict intersection rule (and the MAX_PROVIDERS valve) is
 unchanged.
+
+0.49 (shape 3, the Fallout4 "Player Editor" lead case) adds the
+dynamic-variable form: ``registerSymbol(var, ...)`` /
+``unregisterSymbol(var)`` where ``var`` is a local single-index binding
+(``local var = ARRAY[i]``, a variable index) to a same-part flat literal
+string array (``local ARRAY = {"a", "b", ...}``).  The record walks a
+runtime table, so the loop index varies and ``var`` ranges over every
+element of the array — the array's string constants are the record's
+provides (the lead case's table re-keying, ``ARRAY[k] = v``, changes no
+value and is ignored).  Strictly bounded: a flat string array only (row
+tables, numeric or identifier cells stay unproven), a variable (not
+constant) index, one single-index binding per variable, one array
+definition per name, no double-index tail, no non-local source.  An
+ambiguity (a variable bound twice, an array name defined twice, a
+non-flat array) yields no evidence: fail-closed.  Registration evidence
+is collected from the preamble + enable lua parts (the logic may live in
+preamble-defined functions, shape-2 precedent); release evidence from
+the disable-phase lua parts only — an enable-phase ``unregisterSymbol(var)``
+next to the registration is the re-entrance guard
+(unregister-before-register), not a deactivation release (the
+literal-shape release phasing).  The strict-pair / one-shot adoption rule
+and the MAX_PROVIDERS valve are unchanged: the derived names join the
+same sets.
 """
 
 from __future__ import annotations
@@ -410,6 +433,134 @@ def _extract_name_list_symbols(parts, call_regex: re.Pattern) -> set[str]:
     return names
 
 
+# 0.49 (shape 3): the dynamic-variable form — the Fallout4 "Player
+# Editor" lead case.  The record's embedded Lua walks a runtime table
+# and registers each entry under its name through a variable that
+# ranges over a flat literal string array::
+#
+#     local pointers = {"str","per","end","cha","int","agi","luck","xp"}
+#     for i = addr, size, 8 do
+#       local id = readInteger(i)
+#       local ptr = pointers[id]
+#       if ptr ~= nil then
+#         unregisterSymbol(ptr)
+#         registerSymbol(ptr, i + 4, true)
+#       end
+#     end
+#
+# The loop index varies, so the variable ranges over every element of
+# the array and the array's string constants are the record's provides.
+# The bound (mirroring the house literal-string and name-list evidence):
+# a flat string array only, a variable index, one binding per variable,
+# one array definition per name — anything outside it is unproven.
+#
+# ``_SINGLE_INDEX_BIND``: ``local VAR = ARRAY[<index>]`` as a complete
+# statement.  The index is a single identifier (a loop or read variable
+# — a constant index selects one element, which stays unproven here);
+# the index expression and the statement are bounded to the line, and a
+# double-index tail (``ARRAY[i][k]``, the shape-2 form) or a table-
+# literal / call RHS does not match.
+_SINGLE_INDEX_BIND = re.compile(
+    r"^[ \t]*local[ \t]+([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*"
+    r"([A-Za-z_][A-Za-z0-9_]*)[ \t]*\[[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*\]"
+    r"[ \t]*;?[ \t]*$",
+    re.MULTILINE)
+# The bare-variable name argument of a register/unregister call: the
+# first argument is an identifier — neither a quoted literal (the shape-1
+# form) nor an indexed expression (the shape-2 form).  The call forms
+# mirror the house evidence regexes: the CE helper dotted form counts
+# alongside the plain form for registration, case-insensitively
+# (WP-46 part 2; WP-56 first-letter spellings); the lookbehind keeps
+# unregisterSymbol from matching as a registration.
+_REGISTER_VAR_CALL = re.compile(
+    r"(?<![A-Za-z0-9_.])(?:registerSymbol|Register\.symbol)\s*\(\s*"
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*[),]",
+    re.IGNORECASE)
+_UNREGISTER_VAR_CALL = re.compile(
+    r"(?<![A-Za-z0-9_])unregisterSymbol\s*\(\s*"
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*[),]",
+    re.IGNORECASE)
+
+
+def _flat_string_array_values(cells) -> list[str] | None:
+    """The string constants of a flat array literal, or None when the
+    literal is not a plain array of string constants (a row table, a
+    number, an identifier, ...)."""
+    if not cells:
+        return None
+    values: list[str] = []
+    for kind, value in cells:
+        if kind != "str":
+            return None
+        values.append(value)
+    return values
+
+
+def _variable_symbol_evidence(text: str, call_regex: re.Pattern) -> set[str]:
+    """The names one call form (register or unregister) proves through a
+    dynamically named variable in this text: every
+    ``registerSymbol(var, ...)`` / ``unregisterSymbol(var)`` call where
+    ``var`` is a local single-index binding (``local var = ARRAY[i]``) to
+    a same-text flat literal string array.  The flat array's string
+    constants are the derived names — the loop index ranges over every
+    element.  Ambiguities (a variable bound twice, an array name defined
+    twice, a non-flat or unbound array) yield no evidence: fail-closed.
+    """
+    # Flat string arrays: name -> values; None when the definition is not
+    # a flat string array or the name is defined twice (ambiguous).
+    flat_arrays: dict[str, object] = {}
+    for match in _LOCAL_TABLE.finditer(text):
+        name = match.group(1)
+        if name in flat_arrays:
+            flat_arrays[name] = None
+            continue
+        cells, _end = _parse_table_cells(text, match.end())
+        flat_arrays[name] = (_flat_string_array_values(cells)
+                             if cells is not None else None)
+    # Single-index local bindings: variable -> array name; None when the
+    # variable is bound twice (ambiguous).
+    var_arrays: dict[str, object] = {}
+    for match in _SINGLE_INDEX_BIND.finditer(text):
+        var, array = match.group(1), match.group(2)
+        var_arrays[var] = None if var in var_arrays else array
+    names: set[str] = set()
+    for call in call_regex.finditer(text):
+        array = var_arrays.get(call.group(1))
+        if not isinstance(array, str):
+            continue
+        values = flat_arrays.get(array)
+        if isinstance(values, list):
+            names.update(values)
+    return names
+
+
+def _extract_variable_symbols(parts, call_regex: re.Pattern,
+                              *, release: bool = False) -> set[str]:
+    """The names the record's Lua proves to register/release through a
+    dynamically named variable (a local single-index binding to a same-
+    part flat literal string array).
+
+    ``release=False`` collects registration evidence: the registration
+    logic may live in preamble-defined functions (shape-2 precedent), so
+    every preamble + enable lua part is inspected.  ``release=True``
+    collects release evidence from the disable-phase lua parts only — an
+    enable-phase ``unregisterSymbol(var)`` next to the registration is
+    the re-entrance guard (unregister-before-register), not a
+    deactivation release (the literal-shape release phasing).
+    """
+    names: set[str] = set()
+    for part in parts:
+        if part.kind != 'lua' or not part.text:
+            continue
+        if release and part.phase != 'disable':
+            continue
+        if not release and part.phase == 'disable':
+            continue
+        names.update(_variable_symbol_evidence(_without_comments(part.text),
+                                               call_regex))
+    return names
+
+
 def parts_are_one_shot(parts) -> bool:
     """The one-shot classification shared with ``prepare_lua_program``.
 
@@ -516,6 +667,21 @@ def extract_lua_symbol_providers(parts, *, one_shot: bool = False) -> list[str]:
     # is unchanged: the derived names join the same sets).
     registered.update(_extract_name_list_symbols(parts, _REGISTER_INDEX_CALL))
     released.update(_extract_name_list_symbols(parts, _UNREGISTER_INDEX_CALL))
+    # 0.49 (shape 3): dynamic-variable registration/release (the
+    # Fallout4 "Player Editor" lead case).  A ``registerSymbol(var, ...)``
+    # / ``unregisterSymbol(var)`` call whose name argument is a local
+    # single-index binding to a same-part flat literal string array
+    # proves the array's string constants.  Registration evidence is
+    # collected from the preamble + enable lua parts (the logic may live
+    # in preamble-defined functions, shape-2 precedent); release evidence
+    # from the disable-phase lua parts only — an enable-phase
+    # ``unregisterSymbol(var)`` next to the registration is the
+    # re-entrance guard (unregister-before-register), not a deactivation
+    # release (literal-shape release phasing).  The strict-pair / one-shot
+    # rule below is unchanged: the derived names join the same sets.
+    registered.update(_extract_variable_symbols(parts, _REGISTER_VAR_CALL))
+    released.update(_extract_variable_symbols(parts, _UNREGISTER_VAR_CALL,
+                                              release=True))
     if one_shot:
         adopted = registered - released
     else:
