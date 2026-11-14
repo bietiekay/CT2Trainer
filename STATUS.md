@@ -1,8 +1,57 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-14. **0.49 released** (build
-`native-20261114T184922Z-4b721a9e`, cut from `main` @ `20c63c1`,
-2026-11-14) - the Fallout4 "Player Editor" shape-3 dynamic-
+**Updated:** 2026-11-14. **0.50 released** (build
+`native-20261114T223759Z-086989d6`, cut from `main` @ `4f747ce`,
+2026-11-14) - the Provider-21 parity lane against the
+21-row "no unique supported provider" census of the
+post-0.49 catalog (two CE 7.5 source parity fixes + the
+tests-only ratification of the 17 by-design rows): Fix 1 -
+the CE 7.5 comment-to-EOF parity in the AA source scanners
+(an unterminated `{ ... }` or `/* ... */` block comment is
+stripped silently to the end of the source - CE
+`removecomments` keeps the comment state to the end of the
+text, no error path; the quoted-string refusal stays
+named; a comment that swallows a section marker removes
+that section, so the section contract refuses with its own
+named reason) - unblocks the SonicFrontiers 1337230409
+"Pin Ball" provider + its two `pPinBall` dependents; Fix 2
+- the CE 7.5 shared-globalalloc parity in
+`compiler._dependencies` (a compatible duplicate provider
+set collapses keep-first: CE `globalalloc` reuses the
+existing same-process allocation by name - lookup-first
+`SetUserdefinedSymbolAllocSize` - and `GlobalPool.acquire`
+keeps the name-keyed exact-flag contract, so every
+compatible declarer resolves to the identical address; the
+keep-first scope covers the compatible sets so the RT-4.2
+(R3) fallback reaches them; the "Unselected symbol
+provider conflicts" branch stays reachable only for fully
+incompatible sets) - unblocks the two Cyberpunk2077
+`weaponPtr` dependents (380/381); the ratification lane
+(`tests/test_native_provider21_ratification.py`, 14 tests,
+7 clusters) pins the 17 remaining rows as blocked by
+design - per cluster the exact provider block reason, the
+exact dependent refusal, and the counter-proof that the
+rows resolve once the documented condition is met (Cronos
+`gun` x3 WP-37 `pBase` handover, Cyberpunk `healthPtr` x4
+the table's own `$proces` typo that CE also fails, DS2
+`KeyHandlerThread` x3 Lua envelope handover, DS2
+`freecam_enabled` the `g_Instance` per-symbol report, DS2
+`InventoryItemProperties_call_dest` bare call target,
+ForgottonAnne usemono x3 out of parity scope, RiftApart
+`HeroHealthVFTable` x2 encoded embedded-Lua out of scope
+RT-5G); +16 tests; full main suite 5,171 OK / 36 expected
+skips; in-build suite 5,171 OK / 36 expected skips,
+`ce_inputs: []`; catalog remeasure
+`blocked-catalog-050-provider21`: 117,809 total / 117,616
+supported / 12,974 headings / 104,467 actionable / 193
+blocked (net -5 vs the 0.49 baseline: exactly the 5 rows
+above unblocked, zero newly blocked, zero reason changes,
+the other 148 tables byte-identical; the 17 by-design rows
+stay blocked until the documented user action, as ratified
+by the lane); see the 0.50 section below. Superseded 0.49
+(build `native-20261114T184922Z-4b721a9e`, cut from `main`
+@ `20c63c1`, 2026-11-14) - the Fallout4 "Player Editor"
+shape-3 dynamic-
 variable Lua symbol provider (the last embedded-Lua symbol
 provider shape against the reference tables: a record's
 `{$lua}` registers each entry under its name through a
@@ -587,7 +636,31 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.49, build
+**Latest verified release:** 0.50, build
+`native-20261114T223759Z-086989d6` (cut from `main` @ `4f747ce`,
+2026-11-14): the 0.50 Provider-21 parity lane release -
+in-build suite 5,171 OK / 36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; the build ran
+unsigned by default (`code_signing` report: converter / master
+signed false, reason not-configured - no certificate on this
+machine; the signed path activates with a user-supplied
+trusted-CA PFX); source ZIP
+`CT2Trainer-0.50-source.zip` sha256
+`79c841e9bd7978fdc954a783f7f6989b79d82da9d10a95c35e66a20b7ee6520b`
+(14,709,622 bytes) - carries the Provider-21 parity lane
+(`aa_program.py` + `aa.py` + `compiler.py` +
+`tests/test_native_provider21_ratification.py` + the re-pins
+in `tests/test_native_aa_named_refusals.py` /
+`tests/test_native_aa_literals.py` /
+`tests/test_native_rt42_runtime_provider.py` /
+`tests/test_native_assembler.py` /
+`tests/test_native_global_engine.py`) -
+and portable ZIP
+`CT2Trainer-0.50-windows-portable.zip` sha256
+`fc89315877b0c60b53db8bde568e0c751002f0912e9ad1726f6373eb50f59187`
+(49,891,552 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`417708d985bfb0f84530b0fe3703aa7788db81e10e48915218fc875cf236aab6`,
+17,071,577 bytes) ships next to the converter). Superseded 0.49, build
 `native-20261114T184922Z-4b721a9e` (cut from `main` @ `20c63c1`,
 2026-11-14): the 0.49 FO4 "Player Editor" shape-3 dynamic-
 variable Lua symbol provider + the remaining class-d user-
@@ -1337,6 +1410,130 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.50 released (build `native-20261114T223759Z-086989d6`, cut from `main` @
+`4f747ce`, 2026-11-14): the Provider-21 parity lane against the
+21-row "no unique supported provider" census of the post-0.49
+catalog (two CE 7.5 source parity fixes + the tests-only
+ratification of the 17 by-design rows).**
+0.50 ships the Provider-21 parity lane - the last of the
+census lanes of the 198-blocked post-0.49 catalog that
+could be closed by source parity. Fix 1 - CE 7.5
+comment-to-EOF parity in the AA source scanners
+(`aa_program._clean_source` + `aa._without_comments`): an
+unterminated `{ ... }` or `/* ... */` block comment is
+stripped silently to the end of the source (CE
+`removecomments`, read-only reference: autoassembler.pas
+L732-798 - the comment state persists to the end of the
+text, no error path); the quoted-string-without-closing-
+quote refusal stays named; a comment that swallows a
+section marker removes that section, so the section
+contract refuses the stripped program with its own named
+reason ("Both ENABLE and DISABLE sections are required.").
+Unblocks the SonicFrontiers 1337230409 "Pin Ball"
+provider (valid program + trailing unterminated brace
+comment) and its two `pPinBall` dependents (1337230410
+"Score" / 1337230411 "Lives"). Fix 2 - CE 7.5 shared-
+globalalloc parity in `compiler._dependencies`: a
+compatible duplicate provider set (every declarer
+allocates the same shared global with the same size and
+flags, the `global_alloc.shared_provider_compatible`
+contract) now collapses keep-first instead of refusing
+the dependents as ambiguously provided - CE `globalalloc`
+(read-only reference: autoassembler.pas L2103-2148)
+calls the symbol lookup-first
+`SetUserdefinedSymbolAllocSize` (symbolhandler.pas L3713+)
+and reuses the existing same-process allocation by name,
+and `GlobalPool.acquire` keeps the same name-keyed,
+exact-flag contract, so every compatible declarer
+resolves to the identical address regardless of
+activation order; the keep-first scope
+(`provider_alternatives`) now covers the compatible sets
+as well, so the RT-4.2 (R3) fallback reaches them too -
+when the kept (document-first) declarer is itself
+blocked, the dependent hands its requirement to the
+first still-supported alternative declarer, which is
+runtime-equivalent because the pool reuses the global by
+name; the "Unselected symbol provider conflicts with the
+selected shared global" branch stays reachable only for
+full sets the compatibility check rejects. Unblocks the
+two Cyberpunk2077 `weaponPtr` dependents (380 "Item
+Level 1" / 381 "Item Level 2") - the two rows RT-4.1 had
+documented as the "pinned shared-global contract"
+regressions. The ratification lane
+(`tests/test_native_provider21_ratification.py`, 14
+tests, 7 clusters, synthetic fixtures mirroring the
+real-table shapes) pins the 17 remaining rows as
+blocked by design - per cluster: the provider's exact
+block reason, the dependents' exact generic refusal,
+and the counter-proof that the rows resolve once the
+documented provider condition is met (no hidden second
+gate): Cronos `gun` x3 (the provider releases the
+externally owned `pBase` - the WP-37 named handover),
+Cyberpunk `healthPtr` x4 (the table's own
+`aobscanmodule(..., $proces, ...)` typo - CE fails the
+same row: `getmodulebyname` misses, the
+`getAddressFromName` fallback misses, the aobscanmodule
+handler aborts with rsAAModuleNotFound,
+autoassembler.pas L1073-1145, no `$proces` special case
+anywhere in CE), DS2 `KeyHandlerThread` x3 (the Lua
+providers' static AA envelope releases the externally
+owned symbol - the prefixed handover), DS2
+`freecam_enabled` (the provider references the
+nowhere-registered `g_Instance` - the actionable
+per-symbol report), DS2
+`InventoryItemProperties_call_dest` (bare call target in
+the table source only - the generic wording, not the
+missing-definition report), ForgottonAnne usemono x3
+(out of parity scope by design: targets a CE newer than
+7.5), RiftApart `HeroHealthVFTable` x2 (rows 1031 / 1032,
+provider 1030 "Modify Damage Packet" - the provider's
+registration lives in an encoded embedded-Lua block with
+a `createThread` entry point, out of scope by design,
+RT-5G; the documented static-import remedy is the
+counter-proof). +16 tests (the 14 ratification tests +
+the re-pins: `tests/test_native_aa_named_refusals.py`
+O25 4 -> 5 incl. the new comment-to-EOF pins,
+`tests/test_native_aa_literals.py` data-dialect,
+`tests/test_native_rt42_runtime_provider.py` 21 -> 22
+incl. the new compatible-set fallback pin, plus the two
+in-place parity re-pins in `tests/test_native_assembler.py`
+/ `tests/test_native_global_engine.py`); full main suite
+5,171 OK / 36 expected skips; in-build suite 5,171 OK /
+36 expected skips, `ce_inputs: []`, `runtime_unverified`
+deliberately kept per gate. Source ZIP
+`CT2Trainer-0.50-source.zip` sha256
+`79c841e9bd7978fdc954a783f7f6989b79d82da9d10a95c35e66a20b7ee6520b`
+(14,709,622 bytes) - carries the Provider-21 parity lane
+(`aa_program.py` + `aa.py` + `compiler.py` +
+`tests/test_native_provider21_ratification.py` + the
+re-pins in the five test files) - and portable ZIP
+`CT2Trainer-0.50-windows-portable.zip` sha256
+`fc89315877b0c60b53db8bde568e0c751002f0912e9ad1726f6373eb50f59187`
+(49,891,552 bytes; the frozen `CT2Trainer-Master.exe`
+sha256 `417708d985bfb0f84530b0fe3703aa7788db81e10e48915218fc875cf236aab6`,
+17,071,577 bytes, ships next to the converter). Catalog
+remeasure `blocked-catalog-050-provider21`: 117,809 total
+/ 117,616 supported / 12,974 headings / 104,467
+actionable / 193 blocked (net -5 vs the 0.49 baseline:
+exactly the 5 rows above unblocked, zero newly blocked,
+zero reason changes, the other 148 tables
+byte-identical; the 17 by-design rows stay blocked until
+the documented user action, as ratified by the lane);
+the remaining 193 blocked rows are the documented
+design / gate residuals (80 `BaseAddress` by design
+until the documented user import, 28 DS2 encoded-Lua +
+15 CatValues out of scope, 17 class-d value-symbol rows
+ratified by the 0.49 import-ratification lane, 2
+HeroHealthVFTable out of scope, 17
+no-unique-supported-provider rows ratified by the 0.50
+Provider-21 lane, 11 KeyHandlerThread WP-37 external
+ownership, 6 RE2 AP-08.7 custom value types, 4 usemono
+> 7.5 out of parity scope, 2 + 2 relative-ancestor
+refusals kept by design, 2 createthread / threadWait
+RT-5G, 1 pBase Cronos, 1 trailing-token (the rayman
+`Made by` row, by design), 5 single-row named
+AA-syntax / DISABLE re-init refusals).
 
 **0.49 released (build `native-20261114T184922Z-4b721a9e`, cut from `main` @
 `20c63c1`, 2026-11-14): the FO4 "Player Editor" shape-3 dynamic-

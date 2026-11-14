@@ -926,6 +926,73 @@ game-facing action.
   17,070,681 bytes, ships next to the converter). Feature
   matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`).
+- 0.50 the Provider-21 parity lane release (2026-11-14, content commit
+  `4f747ce`, build record below): VERSION 0.50 + CHANGELOG 0.50 entry in
+  the same change (incl. the `__version__` package constant sync,
+  guarded by `test_version_matches_root_version_file`). The last of the
+  census lanes of the 198-blocked post-0.49 catalog closed by source
+  parity - the 21 "no unique supported provider" rows. Fix 1, the CE
+  7.5 comment-to-EOF parity in the AA source scanners
+  (`aa_program._clean_source` + `aa._without_comments`: an unterminated
+  `{ ... }` or `/* ... */` block comment is stripped silently to the end
+  of the source - CE `removecomments`, autoassembler.pas L732-798,
+  read-only reference: the comment state persists to the end of the
+  text, no error path; the quoted-string-without-closing-quote refusal
+  stays named; a comment that swallows a section marker removes that
+  section, so the section contract refuses the stripped program with
+  its own named reason) - unblocks the SonicFrontiers 1337230409 "Pin
+  Ball" provider + its two `pPinBall` dependents (1337230410 "Score" /
+  1337230411 "Lives"). Fix 2, the CE 7.5 shared-globalalloc parity in
+  `compiler._dependencies` (a compatible duplicate provider set -
+  every declarer allocates the same shared global with the same size
+  and flags, the `shared_provider_compatible` contract - collapses
+  keep-first instead of the ambiguity refusal: CE `globalalloc`
+  (autoassembler.pas L2103-2148) reuses the existing same-process
+  allocation by name (symbolhandler.pas L3713+ lookup-first
+  `SetUserdefinedSymbolAllocSize`), `GlobalPool.acquire` keeps the
+  name-keyed exact-flag contract, so every compatible declarer
+  resolves to the identical address; the keep-first scope
+  (`provider_alternatives`) covers the compatible sets, so the RT-4.2
+  (R3) fallback reaches them too; the "Unselected symbol provider
+  conflicts with the selected shared global" branch stays reachable
+  only for full sets the compatibility check rejects) - unblocks the
+  two Cyberpunk2077 `weaponPtr` dependents (380/381, the rows RT-4.1
+  documented as the "pinned shared-global contract" regressions). Plus
+  the tests-only ratification of the 17 by-design rows
+  (`tests/test_native_provider21_ratification.py`: 14 tests / 7
+  clusters, synthetic fixtures mirroring the real-table shapes -
+  Cronos `gun` x3 WP-37 `pBase` handover, Cyberpunk `healthPtr` x4 the
+  table's own `$proces` typo that CE also fails (the aobscanmodule
+  handler aborts with rsAAModuleNotFound, autoassembler.pas
+  L1073-1145, no `$proces` special case anywhere in CE), DS2
+  `KeyHandlerThread` x3 Lua envelope handover, DS2
+  `freecam_enabled` the `g_Instance` per-symbol report, DS2
+  `InventoryItemProperties_call_dest` bare call target, ForgottonAnne
+  usemono x3 out of parity scope, RiftApart `HeroHealthVFTable` x2
+  (rows 1031 / 1032, provider 1030 "Modify Damage Packet") encoded
+  embedded-Lua out of scope RT-5G - per cluster: the exact provider
+  block reason + the exact dependent refusal + the counter-proof that
+  the rows resolve once the documented condition is met). +16 tests,
+  full main suite 5,171 OK / 36 expected skips (5,155 + 16). Catalog
+  remeasure `blocked-catalog-050-provider21`: 117,809 total /
+  117,616 supported / 12,974 headings / 104,467 actionable / 193
+  blocked (net -5 vs `blocked-catalog-049-variable`: exactly the 5
+  rows above unblocked, zero newly blocked, zero reason changes, the
+  other 148 tables byte-identical; the 17 by-design rows stay blocked
+  until the documented user action, as ratified by the lane). The
+  0.50 build `native-20261114T223759Z-086989d6` cut from `main` @
+  `4f747ce` (2026-11-14): in-build suite 5,171 OK / 36 expected
+  skips, `ce_inputs: []`, `runtime_unverified` deliberately kept per
+  gate; source ZIP `CT2Trainer-0.50-source.zip` sha256
+  `79c841e9bd7978fdc954a783f7f6989b79d82da9d10a95c35e66a20b7ee6520b`
+  (14,709,622 bytes), portable ZIP
+  `CT2Trainer-0.50-windows-portable.zip` sha256
+  `fc89315877b0c60b53db8bde568e0c751002f0912e9ad1726f6373eb50f59187`
+  (49,891,552 bytes; the frozen `CT2Trainer-Master.exe`
+  sha256 `417708d985bfb0f84530b0fe3703aa7788db81e10e48915218fc875cf236aab6`,
+  17,071,577 bytes, ships next to the converter). Feature
+  matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`).
 - 0.45 the per-session hotkey switch (MT-34) + the
   trainer-tick-sound field fix release (2026-11-13, content commit
   `58d6c8f`, build record below): VERSION 0.45 + CHANGELOG 0.45

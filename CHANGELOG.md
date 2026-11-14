@@ -81,6 +81,33 @@ keep-first binding in
 ``tests/test_native_global_engine.py``). Full main suite 5,171 OK
 / 36 expected skips.
 
+- Build: 0.50 released as run
+  `native-20261114T223759Z-086989d6` (cut from `main` @
+  `4f747ce`, 2026-11-14): in-build suite 5,171 OK / 36
+  expected skips, 0 failures - fully green at the canonical
+  build path, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate. The build ran unsigned by
+  default (no certificate on this machine; `code_signing`
+  report: converter / master signed false, reason
+  not-configured) - the signed path activates with a
+  user-supplied trusted-CA PFX. Source ZIP
+  `CT2Trainer-0.50-source.zip` sha256
+  `79c841e9bd7978fdc954a783f7f6989b79d82da9d10a95c35e66a20b7ee6520b`
+  (14,709,622 bytes) - carries the Provider-21 parity lane
+  (`aa_program.py` + `aa.py` + `compiler.py` +
+  `tests/test_native_provider21_ratification.py` + the
+  re-pins in `tests/test_native_aa_named_refusals.py` /
+  `tests/test_native_aa_literals.py` /
+  `tests/test_native_rt42_runtime_provider.py` /
+  `tests/test_native_assembler.py` /
+  `tests/test_native_global_engine.py`) -
+  and portable ZIP
+  `CT2Trainer-0.50-windows-portable.zip` sha256
+  `fc89315877b0c60b53db8bde568e0c751002f0912e9ad1726f6373eb50f59187`
+  (49,891,552 bytes; the frozen `CT2Trainer-Master.exe`
+  (sha256 `417708d985bfb0f84530b0fe3703aa7788db81e10e48915218fc875cf236aab6`,
+  17,071,577 bytes) ships next to the converter).
+
 ## 0.49 (2026-11-14)
 
 The Fallout4 "Player Editor" dynamic-variable symbol lane (shape 3 of
