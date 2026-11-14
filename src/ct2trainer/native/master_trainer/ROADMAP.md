@@ -842,6 +842,36 @@ buffer, with named refusals ("winmm unavailable" / "PlaySoundW
 failed (Win32 <code>)"); the reworked `tests/test_native_trainer_sounds.py`
 PlaybackTests mock the binding seam, not the OS call (+3 tests).
 
+### 0.47 code signing (shipped 2026-11-14; no Master Trainer
+feature)
+
+0.47 ships the optional code signing for the frozen and
+generated trainer executables (the Smart App Control
+handling, the field block observed 2026-11-14 on the 0.46
+trainer) - no Master Trainer feature work. The new pure
+`code_signing.py` layer (environment-only configuration,
+never persisted; signtool sign step with the bounded 300 s
+timeout; the pure PE certificate-table re-proof; fail-closed
+named `sign-…` refusals) signs `CT2Trainer-Converter.exe` and
+`CT2Trainer-Master.exe` after freezing in a source build (the
+template stub is deliberately unsigned) and - the one
+Master-facing effect - signs every trainer the Master
+generates before publication through
+`bundle.build_trainer` (injectable `sign` seam; the trainer
+`.build.json` gains the `signed` flag), so a user with a
+trusted-CA PFX configured gets SAC-trusted generated
+trainers. `bundle.read_embedded_plan` gains the bounded
+backwards footer scan so the plan survives the certificate
+table signtool appends after the footer. Without
+`CT2TRAINER_SIGN_PFX` nothing is signed and every produced
+byte is identical to the unsigned flow (this build: unsigned
+by default, reason not-configured - no certificate on this
+machine; a self-signed certificate does not clear SAC).
+Catalog delta none - no table-parsing path touched
+(117,599 supported / 210 blocked unchanged); the Master
+Trainer load path is unchanged (the MT-9 gate re-checks each
+table independently at load time).
+
 ### 0.46 compatibility lane (shipped 2026-11-13; no Master
 Trainer effect)
 

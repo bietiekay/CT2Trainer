@@ -1,6 +1,30 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-13. **0.46 released** (build
+**Updated:** 2026-11-14. **0.47 released** (build
+`native-20261114T011046Z-ee5cecee`, cut from `main` @ `6e1940e`,
+2026-11-14) - the optional code signing for the frozen and
+generated trainer executables (the Smart App Control handling,
+the field block observed 2026-11-14 on the 0.46 trainer: SAC
+refuses unsigned binaries by hash, has no per-app allow and is a
+one-way off on Win11 - the durable fix is an Authenticode
+signature from a trusted-CA code-signing certificate): the new
+pure `code_signing.py` layer (env-only config, signtool sign
+step, the pure PE certificate-table re-proof, fail-closed named
+`sign-…` refusals) wired into the build (converter + master
+signed after freezing, template deliberately unsigned) and the
+trainer generation (every generated trainer signed before
+publication); `bundle.read_embedded_plan` gains the bounded
+backwards footer scan so the plan survives the certificate table
+signtool appends after the footer; without `CT2TRAINER_SIGN_PFX`
+nothing is signed and every produced byte is identical to the
+unsigned flow (this build: unsigned, reason not-configured - no
+certificate on this machine); +37 tests; full main suite 5,108
+OK / 36 expected skips; in-build suite 5,108 OK / 36 expected
+skips, `ce_inputs: []`; catalog unchanged at
+`blocked-catalog-046-regsize`: 117,809 total / 117,599 supported
+/ 12,974 headings / 104,450 actionable / 210 blocked (no
+table-parsing path touched); see the 0.47 section below.
+Superseded 0.46 (build
 `native-20261113T185658Z-e543af1a`, cut from `main` @ `b348184`,
 2026-11-13) - the AA extended-register `l` alias + `dqword`
 size-keyword parity (the compatibility lane against the 221-row
@@ -493,7 +517,28 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.46, build
+**Latest verified release:** 0.47, build
+`native-20261114T011046Z-ee5cecee` (cut from `main` @ `6e1940e`,
+2026-11-14): the 0.47 optional code signing release (Smart App
+Control handling) - in-build suite 5,108 OK /
+36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; the build ran
+unsigned by default (`code_signing` report: converter / master
+signed false, reason not-configured - no certificate on this
+machine; the signed path activates with a user-supplied
+trusted-CA PFX); source ZIP
+`CT2Trainer-0.47-source.zip` sha256
+`436a330aeceb70a51c2fc5585085a133b25ea6f05aedcdfa25353aa9042d436d`
+(14,675,788 bytes) - carries the code-signing package
+(`code_signing.py` +
+`tests/test_native_code_signing.py` + the bundle footer-scan)
+and the SAC user docs (`usage.md` section 8, `build.md`
+section 3) - and portable ZIP
+`CT2Trainer-0.47-windows-portable.zip` sha256
+`146ee9cd99a12865779ba1daff9e66fa0855be20a7a847d0bd47a513e74bc3a5`
+(49,879,105 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`a770f9689a5744a49aa26ec911437f0fcd09a05631e85edcfea92061b6658453`,
+17,066,832 bytes) ships next to the converter). Superseded 0.46, build
 `native-20261113T185658Z-e543af1a` (cut from `main` @ `b348184`,
 2026-11-13): the 0.46 AA extended-register `l` alias + `dqword`
 size-keyword parity release - in-build suite 5,071 OK /
@@ -1181,6 +1226,85 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.47 released (build `native-20261114T011046Z-ee5cecee`, cut from `main` @
+`6e1940e`, 2026-11-14): the optional code signing for the frozen
+and generated trainer executables (Smart App Control handling).**
+0.47 ships the Smart App Control handling for the frozen and
+generated trainer executables (the field block observed
+2026-11-14 on the 0.46 trainer): Smart App Control (Windows
+Security) refuses unsigned binaries by their binary hash,
+offers no per-app "allow" option, and on Windows 11 turning
+it off is a one-way switch - the durable fix is an
+Authenticode signature from a code-signing certificate
+issued by a trusted public CA (OV or EV; a self-signed
+certificate does not clear Smart App Control). The new pure
+layer `src/ct2trainer/native/code_signing.py` is configured
+through environment variables only (never persisted):
+`CT2TRAINER_SIGN_PFX` (the PFX certificate store file),
+`CT2TRAINER_SIGN_PFX_PASSWORD`, optional `CT2TRAINER_SIGNTOOL`
+(explicit signtool.exe, default discovery under the Windows
+SDK bin roots, highest version wins) and
+`CT2TRAINER_SIGN_TIMESTAMP_URL` (default
+`http://timestamp.digicert.com`). `tools/native_build.py`
+signs `CT2Trainer-Converter.exe` and `CT2Trainer-Master.exe`
+after freezing (the template stub is deliberately NOT signed:
+it is never run directly, and a certificate table after its
+`CT2BASE1` trailer would break the converter's template check)
+and reports the per-EXE signing facts in `build.json` under
+`code_signing`; `bundle.build_trainer` signs every generated
+trainer before publication (the `sign` keyword is the
+injectable test seam, defaulting to the environment-driven
+`sign_if_configured`), and the trainer `.build.json` gains
+the `signed` flag. Signing is signtool `sign /v /f <pfx>
+[/p <pwd>] /fd SHA256 [/tr <url> /td SHA256] <path>` (bounded
+300 s timeout, stdout captured), and after a reported success
+the certificate table of the PE is re-proven by the pure
+`certificate_table` security-directory walk (WIN_CERTIFICATE
+revision 0x0200, certificate type 0x0001, declared length
+equal to the security directory size) - so a signed file is
+never shipped unproven. Fail-closed named refusals:
+`sign-not-win32`, `sign-signtool-unavailable`,
+`sign-certificate-missing`, `sign-failed`,
+`sign-verification-failed` - a configured signing that fails
+refuses the build / the trainer generation, it never ships an
+unsigned binary. `bundle.read_embedded_plan` no longer assumes
+the footer at the end of the file: a bounded backwards
+`CT2NATV1` magic scan (tail window 1 MiB, the documented
+certificate-tail bound) where every candidate is proved
+against the plan checksum, so the plan survives the
+certificate table that signtool appends after the footer; a
+magic occurrence inside the tail that does not verify is
+skipped, never accepted, and a tail beyond the window is the
+named refusal. Without `CT2TRAINER_SIGN_PFX` nothing is signed
+and every produced byte is identical to the unsigned flow
+(this build: unsigned, reason not-configured - no certificate
+on this machine). +37 tests (new
+`tests/test_native_code_signing.py` 32 +
+`tests/test_native_bundle.py` +5). Full main suite 5,108 OK /
+36 expected skips; in-build suite 5,108 OK / 36 expected
+skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+per gate. Source ZIP `CT2Trainer-0.47-source.zip` sha256
+`436a330aeceb70a51c2fc5585085a133b25ea6f05aedcdfa25353aa9042d436d`
+(14,675,788 bytes) - carries the code-signing package
+(`code_signing.py` +
+`tests/test_native_code_signing.py` + the bundle footer-scan)
+and the SAC user docs (`usage.md` section 8, `build.md`
+section 3) - and portable ZIP
+`CT2Trainer-0.47-windows-portable.zip` sha256
+`146ee9cd99a12865779ba1daff9e66fa0855be20a7a847d0bd47a513e74bc3a5`
+(49,879,105 bytes; the frozen `CT2Trainer-Master.exe`
+sha256 `a770f9689a5744a49aa26ec911437f0fcd09a05631e85edcfea92061b6658453`,
+17,066,832 bytes, ships next to the converter). Catalog
+unchanged at `blocked-catalog-046-regsize`: 117,809 total /
+117,599 supported / 12,974 headings / 104,450 actionable /
+210 blocked (no table-parsing path touched); the user guide
+gains section 8 "Windows Security (Smart App Control)" (the
+two documented options: code-sign with a trusted-CA
+certificate, or the one-way SAC-off switch; trainers
+generated before a certificate was installed must be
+regenerated) and the build guide the optional code-signing
+section; the portable ZIP README carries the same user notes.
 
 **0.46 released (build `native-20261113T185658Z-e543af1a`, cut from `main` @
 `b348184`, 2026-11-13): the AA extended-register `l` alias +

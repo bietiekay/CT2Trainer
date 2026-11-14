@@ -703,6 +703,65 @@ game-facing action.
   17,069,499 bytes, ships next to the converter). Feature
   matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`).
+- 0.47 the optional code signing for the frozen and
+  generated trainer executables release (2026-11-14, content
+  commits `b764697` + `6e1940e`, build record below): VERSION
+  0.47 + CHANGELOG 0.47 entry in the same change (incl. the
+  `__version__` package constant sync, guarded by
+  `test_version_matches_root_version_file`). The Smart App
+  Control handling (the field block observed 2026-11-14 on
+  the 0.46 trainer: SAC refuses unsigned binaries by hash,
+  has no per-app allow and is a one-way off on Win11 - the
+  durable fix is an Authenticode signature from a trusted-CA
+  code-signing certificate): the new pure `code_signing.py`
+  layer (env-only config `CT2TRAINER_SIGN_PFX` /
+  `CT2TRAINER_SIGN_PFX_PASSWORD` / `CT2TRAINER_SIGNTOOL` /
+  `CT2TRAINER_SIGN_TIMESTAMP_URL`, never persisted; signtool
+  `sign /v /f <pfx> [/p <pwd>] /fd SHA256 [/tr <url> /td
+  SHA256]` with the bounded 300 s timeout; the pure PE
+  security-directory `certificate_table` walk re-proving the
+  WIN_CERTIFICATE revision 0x0200 / type 0x0001 / declared
+  length after a reported success; fail-closed named
+  refusals `sign-not-win32` / `sign-signtool-unavailable` /
+  `sign-certificate-missing` / `sign-failed` /
+  `sign-verification-failed` - a configured signing that
+  fails never ships an unsigned binary) wired into
+  `tools/native_build.py` (converter + master signed after
+  freezing, the template stub deliberately unsigned - a
+  certificate table after its CT2BASE1 trailer would break
+  the converter's template check; build.json `code_signing`
+  facts) and into `bundle.build_trainer` (every generated
+  trainer signed before publication through the injectable
+  `sign` seam; the trainer `.build.json` gains the `signed`
+  flag); `bundle.read_embedded_plan` no longer assumes the
+  footer at EOF - a bounded backwards `CT2NATV1` magic scan
+  (1 MiB certificate-tail window) where every candidate is
+  proved against the plan checksum, so the plan survives the
+  certificate table signtool appends after the footer;
+  without `CT2TRAINER_SIGN_PFX` nothing is signed and every
+  produced byte is identical to the unsigned flow (this
+  build: `code_signing.converter/master signed: false,
+  reason: not-configured` - no certificate on this machine;
+  the self-signed option does not clear SAC). +37 tests (new
+  `tests/test_native_code_signing.py` 32 +
+  `tests/test_native_bundle.py` +5). Full main suite 5,108
+  OK / 36 expected skips (5,071 + 37). Catalog delta none -
+  no table-parsing path touched (117,809 total / 117,599
+  supported / 210 blocked unchanged). The 0.47 build
+  `native-20261114T011046Z-ee5cecee` cut from `main` @
+  `6e1940e` (2026-11-14): in-build suite 5,108 OK / 36
+  expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.47-source.zip` sha256
+  `436a330aeceb70a51c2fc5585085a133b25ea6f05aedcdfa25353aa9042d436d`
+  (14,675,788 bytes), portable ZIP
+  `CT2Trainer-0.47-windows-portable.zip` sha256
+  `146ee9cd99a12865779ba1daff9e66fa0855be20a7a847d0bd47a513e74bc3a5`
+  (49,879,105 bytes; the frozen `CT2Trainer-Master.exe`
+  sha256 `a770f9689a5744a49aa26ec911437f0fcd09a05631e85edcfea92061b6658453`,
+  17,066,832 bytes, ships next to the converter). Feature
+  matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`).
 - 0.45 the per-session hotkey switch (MT-34) + the
   trainer-tick-sound field fix release (2026-11-13, content commit
   `58d6c8f`, build record below): VERSION 0.45 + CHANGELOG 0.45

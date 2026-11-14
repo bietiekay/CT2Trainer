@@ -61,6 +61,29 @@ installed must be regenerated) and the build guide the optional
 code-signing section; the portable ZIP README carries the same user
 notes. Catalog delta none - the change touches no table-parsing path.
 
+- Build: 0.47 released as run
+  `native-20261114T011046Z-ee5cecee` (cut from `main` @
+  `6e1940e`, 2026-11-14): in-build suite 5,108 OK / 36
+  expected skips, 0 failures - fully green at the canonical
+  build path, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate. The build ran unsigned by
+  default (no certificate on this machine; `code_signing`
+  report: converter / master signed false, reason
+  not-configured) - the signed path activates with a
+  user-supplied trusted-CA PFX. Source ZIP
+  `CT2Trainer-0.47-source.zip` sha256
+  `436a330aeceb70a51c2fc5585085a133b25ea6f05aedcdfa25353aa9042d436d`
+  (14,675,788 bytes) - carries the code-signing package
+  (`code_signing.py` +
+  `tests/test_native_code_signing.py` + the bundle
+  footer-scan) and the SAC user docs (`usage.md` section 8,
+  `build.md` section 3) - and portable ZIP
+  `CT2Trainer-0.47-windows-portable.zip` sha256
+  `146ee9cd99a12865779ba1daff9e66fa0855be20a7a847d0bd47a513e74bc3a5`
+  (49,879,105 bytes; the frozen `CT2Trainer-Master.exe`
+  (sha256 `a770f9689a5744a49aa26ec911437f0fcd09a05631e85edcfea92061b6658453`,
+  17,066,832 bytes) ships next to the converter).
+
 ## 0.46 (2026-11-13)
 
 AA extended-register `l` alias + `dqword` size-keyword parity

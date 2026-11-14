@@ -1022,6 +1022,32 @@ relative-ancestor refusals kept by design, 2 createthread RT-5G, 1
 pBase Cronos, 5 trailing-token, 6 single-row AA-syntax / DISABLE
 re-init).
 
+0.47 release record (2026-11-14, run `native-20261114T011046Z-ee5cecee`
+cut from `main` @ `6e1940e`): the optional code signing for the
+frozen and generated trainer executables (the Smart App
+Control handling, the field block observed 2026-11-14 on the
+0.46 trainer) ships as the 0.47 release - in-build suite
+5,108 OK / 36 expected skips, `ce_inputs: []`,
+`runtime_unverified` deliberately kept per gate; the build ran
+unsigned by default (no code-signing certificate on this
+machine; `build.json` `code_signing`: converter / master
+signed false, reason not-configured - the signed path
+activates with a user-supplied trusted-CA PFX, and a signed
+build's certificate table is re-proven before publication);
+source
+ZIP `CT2Trainer-0.47-source.zip` sha256
+`436a330aeceb70a51c2fc5585085a133b25ea6f05aedcdfa25353aa9042d436d`
+(14,675,788 bytes), portable ZIP
+`CT2Trainer-0.47-windows-portable.zip` sha256
+`146ee9cd99a12865779ba1daff9e66fa0855be20a7a847d0bd47a513e74bc3a5`
+(49,879,105 bytes; the frozen `CT2Trainer-Master.exe`
+sha256 `a770f9689a5744a49aa26ec911437f0fcd09a05631e85edcfea92061b6658453`,
+17,066,832 bytes, ships next to the converter). Catalog
+unchanged at `blocked-catalog-046-regsize`: 117,809 total /
+117,599 supported / 12,974 headings / 104,450 actionable /
+210 blocked (no table-parsing path touched); the remaining
+210 blocked rows are the documented design / gate residuals
+and AP-11 stays open by definition.
 0.46 release record (2026-11-13, run `native-20261113T185658Z-e543af1a`
 cut from `main` @ `b348184`): the AA extended-register
 `l` alias + `dqword` size-keyword parity ships as the
