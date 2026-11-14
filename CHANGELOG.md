@@ -2,6 +2,65 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.47 (2026-11-14)
+
+Optional code signing for the frozen and generated trainer
+executables (Smart App Control handling, the field block observed
+2026-11-14 on the 0.46 trainer): Smart App Control (Windows Security)
+refuses unsigned binaries by their binary hash, offers no per-app
+"allow" option, and on Windows 11 turning it off is a one-way switch
+- the durable fix is an Authenticode signature from a code-signing
+certificate issued by a trusted public CA (OV or EV; a self-signed
+certificate does not clear Smart App Control). The new pure layer
+`src/ct2trainer/native/code_signing.py` wires that optional step
+everywhere an EXE is produced, configured through environment
+variables only (never persisted): `CT2TRAINER_SIGN_PFX` (the PFX
+certificate store file), `CT2TRAINER_SIGN_PFX_PASSWORD`, optional
+`CT2TRAINER_SIGNTOOL` (explicit signtool.exe, default discovery under
+the Windows SDK bin roots, highest version wins) and
+`CT2TRAINER_SIGN_TIMESTAMP_URL` (default
+`http://timestamp.digicert.com`). `tools/native_build.py` signs
+`CT2Trainer-Converter.exe` and `CT2Trainer-Master.exe` after freezing
+(the template stub is deliberately NOT signed: it is never run
+directly, and a certificate table after its `CT2BASE1` trailer would
+break the converter's template check) and reports the per-EXE signing
+facts in `build.json` under `code_signing`; `bundle.build_trainer`
+signs every generated trainer before publication (the `sign` keyword
+is the injectable test seam, defaulting to the environment-driven
+`sign_if_configured`), and the trainer `.build.json` gains the
+`signed` flag. Signing is signtool `sign /v /f <pfx> [/p <pwd>] /fd
+SHA256 [/tr <url> /td SHA256] <path>` (bounded 300 s timeout, stdout
+captured), and after a reported success the certificate table of the
+PE is re-proven by the pure `certificate_table` security-directory
+walk (WIN_CERTIFICATE revision 0x0200, certificate type 0x0001,
+declared length equal to the security directory size) - so a signed
+file is never shipped unproven. Fail-closed named refusals:
+`sign-not-win32`, `sign-signtool-unavailable`,
+`sign-certificate-missing`, `sign-failed`,
+`sign-verification-failed` - a configured signing that fails refuses
+the build / the trainer generation, it never ships an unsigned
+binary. `bundle.read_embedded_plan` no longer assumes the footer at
+the end of the file: a bounded backwards `CT2NATV1` magic scan (tail
+window 1 MiB, the documented certificate-tail bound) where every
+candidate is proved against the plan checksum, so the plan survives
+the certificate table that signtool appends after the footer; a magic
+occurrence inside the tail that does not verify is skipped, never
+accepted, and a tail beyond the window is the named refusal. Without
+`CT2TRAINER_SIGN_PFX` nothing is signed and every produced byte is
+identical to the unsigned flow. +37 tests (new
+`tests/test_native_code_signing.py` 32: config resolution, named
+refusals, SDK discovery, argv construction, the signtool seam over
+injected runners, the synthetic-PE certificate-table walk,
+sign-and-verify fail-closed; `tests/test_native_bundle.py` +5:
+certificate-tail roundtrip, fake-magic-in-tail, bounded-scan refusal,
+signing wiring + report flag). The user guide gains section 8
+"Windows Security (Smart App Control)" (the two documented options:
+code-sign with a trusted-CA certificate, or the one-way
+SAC-off switch; trainers generated before a certificate was
+installed must be regenerated) and the build guide the optional
+code-signing section; the portable ZIP README carries the same user
+notes. Catalog delta none - the change touches no table-parsing path.
+
 ## 0.46 (2026-11-13)
 
 AA extended-register `l` alias + `dqword` size-keyword parity

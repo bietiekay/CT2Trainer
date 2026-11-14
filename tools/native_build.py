@@ -335,6 +335,17 @@ def build(output):
     # templates, so it gets no CT2BASE1 marker (that marker is exclusive to the
     # converter's template stub).
     master = freeze("native_master.py", "CT2Trainer-Master", icon=assets / "Master_Trainer.ico")
+    # Optional Authenticode signing (Smart App Control handling): the frozen
+    # EXEs are signed through the environment-driven code_signing layer when
+    # CT2TRAINER_SIGN_PFX is set - fail-closed named refusals otherwise.
+    # The template stub is deliberately NOT signed: it is never run directly,
+    # and a certificate table after its CT2BASE1 trailer would break the
+    # converter's template check.
+    if str(ROOT / "src") not in sys.path:
+        sys.path.insert(0, str(ROOT / "src"))
+    from ct2trainer.native import code_signing
+    converter_signing = code_signing.sign_if_configured(converter)
+    master_signing = code_signing.sign_if_configured(master)
     contents = [inventory(template), inventory(converter), inventory(master)]
     (output / "payload-inventory.json").write_text(json.dumps(contents, indent=2) + "\n", encoding="utf-8")
     if source_files()!=files or any(digest(path)!=snapshots[path.relative_to(ROOT).as_posix()] for path in files):
@@ -389,6 +400,13 @@ Product behavior (what the generated trainer does)
   (PID/creation time, PE header, architecture, ownership, current
   bytes) before any memory mutation; one-shot scripts get the honest
   one-shot contract (no faked OFF/save/re-apply).
+- Optional code signing (Smart App Control handling): when the
+  CT2TRAINER_SIGN_PFX environment variable names a PFX certificate,
+  the frozen converter / master EXEs and every generated trainer are
+  Authenticode-signed with signtool (SHA-256 digest, RFC-3161
+  timestamp) and the certificate table is re-proven before
+  publication; without the variable the unsigned byte stream is
+  unchanged and the build reports signed: false.
 - Still in development: broad async/table forms, managed
   lookup/target invocation, remote speed control. Static IL2CPP file
   analysis produces a read-only report (no live managed resolver).
@@ -569,6 +587,27 @@ attach failures are logged once per distinct cause. Logging is a
 debugging aid only: it never changes trainer behavior, and with the
 option off (the default) no log file is written at all.
 
+Windows Security (Smart App Control)
+===================================
+If Windows Security blocks the converter, the master trainer or a
+generated trainer under **Smart App Control**, the executable is
+unsigned and Smart App Control does not trust it. There is no per-app
+"allow" option, and on Windows 11 turning Smart App Control off is a
+one-way switch (re-enabling requires a system reset). The durable fix
+is to code-sign the binaries: obtain a code-signing certificate from a
+trusted public CA (OV or EV - a self-signed certificate does NOT clear
+Smart App Control), export it to a PFX, and set the environment
+variables CT2TRAINER_SIGN_PFX (the PFX path) and
+CT2TRAINER_SIGN_PFX_PASSWORD before running this converter or a
+source build. Every EXE produced in that session - and every trainer
+you generate - is then Authenticode-signed with signtool, and the
+signature is re-proven before the file is published. Trainers
+generated before a certificate was installed must be regenerated to
+carry the signature. A configured signing that fails refuses the
+build / the generation with a named reason (it never ships an
+unsigned binary); without the variable the unsigned flow is
+byte-identical.
+
 Limits (fail-closed)
 ====================
 - Records that cannot be supported stay visible with a named block
@@ -588,6 +627,7 @@ Keep licenses/ with redistributions. The same notices are embedded in
 generated trainers. User CT rights are separate.
 """)
     report = {"schema": "ct2trainer-repository-build/v1", "version": VERSION, "python": sys.version, "pyinstaller": __import__("PyInstaller").__version__, "ce_inputs": [], "runtime_unverified": True,
+              "code_signing": {"converter": converter_signing, "master": master_signing, "template": "not signed by design (never run directly)"},
               "source_inputs": [{"path": p.relative_to(ROOT).as_posix(), "sha256": digest(p)} for p in files],
               "outputs": [{"file": p.name, "sha256": digest(p), "bytes": p.stat().st_size} for p in (template, converter, master, source_zip, portable_zip)]}
     (output / "build.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

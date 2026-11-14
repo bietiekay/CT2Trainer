@@ -129,6 +129,48 @@ designed for touch operation on a Steam Deck:
 - Amber banners report hotkey conflicts and a failed table-Lua bootstrap
   (record scripts stay inactive then).
 
+## 8. Windows Security (Smart App Control)
+
+If Windows Security blocks the converter, the master trainer or a
+generated trainer under **Smart App Control**, the executable is unsigned
+and Smart App Control does not trust it. Smart App Control blocks by
+binary hash, offers **no per-app "allow" option**, and on Windows 11
+turning it off is a **one-way switch** (re-enabling requires a system
+reset). Two ways forward:
+
+**Option A - code-sign the binaries (recommended, durable).** Obtain a
+code-signing certificate from a trusted public CA (an OV or EV
+code-signing certificate; a **self-signed certificate does NOT clear
+Smart App Control** - the certificate chain must be trusted by Windows),
+export it to a PFX file, and set the environment variables before
+running the converter or a source build:
+
+```powershell
+$env:CT2TRAINER_SIGN_PFX = "C:\certs\my-code-signing.pfx"
+$env:CT2TRAINER_SIGN_PFX_PASSWORD = "the-pfx-password"
+# optional overrides (defaults: discovery under the Windows SDK bin
+# roots, timestamp server http://timestamp.digicert.com)
+$env:CT2TRAINER_SIGNTOOL = "C:\Program Files (x86)\Windows Kits\10\bin\<version>\x64\signtool.exe"
+$env:CT2TRAINER_SIGN_TIMESTAMP_URL = "http://timestamp.digicert.com"
+```
+
+Every EXE produced in that session is then Authenticode-signed with
+signtool (SHA-256 digest, RFC-3161 timestamp) - the converter and
+master trainer on a source build, and every trainer you generate - and
+the certificate table is re-proven before the file is published.
+Trainers generated before a certificate was installed must be
+**regenerated** to carry the signature. A configured signing that
+fails refuses the build / the generation with a named reason (`sign-…`
+refusal in the status line / build log); it never ships an unsigned
+binary. Without `CT2TRAINER_SIGN_PFX` the unsigned flow is
+byte-identical and no signing happens at all.
+
+**Option B - turn off Smart App Control (one-way).** Windows Security →
+*App & browser control* → *Smart App Control settings* → *Turn off
+Smart App Control*. The binaries then run, but the switch stays off
+until a system reset, and the protection it offers is gone for every
+other unsigned binary on the machine as well.
+
 ## 7. Final acceptance
 
 Final acceptance is **separate on Windows and on a real Steam Deck under
