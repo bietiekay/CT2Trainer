@@ -190,6 +190,51 @@ see "Verified frozen scan gate (2026-11-15, 0.52 build cut)" in
 `tests/windows/scan_fixture/README.md`. Real-game, clean-machine
 and Deck / Proton / touch acceptance remain open.
 
+Verified owned String gate (2026-11-15, source runtime, repo
+`main` @ `3519dcd` post-0.52 on Windows NT 10.0.26300.0 x64, MSVC
+`cl` 19.44.35229 BuildTools 2022): the 2026-10-07 repin build was
+cleaned, so the fixture was rebuilt from the unchanged source
+(`string_target.c` sha256
+`9c69ea3549387956551e96d501a5184765d59df36cae2cc32936ca81b0877652`,
+single git commit) into run
+`native-string-fixture-20261115T085726Z-b2cade29`
+(`verification.json` passed). The fresh builds are
+byte-nondeterministic (second independent rebuild differed in hash
+for both architectures) but layout-stable, so `string_probe.py`
+`TARGET_SHA256` was re-pinned to the fresh EXEs (x64
+`46e3f47e60b1ca77fcd16cd3b0d5a57ba3a131029c5b107cb91cab297a23e852`,
+x86
+`3c22495e86ace0999b64f10d35e2c276d753d62667daa2347077cc76009f5ab7`);
+the fresh x64 image keeps the 2026-10-07 layout exactly (x64 CT
+unchanged, freshly compiled x64 plan fingerprint byte-identical to
+the pinned
+`fc1ff36bcfa1bba926cf792a0e62ec619aaaa21866f424a19cbe4d2bb07c59f8`
+- compiler determinism confirmed), while the fresh x86 image places
+its static data block a uniform 0x40 lower (ascii `0x1DE40` ->
+`0x1DE00`, spacing unchanged), so the x86 CT addresses + probe
+`LAYOUT['x86']` were re-pinned together (new x86 CT sha256
+`95e30b8ef100e16414b43d916e1d70ef025131433fd8847fea50f0dc170ff984`,
+plan fingerprint
+`e49036db5a725a08ebaa3e499a74e9dde4913b2d5265a9cf070912f5312c6640`;
+the `TARGET_SHA256` hash gate still bounds every acceptance).
+Re-run through the source-runtime launcher (0.52 in-build venv
+python, `PYTHONPATH=src`, `--plan` / `--string-fixture-target` /
+`--string-fixture-report`, exit 0): both the x64 and x86 reports
+`ct2trainer-owned-string/v1` status `passed`, `frozen_runtime:
+false`, `ce_inputs: []`, `owned_markers_absent: true`, 14/14 checks
+each (child identity / regions / RVAs / sentinels, real
+ascii-utf16-surrogate-and-fixed reads, invalid-literal refusals,
+precise prefix writes with tail + guard preservation, fixed
+literal exact units, wrong-protection refusals without byte or
+protection change, freeze tail/last-byte behavior, fresh held-freeze
+prefix repair, frozen prefix-overlap refusal, apply-updated freeze
+intent, live controller restart drops freeze, target
+restart-attach fresh, final close + owned exit). Plans + reports
+under `build\windows-fixture\string-check-20261115T095000Z-string\`.
+Full record in `tests/windows/string_fixture/README.md`. The frozen
+String gate is re-run at the next release cut; real-game,
+clean-machine and Deck / Proton / touch acceptance remain open.
+
 ## 5. What is still open
 
 - **Runtime acceptance** stays `runtime_unverified: true` until

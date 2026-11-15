@@ -15,28 +15,33 @@ import sys
 import tempfile
 import threading
 
-# Re-pinned 2026-10-07 after the CT2Trainer rename (schema strings) and the
-# fixture rebuild: MSVC 19.44.35229,
-# evidence build/runs/fixture-repin-20261007T115729Z.
+# Re-pinned 2026-11-15 after the 2026-10-07 repin build was cleaned: rebuilt
+# from the unchanged source (MSVC 19.44.35229), evidence
+# build/runs/native-string-fixture-20261115T085726Z-b2cade29. The fresh x64
+# image keeps the 2026-10-07 layout exactly (x64 CT and plan fingerprint
+# unchanged); the fresh x86 image places the static data block a uniform
+# 0x40 lower (ascii 0x1DE40 -> 0x1DE00, stable across independent
+# rebuilds), so the x86 CT addresses and LAYOUT were re-pinned together with
+# both target hashes.
 PROCESS_NAME = 'NativeStringFixture.exe'
 FIXTURE_SOURCE_SHA256 = '9c69ea3549387956551e96d501a5184765d59df36cae2cc32936ca81b0877652'
 CT_SHA256 = {
     'x64': '97e36a533db823542bed0830cd07a0eaedc8b1f34ff36d108c2c3edf69e3c10e',
-    'x86': '63758a2d45765a002b2f7618515b0aac23e75d4baf736bbe85525a998f0d7d1c',
+    'x86': '95e30b8ef100e16414b43d916e1d70ef025131433fd8847fea50f0dc170ff984',
 }
 TARGET_SHA256 = {
-    'x64': 'a997bd3775cd76e40b08089ad6fcddc6f0f873fcc660901f278bffedbae49984',
-    'x86': '842525b1f9b881cee8f43e07d3545bee183514f1dfb9f2294eb0ea86ca0a8274',
+    'x64': '46e3f47e60b1ca77fcd16cd3b0d5a57ba3a131029c5b107cb91cab297a23e852',
+    'x86': '3c22495e86ace0999b64f10d35e2c276d753d62667daa2347077cc76009f5ab7',
 }
 PLAN_SHA256 = {
     'x64': 'fc1ff36bcfa1bba926cf792a0e62ec619aaaa21866f424a19cbe4d2bb07c59f8',
-    'x86': 'cb58065844546c757aba77fcb6b23b4fc6532196aa72edd2dae6bb03da93167f',
+    'x86': 'e49036db5a725a08ebaa3e499a74e9dde4913b2d5265a9cf070912f5312c6640',
 }
 LAYOUT = {
     'x64': {'module_bytes': 0x2A000, 'ascii': 0x24048, 'utf16': 0x24060,
             'fixed': 0x24090, 'readonly': 0x240A0, 'executable': 0x240A8},
-    'x86': {'module_bytes': 0x22000, 'ascii': 0x1DE40, 'utf16': 0x1DE58,
-            'fixed': 0x1DE88, 'readonly': 0x1DE98, 'executable': 0x1DE9C},
+    'x86': {'module_bytes': 0x22000, 'ascii': 0x1DE00, 'utf16': 0x1DE18,
+            'fixed': 0x1DE48, 'readonly': 0x1DE58, 'executable': 0x1DE5C},
 }
 _BUFFER_FORMATS = {'ascii': (8, 1, True, 4), 'utf16': (16, 2, True, 12),
                    'fixed': (8, 1, False, 8)}

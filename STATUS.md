@@ -44,7 +44,33 @@ generated `ScanTrainer.exe`, `frozen_runtime: true`)
 re-ran at the 0.52 build cut on the new 0.52 template -
 both the x64 and x86 frozen reports passed, 8/8 checks
 each, plan identity identical to the source runtime.
-Real-game, clean-machine and Deck / Proton / touch
+The owned String gate (the third Windows function gate)
+was verified 2026-11-15 in the source runtime (repo
+`main` @ `3519dcd`, post-0.52 content; the fixture
+re-pinned after the 2026-10-07 repin build was cleaned -
+rebuilt from the unchanged source, MSVC `cl` 19.44.35229,
+run `native-string-fixture-20261115T085726Z-b2cade29`; the
+fresh builds are byte-nondeterministic but layout-stable,
+so `string_probe.py` `TARGET_SHA256` was re-pinned to the
+fresh EXEs - the fresh x64 image keeps the 2026-10-07
+layout exactly (x64 CT + plan fingerprint unchanged),
+while the fresh x86 image places its static data block a
+uniform 0x40 lower (ascii `0x1DE40` -> `0x1DE00`), so the
+x86 CT + probe `LAYOUT['x86']` were re-pinned together);
+both the x64 and x86 reports
+`ct2trainer-owned-string/v1` passed, 14/14 checks each,
+`ce_inputs: []`, `owned_markers_absent: true` (real
+ascii/utf16-surrogate/fixed embedded-zero reads, precise
+prefix writes with tail + guard preservation, fixed
+literal exact units, wrong-protection refusals without
+byte or protection change, freeze tail + last-byte
+repair, fresh held-freeze prefix repair, frozen
+prefix-overlap refusal, apply-updated freeze intent, live
+controller restart drops freeze, target restart attaches
+fresh, final close + owned exit); the frozen String gate
+re-runs at the next release cut; full main suite 5,197 OK
+/ 36 expected skips. Real-game, clean-machine and Deck /
+Proton / touch
 acceptance remain open, so `runtime_unverified` stays set
 per the RT-6 acceptance; see the 0.52 section below.
 Superseded 0.51 (build `native-20261115T023110Z-4ed2835e`,

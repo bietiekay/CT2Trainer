@@ -24,7 +24,7 @@ def metadata(architecture='x64', pid=17):
     # Fixed source-layout values independent of ASLR and child creation times.
     base = 0x140000000 if architecture == 'x64' else 0x400000
     rvas = ((0x24048, 0x24060, 0x24090, 0x240A0, 0x240A8)
-            if architecture == 'x64' else (0x1DE40, 0x1DE58, 0x1DE88, 0x1DE98, 0x1DE9C))
+            if architecture == 'x64' else (0x1DE00, 0x1DE18, 0x1DE48, 0x1DE58, 0x1DE5C))
     value = {'schema': 'ct2trainer-owned-string-target/v1', 'pid': pid,
         'pointer_bits': 64 if architecture == 'x64' else 32,
         'pe_machine': 0x8664 if architecture == 'x64' else 0x14C,
@@ -64,8 +64,8 @@ class OwnedStringAdmissionTests(unittest.TestCase):
                 self.assertEqual([e['id'] for e in plan['entries']], [1,2,3,4,5,6])
                 self.assertEqual([e.get('variable_type') for e in plan['entries']], ['String']*5+['Byte'])
                 self.assertEqual([e['value_profile']['size'] for e in plan['entries'][:5]], [8,32,8,8,8])
-                self.assertEqual(plan['entries'][0]['address'], '"'+PROCESS_NAME+'"+'+('24048' if architecture=='x64' else '1DE40'))
-                self.assertEqual(plan['entries'][3]['address'], '["'+PROCESS_NAME+'"+'+('240A0' if architecture=='x64' else '1DE98')+']')
+                self.assertEqual(plan['entries'][0]['address'], '"'+PROCESS_NAME+'"+'+('24048' if architecture=='x64' else '1DE00'))
+                self.assertEqual(plan['entries'][3]['address'], '["'+PROCESS_NAME+'"+'+('240A0' if architecture=='x64' else '1DE58')+']')
 
     def test_pinned_owned_c_source_is_exported_exactly(self):
         self.assertEqual(hashlib.sha256((FIXTURE/'string_target.c').read_bytes()).hexdigest(), FIXTURE_SOURCE_SHA256)

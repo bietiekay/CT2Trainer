@@ -72,5 +72,79 @@ precise literal-prefix write/undo and tail preservation, overlap and freeze
 policy, refusal of read-only/executable/incomplete spans, and failure/late-guard
 tests before source/frozen trainer acceptance can be claimed.
 
+## Verified String gate (2026-11-15, source runtime)
+
+Pass 1 of the owned String gate, repo `main` @ `3519dcd` (post-0.52) on
+Windows `Microsoft Windows NT 10.0.26300.0` x64. The 2026-10-07 repin build
+`build/runs/fixture-repin-20261007T115729Z` had been cleaned, so the fixture
+was rebuilt from the unchanged source (`string_target.c` sha256
+`9c69ea3549387956551e96d501a5184765d59df36cae2cc32936ca81b0877652`, single
+git commit) with the same MSVC `cl.exe` 19.44.35229 (BuildTools 2022,
+`/W4 /WX /Od /TC`, nonincremental link) - fresh run
+`build\runs\native-string-fixture-20261115T085726Z-b2cade29\`
+(git-ignored), `verification.json` status `passed`. The fresh builds are
+byte-nondeterministic (two independent rebuilds produced different hashes
+for both architectures), so `string_probe.py` `TARGET_SHA256` was re-pinned to
+the fresh EXEs (documented re-pin practice, as for the scan lane).
+
+Layout outcome of the rebuild (proved by the children's own
+`ct2trainer-owned-string-target/v1` metadata, two independent rebuilds in
+agreement):
+
+- x64: identical to the 2026-10-07 layout (`module_bytes` `0x2A000`,
+  ascii/utf16/fixed/readonly/executable RVAs unchanged) - the x64 CT is
+  unchanged (sha256
+  `97e36a533db823542bed0830cd07a0eaedc8b1f34ff36d108c2c3edf69e3c10e`) and the
+  freshly compiled x64 plan fingerprint is byte-identical to the pinned
+  `fc1ff36bcfa1bba926cf792a0e62ec619aaaa21866f424a19cbe4d2bb07c59f8`,
+  confirming compiler determinism.
+- x86: the static data block sits a uniform 0x40 lower than the 2026-10-07
+  build (ascii `0x1DE40` -> `0x1DE00`, utf16 `0x1DE58` -> `0x1DE18`,
+  fixed `0x1DE88` -> `0x1DE48`, readonly pointer `0x1DE98` -> `0x1DE58`,
+  executable pointer `0x1DE9C` -> `0x1DE5C`; `module_bytes` unchanged at
+  `0x22000`, the guarded-buffer spacing and pointer-slot layout are
+  unchanged). The x86 CT addresses were re-pinned to the fresh layout
+  (all six records, incl. the prefix-overlap byte at ascii+1), the probe
+  `LAYOUT['x86']` moved with them, and the new pins are CT sha256
+  `95e30b8ef100e16414b43d916e1d70ef025131433fd8847fea50f0dc170ff984` and
+  plan fingerprint
+  `e49036db5a725a08ebaa3e499a74e9dde4913b2d5265a9cf070912f5312c6640`.
+  The hash gate (`TARGET_SHA256`) still bounds every acceptance, so a
+  future rebuild with a different layout is refused before any child
+  spawn, never mis-tested.
+
+Re-run through the source-runtime launcher (0.52 in-build venv python,
+`PYTHONPATH=src`, `ct2trainer.native.launcher.main` with `--plan` /
+`--string-fixture-target` / `--string-fixture-report`, exit 0), plans +
+reports under
+`build\windows-fixture\string-check-20261115T095000Z-string\` (git-ignored):
+
+- x64: report `ct2trainer-owned-string/v1` status `passed`,
+  `frozen_runtime: false`, `ce_inputs: []`,
+  `owned_markers_absent: true` - 14/14 checks passed:
+  exact-child-image-identity-architecture-regions-rvas-and-sentinels,
+  real-ascii-utf16-surrogate-and-fixed-embedded-zero-reads,
+  invalid-encoding-length-and-nul-refuse-before-effect,
+  ascii-precise-prefix-held-write-retains-declared-tail-and-guards,
+  utf16-units-surrogate-and-aligned-terminator-write-preserves-tail,
+  fixed-literal-exact-units-including-embedded-zero,
+  read-only-and-rwx-regions-refuse-without-changing-bytes-or-protection,
+  freeze-preserves-new-unowned-tails-and-restores-fixed-owned-last-byte,
+  fresh-held-freeze-repairs-owned-prefix-only-with-independent-readback,
+  frozen-prefix-overlap-refuses-before-effect,
+  apply-updates-variable-length-freeze-intent-without-stale-tail-replay,
+  live-controller-restart-drops-freeze-and-never-saves-or-replays-string-values,
+  target-pid-creation-restart-attaches-fresh-without-value-or-freeze-replay,
+  normal-final-close-sentinels-markers-and-owned-target-exit.
+- x86: same 14/14 pass against the re-pinned x86 target
+  (`3c22495e86ace0999b64f10d35e2c276d753d62667daa2347077cc76009f5ab7`),
+  `target_architecture: x86`, `frozen_runtime: false`.
+
+The frozen String gate (`frozen_runtime: true`, the generated string
+trainer) is re-run at the next release cut. This record closes the
+String-fixture portion of the Windows runtime evidence only: real-game,
+clean-machine and Deck / Proton acceptance remain open
+(`runtime_unverified` stays set).
+
 The module/RVA interpretation follows the public Microsoft
 [PE format](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format).

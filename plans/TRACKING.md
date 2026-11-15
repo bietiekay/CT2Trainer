@@ -155,8 +155,44 @@ game-facing action.
   identity identical to the source runtime (see the ledger section
   "Windows scan fixture runtime evidence" in
   `documentation/native-progress.md` and the verified-scan-gate
-  record in `tests/windows/scan_fixture/README.md`). Real-game and
-  clean-machine / Deck / Proton acceptance stay open.
+  record in `tests/windows/scan_fixture/README.md`). The owned
+  String gate (the third Windows function gate) was verified
+  2026-11-15 in the source runtime (repo `main` @ `3519dcd`,
+  post-0.52 content; the fixture re-pinned after the 2026-10-07
+  repin build was cleaned - rebuilt from the unchanged source,
+  MSVC `cl` 19.44.35229, run
+  `native-string-fixture-20261115T085726Z-b2cade29`; the fresh
+  builds are byte-nondeterministic but layout-stable, so
+  `string_probe.py` `TARGET_SHA256` was re-pinned to the fresh
+  EXEs - the fresh x64 image keeps the 2026-10-07 layout exactly
+  (x64 CT unchanged, freshly compiled x64 plan fingerprint
+  byte-identical to the pinned
+  `fc1ff36bcfa1bba926cf792a0e62ec619aaaa21866f424a19cbe4d2bb07c59f8`),
+  while the fresh x86 image places its static data block a
+  uniform 0x40 lower (ascii `0x1DE40` -> `0x1DE00`), so the x86
+  CT addresses + probe `LAYOUT['x86']` were re-pinned together
+  (new x86 CT sha256
+  `95e30b8ef100e16414b43d916e1d70ef025131433fd8847fea50f0dc170ff984`,
+  plan fingerprint
+  `e49036db5a725a08ebaa3e499a74e9dde4913b2d5265a9cf070912f5312c6640`;
+  the `TARGET_SHA256` hash gate still bounds every acceptance)):
+  both the x64 and x86 reports
+  `ct2trainer-owned-string/v1` `passed`, 14/14 checks each,
+  `ce_inputs: []`, `owned_markers_absent: true` (real
+  ascii/utf16-surrogate/fixed embedded-zero reads, precise
+  prefix writes retaining declared tails + guards, fixed
+  literal exact units, wrong-protection refusals without byte or
+  protection change, freeze tail + last-byte repair, fresh
+  held-freeze prefix repair, frozen prefix-overlap refusal,
+  apply-updated freeze intent, live controller restart drops
+  freeze, target restart attaches fresh, final close + owned
+  exit); the frozen String gate re-runs at the next release cut
+  (see the ledger section "Windows String fixture runtime
+  evidence" in `documentation/native-progress.md` and the
+  verified-String-gate record in
+  `tests/windows/string_fixture/README.md`). Full main suite
+  5,197 OK / 36 expected skips. Real-game and clean-machine /
+  Deck / Proton acceptance stay open.
 - 0.21 Master Trainer (2026-10-31, branch
   `native-0.20-master-trainer`, merged `main` @ `9a725a8`; released in
   build `native-20261031T211046Z-14707e12` - in-build suite 4,044 OK
