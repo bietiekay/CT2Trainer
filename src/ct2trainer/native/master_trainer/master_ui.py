@@ -139,6 +139,7 @@ from ..engine import (TrainerEngine, StaleStateRecoverable,
                       StaleArtifactsRecoverable, LiveStateConflict,
                       StateError, default_state_dirs,
                       perform_stale_recovery)
+from ..luacall_binding import owned_luacall_binding_factory
 from ..state_force import force_reclaim
 from ..window_icon import window_icon_path
 from ..about_ui import repo_link
@@ -2172,7 +2173,8 @@ class MasterWindow:
             try:
                 engine = TrainerEngine(plan,
                                        state_dir=self.app.state_dir_for(plan),
-                                       memory_factory=self._memory_factory())
+                                       memory_factory=self._memory_factory(),
+                                       luacall_binding_factory=owned_luacall_binding_factory)
                 break
             except StaleStateRecoverable as exc:
                 if self.app.force:

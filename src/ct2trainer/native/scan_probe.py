@@ -11,17 +11,28 @@ import sys
 import tempfile
 import threading
 
-# Re-pinned 2026-10-07 after the CT2Trainer rename (CT lua helper name,
-# schema strings) and the fixture rebuild: MSVC 19.44.35229,
-# evidence build/runs/fixture-repin-20261007T115729Z.
+from .luacall_binding import owned_luacall_binding_factory
+
+# Re-pinned 2026-11-15: the git-ignored repin build
+# build/runs/fixture-repin-20261007T115729Z was cleaned, so the fixture was
+# rebuilt from the unchanged source (scan_target.c sha256
+# 4c939ab3c42aeea7eb2211253af8f7bbb374646afd12d744d06685bb7b72808f,
+# single git commit b6c48cc; the CT is unchanged at CT_SHA256) with the
+# same MSVC 19.44.35229 (BuildTools 2022, /W4 /WX /Od /TC,
+# /INCREMENTAL:NO) - evidence
+# build/runs/native-scan-fixture-20261115T043627Z-cfea6da9
+# (verification.json status passed, ce_inputs []). Previous repin:
+# 2026-10-07 after the CT2Trainer rename (CT lua helper name, schema
+# strings) and the fixture rebuild, evidence
+# build/runs/fixture-repin-20261007T115729Z.
 PROCESS_NAME = 'NativeScanFixture.exe'
 CT_SHA256 = '440a5bf3fdaaae5e2756eed16f8728efd3c65c7c40084e2a0685f2e2c83366db'
 SOURCE_SHA256 = {
     1: 'a78b5e66e44d058c3e6c704395ccccfb2cbcca661b4cd1a141a5f1e97b33f69b',
     2: 'fc233329b1d143b7687f10a365d9de00eca5fb5933d4b8de49307f81cb336080'}
 TARGET_SHA256 = {
-    'x64': 'c9ef4645e2a4153db9beec9921f21a26d05f2bb120b55476a2a0e97f2070481c',
-    'x86': '43556035fda3298950ca6fee41512143caa40cd1188cd6d494d127a8e2fc5fe2'}
+    'x64': 'e54b12801564aed37ad9ee3ed3283459e53f9f69ee8042af73730fc0784c5315',
+    'x86': 'd66756a12c741caf163823a26643bce5c0a0369c8b689fc00f0a3f52fa8a626e'}
 PRIVATE_PATTERN = bytes.fromhex('44 33 22 11 78 49 9A EB 3C 0D 5E AF F0 C1 12 63 B4 85 D6 27 08 59 AA FB CC 1D 6E BF 80 D1 22 73')
 NTH_PATTERN = bytes.fromhex('11 00 00 00 11 32 D7 C8 ED 8E A3 44 79 1A 3F D0')
 
@@ -154,7 +165,8 @@ def run_probe(plan, target: str | Path, report: str | Path):
                 raise AssertionError('Nth pattern or module sentinel differs')
     try:
         child, metadata = spawn()
-        engine = TrainerEngine(plan, state_dir=state)
+        engine = TrainerEngine(plan, state_dir=state,
+                               luacall_binding_factory=owned_luacall_binding_factory)
         connect(metadata)
         module = reader.module(PROCESS_NAME)
         if module[0] <= metadata['private'] < sum(module): raise AssertionError('Private pattern is in the image')
@@ -214,7 +226,8 @@ def run_probe(plan, target: str | Path, report: str | Path):
         observed_private(metadata, False)
         observed_nth_original(metadata)
         reader.close(); reader = None
-        engine = TrainerEngine(plan, state_dir=state)
+        engine = TrainerEngine(plan, state_dir=state,
+                               luacall_binding_factory=owned_luacall_binding_factory)
         connect(metadata)
         observed_private(metadata, True)
         if reader.read(metadata['nth'][2],4) != struct.pack('<I',2): raise AssertionError('Controller restart failed nth reapply')

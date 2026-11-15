@@ -37,6 +37,7 @@ from .engine import (TrainerEngine, NativeRuntimeError, StateError,
                      LiveStateConflict, terminate_live_session)
 from .about_ui import repo_link, trainer_title
 from .architecture import plan_architecture
+from .luacall_binding import owned_luacall_binding_factory
 from .window_icon import window_icon_path
 from .ui_layout import (NARROW_THRESHOLD, VIEWS, STAGED_PENDING, BANNER_HEIGHT,
                         CHROME_HEADER, CHROME_FILTER, CHROME_FILTER_GRID,
@@ -1310,7 +1311,11 @@ def run_trainer(plan: dict | str | Path, force: bool = False) -> int:
             return 1
         stale = artifacts = live = None
         try:
-            engine = TrainerEngine(plan)
+            # Owned luacall route: records whose AA envelope carries
+            # luaCall(...) references gate activation on the owned
+            # reviewed nth-AOB helper binding; the engine default stays
+            # fail-closed, the wiring is the production construction.
+            engine = TrainerEngine(plan, luacall_binding_factory=owned_luacall_binding_factory)
         except StaleStateRecoverable as exc:
             stale = exc
         except StaleArtifactsRecoverable as exc:

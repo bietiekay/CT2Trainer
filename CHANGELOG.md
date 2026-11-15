@@ -2,6 +2,77 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.52 (2026-11-15)
+
+The owned luacall binding + the Windows scan-fixture lane: the
+production ``luacall_binding_factory`` behind the engine's
+``_require_luacall_binding`` gate - the owned reviewed nth-AOB
+helper route for records whose AA envelope carries
+``luaCall(...)`` references. The new
+``src/ct2trainer/native/luacall_binding.py`` provides
+``OwnedNthAobPort`` (a real, callable, unit-tested AOB port on the
+engine's attached target memory: module-bounded, 1-based occurrence,
+identity- and liveness-checked, a bounded read-only pass - a scan
+never writes target memory; no attached memory is the named
+``NthAOBError`` refusal), ``OwnedLuaCallBinding`` (covers exactly
+the two reviewed helper names ``lua_aobscan`` /
+``ct2trainerNthAOB`` - both spellings satisfy the gate's exact
+name + line check; the stable ``aob_port``) and
+``owned_luacall_binding_factory`` (a fresh binding per call; the
+binding and its port are stateless). The wiring lives at the
+production construction sites only - the standalone trainer
+(``ui.py``), the Master trainer
+(``master_trainer/master_ui.py``) and the owned scan gate
+(``scan_probe.py``, both engine constructions); the engine default
+stays fail-closed (``no luacall binding factory`` before any
+allocation or write), and a plan naming any other Lua function
+stays refused by exact name - the generic table-Lua route remains
+open (AP-11). ``tests/test_native_luacall_binding.py`` (13 tests):
+the port (occurrence 1/2/3 over the module-bounded
+addresses, module-bounds pin, wildcard, missing-occurrence
+refusal, identity/liveness-change refusal, unknown-module
+``OSError`` propagation, no-attached-memory refusal), the binding
+contract (exact name coverage, stable port, both spellings satisfy
+the gate, a generic name refused by exact name + line, a fresh
+factory per call) and the engine end-to-end route through the
+production factory (the activation journals address / bytes /
+match_count; the disable provably uses the captured address with
+zero rescans after an earlier new occurrence is added; the generic
+record is refused by exact name). Full main suite 5,197 OK / 36
+expected skips (5,184 + 13). Catalog remeasure
+``blocked-catalog-luacall-binding`` (3-chunk static audit, all 151
+reference tables): 117,809 total / 117,616 supported / 12,974
+headings / 104,467 actionable / 193 blocked (zero delta vs
+``blocked-catalog-051-residual`` - the binding + wiring touch no
+table-parsing path).
+
+The Windows scan-fixture lane (RT-6 fixture-owned portion, source
+runtime): the pre-0.51 fixture repin build had been cleaned, so
+the fixture was rebuilt from the unchanged source
+(``scan_target.c`` sha256
+``4c939ab3c42aeea7eb2211253af8f7bbb374646afd12d744d06685bb7b72808f``,
+git commit ``b6c48cc``; the CT unchanged at
+``440a5bf3fdaaae5e2756eed16f8728efd3c65c7c40084e2a0685f2e2c83366db``)
+with the same MSVC ``cl`` 19.44.35229 (run
+``native-scan-fixture-20261115T043627Z-cfea6da9``);
+``scan_probe.py`` re-pinned to the fresh x64 / x86 target hashes.
+The first gate run failed the open luacall gate fail-closed
+(``no luacall binding factory``, before any allocation or write);
+with the new binding, both the x64 and x86 reports
+``ct2trainer-owned-scan/v1`` passed in the source runtime, 8/8
+checks each, ``ce_inputs: []``, ``owned_markers_absent: true``
+(the module-bounded nth scan is journaled per receipt;
+``add-first`` adds an earlier occurrence while active and the
+disable provably does not rebind to it; the target restart
+reapplies the confirmed wishes; the controller restart restores;
+final off + normal target cleanup; terminal receipts in schema-
+valid terminal states). The frozen scan gate (the generated
+``ScanTrainer.exe``, ``frozen_runtime: true``) was re-run at the
+0.52 build cut. Records:
+``tests/windows/scan_fixture/README.md`` ("Verified scan gate
+(2026-11-15, source runtime)"), ``documentation/native-verification.md``,
+the ledger section in ``documentation/native-progress.md``.
+
 ## 0.51 (2026-11-15)
 
 The post-0.50 residual-census ratification lane (tests

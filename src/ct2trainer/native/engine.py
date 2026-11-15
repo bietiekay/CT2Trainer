@@ -1787,12 +1787,14 @@ class TrainerEngine:
             # clock route exists (AP-11).
             self.clock_factory = clock_factory
             self.clock = None
-            # luaCall binding (N-?): records whose AA envelope carries
-            # luaCall(...) lines are gated at activation: the embedded
-            # lua_call_plan must be covered by an injected LuaCallBinding
+            # luaCall binding (luacall_binding): records whose AA envelope
+            # carries luaCall(...) lines are gated at activation: the
+            # embedded lua_call_plan must be covered by a LuaCallBinding
             # before the record's Lua may run. The default refuses visibly
-            # until an owned runtime binding exists (AP-11), mirroring the
-            # clock binding.
+            # (fail-closed, mirroring the clock binding); the production
+            # wiring is the owned reviewed nth-AOB helper binding
+            # (luacall_binding.owned_luacall_binding_factory) at the
+            # trainer and owned-gate construction sites.
             self.luacall_binding_factory = luacall_binding_factory
             # disassemble() port (aa_debugger_api): programs carrying
             # disassemble(...) nodes run the bounded read-only inspection
@@ -5123,13 +5125,18 @@ class TrainerEngine:
     def _require_luacall_binding(self, entry: dict) -> None:
         """Gate records with luaCall references behind an explicit binding.
 
-        The compiler embeds a static luaCall plan (lua_call_plan) into pure-AA
-        records whose envelope contains luaCall lines. Before the record's Lua
-        may run, the engine must prove that an injected binding covers every
-        referenced Lua function and that AOB references have an AOB port.
-        Without a luacall_binding_factory the record is refused visibly; the
-        owned runtime route for such bindings is still open (AP-11), so the
-        default stays fail-closed like the clock and call-broker bindings.
+        The compiler embeds a static luaCall plan (lua_call_plan) into
+        records whose envelope contains luaCall lines. Before the record's
+        Lua may run, the engine must prove that an injected binding covers
+        every referenced Lua function and that AOB references have an AOB
+        port. Without a luacall_binding_factory the record is refused
+        visibly and the default stays fail-closed like the clock and
+        call-broker bindings; the production wiring is the owned reviewed
+        nth-AOB helper binding (luacall_binding.
+        owned_luacall_binding_factory) at the trainer and owned-gate
+        construction sites. A plan naming any other Lua function stays
+        refused by exact name: the owned route proves the reviewed helper
+        names only, and the generic table-Lua route remains open (AP-11).
         """
         report = entry.get('lua_call_plan')
         if report is None:
