@@ -1402,6 +1402,31 @@ ZIP `CT2Trainer-0.51-source.zip` sha256
 sha256 `1dff59f006370da718ecf343e66d6cdf78ad7b462bb7468348a4dbbdeb5893bb`,
 17,071,049 bytes, ships next to the converter).
 
+Windows fixture runtime evidence (2026-11-15, RT-6 fixture-owned
+portion, on the 0.51 build, repo `main` @ `9e5e906`, clean tree):
+the first Windows function gate was verified on
+`Microsoft Windows NT 10.0.26300.0` x64 with MSVC `cl` 19.44.35229
+(BuildTools 2022) - preflight run `20261115T035818Z-ed5ba8bd`
+passed (owned `FixtureTarget.exe` sha256
+`b6a5c45ced721d345790a45d359747dfb7e69d28bea0dd6d2ea767e1e0d49086`,
+PE `0x8664`, single marker, baseline `value=1234` / `pause=0`); the
+frozen generated trainer (0.51 template, `FixtureTrainer.exe` sha256
+`38afb9790d3fb0f74bfb87b03707cda81d69187927207ae5e0834c5e0dd533bc`)
+ran the owned fixture gate against a live target it spawned itself -
+report `ct2trainer-fixture/v1` `passed`, `frozen_runtime: true`,
+`ce_runtime_used: false`, 14/14 observations (attach + AOB, value
+4321, Lua record write 5432, Lua worker, memscan + foundlist,
+keyboard/controller API, NASM/iced encoding, freeze, pause patch,
+concurrent-trainer blocked, resume, saved-switch persistence across
+target restart, trainer restart, close restore + lock release).
+This is fixture-owned runtime evidence only: pinned-game-build
+observation, the clean-machine protocol and the Deck / Proton /
+touch protocol remain open per the RT-6 acceptance, so
+`runtime_unverified` stays set. Records:
+`tests/windows/fixture_target/README.md` ("Verified direct check
+(2026-11-15, 0.51)"), `documentation/native-verification.md`,
+ledger section in `documentation/native-progress.md`.
+
 0.47 release record (2026-11-14, run `native-20261114T011046Z-ee5cecee`
 cut from `main` @ `6e1940e`): the optional code signing for the
 frozen and generated trainer executables (the Smart App

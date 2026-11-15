@@ -113,6 +113,28 @@ Windows fixture target (first Windows function gate):
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests\windows\fixture_target\Invoke-FixturePreflight.ps1 -Compiler MSVC
 ```
 
+Verified direct check (2026-11-15, 0.51, repo `main` @ `9e5e906` on
+Windows NT 10.0.26300.0 x64, MSVC `cl` 19.44.35229 BuildTools 2022):
+preflight run `20261115T035818Z-ed5ba8bd` passed (`FixtureTarget.exe`
+sha256 `b6a5c45ced721d345790a45d359747dfb7e69d28bea0dd6d2ea767e1e0d49086`,
+PE `0x8664`, single marker, baseline `value=1234` / `pause=0`, ticks
+0 -> 3); plan + trainer generated with the in-build venv CLI from the
+0.51 template (`FixtureTrainer.exe` sha256
+`38afb9790d3fb0f74bfb87b03707cda81d69187927207ae5e0834c5e0dd533bc`);
+the frozen generated trainer ran the owned fixture gate
+(`--fixture-target` / `--fixture-report`, exit 0) against a live
+`FixtureTarget.exe` it spawned itself - report
+`ct2trainer-fixture/v1` `passed`, `frozen_runtime: true`,
+`ce_runtime_used: false`, 14/14 observations (attach + AOB, value
+4321, Lua record write 5432, Lua worker, memscan + foundlist,
+keyboard/controller API, NASM/iced encoding, freeze, pause patch,
+concurrent-trainer blocked, resume, saved-switch persistence across
+target restart, trainer restart, close restore + lock release).
+Evidence folders under the git-ignored `build\windows-fixture\`
+(preflight + direct-check sub-folders; full record in
+`tests/windows/fixture_target/README.md`). Real-game, clean-machine
+and Deck / Proton / touch acceptance remain open.
+
 ## 5. What is still open
 
 - **Runtime acceptance** stays `runtime_unverified: true` until

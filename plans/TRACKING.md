@@ -116,7 +116,15 @@ game-facing action.
   zero compile errors, zero newly blocked/unblocked, zero
   reason-changed rows (UI-only change, zero catalog effect).
 - AP-11 confirmed effects: 0/6,143. Windows and real Deck acceptance
-  remain open; `runtime_unverified` remains set.
+  remain open; `runtime_unverified` remains set. The owned
+  fixture-target direct check (the first Windows function gate) was
+  verified 2026-11-15 against the 0.51 build: frozen generated
+  trainer, 14/14 observations passed, report
+  `ct2trainer-fixture/v1` `passed` (see the ledger section
+  "Windows fixture runtime evidence" in
+  `documentation/native-progress.md` and the verified-check record in
+  `tests/windows/fixture_target/README.md`); real-game and
+  clean-machine / Deck / Proton acceptance stay open.
 - 0.21 Master Trainer (2026-10-31, branch
   `native-0.20-master-trainer`, merged `main` @ `9a725a8`; released in
   build `native-20261031T211046Z-14707e12` - in-build suite 4,044 OK

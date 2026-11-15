@@ -2844,6 +2844,71 @@ Lane B is the implementation lane of the deferred compatibility-lane cycle again
 
 Lane C is the test-only ratification lane of the deferred compatibility-lane cycle against the 537-blocked census: the 80 `BaseAddress` rows of the five UE5 script-template tables (AtomicHeart v1.2, HellPie v1.0, Oregon v1.1, Scorn v1.0, The Callisto Protocol v1.2 - 16 per table; roadmap class d, R6 UNDEF_LEGACY) are blocked by design until the user imports the symbol - the block message already names the remedy ("Import it as a user symbol with its target address, or add a record that registers it"). The lane adds no source; it proves the documented import path end-to-end on the synthetic script-template shape (`tests/test_native_baseaddress_import.py` +378 lines, 9 tests / 3 classes): the same rows are blocked with the exact named class-d message (path joined by ` / `, count block total=14 / headings=6 / blocked=8 / supported=6) while `BaseAddress` is undefined, and fully supported - NOT staged (the UDS address is static), `dependency_ids=[]`, `requires=['BaseAddress']`, casefolded plan map, both plan validators passing - once a `<UserdefinedSymbols>` `BaseAddress` entry exists, resolved byte-exactly through the engine (seeded `engine.symbols`, all four pointer rows + the Value Types pair read byte-exactly; `set_value` roundtrip byte-exact; reads never write); forged out-of-range (64-bit unsigned) and duplicate-casefold maps are refused with the named reasons at compile and runtime. Real-table static audit over the five tables' temp copies (originals sha256-verified unchanged before / after): as-is 83 blocked (80 `BaseAddress` + 3 out-of-scope: 2 `MapLastLeftClickCoordinates_Pointer` AtomicHeart, 1 `r15l` HellPie) -> 3 blocked after the `BaseAddress` import, +16 supported per table, zero newly blocked, zero unblocked outside scope, zero reason changes, zero staging changes (actionable +80 = supported +80 - 0 headings). Full main suite after the merge: 5,020 OK / 36 expected skips (baseline 5,011 + 9 new). Catalog remeasure `blocked-catalog-lane-c`: 117,809 total / 117,272 supported / 12,974 headings / 104,123 actionable / 537 blocked - zero delta vs `blocked-catalog-043-tgc` (3-chunk record-level delta audit: 0 newly blocked, 0 unblocked, 0 reason changes, 0 tables added / removed). The 80 rows stay blocked in the shipped (as-is) tables by design until the user imports the symbol with its target address; a real in-game import + effect (AP-11) remains open by definition - this proof is static (no target attach, no Lua execution).
 
+### Windows fixture runtime evidence (2026-11-15, first Windows
+function gate verified on the 0.51 build)
+
+The fixture-target direct check documented in
+`tests/windows/fixture_target/README.md` was executed against the
+0.51 release state (repo `main` @ `9e5e906`, clean tree) on Windows
+`Microsoft Windows NT 10.0.26300.0` x64 (PowerShell
+5.1.26100.9818), MSVC `cl.exe` 19.44.35229 (Visual Studio BuildTools
+2022, 14.44.35207, HostX64\x64), `/W4 /O2 /TC`:
+
+- **Preflight** (run `20261115T035818Z-ed5ba8bd`,
+  `build\windows-fixture\preflight-20261115T035818Z-ed5ba8bd\`,
+  git-ignored): `Invoke-FixturePreflight.ps1 -Compiler MSVC` passed -
+  `FixtureTarget.exe` sha256
+  `b6a5c45ced721d345790a45d359747dfb7e69d28bea0dd6d2ea767e1e0d49086`
+  (142,336 bytes, PE `0x8664`, exactly one `CT2T-FIX-2026-01`
+  marker), `fixture_target.c` sha256
+  `1b00c36ea6a2c4de3480c0777d6c13b8a450cd51bb9db8286480a725aab070a8`,
+  `fixture.ct` sha256
+  `418ba44f2fbfd11c2a8857909a807e519c2a87d1e974e991d1fb268df6a0e92f`
+  (the byte-pinned `FIXTURE_CT_SHA256` probe constant); baseline PID
+  3768: `value=1234`, `pause=0`, one tick per line, ticks 0 -> 3 over
+  4 s; `preflight.json` status
+  `target-baseline-passed-ce-and-trainer-unverified`.
+- **Plan + trainer**: the in-build venv CLI
+  (`build\runs\native-20261115T023110Z-4ed2835e\venv\Scripts\python.exe
+  -m ct2trainer.native`) ran `inspect` (4/4 records supported,
+  process `FixtureTarget.exe`, zero blocked), `prepare` (plan JSON)
+  and `build` with the 0.51 `CT2Trainer-Template.exe` ->
+  `FixtureTrainer.exe` sha256
+  `38afb9790d3fb0f74bfb87b03707cda81d69187927207ae5e0834c5e0dd533bc`
+  (16,901,681 bytes) under
+  `build\windows-fixture\direct-check-20261115T040000Z-fixture\`.
+- **Gate run**: the frozen generated trainer was started with
+  `--fixture-target <preflight FixtureTarget.exe> --fixture-report
+  fixture-report.json` (exit 0) and spawned the target itself; the
+  report (`fixture-report.json`, schema `ct2trainer-fixture/v1`,
+  status `passed`, `frozen_runtime: true`,
+  `ce_runtime_used: false`) passed 14/14 observations -
+  unique-process attach + AOB (PID 4976, marker address proven by an
+  independent `ProcessMemory` reader), independent value readback
+  4321, upstream Lua 5.3 record write + independent readback (5432),
+  owned Lua worker (`createThread` / `sleep(10)` / write /
+  termination), real Lua memscan + foundlist index + owned module
+  read (exactly one hit at the AOB address), read-only keyboard /
+  controller API (no physical input claim), pinned BSD NASM + MIT
+  iced machine encoding (`89c883c064c3`), freeze confirms current
+  value, pause patch (`FixtureAnchor+14` -> `01000000`, ticks frozen
+  while persisted), concurrent trainer blocked (state lock), disable
+  resumes ticks, saved switches after target restart (value NOT
+  restored: PID 4976 -> 4996, `value=1234`, `pause=1` re-applied
+  from the saved switch), trainer restart restores the saved switch,
+  close restores the owned patch (`+14` -> `00000000`) and releases
+  the state lock. `game_unverified` / `other_pc_unverified` /
+  `proton_unverified` stay `true` per gate.
+
+This closes the fixture-owned portion of the Windows runtime
+evidence only. Real-game acceptance (pinned game builds), the
+clean-machine protocol and the Steam Deck / Proton / touch protocol
+remain open, so `runtime_unverified` stays set per
+`documentation/native-verification.md` section 5 and the roadmap RT-6
+acceptance. The full record (exact steps, hashes, observations) is in
+`tests/windows/fixture_target/README.md` ("Verified direct check
+(2026-11-15, 0.51)") and `documentation/native-verification.md`.
+
 ### 0.51 release build record (2026-11-15, run
 `native-20261115T023110Z-4ed2835e`, cut from `main` @ `35542f4`)
 
