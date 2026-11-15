@@ -28,9 +28,18 @@ CT_SHA256 = {
     'x64': 'a27eb49eb76b628c7e3c3703d1018f206f00feab5d5c6e46ea032f53c28f92f6',
     'x86': '99fab3bdaa7c8beffddbad9a1345801c87127e4a5bb78f6afd3cec807b4be65c',
 }
+# Re-pinned 2026-11-15 after the 2026-10-07 pin build was cleaned: rebuilt
+# from the unchanged source (global_target.c sha256
+# c44cbe404954678ca753f81b17f6d9c1c17d16558755a79bcb982a983ebec6aa,
+# tests/windows/global_fixture/Invoke-GlobalFixtureBuild.ps1, MSVC 19.44.35229,
+# /W4 /WX /Od, marker + probe prologue occurrence == 1 each) into
+# build/runs/native-global-fixture-20261115T144546Z-f569. Both pinned CTs are
+# unchanged, so only the target hashes moved; the metadata line contract,
+# the marker/probe sentinels and one probe status reply were re-proved
+# against the fresh children by a read-only pre-flight.
 TARGET_SHA256 = {
-    'x64': 'f42dfd03dfe2e703fcd87320fc30f00d825f47ef50dc58d957a38f166e620853',
-    'x86': 'e66ae2b8bdc3d44d427b31fa9278dd017694ef707d352e52461c1979ec98f98c',
+    'x64': 'cd74ef9285309e95251eea5df3181c5134cf4c6487b0965629114a96a188387e',
+    'x86': 'b69cc968997d1ede53176aaa6c8cdbfebe6deee7838b7f064270f6dc8530bc56',
 }
 # Re-pinned 2026-10-11 for WP-14 (staged capabilities): the canonical plan
 # of the unchanged pinned CTs now carries the derived 'staged' marker on

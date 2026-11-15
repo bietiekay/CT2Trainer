@@ -309,6 +309,48 @@ record in `tests/windows/hook_fixture/README.md`. Both frozen gates
 re-run at the next release cut; real-game, clean-machine and Deck /
 Proton / touch acceptance remain open.
 
+Verified owned global gate, both architectures (2026-11-15, source
+runtime, repo `main` @ `992326c` post-0.52 on Windows NT 10.0.26300.0
+x64, MSVC `cl` 19.44.35229 BuildTools 2022): the 2026-10-07 pin build
+of both targets had been cleaned, so `NativeGlobalFixture.exe` was
+rebuilt for x64 + x86 from the unchanged source (`global_target.c`
+sha256 `c44cbe404954678ca753f81b17f6d9c1c17d16558755a79bcb982a983ebec6aa`)
+through the directory's committed recipe
+`tests/windows/global_fixture/Invoke-GlobalFixtureBuild.ps1` (marker
++ probe prologue occurrence == 1 each) into run
+`native-global-fixture-20261115T144546Z-f569` (`build.json` schema
+`ct2trainer-owned-global-build/v1` status `passed`, x64 EXE sha256
+`cd74ef9285309e95251eea5df3181c5134cf4c6487b0965629114a96a188387e`,
+x86 EXE sha256
+`b69cc968997d1ede53176aaa6c8cdbfebe6deee7838b7f064270f6dc8530bc56`).
+The re-pin is hash-only - both pinned CTs and the fixture source are
+unchanged, so only `global_probe.py` `TARGET_SHA256` moved for both
+architectures, and the canonical plan fingerprints (`PLAN_SHA256`)
+still hold byte-for-byte against the compiled plans (no compiler
+drift); a read-only pre-flight spawn proved both fresh children's
+bounded metadata line contract, the marker/proprobe sentinels read
+back byte-exact through independent OpenProcess / ReadProcessMemory,
+one probe status reply (`sequence=1`, `probe_value=0x5A5B5C5D`) and
+the quit exit 0 before the re-pin, and the hash gate still bounds
+every acceptance. Re-run through the source-runtime controller
+(`global_probe.run_probe` per architecture, dev venv python,
+`PYTHONPATH=src`, fresh `'x'` reports): both reports
+`ct2trainer-owned-global/v1` status `passed`,
+`source_runtime: true`, `frozen_runtime: false`,
+`ce_implementation_inputs: []`, `owned_markers_absent: true`, 14/14
+checks per architecture (identity/module metadata; baseline probe;
+near-marker RW allocation + 333 init; patched-entry roundtrip;
+value-record write through the symbol; disable retention + hidden
+symbol; second-controller refusal; target-exit pool retirement;
+normal close cleanup; stale-journal fence; fresh-identity re-spawn;
+fresh-session roundtrip; final close) plus the recorded live-close
+fence refusal with entry restored, storage retained and all markers
+preserved. Plans + reports under
+`build\windows-fixture\global-check-20261115T145222Z\`. Full record
+in `tests/windows/global_fixture/README.md`. The frozen re-run
+happens at the next release cut; real-game, clean-machine and Deck /
+Proton / touch acceptance remain open.
+
 ## 5. What is still open
 
 - **Runtime acceptance** stays `runtime_unverified: true` until

@@ -3281,6 +3281,97 @@ acceptance. Full record in
 gates (2026-11-15, source runtime)") and
 `documentation/native-verification.md`.
 
+### Windows global fixture runtime evidence (2026-11-15, owned
+global gate verified in the source runtime after the 0.52 cut, both
+architectures)
+
+The owned global-allocation fixture gate documented in
+`tests/windows/global_fixture/README.md` was executed on Windows
+`Microsoft Windows NT 10.0.26300.0` x64 (PowerShell
+5.1.26100.9818), repo `main` @ `992326c` (post-hook + Lua-record
+lane; the 0.52 content set is code-identical, so the dev venv python
+serves as the source-runtime interpreter with `PYTHONPATH=src`). The
+2026-10-07 pin build of both targets had been cleaned, so
+`NativeGlobalFixture.exe` was rebuilt for x64 and x86 from the
+unchanged source (`global_target.c` sha256
+`c44cbe404954678ca753f81b17f6d9c1c17d16558755a79bcb982a983ebec6aa`)
+with the same MSVC `cl.exe` 19.44.35229 (BuildTools 2022,
+`/W4 /WX /Od`) through the directory's committed recipe
+`Invoke-GlobalFixtureBuild.ps1` (both archs default, the 16-byte
+marker `CT2T-GLB-2026-01` and the probe prologue each verified to
+occur exactly once per image) into run
+`native-global-fixture-20261115T144546Z-f569` (git-ignored):
+`build.json` (schema `ct2trainer-owned-global-build/v1`) status
+`passed`, `ce_inputs: []`, x64 EXE sha256
+`cd74ef9285309e95251eea5df3181c5134cf4c6487b0965629114a96a188387e`
+(146,432 bytes, PE machine 0x8664), x86 EXE sha256
+`b69cc968997d1ede53176aaa6c8cdbfebe6deee7838b7f064270f6dc8530bc56`
+(121,344 bytes, PE machine 0x14C).
+
+The re-pin is hash-only: both pinned CTs are unchanged on disk
+(`global_alloc_x64.ct` sha256
+`a27eb49eb76b628c7e3c3703d1018f206f00feab5d5c6e46ea032f53c28f92f6`,
+`global_alloc_x86.ct` sha256
+`99fab3bdaa7c8beffddbad9a1345801c87127e4a5bb78f6afd3cec807b4be65c`)
+and the fixture source is unchanged, so only
+`global_probe.py` `TARGET_SHA256` moved for both architectures. The
+canonical plan fingerprints (`PLAN_SHA256`) still hold - the compiled
+plans match them byte-for-byte, so no compiler drift: x64
+`cf8fdfbc77a91ae811ac12cc4c6e4ea797cc168948ae6298f4e473936c661c00`,
+x86 `312a753e3df1e71ec8fdb652b98c2880cc5b895febd9aff28e3a8897903b9982`.
+A read-only pre-flight spawn proved both fresh children before the
+re-pin: the bounded metadata line contract (`ct2trainer-owned
+-global-target/v1`, all integer keys, exact sentinel hex), the
+marker bytes at `module_base + marker_rva` and the probe prologue at
+`module_base + probe_rva` read back byte-exact through independent
+`OpenProcess` / `ReadProcessMemory`, one `probe` status reply
+(`sequence=1`, `probe_value=0x5A5B5C5D`) and the `quit` exit 0; the
+`TARGET_SHA256` hash gate still bounds every acceptance, so a future
+rebuild with a different layout or protocol is refused before any
+child spawn.
+
+Re-run through the source-runtime controller (dev venv python,
+`PYTHONPATH=src`, `global_probe.run_probe(plan, target, report)` per
+architecture with fresh `'x'` reports; both plans compiled 2/2
+supported - x64 plan file sha256
+`1c42341c02f40934f76809c9b0d9b7d71163b4b240b6d858b006460c3213a881`,
+x86 plan file sha256
+`3a14a5ef5fe3d91b731aa915770c061f258fa1becefac7754584dced6bf6c099` -
+plans + reports under
+`build\windows-fixture\global-check-20261115T145222Z\`,
+git-ignored): both reports `ct2trainer-owned-global/v1` status
+`passed`, `source_runtime: true`, `frozen_runtime: false`,
+`ce_implementation_inputs: []`, `owned_markers_absent: true` -
+14/14 checks passed per architecture (exact-child-image-identity
+and module metadata; baseline probe returns the pinned original
+constant; global enable allocates RW storage near the marker and
+initializes 333; the patched entry returns the held global value
+through the real code path; the value-record write through the
+symbol lands in the held global storage; disable restores the entry
+bytes and retains the global storage; the value symbol is hidden
+after disable while the storage remains; the second controller
+refuses the live state claim; target exit retires the pool and
+removes the terminal receipt; normal close after exit confirms
+cleanup; the stale pool journal alone blocks a new controller; a
+fresh spawn attaches a fresh identity with the original probe; the
+fresh session re-allocates the global and the roundtrip succeeds;
+normal final close with sentinels, markers and owned target exit);
+plus the recorded live-close fence per architecture (refusal
+"Shared globals and their retired consumers remain owned until exact
+target exit. Preserve the session and receipts.", entry restored,
+storage retained, all markers preserved).
+
+This closes the global-fixture portion of the Windows runtime
+evidence only: the frozen re-run (the generated trainer,
+`frozen_runtime: true`) happens at the next release cut; real-game,
+clean-machine and Deck / Proton / touch acceptance remain open, so
+`runtime_unverified` stays set per
+`documentation/native-verification.md` section 5 and the roadmap RT-6
+acceptance. Full record in
+`tests/windows/global_fixture/README.md` ("Verified owned global
+gates (2026-11-15, source runtime)") and
+`documentation/native-verification.md`.
+
 ### 0.52 release build record (2026-11-15, run
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`)
 

@@ -252,9 +252,41 @@ game-facing action.
   gates re-run at the next release cut (see the ledger section
   "Windows hook + Lua-record fixture runtime evidence" in
   `documentation/native-progress.md` and the verified-gates
-  record in `tests/windows/hook_fixture/README.md`). Full main
-  suite 5,197 OK / 36 expected skips. Real-game and
-  clean-machine / Deck / Proton acceptance stay open.
+  record in `tests/windows/hook_fixture/README.md`). The owned
+  global gate (fresh x64 + x86 targets `NativeGlobalFixture.exe`,
+  the seventh Windows function gate) was verified 2026-11-15 in
+  the source runtime (repo `main` @ `992326c`, post-hook +
+  Lua-record lane; the 2026-10-07 pin build was cleaned, so both
+  targets were rebuilt from the unchanged source through the
+  directory's committed recipe
+  `tests/windows/global_fixture/Invoke-GlobalFixtureBuild.ps1`,
+  MSVC `cl` 19.44.35229, run
+  `native-global-fixture-20261115T144546Z-f569`, marker + probe
+  prologue occurrence == 1 each; the re-pin is hash-only - both
+  pinned CTs + the fixture source are unchanged, only
+  `global_probe.py` `TARGET_SHA256` moved for both architectures
+  (x64 `cd74ef9285309e95251eea5df3181c5134cf4c6487b0965629114a96a188387e`,
+  x86 `b69cc968997d1ede53176aaa6c8cdbfebe6deee7838b7f064270f6dc8530bc56`),
+  and the canonical plan fingerprints (`PLAN_SHA256`) still hold
+  byte-for-byte - no compiler drift; a read-only pre-flight
+  proved the metadata line contract + byte-exact sentinel
+  read-back + one probe status reply + quit exit 0 per child
+  before the re-pin): both reports `ct2trainer-owned-global/v1`
+  `passed`, 14/14 checks, `ce_inputs: []`,
+  `owned_markers_absent: true` (identity/module metadata;
+  baseline probe; near-marker RW allocation + 333 init;
+  patched-entry roundtrip; value-record write through the symbol;
+  disable retention + hidden symbol; second-controller refusal;
+  target-exit pool retirement; normal close cleanup; stale
+  journal fence; fresh-identity re-spawn; fresh-session
+  roundtrip; final close) plus the recorded live-close fence per
+  architecture (see the ledger section "Windows global fixture
+  runtime evidence" in `documentation/native-progress.md` and the
+  verified-gates record in
+  `tests/windows/global_fixture/README.md`); the frozen re-run
+  happens at the next release cut. Full main suite 5,197 OK / 36
+  expected skips. Real-game and clean-machine / Deck / Proton
+  acceptance stay open.
 - 0.21 Master Trainer (2026-10-31, branch
   `native-0.20-master-trainer`, merged `main` @ `9a725a8`; released in
   build `native-20261031T211046Z-14707e12` - in-build suite 4,044 OK

@@ -114,7 +114,23 @@ implied image base before the re-pin): hook report
 `ce_inputs: []`; Lua report
 `ct2trainer-frozen-lua-record/v1` passed, 4/4 checks,
 `ce_inputs: []`; both frozen gates re-run at the next release
-cut; full main suite 5,197 OK / 36 expected skips. Real-game,
+cut. The owned global gate (fresh x64 + x86 targets
+`NativeGlobalFixture.exe`, the seventh Windows function gate)
+was verified 2026-11-15 in the source runtime (repo `main` @
+`992326c`; the 2026-10-07 pin build was cleaned, so both
+targets were rebuilt from the unchanged source through the
+directory's committed recipe, MSVC `cl` 19.44.35229, run
+`native-global-fixture-20261115T144546Z-f569`; the re-pin is
+hash-only - both pinned CTs + the fixture source are unchanged,
+only `global_probe.py` `TARGET_SHA256` moved for both
+architectures, the canonical plan fingerprints still hold
+byte-for-byte, and a read-only pre-flight proved the metadata
+contract + sentinel read-back + probe reply per child before
+the re-pin): both reports `ct2trainer-owned-global/v1`
+passed, 14/14 checks, `ce_inputs: []`,
+`owned_markers_absent: true`, plus the recorded live-close
+fence; the frozen re-run happens at the next release cut; full
+main suite 5,197 OK / 36 expected skips. Real-game,
 clean-machine and Deck / Proton / touch
 acceptance remain open, so `runtime_unverified` stays set
 per the RT-6 acceptance; see the 0.52 section below.
