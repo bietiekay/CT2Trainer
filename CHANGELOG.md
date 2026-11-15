@@ -54,6 +54,45 @@ table-parsing path touched).
   total / 117,616 supported / 12,974 headings / 104,467 actionable /
   193 blocked - this cycle touches no table-parsing path.
 
+- Build: 0.52.1 released as run
+  `native-20261115T181026Z-00f5dfe8` (cut from `main` @
+  `dc138e0`, 2026-11-15): in-build suite 5,203 OK / 36
+  expected skips, 0 failures - fully green at the
+  canonical build path, `ce_inputs: []`,
+  `runtime_unverified` deliberately kept per gate. The
+  build ran unsigned by default (no certificate on this
+  machine; `code_signing` report: converter / master
+  signed false, reason not-configured) - the signed path
+  activates with a user-supplied trusted-CA PFX. Source
+  ZIP `CT2Trainer-0.52.1-source.zip` sha256
+  `c65883bf5a5161a0e4846ba4ed9a5c1725678ec363b94728f4d1dbbe603723a6`
+  (14,763,924 bytes) - carries the global-gate launcher
+  pair (`launcher.py` +
+  `tests/test_native_global_launcher.py`), the release
+  allowlist fix (`tools/native_build.py`: the global gate
+  CTs + the `tests/windows/global_fixture` directory) and
+  the string-fixture re-pin (`string_probe.py`) - and
+  portable ZIP
+  `CT2Trainer-0.52.1-windows-portable.zip` sha256
+  `35b43cc56da28fc29b7663ee3efb61a953f4b085496176b21016365a1f26056e`
+  (49,918,368 bytes; the frozen `CT2Trainer-Master.exe`
+  (sha256
+  `bd0388cbe45b350ee11117b99e55262ade6906e81e72e28c286fa1e3ddfe8316`,
+  17,074,203 bytes) ships next to the converter). The
+  frozen re-runs of the string (x64 + x86), x86
+  debug-hook, hook + Lua-record and global (x64 + x86)
+  gates shipped with this build - the seven frozen
+  trainers regenerated with the 0.52.1 template stub
+  (sha256
+  `df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`),
+  every report passed with `frozen_runtime: true` (14/14
+  string x64 + x86, 6/6 x86 debug-hook, 7/7 hook, 4/4
+  Lua-record, 14/14 global x64 + x86, x86 / hook /
+  Lua-record plan identity identical to the source
+  runtime); see the 0.52.1 release build record and the
+  fixture README records in the ledger section in
+  ``documentation/native-progress.md``.
+
 ## 0.52 (2026-11-15)
 
 The owned luacall binding + the Windows scan-fixture lane: the

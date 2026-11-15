@@ -634,9 +634,12 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-15, 0.52 released - build
-`native-20261115T070952Z-14405931` cut from `main` @ `26e6ebc`,
-2026-11-15, in-build suite 5,197 OK / 36 expected skips, `ce_inputs:
+**CT2Trainer (status 2026-11-15, 0.52.1 released - build
+`native-20261115T181026Z-00f5dfe8` cut from `main` @ `dc138e0`,
+2026-11-15, in-build suite 5,203 OK / 36 expected skips, `ce_inputs:
+[]`; superseded 0.52, build `native-20261115T070952Z-14405931` cut
+from `main` @ `26e6ebc`, 2026-11-15, in-build suite 5,197 OK / 36
+expected skips, `ce_inputs:
 []`; superseded 0.51, build `native-20261115T023110Z-4ed2835e` cut
 from `main` @ `35542f4`, 2026-11-15, in-build suite 5,184 OK / 36
 expected skips, `ce_inputs: []`; superseded 0.50, build `native-20261114T223759Z-086989d6` cut
@@ -1241,7 +1244,52 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261115T070952Z-14405931` (0.52, cut
+**Latest verified build:** `native-20261115T181026Z-00f5dfe8` (0.52.1, cut
+from `main` @ `dc138e0`, 2026-11-15; in-build suite 5,203 OK / 36
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+per gate; source ZIP `CT2Trainer-0.52.1-source.zip` sha256
+`c65883bf5a5161a0e4846ba4ed9a5c1725678ec363b94728f4d1dbbe603723a6`
+(14,763,924 bytes) - carries the global-gate frozen-trainer
+launcher pair (`src/ct2trainer/native/launcher.py` +
+`tests/test_native_global_launcher.py`), the release allowlist fix
+(`tools/native_build.py`: the two global gate CTs + the
+`tests/windows/global_fixture` directory) and the string-fixture
+re-pin (`string_probe.py`) - and
+portable ZIP `CT2Trainer-0.52.1-windows-portable.zip` sha256
+`35b43cc56da28fc29b7663ee3efb61a953f4b085496176b21016365a1f26056e`
+(49,918,368 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`bd0388cbe45b350ee11117b99e55262ade6906e81e72e28c286fa1e3ddfe8316`,
+17,074,203 bytes) ships next to the converter)). 0.52.1 ships the
+global-gate frozen-trainer launcher pair (the
+`--global-fixture-target` / `--global-fixture-report` pair in
+`launcher.py` in the house pattern - the global gate has no
+string-style plan-load failure reservation: an orphan flag or a
+mixed gate is refused before the plan is read, exit 2, a frozen
+embedded-plan failure is exit 2 without reserving a report, the
+report reserved by `global_probe.run_probe`) + the string-fixture
+re-pin (the pin build had been cleaned; rebuild
+`native-string-fixture-20261115T174324Z-45f4` from the unchanged
+source, both string gates re-verified 14/14 in the source
+runtime) + the release allowlist fix; the frozen re-runs of the
+string (x64 + x86), x86 debug-hook, hook + Lua-record and global
+(x64 + x86) gates re-ran at the release cut on the 0.52.1
+template stub (sha256
+`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`)
+- all seven frozen trainers passed with `frozen_runtime: true`
+(14/14 string per architecture, 6/6 x86 debug-hook, 7/7 hook,
+4/4 Lua-record, 14/14 global per architecture; x86 / hook /
+Lua-record plan identity identical to the source runtime; see the
+0.52.1 content section and the "0.52.1 release build record"
+section in documentation/native-progress.md); the build ran
+unsigned by default (`code_signing` report: signed false /
+not-configured) and the signed path activates with a
+user-supplied trusted-CA PFX; catalog unchanged
+(`blocked-catalog-luacall-binding`): 117,616 supported / 193
+blocked (zero delta vs the 0.52 baseline - this cycle touches no
+table-parsing path; the remaining 193 blocked rows are the
+documented design / gate residuals of the 0.51 residual census,
+unchanged). Superseded 0.52 build:
+`native-20261115T070952Z-14405931` (0.52, cut
 from `main` @ `26e6ebc`, 2026-11-15; in-build suite 5,197 OK / 36
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
 per gate; source ZIP `CT2Trainer-0.52-source.zip` sha256

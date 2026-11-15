@@ -142,8 +142,27 @@ git-ignored):
   `ce_implementation_inputs: []`, `owned_markers_absent: true` - the
   same 14/14 checks passed, plus the same recorded live-close fence.
 
+## Verified frozen global gate (2026-11-15, 0.52.1 build cut)
+
+Both frozen global gates (the generated trainers,
+`frozen_runtime: true`) were re-run at the 0.52.1 release cut (run
+`native-20261115T181026Z-00f5dfe8`, cut from `main` @ `dc138e0`): the
+two frozen trainers regenerated from the gate-passed plans with the
+0.52.1 template stub (sha256
+`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`) -
+frozen x64 trainer sha256
+`a96d407911a4223a5d93fc4f706e6c0820ac15674f343bda71d019736e31030e`
+(plan sha256
+`bd89b62363e1800424a66efdf5f31b9459d5cc0ee7e9730a081d9773e8601865`),
+frozen x86 trainer sha256
+`eef0cea97a3f2666df340a6e80981a2b6a8492c37092007df2c504c5fe09e683`
+(plan sha256
+`2f443b73f0ab4e9b7a827f433a20fd4d248ec0f67f541b92553735e9f1af191e`) -
+each ran with `--global-fixture-target` / `--global-fixture-report`
+(exit 0) against the live owned target it spawned itself: both
+reports `ct2trainer-owned-global/v1` status `passed`,
+`frozen_runtime: true`, 14/14 checks each. Evidence under the
+git-ignored `build\windows-fixture\frozen-check-20261115T183206Z\`.
 This record closes the global-fixture portion of the Windows runtime
-evidence only: the frozen re-run (the generated trainer,
-`frozen_runtime: true`) happens at the next release cut; real-game,
-clean-machine and Deck / Proton / touch acceptance remain open
-(`runtime_unverified` stays set).
+evidence only: real-game, clean-machine and Deck / Proton / touch
+acceptance remain open (`runtime_unverified` stays set).

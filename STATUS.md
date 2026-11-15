@@ -1,6 +1,53 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-15. **0.52 released** (build
+**Updated:** 2026-11-15. **0.52.1 released** (build
+`native-20261115T181026Z-00f5dfe8`, cut from `main` @
+`dc138e0`, 2026-11-15) - the global-gate frozen-trainer
+launcher pair + the string-fixture re-pin + the release
+allowlist fix: the `--global-fixture-target` /
+`--global-fixture-report` pair joins the frozen-trainer entry
+point in `launcher.py` (house pattern: pairs entry, the
+report-without-target orphan check, the single-mode dispatch
+after the lua dispatch); the global gate has no string-style
+plan-load failure reservation - an orphan flag or a mixed
+gate is refused before the plan is read (exit 2), a frozen
+embedded-plan failure is exit 2 without reserving a report,
+the report itself reserved by `global_probe.run_probe` after
+the fixture-plan validation; +6 tests in
+`tests/test_native_global_launcher.py`; the release
+allowlist fix adds the two global gate CTs +
+`tests/windows/global_fixture` to the source ZIP allowlist
+(the global gate was the only owned gate whose fixture
+inputs were missing while the shipped
+`test_native_global_probe.py` compiles the CTs); the string
+lane re-pinned after its pin build was cleaned (rebuilt from
+the unchanged source, MSVC `cl` 19.44.35229, run
+`native-string-fixture-20261115T174324Z-45f4`;
+`string_probe.py` `TARGET_SHA256` x64
+`7b815ff5148180b434a7ebe543411b54e4d5ce90399ed83e4bf8ecc5f77eb0fd`
+/ x86
+`7876bf70a8feab52a5774802708d82f1eab36f435231ba3045c59a7b7a7f0668`,
+both pinned CTs + the plan fingerprints unchanged - no
+compiler drift; both string gates re-verified 14/14 in the
+source runtime); +6 tests; full main suite 5,203 OK / 36
+expected skips; in-build suite 5,203 OK / 36 expected
+skips, `ce_inputs: []`; catalog unchanged
+(`blocked-catalog-luacall-binding`): 117,809 total /
+117,616 supported / 12,974 headings / 104,467 actionable /
+193 blocked - this cycle touches no table-parsing path. The
+frozen re-runs of the string (x64 + x86), x86 debug-hook,
+hook + Lua-record and global (x64 + x86) gates shipped with
+this build - the seven frozen trainers regenerated with the
+0.52.1 template stub (sha256
+`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`),
+every report passed with `frozen_runtime: true` (14/14
+string per architecture, 6/6 x86 debug-hook, 7/7 hook, 4/4
+Lua-record, 14/14 global per architecture; x86 / hook /
+Lua-record plan identity identical to the source runtime);
+real-game, clean-machine and Deck / Proton / touch
+acceptance remain open, so `runtime_unverified` stays set
+per the RT-6 acceptance; see the 0.52.1 section below.
+Superseded 0.52 (build
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`,
 2026-11-15) - the owned luacall binding + the Windows
 scan-fixture lane: the production `luacall_binding_factory`
@@ -67,8 +114,9 @@ byte or protection change, freeze tail + last-byte
 repair, fresh held-freeze prefix repair, frozen
 prefix-overlap refusal, apply-updated freeze intent, live
 controller restart drops freeze, target restart attaches
-fresh, final close + owned exit); the frozen String gate
-re-runs at the next release cut. The owned x86 debug-hook
+fresh, final close + owned exit); the frozen String gates
+re-ran at the 0.52.1 build cut (both frozen trainers passed
+14/14 with `frozen_runtime: true`). The owned x86 debug-hook
 gate (the fourth Windows function gate) was verified
 2026-11-15 in the source runtime (repo `main` @ `0367d7b`,
 post-String-lane content; the fixture re-pinned after the
@@ -91,8 +139,12 @@ saved as ON, x86 Lua pointer width + remote export +
 coordinated literal write with independent readback, exact
 disable + retired executable retention, target exit
 finalizes receipts preserving saved ON, saved ON restores
-on a fresh identity with final disable + close); the
-frozen x86 gate re-runs at the next release cut. The owned
+on a fresh identity with final disable + close); the frozen
+x86 gate re-ran at the 0.52.1 build cut (frozen trainer
+sha256
+`425e81bf49743a09c91df76f5283dda60c89cb844d59a918c0abaf4231bb1813`,
+6/6 checks, `frozen_runtime: true`, plan identity identical
+to the source runtime). The owned
 hook gate + owned Lua-record gate (shared fresh x64 target
 `NativeHookFixture.exe`, the fifth + sixth Windows function
 gates) were verified 2026-11-15 in the source runtime (repo
@@ -113,8 +165,14 @@ implied image base before the re-pin): hook report
 `ct2trainer-frozen-hook/v1` passed, 7/7 checks,
 `ce_inputs: []`; Lua report
 `ct2trainer-frozen-lua-record/v1` passed, 4/4 checks,
-`ce_inputs: []`; both frozen gates re-run at the next release
-cut. The owned global gate (fresh x64 + x86 targets
+`ce_inputs: []`; both frozen gates re-ran at the 0.52.1 build
+cut (hook trainer sha256
+`272f3c755970baf1259e75f98e6ee16c5a16eb6e613b4f4d6692fc16cf96e944`
+7/7, Lua-record trainer sha256
+`65d2ce70da27281e94b6a9ccbfc2668be2f499922e44437d3351ca8020653c70`
+4/4, both `frozen_runtime: true`, plan identity identical to
+the source runtime). The owned global gate (fresh x64 + x86
+targets
 `NativeGlobalFixture.exe`, the seventh Windows function gate)
 was verified 2026-11-15 in the source runtime (repo `main` @
 `992326c`; the 2026-10-07 pin build was cleaned, so both
@@ -129,7 +187,12 @@ contract + sentinel read-back + probe reply per child before
 the re-pin): both reports `ct2trainer-owned-global/v1`
 passed, 14/14 checks, `ce_inputs: []`,
 `owned_markers_absent: true`, plus the recorded live-close
-fence; the frozen re-run happens at the next release cut. The
+fence; the frozen global gates re-ran at the 0.52.1 build cut
+(frozen x64 trainer sha256
+`a96d407911a4223a5d93fc4f706e6c0820ac15674f343bda71d019736e31030e`,
+frozen x86 trainer sha256
+`eef0cea97a3f2666df340a6e80981a2b6a8492c37092007df2c504c5fe09e683`,
+both reports passed 14/14 with `frozen_runtime: true`). The
 owned clock gate (fresh x64 + x86 local fixtures, the eighth
 Windows function gate; no pinned target image, so no re-pin -
 production clock sources unchanged, the gate compares the fresh
@@ -839,7 +902,36 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.52, build
+**Latest verified release:** 0.52.1, build
+`native-20261115T181026Z-00f5dfe8` (cut from `main` @
+`dc138e0`, 2026-11-15): the 0.52.1 global-gate frozen-trainer
+launcher pair + string-fixture re-pin + release allowlist fix
+release - in-build suite 5,203 OK / 36 expected skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; the build ran unsigned by default (`code_signing`
+report: converter / master signed false, reason not-configured
+- no certificate on this machine; the signed path activates
+with a user-supplied trusted-CA PFX); source ZIP
+`CT2Trainer-0.52.1-source.zip` sha256
+`c65883bf5a5161a0e4846ba4ed9a5c1725678ec363b94728f4d1dbbe603723a6`
+(14,763,924 bytes) - carries the global-gate launcher pair
+(`launcher.py` + `tests/test_native_global_launcher.py`),
+the release allowlist fix (`tools/native_build.py`) and the
+string-fixture re-pin (`string_probe.py`) - and portable ZIP
+`CT2Trainer-0.52.1-windows-portable.zip` sha256
+`35b43cc56da28fc29b7663ee3efb61a953f4b085496176b21016365a1f26056e`
+(49,918,368 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`bd0388cbe45b350ee11117b99e55262ade6906e81e72e28c286fa1e3ddfe8316`,
+17,074,203 bytes) ships next to the converter); the frozen
+re-runs of the string (x64 + x86), x86 debug-hook, hook +
+Lua-record and global (x64 + x86) gates re-ran at the
+release cut on the 0.52.1 template stub (sha256
+`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`)
+- all seven frozen trainers passed with `frozen_runtime: true`
+(14/14 string per architecture, 6/6 x86 debug-hook, 7/7
+hook, 4/4 Lua-record, 14/14 global per architecture; x86 /
+hook / Lua-record plan identity identical to the source
+runtime). Superseded 0.52, build
 `native-20261115T070952Z-14405931` (cut from `main` @ `26e6ebc`,
 2026-11-15): the 0.52 owned luacall binding + Windows
 scan-fixture lane release - in-build suite 5,197 OK / 36

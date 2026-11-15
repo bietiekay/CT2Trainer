@@ -231,8 +231,29 @@ prefix repair, frozen prefix-overlap refusal, apply-updated freeze
 intent, live controller restart drops freeze, target
 restart-attach fresh, final close + owned exit). Plans + reports
 under `build\windows-fixture\string-check-20261115T095000Z-string\`.
-Full record in `tests/windows/string_fixture/README.md`. The frozen
-String gate is re-run at the next release cut; real-game,
+Full record in `tests/windows/string_fixture/README.md`. The
+String lane was re-pinned a second time before the 0.52.1 cut
+(the pin build had been cleaned; rebuild
+`native-string-fixture-20261115T174324Z-45f4` from the unchanged
+source, `TARGET_SHA256` x64
+`7b815ff5148180b434a7ebe543411b54e4d5ce90399ed83e4bf8ecc5f77eb0fd`
+/ x86
+`7876bf70a8feab52a5774802708d82f1eab36f435231ba3045c59a7b7a7f0668`,
+both CTs + plan fingerprints unchanged, both gates re-verified
+14/14 in the source runtime). The frozen String gates
+(`frozen_runtime: true`, the generated string trainers) were
+re-run at the 0.52.1 release cut (run
+`native-20261115T181026Z-00f5dfe8`, 0.52.1 template stub sha256
+`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`):
+frozen x64 trainer sha256
+`7943372c45f2521b93f65ecbe952ef387efa3612e4907b51fa899291e4120bcc`,
+frozen x86 trainer sha256
+`e225c9adc45997a820ef0871341a087d1a0c5b885c645c4954e6a7f7e5d238b5`;
+both reports `ct2trainer-owned-string/v1` status `passed`,
+`frozen_runtime: true`, 14/14 checks each; see "Verified frozen
+String gate (2026-11-15, 0.52.1 build cut)" in
+`tests/windows/string_fixture/README.md` and the 0.52.1 release
+build record in `documentation/native-progress.md`. Real-game,
 clean-machine and Deck / Proton / touch acceptance remain open.
 
 Verified owned x86 debug-hook gate (2026-11-15, source runtime, repo
@@ -264,9 +285,22 @@ saved ON; saved ON restores on a fresh identity with final disable +
 close - the debugger-coordinated hook carries 8 held thread-context
 observations). Plans + reports under
 `build\windows-fixture\x86-check-20261115T105517Z\`. Full record in
-`tests/windows/debug_hook_fixture/README.md`. The frozen x86 gate is
-re-run at the next release cut; real-game, clean-machine and Deck /
-Proton / touch acceptance remain open.
+`tests/windows/debug_hook_fixture/README.md`. The frozen x86 gate
+(`frozen_runtime: true`, the generated x86 trainer) was re-run at
+the 0.52.1 release cut (run
+`native-20261115T181026Z-00f5dfe8`, 0.52.1 template stub sha256
+`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`):
+frozen trainer sha256
+`425e81bf49743a09c91df76f5283dda60c89cb844d59a918c0abaf4231bb1813`,
+plan identity identical to the source runtime (canonical plan
+sha256
+`81bbc942c9b626af46c924a514f0af91e9da7ab914aba0cf91e18a25f3de7f0d`);
+report `ct2trainer-owned-x86/v1` status `passed`,
+`frozen_runtime: true`, 6/6 checks; see "Verified frozen x86 gate
+(2026-11-15, 0.52.1 build cut)" in
+`tests/windows/debug_hook_fixture/README.md` and the 0.52.1 release
+build record in `documentation/native-progress.md`. Real-game,
+clean-machine and Deck / Proton / touch acceptance remain open.
 
 Verified owned hook gate + owned Lua-record gate (2026-11-15, source
 runtime, repo `main` @ `cb04cc8` post-0.52 on Windows NT
@@ -306,8 +340,26 @@ inverse raw undo + callback cancellation; fresh activation, target
 exit finalization and confirmed saved-state restart). Plans + reports
 under `build\windows-fixture\hook-check-20261115T135250Z\`. Full
 record in `tests/windows/hook_fixture/README.md`. Both frozen gates
-re-run at the next release cut; real-game, clean-machine and Deck /
-Proton / touch acceptance remain open.
+(`frozen_runtime: true`, the generated trainers) were re-run at the
+0.52.1 release cut (run `native-20261115T181026Z-00f5dfe8`, 0.52.1
+template stub sha256
+`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`):
+frozen hook trainer sha256
+`272f3c755970baf1259e75f98e6ee16c5a16eb6e613b4f4d6692fc16cf96e944`,
+frozen Lua-record trainer sha256
+`65d2ce70da27281e94b6a9ccbfc2668be2f499922e44437d3351ca8020653c70`,
+plan identity identical to the source runtime (canonical plan
+sha256 `63b98c5ac105e5969d396bd2b0f629316189802e97515a9751df708db177bfcd`
+hook,
+`620f96597653151e1a69d235bc9a8ad15505c9e4012146f94c2986d08570433e`
+Lua-record); hook report `ct2trainer-frozen-hook/v1` status
+`passed`, `frozen_runtime: true`, 7/7 checks; Lua report
+`ct2trainer-frozen-lua-record/v1` status `passed`,
+`frozen_runtime: true`, 4/4 checks; see "Verified frozen hook +
+Lua-record gates (2026-11-15, 0.52.1 build cut)" in
+`tests/windows/hook_fixture/README.md` and the 0.52.1 release
+build record in `documentation/native-progress.md`. Real-game,
+clean-machine and Deck / Proton / touch acceptance remain open.
 
 Verified owned global gate, both architectures (2026-11-15, source
 runtime, repo `main` @ `992326c` post-0.52 on Windows NT 10.0.26300.0
@@ -347,9 +399,25 @@ fresh-session roundtrip; final close) plus the recorded live-close
 fence refusal with entry restored, storage retained and all markers
 preserved. Plans + reports under
 `build\windows-fixture\global-check-20261115T145222Z\`. Full record
-in `tests/windows/global_fixture/README.md`. The frozen re-run
-happens at the next release cut; real-game, clean-machine and Deck /
-Proton / touch acceptance remain open.
+in `tests/windows/global_fixture/README.md`. Both frozen global
+gates (`frozen_runtime: true`, the generated trainers) were re-run
+at the 0.52.1 release cut (run
+`native-20261115T181026Z-00f5dfe8`, 0.52.1 template stub sha256
+`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`):
+frozen x64 trainer sha256
+`a96d407911a4223a5d93fc4f706e6c0820ac15674f343bda71d019736e31030e`
+(plan sha256
+`bd89b62363e1800424a66efdf5f31b9459d5cc0ee7e9730a081d9773e8601865`),
+frozen x86 trainer sha256
+`eef0cea97a3f2666df340a6e80981a2b6a8492c37092007df2c504c5fe09e683`
+(plan sha256
+`2f443b73f0ab4e9b7a827f433a20fd4d248ec0f67f541b92553735e9f1af191e`);
+both reports `ct2trainer-owned-global/v1` status `passed`,
+`frozen_runtime: true`, 14/14 checks each; see "Verified frozen
+global gate (2026-11-15, 0.52.1 build cut)" in
+`tests/windows/global_fixture/README.md` and the 0.52.1 release
+build record in `documentation/native-progress.md`. Real-game,
+clean-machine and Deck / Proton / touch acceptance remain open.
 
 Verified owned clock gate, both architectures (2026-11-15, source
 runtime, repo `main` @ `fc20da5` post-0.52 on Windows NT

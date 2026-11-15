@@ -105,9 +105,25 @@ report `ct2trainer-owned-x86/v1` status `passed`,
 - saved_x86_on_restores_on_fresh_identity_and_final_disable_closes
 
 The debugger-coordinated hook evidence carries 8 held thread-context
-observations; the restarted target obtained a fresh identity. The
-frozen x86 gate (`frozen_runtime: true`, the generated x86 trainer) is
-re-run at the next release cut. This record closes the x86-fixture
-portion of the Windows runtime evidence only: real-game,
-clean-machine and Deck / Proton acceptance remain open
+observations; the restarted target obtained a fresh identity.
+
+## Verified frozen x86 gate (2026-11-15, 0.52.1 build cut)
+
+The frozen x86 gate (`frozen_runtime: true`, the generated x86
+trainer) was re-run at the 0.52.1 release cut (run
+`native-20261115T181026Z-00f5dfe8`, cut from `main` @ `dc138e0`): the
+frozen trainer regenerated from the gate-passed plan with the 0.52.1
+template stub (sha256
+`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`) -
+frozen trainer sha256
+`425e81bf49743a09c91df76f5283dda60c89cb844d59a918c0abaf4231bb1813`,
+plan identity identical to the source runtime (canonical plan sha256
+`81bbc942c9b626af46c924a514f0af91e9da7ab914aba0cf91e18a25f3de7f0d`) -
+ran with `--x86-fixture-target` / `--x86-fixture-report` (exit 0)
+against the live x86 target it spawned itself: report
+`ct2trainer-owned-x86/v1` status `passed`, `frozen_runtime: true`,
+6/6 checks. Evidence under the git-ignored
+`build\windows-fixture\frozen-check-20261115T183206Z\`. This record
+closes the x86-fixture portion of the Windows runtime evidence only:
+real-game, clean-machine and Deck / Proton acceptance remain open
 (`runtime_unverified` stays set).

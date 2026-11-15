@@ -186,10 +186,14 @@ game-facing action.
   held-freeze prefix repair, frozen prefix-overlap refusal,
   apply-updated freeze intent, live controller restart drops
   freeze, target restart attaches fresh, final close + owned
-  exit); the frozen String gate re-runs at the next release cut
-  (see the ledger section "Windows String fixture runtime
-  evidence" in `documentation/native-progress.md` and the
-  verified-String-gate record in
+  exit); the frozen String gates re-ran at the 0.52.1 build cut
+  (run `native-20261115T181026Z-00f5dfe8`, 0.52.1 template stub
+  sha256
+  `df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`;
+  both frozen trainers passed 14/14 with `frozen_runtime: true`;
+  see the 0.52.1 release build record in
+  `documentation/native-progress.md` and the "Verified frozen
+  String gate (2026-11-15, 0.52.1 build cut)" record in
   `tests/windows/string_fixture/README.md`). The owned
   x86 debug-hook gate (the fourth Windows function gate) was
   verified 2026-11-15 in the source runtime (repo `main` @
@@ -214,10 +218,14 @@ game-facing action.
   disable + retired executable retention; target exit
   finalizes receipts preserving saved ON; saved ON restores on
   a fresh identity with final disable + close); the frozen
-  x86 gate re-runs at the next release cut (see the ledger
-  section "Windows x86 debug-hook fixture runtime evidence" in
-  `documentation/native-progress.md` and the verified-x86-gate
-  record in
+  x86 gate re-ran at the 0.52.1 build cut (frozen trainer
+  sha256
+  `425e81bf49743a09c91df76f5283dda60c89cb844d59a918c0abaf4231bb1813`,
+  plan identity identical to the source runtime, report
+  `ct2trainer-owned-x86/v1` `passed`, `frozen_runtime: true`,
+  6/6 checks; see the 0.52.1 release build record in
+  `documentation/native-progress.md` and the "Verified frozen
+  x86 gate (2026-11-15, 0.52.1 build cut)" record in
   `tests/windows/debug_hook_fixture/README.md`). The owned
   hook gate + owned Lua-record gate (shared fresh x64 target
   `NativeHookFixture.exe`, the fifth + sixth Windows function
@@ -249,9 +257,14 @@ game-facing action.
   refusal before cancellation; disable with inverse raw undo +
   callback cancellation; fresh activation, target exit
   finalization and confirmed saved-state restart); both frozen
-  gates re-run at the next release cut (see the ledger section
-  "Windows hook + Lua-record fixture runtime evidence" in
-  `documentation/native-progress.md` and the verified-gates
+  gates re-ran at the 0.52.1 build cut (hook trainer sha256
+  `272f3c755970baf1259e75f98e6ee16c5a16eb6e613b4f4d6692fc16cf96e944`
+  7/7, Lua-record trainer sha256
+  `65d2ce70da27281e94b6a9ccbfc2668be2f499922e44437d3351ca8020653c70`
+  4/4, both `frozen_runtime: true`, plan identity identical to
+  the source runtime; see the 0.52.1 release build record in
+  `documentation/native-progress.md` and the "Verified frozen
+  hook + Lua-record gates (2026-11-15, 0.52.1 build cut)"
   record in `tests/windows/hook_fixture/README.md`). The owned
   global gate (fresh x64 + x86 targets `NativeGlobalFixture.exe`,
   the seventh Windows function gate) was verified 2026-11-15 in
@@ -283,8 +296,17 @@ game-facing action.
   architecture (see the ledger section "Windows global fixture
   runtime evidence" in `documentation/native-progress.md` and the
   verified-gates record in
-  `tests/windows/global_fixture/README.md`); the frozen re-run
-  happens at the next release cut. The owned clock gate (fresh
+  `tests/windows/global_fixture/README.md`); the frozen global
+  gates re-ran at the 0.52.1 build cut (frozen x64 trainer sha256
+  `a96d407911a4223a5d93fc4f706e6c0820ac15674f343bda71d019736e31030e`,
+  frozen x86 trainer sha256
+  `eef0cea97a3f2666df340a6e80981a2b6a8492c37092007df2c504c5fe09e683`,
+  both reports `ct2trainer-owned-global/v1` `passed`,
+  `frozen_runtime: true`, 14/14 checks each; see the 0.52.1
+  release build record in `documentation/native-progress.md` and
+  the "Verified frozen global gate (2026-11-15, 0.52.1 build
+  cut)" record in
+  `tests/windows/global_fixture/README.md`). The owned clock gate (fresh
   x64 + x86 local fixtures, the eighth Windows function gate; no
   pinned target image, so no re-pin - production clock sources
   unchanged, the gate compares the fresh EXE's conversion vectors
@@ -313,7 +335,8 @@ game-facing action.
   evidence" in `documentation/native-progress.md` and the
   verified-gates record in
   `tests/windows/clock_fixture/README.md`). Full main suite
-  5,197 OK / 36 expected skips. Real-game and clean-machine /
+  5,203 OK / 36 expected skips (the 0.52.1 content set: +6
+  global-gate launcher tests). Real-game and clean-machine /
   Deck / Proton acceptance stay open.
 - 0.21 Master Trainer (2026-10-31, branch
   `native-0.20-master-trainer`, merged `main` @ `9a725a8`; released in
@@ -1124,6 +1147,80 @@ game-facing action.
   17,070,681 bytes, ships next to the converter). Feature
   matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`).
+- 0.52.1 the global-gate frozen-trainer launcher pair + the
+  string-fixture re-pin + the release allowlist fix release
+  (2026-11-15, content commit `dc138e0`, build record below):
+  VERSION 0.52.1 + CHANGELOG 0.52.1 entry in the same change
+  (incl. the `__version__` package constant sync, guarded by
+  `test_version_matches_root_version_file`). `launcher.py`:
+  the last owned-gate pair `--global-fixture-target` /
+  `--global-fixture-report` joins the frozen-trainer entry
+  point (house pattern: pairs entry, the report-without-target
+  orphan check, the single-mode dispatch after the lua
+  dispatch); the global gate has no string-style plan-load
+  failure reservation - an orphan flag or a mixed gate is
+  refused before the plan is read (exit 2), a frozen
+  embedded-plan failure is exit 2 without reserving a report,
+  the report itself reserved by `global_probe.run_probe` after
+  the fixture-plan validation. `tests/test_native_global_launcher.py`
+  (6 tests: both architecture routings through
+  `compile_table(..., architecture=...)` with no generic
+  pre-validation and no GUI, the invalid-owned-plan failed
+  evidence before target start, the orphan-flag refusal before
+  any plan read, the exclusion of every other complete pair +
+  smoke modes, the cross-pair orphan exclusion, the frozen
+  embedded-plan failure - the module-level `ui` pre-import
+  keeps the file order-independent). Release allowlist fix
+  (`tools/native_build.py`): the two global gate CTs +
+  `tests/windows/global_fixture` join the source ZIP allowlist
+  - the global gate was the only owned gate whose fixture
+  inputs were missing while the shipped
+  `test_native_global_probe.py` compiles the CTs. String
+  fixture re-pin (verification only): the pin build had been
+  cleaned before the cut, so the fixture was rebuilt from the
+  unchanged source (`string_target.c` sha256
+  `9c69ea3549387956551e96d501a5184765d59df36cae2cc32936ca81b0877652`,
+  MSVC `cl` 19.44.35229) into run
+  `native-string-fixture-20261115T174324Z-45f4`;
+  `string_probe.py` `TARGET_SHA256` moved (x64
+  `7b815ff5148180b434a7ebe543411b54e4d5ce90399ed83e4bf8ecc5f77eb0fd`,
+  x86
+  `7876bf70a8feab52a5774802708d82f1eab36f435231ba3045c59a7b7a7f0668`),
+  both pinned CTs unchanged - the plan fingerprints hold, so
+  no compiler drift; both gates re-ran in the source runtime
+  14/14 per architecture (`ce_inputs: []`,
+  `owned_markers_absent: true`). +6 tests, full main suite
+  5,203 OK / 36 expected skips (5,197 + 6). Catalog unchanged
+  (`blocked-catalog-luacall-binding`): 117,809 total / 117,616
+  supported / 12,974 headings / 104,467 actionable / 193
+  blocked - this cycle touches no table-parsing path. The
+  0.52.1 build `native-20261115T181026Z-00f5dfe8` cut from
+  `main` @ `dc138e0` (2026-11-15): in-build suite 5,203 OK /
+  36 expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; unsigned by default
+  (`code_signing` not-configured); source ZIP
+  `CT2Trainer-0.52.1-source.zip` sha256
+  `c65883bf5a5161a0e4846ba4ed9a5c1725678ec363b94728f4d1dbbe603723a6`
+  (14,763,924 bytes), portable ZIP
+  `CT2Trainer-0.52.1-windows-portable.zip` sha256
+  `35b43cc56da28fc29b7663ee3efb61a953f4b085496176b21016365a1f26056e`
+  (49,918,368 bytes; the frozen `CT2Trainer-Master.exe`
+  sha256 `bd0388cbe45b350ee11117b99e55262ade6906e81e72e28c286fa1e3ddfe8316`,
+  17,074,203 bytes, ships next to the converter). Frozen
+  re-run at this cut: the seven frozen trainers (string x64 +
+  x86, x86 debug-hook, hook, Lua-record, global x64 + x86)
+  regenerated with the 0.52.1 template stub (sha256
+  `df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`)
+  - every report status `passed` with `frozen_runtime: true`
+  (14/14 string per architecture, 6/6 x86 debug-hook, 7/7
+  hook, 4/4 Lua-record, 14/14 global per architecture; x86 /
+  hook / Lua-record plan identity identical to the source
+  runtime; trainers + reports under the git-ignored
+  `build\windows-fixture\frozen-check-20261115T183206Z\`;
+  real-game, clean-machine and Deck / Proton / touch
+  acceptance remain open, `runtime_unverified` stays set per
+  the RT-6 acceptance). Feature matrix unchanged (42/42,
+  7,475/7,475 over `w4b4-case30-20261020081722Z`).
 - 0.52 the owned luacall binding + the Windows scan-fixture
   lane release (2026-11-15, content commit `26e6ebc`, build
   record below): VERSION 0.52 + CHANGELOG 0.52 entry in the
