@@ -2,6 +2,105 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.51 (2026-11-15)
+
+The post-0.50 residual-census ratification lane (tests
+only, zero catalog delta): the five remaining unrated
+residual classes of the 193-row catalog census
+(``blocked-catalog-050-provider21``) are pinned as
+blocked by design - every other residual row is already
+covered by a documented gate or by a 0.44-0.50
+ratification lane.
+``tests/test_native_residual_ratification.py`` (13
+tests, 6 clusters, synthetic fixtures mirroring the
+real-table shapes, no real-table path references)
+pins, per cluster, the exact block reason as measured
+in the census + the counter-proof that the rows
+resolve once the documented condition is met (no
+hidden second gate): DS2 ``KeyHandlerThread`` x11
+(87498 / 87500 / 87502 / 87507 / 87508 / 87509 / 87510 /
+87511 / 87513 / 87514 / 87516) - every record allocates
+the SAME symbol name ``KeyHandlerThread`` through a
+Lua-generated ``alloc(KeyHandlerThread, 0x1000,
+process)`` line (``process`` is the CE module-name Lua
+global, ProcessHandlerUnit.pas L186-189) and registers
+/ releases it in the static ``{$asm}`` envelope; the
+static program never lists the Lua-generated
+allocation, so each record's own ``dealloc`` drops to
+``unowned_cleanup_dropped`` in the first pass, and the
+0.42 cleanup-parity re-check then finds the name
+live-registered by every other supported record and
+re-blocks each record with the prefixed WP-37 handover
+refusal, owner = first other entry in entry order (the
+mutual 87498 <-> 87500 attribution of the census); CE
+7.5 breaks the same way at runtime - the later
+record's ``registersymbol`` overwrites the shared
+name, so the earlier record's disable-phase
+``dealloc`` frees the later record's live thread
+block: the table is a one-record-at-a-time test
+harness, and the static model cannot prove
+multi-activation safety; the counter-proofs are that
+a single record stays supported (its own release is
+an in-program cleanup) and that per-record unique
+alloc names resolve every record. AtomicHeart-Win64-
+Shipping 73 "Unlimited Energy" - the DISABLE line
+``unregistersymbol(energyBkp)dealloc(newmem)`` glues a
+second directive onto the first: CE 7.5 consumes the
+whole line at the first directive (the
+unregistersymbol handler, autoassembler.pas
+L2492-2525) and silently discards the glued dealloc
+(a leaked block; the record works), while
+CT2Trainer keeps the named parse refusal because
+teaching the parser to swallow trailing directive
+content would mask real authoring errors; the
+counter-proof is the same record with the directives
+on separate lines. P3R-v4 229 "No money lost
+weapon/crane?" - ``reassemble(moneylost_gain+4,5)``:
+CE 7.5 reassemble is single-argument (autoassembler.
+pas L2413-2452; rsWrongSyntaxReAssemble "Wrong
+syntax. Reassemble(address)", L113), so the trailing
+``,5`` breaks the address expression even in CE; the
+counter-proof is the single-argument form.
+Cyberpunk2077 159 "Find Name" - ``assert(true)``: CE
+7.5 assert requires the two-argument
+``assert(address, bytestring)`` form (autoassembler.
+pas L2023-2030) and raises
+rsWrongSyntaxASSERTAddress1122335566 for the
+comma-less line; the record is a debug helper whose
+Lua lookup runs first and whose assert then fails -
+broken in CE as well; the counter-proof is the
+two-argument form. TheSinkingCity Remastered 258084
+"Fast Travel" - the DISABLE phase writes
+``bFastTravel: db 0`` to the record's own ENABLE
+``globalalloc(bFastTravel,1,$process)`` with changed
+bytes: in CE the global persists session-lifetime
+and the line is a plain data write (the record
+works), while CT2Trainer's O19 shared-global
+contract (RT-4.5, ``global_alloc.py`` - a direct
+global cursor on an initialized global in DISABLE
+starts a reset that must repeat the exact ENABLE
+initializer bytes: equal or empty = CE no-op,
+changed = named changed-reinitialization refusal)
+deliberately fails closed because the engine's
+global-pool lifecycle and recovery journal do not
+journal a changed re-initialization; the
+counter-proof is repeating the exact ENABLE
+initializer. Little Kitty, Big City 1 / 2 - the
+``usemono()`` directive on the first static
+envelope line targets a Cheat Engine newer than 7.5 -
+out of parity scope by design, here in the Static AA
+envelope prefix form (the plain form is pinned by
+the 0.50 ForgottonAnne cluster); the counter-proof
+is the record without the directive. Catalog
+remeasure ``blocked-catalog-051-residual``: 117,809
+total / 117,616 supported / 12,974 headings /
+104,467 actionable / 193 blocked (zero delta vs
+``blocked-catalog-050-provider21``: record-level diff
+per table - zero count diffs, zero newly blocked,
+zero unblocked, zero reason changes, all 151 tables
+byte-identical). +13 tests; full main suite 5,184 OK
+/ 36 expected skips.
+
 ## 0.50 (2026-11-14)
 
 The Provider-21 compatibility lane against the 21-row
