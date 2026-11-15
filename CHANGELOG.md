@@ -2,6 +2,58 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.52.1 (2026-11-15)
+
+The Global-gate frozen-trainer launcher pair + the string-fixture
+re-pin + the release allowlist fix (patch release; no
+table-parsing path touched).
+
+- ``launcher.py``: the last owned-gate pair
+  ``--global-fixture-target`` / ``--global-fixture-report`` joins
+  the frozen-trainer entry point (house pattern: pairs entry, the
+  report-without-target orphan check, the single-mode dispatch after
+  the lua dispatch). The global gate has no string-style plan-load
+  failure reservation: an orphan flag or a mixed gate is refused
+  before the plan is read (exit 2), a frozen embedded-plan failure
+  is exit 2 without reserving a report, and the report itself is
+  reserved by ``global_probe.run_probe`` after the fixture-plan
+  validation.
+- ``tests/test_native_global_launcher.py`` (new, 6 tests): both
+  architecture routings (x64 + x86 through
+  ``compile_table(..., architecture=...)`` - no generic
+  pre-validation, no GUI), the invalid-owned-plan failed evidence
+  before target start (``ct2trainer-owned-global/v1`` status
+  ``failed``, no Popen, no GUI, ``target_spawned: false``), the
+  orphan-flag refusal before any plan read, the exclusion of every
+  other complete pair and the smoke modes, the cross-pair orphan
+  exclusion, and the frozen embedded-plan failure.
+- Release allowlist fix (``tools/native_build.py``): the two global
+  gate CTs (``tests/fixtures/global_alloc/global_alloc_{x64,x86}.ct``)
+  and the ``tests/windows/global_fixture`` directory join the source
+  ZIP allowlist - the global gate was the only owned gate whose
+  fixture inputs were missing while the shipped
+  ``test_native_global_probe.py`` compiles the CTs.
+- String-fixture re-pin (verification only): the string lane's pin
+  build had been cleaned before the cut, so the fixture was rebuilt
+  from the unchanged source (``string_target.c`` sha256
+  ``9c69ea3549387956551e96d501a5184765d59df36cae2cc32936ca81b0877652``,
+  MSVC ``cl`` 19.44.35229) into
+  ``build/runs/native-string-fixture-20261115T174324Z-45f4``
+  (``ct2trainer-owned-string-build/v1`` passed, ``ce_inputs: []``);
+  ``string_probe.py`` ``TARGET_SHA256`` moved (x64
+  ``7b815ff5148180b434a7ebe543411b54e4d5ce90399ed83e4bf8ecc5f77eb0fd``,
+  x86
+  ``7876bf70a8feab52a5774802708d82f1eab36f435231ba3045c59a7b7a7f0668``)
+  and both pinned CTs stayed unchanged - the plan fingerprints hold,
+  so no compiler drift. Both gates re-ran in the source runtime
+  against the fresh targets: 14/14 checks per architecture,
+  ``source_runtime: true``, ``ce_inputs: []``,
+  ``owned_markers_absent: true``.
+- Full main suite 5,203 OK / 36 expected skips (5,197 + 6 new).
+  Catalog unchanged (``blocked-catalog-luacall-binding``): 117,809
+  total / 117,616 supported / 12,974 headings / 104,467 actionable /
+  193 blocked - this cycle touches no table-parsing path.
+
 ## 0.52 (2026-11-15)
 
 The owned luacall binding + the Windows scan-fixture lane: the

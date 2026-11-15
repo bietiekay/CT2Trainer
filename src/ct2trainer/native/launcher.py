@@ -47,6 +47,8 @@ def main(argv=None) -> int:
     cli.add_argument('--scan-fixture-report', type=Path, help='Owned scan gate evidence file')
     cli.add_argument('--string-fixture-target', type=Path, help='Pinned owned String fixture gate')
     cli.add_argument('--string-fixture-report', type=Path, help='Owned String gate evidence file')
+    cli.add_argument('--global-fixture-target', type=Path, help='Pinned owned Global-allocation fixture gate')
+    cli.add_argument('--global-fixture-report', type=Path, help='Owned global gate evidence file')
     cli.add_argument('--il2cpp-static-pe', type=Path, help='Static IL2CPP PE analysis target (owned fixture)')
     cli.add_argument('--il2cpp-static-metadata', type=Path, help='Static IL2CPP metadata file')
     cli.add_argument('--il2cpp-static-report', type=Path, help='Static IL2CPP gate evidence file')
@@ -55,7 +57,8 @@ def main(argv=None) -> int:
              ('hook_fixture_target','hook_fixture_report'), ('lua_fixture_target','lua_fixture_report'),
              ('x86_fixture_target','x86_fixture_report'), ('scan_fixture_target','scan_fixture_report'),
              ('string_fixture_target','string_fixture_report'),
-             ('il2cpp_static_pe','il2cpp_static_report'))
+             ('global_fixture_target','global_fixture_report'),
+              ('il2cpp_static_pe','il2cpp_static_report'))
     owned_mode_requested = any(getattr(args, name) is not None for pair in pairs for name in pair)
     try:
         for target_name, report_name in pairs:
@@ -87,6 +90,8 @@ def main(argv=None) -> int:
             raise ValueError('--x86-fixture-report requires --x86-fixture-target')
         if args.scan_fixture_report is not None and args.scan_fixture_target is None:
             raise ValueError('--scan-fixture-report requires --scan-fixture-target')
+        if args.global_fixture_report is not None and args.global_fixture_target is None:
+            raise ValueError('--global-fixture-report requires --global-fixture-target')
         if args.scan_fixture_target:
             if args.scan_fixture_report is None:
                 raise ValueError('--scan-fixture-target requires --scan-fixture-report')
@@ -104,6 +109,12 @@ def main(argv=None) -> int:
                 raise ValueError('--lua-fixture-target requires --lua-fixture-report')
             from .lua_record_probe import run_probe
             run_probe(plan, args.lua_fixture_target, args.lua_fixture_report)
+            return 0
+        if args.global_fixture_target:
+            if args.global_fixture_report is None:
+                raise ValueError('--global-fixture-target requires --global-fixture-report')
+            from .global_probe import run_probe
+            run_probe(plan, args.global_fixture_target, args.global_fixture_report)
             return 0
         validate_plan(plan)
         from .architecture import plan_architecture

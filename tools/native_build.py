@@ -154,7 +154,8 @@ def source_files():
     files += [ROOT / 'tests/native_il2cpp_static_fixtures.py']
     files += [ROOT / 'tests/native_tk_teardown.py']
     files += [ROOT / 'tests/windows/fixture_target' / n for n in ('fixture_target.c','fixture.ct','fixture_one_shot.ct')]
-    for fixture in ('hook_fixture','debug_hook_fixture','clock_fixture','scan_fixture','target_broker_fixture','string_fixture'):
+    files += [ROOT / 'tests/fixtures/global_alloc' / n for n in ('global_alloc_x64.ct','global_alloc_x86.ct')]
+    for fixture in ('hook_fixture','debug_hook_fixture','clock_fixture','global_fixture','scan_fixture','target_broker_fixture','string_fixture'):
         files += [p for p in (ROOT/'tests/windows'/fixture).glob('*')
                   if p.suffix in {'.c','.h','.py','.ct','.ps1','.md'}]
     # Mono is a selected source-only API adaptation: never recursively admit

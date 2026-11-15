@@ -140,8 +140,30 @@ reports under
   (`3c22495e86ace0999b64f10d35e2c276d753d62667daa2347077cc76009f5ab7`),
   `target_architecture: x86`, `frozen_runtime: false`.
 
+## Re-pin before the 0.52.1 cut (2026-11-15, source runtime)
+
+The string lane's pin build was cleaned before the 0.52.1 release cut,
+so the fixture was rebuilt a second time from the same unchanged source
+(`string_target.c` sha256
+`9c69ea3549387956551e96d501a5184765d59df36cae2cc32936ca81b0877652`,
+MSVC `cl.exe` 19.44.35229, `/W4 /WX /Od /TC`, nonincremental link) into
+`build\runs\native-string-fixture-20261115T174324Z-45f4\`
+(git-ignored), `verification.json` (schema
+`ct2trainer-owned-string-build/v1`) status `passed`, `ce_inputs: []`.
+`string_probe.py` `TARGET_SHA256` moved again to the fresh EXEs (x64
+`7b815ff5148180b434a7ebe543411b54e4d5ce90399ed83e4bf8ecc5f77eb0fd`,
+x86 `7876bf70a8feab52a5774802708d82f1eab36f435231ba3045c59a7b7a7f0668`);
+both pinned CTs are unchanged and the canonical plan fingerprints
+(`PLAN_SHA256`) still hold against the freshly compiled plans, so no
+compiler drift. Both gates re-ran through the source-runtime launcher
+against the fresh targets, plans + reports under
+`build\windows-fixture\string-check-20261115T175237Z\` (git-ignored):
+both `ct2trainer-owned-string/v1` status `passed`, 14/14 checks per
+architecture, `source_runtime: true`, `ce_inputs: []`,
+`owned_markers_absent: true`.
+
 The frozen String gate (`frozen_runtime: true`, the generated string
-trainer) is re-run at the next release cut. This record closes the
+trainer) is re-run at the 0.52.1 release cut. This record closes the
 String-fixture portion of the Windows runtime evidence only: real-game,
 clean-machine and Deck / Proton acceptance remain open
 (`runtime_unverified` stays set).

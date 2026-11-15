@@ -29,9 +29,19 @@ CT_SHA256 = {
     'x64': '97e36a533db823542bed0830cd07a0eaedc8b1f34ff36d108c2c3edf69e3c10e',
     'x86': '95e30b8ef100e16414b43d916e1d70ef025131433fd8847fea50f0dc170ff984',
 }
+# Re-pinned 2026-11-15 after the string lane's 2026-11-15 pin build was
+# cleaned: rebuilt from the unchanged source (string_target.c sha256
+# 9c69ea3549387956551e96d501a5184765d59df36cae2cc32936ca81b0877652,
+# tests/windows/string_fixture/Invoke-StringFixtureBuild.ps1, MSVC
+# 19.44.35229, /W4 /WX /Od) into
+# build/runs/native-string-fixture-20261115T174324Z-45f4 (build.json
+# schema ct2trainer-owned-string-build/v1, status passed, ce_inputs:
+# []). Both pinned CTs are unchanged, so only the target hashes moved;
+# the canonical plan fingerprints (PLAN_SHA256) still hold against the
+# compiled plans, so no compiler drift.
 TARGET_SHA256 = {
-    'x64': '46e3f47e60b1ca77fcd16cd3b0d5a57ba3a131029c5b107cb91cab297a23e852',
-    'x86': '3c22495e86ace0999b64f10d35e2c276d753d62667daa2347077cc76009f5ab7',
+    'x64': '7b815ff5148180b434a7ebe543411b54e4d5ce90399ed83e4bf8ecc5f77eb0fd',
+    'x86': '7876bf70a8feab52a5774802708d82f1eab36f435231ba3045c59a7b7a7f0668',
 }
 PLAN_SHA256 = {
     'x64': 'fc1ff36bcfa1bba926cf792a0e62ec619aaaa21866f424a19cbe4d2bb07c59f8',
