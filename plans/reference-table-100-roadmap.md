@@ -1427,6 +1427,106 @@ touch protocol remain open per the RT-6 acceptance, so
 (2026-11-15, 0.51)"), `documentation/native-verification.md`,
 ledger section in `documentation/native-progress.md`.
 
+Windows scan fixture runtime evidence (2026-11-15, RT-6
+fixture-owned portion, source runtime, repo `main` @ `26e6ebc`
+(the 0.52 content) on Windows NT 10.0.26300.0 x64, MSVC `cl`
+19.44.35229 BuildTools 2022): the owned process/nth scan gate
+documented in `tests/windows/scan_fixture/README.md` was
+verified - the fixture was rebuilt from the unchanged source
+(`scan_target.c` sha256
+`4c939ab3c42aeea7eb2211253af8f7bbb374646afd12d744d06685bb7b72808f`,
+single git commit `b6c48cc`; the CT unchanged at sha256
+`440a5bf3fdaaae5e2756eed16f8728efd3c65c7c40084e2a0685f2e2c83366db`)
+into run `native-scan-fixture-20261115T043627Z-cfea6da9`
+(`verification.json` passed, `ce_inputs: []`; x64 target sha256
+`e54b12801564aed37ad9ee3ed3283459e53f9f69ee8042af73730fc0784c5315`,
+x86 target sha256
+`d66756a12c741caf163823a26643bce5c0a0369c8b689fc00f0a3f52fa8a626e`;
+`scan_probe.py` re-pinned to the fresh hashes). The first gate
+run failed the open luacall gate fail-closed (`no luacall
+binding factory`, before any allocation or write); the new
+owned luacall binding
+(`src/ct2trainer/native/luacall_binding.py` - `OwnedNthAobPort`
+on the engine's attached target memory, module-bounded /
+1-based occurrence / identity-checked / read-only;
+`OwnedLuaCallBinding` covering exactly `lua_aobscan` /
+`ct2trainerNthAOB`; `owned_luacall_binding_factory` wired at
+the trainer / Master / scan-probe construction sites, engine
+default stays fail-closed, plans naming any other Lua function
+stay refused by exact name - the generic table-Lua route
+remains open, AP-11) closed it. Re-run through the
+source-runtime launcher (0.51 in-build venv python, exit 0):
+both the x64 and x86 reports `ct2trainer-owned-scan/v1`
+`passed`, `frozen_runtime: false`, `ce_inputs: []`,
+`owned_markers_absent: true`, 8/8 checks each (exact-arch
+target + three module patterns + private buffer, compact
+process scan + real-held publication + independent readback,
+nth module source adapter confirmed + journaled, earlier new
+match does not rebind disable + both scopes restore exactly,
+fresh reactivation rescans + saves the current occurrence,
+target restart reapplies the confirmed wishes, controller
+restart restores the saved confirmed records, final off +
+normal target cleanup; terminal receipts in schema-valid
+terminal states - 1 `target-exited` + 3 `abandoned`). This is
+fixture-owned runtime evidence only: pinned-game-build
+observation, the clean-machine protocol and the Deck / Proton
+/ touch protocol remain open per the RT-6 acceptance, so
+`runtime_unverified` stays set. The frozen scan gate (the
+generated `ScanTrainer.exe`, `frozen_runtime: true`) was
+re-run at the 0.52 build cut. Records:
+`tests/windows/scan_fixture/README.md` ("Verified scan gate
+(2026-11-15, source runtime)"), `documentation/native-verification.md`,
+ledger section in `documentation/native-progress.md`.
+
+0.52 release record (2026-11-15, run `native-20261115T070952Z-14405931`
+cut from `main` @ `26e6ebc`): the owned luacall binding + the
+Windows scan-fixture lane ship as the 0.52 release - the
+production `luacall_binding_factory` behind the engine's
+`_require_luacall_binding` gate (the owned reviewed nth-AOB
+helper route for records whose AA envelope carries
+`luaCall(...)` references; `luacall_binding.py` +
+`tests/test_native_luacall_binding.py`, +13 tests; the scan
+fixture re-pin run
+`native-scan-fixture-20261115T043627Z-cfea6da9`; the scan
+gate verified in the source runtime - the first run failed
+the open luacall gate fail-closed, the new binding closed
+it, both the x64 and x86 reports
+`ct2trainer-owned-scan/v1` passed, 8/8 checks each; see the
+scan-evidence paragraph above); catalog remeasure
+`blocked-catalog-luacall-binding`: 117,616 supported / 193
+blocked (zero delta vs `blocked-catalog-051-residual`:
+record-level diff per table - zero count diffs, zero newly
+blocked, zero unblocked, zero reason changes, all 151
+tables byte-identical - the binding + wiring touch no
+table-parsing path); full main suite 5,197 OK / 36
+expected skips; in-build suite 5,197 OK / 36 expected
+skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; the build ran unsigned by default (no
+code-signing certificate on this machine; `build.json`
+`code_signing`: converter / master signed false, reason
+not-configured - the signed path activates with a
+user-supplied trusted-CA PFX); source ZIP
+`CT2Trainer-0.52-source.zip` sha256
+`4ab1445befb795a40387d6ab69b0bf7b5f333b73cd62d2769b3083cab6969a7b`
+(14,729,777 bytes), portable ZIP
+`CT2Trainer-0.52-windows-portable.zip` sha256
+`2009c3f1a959766ab793c6b6b57d89dcfb27143b4b1a8c03b78665d450fbd2cf`
+(49,899,983 bytes; the frozen `CT2Trainer-Master.exe`
+sha256 `29f99e7a069a5a51d03b765ff40d8573684ba3567ec48f4f85fcc26722895903`,
+17,072,825 bytes, ships next to the converter); the frozen
+scan gate (the generated `ScanTrainer.exe`,
+`frozen_runtime: true`) re-ran at the release cut on the
+0.52 template - the two frozen scan trainers regenerated
+with the new template stub (sha256
+`23e8fed027b0e50f5bc1f81f7b7b626b6df951f5de8ba2a0e7c43fefbbf2d4a9`),
+both reports `ct2trainer-owned-scan/v1` passed, 8/8 checks
+each, `ce_inputs: []`, `owned_markers_absent: true`, plan
+identity identical to the source runtime (frozen x64
+trainer sha256
+`283e50759750774bcd3c3b8c04020a58f87ac3ff94e4f74f233a28305d7745f5`,
+frozen x86 trainer sha256
+`8ebc01935a3bb70bfac6439c30c3f3ec8d540368426a8e79c189009a4703cb12`).
+
 0.47 release record (2026-11-14, run `native-20261114T011046Z-ee5cecee`
 cut from `main` @ `6e1940e`): the optional code signing for the
 frozen and generated trainer executables (the Smart App

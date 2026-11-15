@@ -123,7 +123,39 @@ game-facing action.
   `ct2trainer-fixture/v1` `passed` (see the ledger section
   "Windows fixture runtime evidence" in
   `documentation/native-progress.md` and the verified-check record in
-  `tests/windows/fixture_target/README.md`); real-game and
+  `tests/windows/fixture_target/README.md`). The owned
+  process/nth scan gate (the second Windows function gate) was
+  verified 2026-11-15 in the source runtime (repo `main` @
+  `26e6ebc`, the 0.52 content; the fixture re-pinned after the
+  pre-0.51 repin build was cleaned - rebuilt from the unchanged
+  source, MSVC `cl` 19.44.35229, run
+  `native-scan-fixture-20261115T043627Z-cfea6da9`): the first run
+  failed the open luacall gate fail-closed (`no luacall binding
+  factory`, before any allocation or write); the new owned luacall
+  binding (`src/ct2trainer/native/luacall_binding.py` -
+  `OwnedNthAobPort` on the engine's attached target memory,
+  module-bounded / 1-based occurrence / identity-checked /
+  read-only; `OwnedLuaCallBinding` covering exactly
+  `lua_aobscan` / `ct2trainerNthAOB`; wired at the trainer /
+  Master / scan-gate construction sites, engine default stays
+  fail-closed, plans naming any other Lua function stay refused by
+  exact name - the generic table-Lua route remains open, AP-11)
+  closed it; both the x64 and x86 reports
+  `ct2trainer-owned-scan/v1` `passed`, 8/8 checks each,
+  `ce_inputs: []`, `owned_markers_absent: true` (the module-bounded
+  nth scan is journaled per receipt, `add-first` adds an earlier
+  occurrence while active and the disable provably does not rebind
+  to it, target restart reapplies the confirmed wishes, controller
+  restart restores, final off + normal target cleanup; terminal
+  receipts in schema-valid terminal states); the frozen scan gate
+  (the generated `ScanTrainer.exe`, `frozen_runtime: true`)
+  re-ran at the 0.52 build cut - the two frozen scan trainers
+  regenerated with the 0.52 template stub, both reports
+  `ct2trainer-owned-scan/v1` `passed`, 8/8 checks each, plan
+  identity identical to the source runtime (see the ledger section
+  "Windows scan fixture runtime evidence" in
+  `documentation/native-progress.md` and the verified-scan-gate
+  record in `tests/windows/scan_fixture/README.md`). Real-game and
   clean-machine / Deck / Proton acceptance stay open.
 - 0.21 Master Trainer (2026-10-31, branch
   `native-0.20-master-trainer`, merged `main` @ `9a725a8`; released in
@@ -932,6 +964,77 @@ game-facing action.
   (49,888,023 bytes; the frozen `CT2Trainer-Master.exe`
   sha256 `d3ada53a7ebc6c160be55608046a286ba98028a1858cc2d950a64327a529d63b`,
   17,070,681 bytes, ships next to the converter). Feature
+  matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`).
+- 0.52 the owned luacall binding + the Windows scan-fixture
+  lane release (2026-11-15, content commit `26e6ebc`, build
+  record below): VERSION 0.52 + CHANGELOG 0.52 entry in the
+  same change (incl. the `__version__` package constant
+  sync, guarded by
+  `test_version_matches_root_version_file`). The production
+  `luacall_binding_factory` behind the engine's
+  `_require_luacall_binding` gate - the owned reviewed
+  nth-AOB helper route for records whose AA envelope
+  carries `luaCall(...)` references:
+  `src/ct2trainer/native/luacall_binding.py`
+  (`OwnedNthAobPort` on the engine's attached target
+  memory - module-bounded, 1-based occurrence,
+  identity-checked, a bounded read-only pass - a scan never
+  writes target memory; `OwnedLuaCallBinding` covering
+  exactly `lua_aobscan` / `ct2trainerNthAOB`;
+  `owned_luacall_binding_factory` wired at the standalone
+  trainer / Master trainer / scan-gate construction sites,
+  engine default stays fail-closed, plans naming any other
+  Lua function stay refused by exact name - the generic
+  table-Lua route remains open, AP-11) + the
+  `scan_probe.py` fixture re-pin (the pre-0.51 repin build
+  had been cleaned; the fixture rebuilt from the unchanged
+  source, MSVC `cl` 19.44.35229, run
+  `native-scan-fixture-20261115T043627Z-cfea6da9`). The
+  owned process/nth scan gate (the second Windows function
+  gate) was verified in the source runtime: the first run
+  failed the open luacall gate fail-closed (`no luacall
+  binding factory`, before any allocation or write), the
+  new binding closed it - both the x64 and x86 reports
+  `ct2trainer-owned-scan/v1` passed, 8/8 checks each,
+  `ce_inputs: []`, `owned_markers_absent: true` (the
+  module-bounded nth scan journaled per receipt, `add-first`
+  adds an earlier occurrence while active and the disable
+  provably does not rebind to it, target restart reapplies
+  the confirmed wishes, controller restart restores, final
+  off + normal target cleanup; terminal receipts in
+  schema-valid terminal states); the frozen scan gate (the
+  generated `ScanTrainer.exe`, `frozen_runtime: true`)
+  re-ran at the release cut on the 0.52 template - the two
+  frozen scan trainers regenerated with the new template
+  stub (sha256
+  `23e8fed027b0e50f5bc1f81f7b7b626b6df951f5de8ba2a0e7c43fefbbf2d4a9`),
+  both reports passed 8/8, plan identity identical to the
+  source runtime (frozen x64 trainer sha256
+  `283e50759750774bcd3c3b8c04020a58f87ac3ff94e4f74f233a28305d7745f5`,
+  frozen x86 trainer sha256
+  `8ebc01935a3bb70bfac6439c30c3f3ec8d540368426a8e79c189009a4703cb12`;
+  real-game, clean-machine and Deck / Proton / touch
+  acceptance remain open, `runtime_unverified` stays set
+  per the RT-6 acceptance). +13 tests, full main suite
+  5,197 OK / 36 expected skips (5,184 + 13). Catalog
+  remeasure `blocked-catalog-luacall-binding`: 117,809
+  total / 117,616 supported / 12,974 headings / 104,467
+  actionable / 193 blocked (zero delta vs
+  `blocked-catalog-051-residual` - the binding + wiring
+  touch no table-parsing path). The 0.52 build
+  `native-20261115T070952Z-14405931` cut from `main` @
+  `26e6ebc` (2026-11-15): in-build suite 5,197 OK / 36
+  expected skips, `ce_inputs: []`, `runtime_unverified`
+  deliberately kept per gate; source ZIP
+  `CT2Trainer-0.52-source.zip` sha256
+  `4ab1445befb795a40387d6ab69b0bf7b5f333b73cd62d2769b3083cab6969a7b`
+  (14,729,777 bytes), portable ZIP
+  `CT2Trainer-0.52-windows-portable.zip` sha256
+  `2009c3f1a959766ab793c6b6b57d89dcfb27143b4b1a8c03b78665d450fbd2cf`
+  (49,899,983 bytes; the frozen `CT2Trainer-Master.exe`
+  sha256 `29f99e7a069a5a51d03b765ff40d8573684ba3567ec48f4f85fcc26722895903`,
+  17,072,825 bytes, ships next to the converter). Feature
   matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`).
 - 0.51 the post-0.50 residual-census ratification lane release

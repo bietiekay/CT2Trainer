@@ -135,6 +135,61 @@ Evidence folders under the git-ignored `build\windows-fixture\`
 `tests/windows/fixture_target/README.md`). Real-game, clean-machine
 and Deck / Proton / touch acceptance remain open.
 
+Verified owned process/nth scan gate (2026-11-15, source runtime,
+repo `main` @ `a017d5e` + the owned luacall binding lane on Windows
+NT 10.0.26300.0 x64, MSVC `cl` 19.44.35229 BuildTools 2022): the
+pre-0.51 repin build was cleaned, so the fixture was rebuilt from the
+unchanged source (`scan_target.c` sha256
+`4c939ab3c42aeea7eb2211253af8f7bbb374646afd12d744d06685bb7b72808f`,
+single git commit `b6c48cc`; CT unchanged at sha256
+`440a5bf3fdaaae5e2756eed16f8728efd3c65c7c40084e2a0685f2e2c83366db`)
+into run `native-scan-fixture-20261115T043627Z-cfea6da9`
+(`verification.json` passed, `ce_inputs: []`; x64 target sha256
+`e54b12801564aed37ad9ee3ed3283459e53f9f69ee8042af73730fc0784c5315`,
+x86 target sha256
+`d66756a12c741caf163823a26643bce5c0a0369c8b689fc00f0a3f52fa8a626e`;
+`scan_probe.py` re-pinned). The first run failed the open luacall
+gate (`no luacall binding factory`, fail-closed); the new owned
+luacall binding
+(`src/ct2trainer/native/luacall_binding.py`, wired at the trainer /
+Master / scan-probe construction sites, engine default stays
+fail-closed, generic luaCall names stay refused by exact name -
+AP-11) closed it. Re-run through the source-runtime launcher (0.51
+in-build venv python sha256
+`5fc3c5244b5eef01a82fbefd1932d1382b79c72fe6e64ffe8df1e3ce3643f02f`,
+`--plan` / `--scan-fixture-target` / `--scan-fixture-report`, exit 0):
+both x64 and x86 reports `ct2trainer-owned-scan/v1` status `passed`,
+`frozen_runtime: false`, `ce_inputs: []`, `owned_markers_absent:
+true`, 8/8 checks each (exact-arch target + patterns, compact
+process scan + publication + readback, nth source adapter confirmed
++ journaled, add-first does not rebind disable, fresh reactivation
+rescans, target restart reapplies wishes, controller restart
+restores, final off + cleanup; terminal receipts in valid terminal
+states). Plans under
+`build\windows-fixture\scan-check-20261115T044000Z-scan\`
+(x64 plan sha256
+`1a84220daa1d98f62668ea1c7761e703e0229de2ea19b1952df9b11fe4b086e5`,
+x86 plan sha256
+`fa1939cd1213f3471cb1f6fcca97644c048b3f1c23d8a503adbdc6eb9b09554a`).
+Full record in `tests/windows/scan_fixture/README.md`. The frozen
+scan gate (`frozen_runtime: true`, the generated
+`ScanTrainer.exe`) was re-run at the 0.52 release cut (run
+`native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`):
+the two frozen scan trainers were regenerated from the gate-passed
+plans with the 0.52 template stub (sha256
+`23e8fed027b0e50f5bc1f81f7b7b626b6df951f5de8ba2a0e7c43fefbbf2d4a9`
+- the pre-cut trainers carried the pre-binding 0.51 template) and
+both reports `ct2trainer-owned-scan/v1` passed - `frozen_runtime:
+true`, `ce_inputs: []`, `owned_markers_absent: true`, 8/8 checks
+each, plan identity identical to the source runtime (frozen x64
+trainer sha256
+`283e50759750774bcd3c3b8c04020a58f87ac3ff94e4f74f233a28305d7745f5`,
+frozen x86 trainer sha256
+`8ebc01935a3bb70bfac6439c30c3f3ec8d540368426a8e79c189009a4703cb12`);
+see "Verified frozen scan gate (2026-11-15, 0.52 build cut)" in
+`tests/windows/scan_fixture/README.md`. Real-game, clean-machine
+and Deck / Proton / touch acceptance remain open.
+
 ## 5. What is still open
 
 - **Runtime acceptance** stays `runtime_unverified: true` until

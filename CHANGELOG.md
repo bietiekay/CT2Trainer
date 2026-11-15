@@ -70,8 +70,33 @@ valid terminal states). The frozen scan gate (the generated
 ``ScanTrainer.exe``, ``frozen_runtime: true``) was re-run at the
 0.52 build cut. Records:
 ``tests/windows/scan_fixture/README.md`` ("Verified scan gate
-(2026-11-15, source runtime)"), ``documentation/native-verification.md``,
+(2026-11-15, source runtime)" + "Verified frozen scan gate
+(2026-11-15, 0.52 build cut)"),
+``documentation/native-verification.md``,
 the ledger section in ``documentation/native-progress.md``.
+
+- Build: 0.52 released as run
+  `native-20261115T070952Z-14405931` (cut from `main` @
+  `26e6ebc`, 2026-11-15): in-build suite 5,197 OK / 36
+  expected skips, 0 failures - fully green at the
+  canonical build path, `ce_inputs: []`,
+  `runtime_unverified` deliberately kept per gate. The
+  build ran unsigned by default (no certificate on this
+  machine; `code_signing` report: converter / master
+  signed false, reason not-configured) - the signed path
+  activates with a user-supplied trusted-CA PFX. Source
+  ZIP `CT2Trainer-0.52-source.zip` sha256
+  `4ab1445befb795a40387d6ab69b0bf7b5f333b73cd62d2769b3083cab6969a7b`
+  (14,729,777 bytes) - carries the owned luacall binding
+  (`luacall_binding.py` +
+  `tests/test_native_luacall_binding.py`) - and
+  portable ZIP
+  `CT2Trainer-0.52-windows-portable.zip` sha256
+  `2009c3f1a959766ab793c6b6b57d89dcfb27143b4b1a8c03b78665d450fbd2cf`
+  (49,899,983 bytes; the frozen `CT2Trainer-Master.exe`
+  (sha256
+  `29f99e7a069a5a51d03b765ff40d8573684ba3567ec48f4f85fcc26722895903`,
+  17,072,825 bytes) ships next to the converter).
 
 ## 0.51 (2026-11-15)
 
