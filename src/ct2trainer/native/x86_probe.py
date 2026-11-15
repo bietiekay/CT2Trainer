@@ -13,8 +13,17 @@ import threading
 import time
 
 
+# Re-pinned 2026-11-15 after the 2026-10-07 repin build was cleaned: rebuilt
+# from the unchanged source (hook_stress_target.c sha256
+# 967e035a7aef7b213726d4fd80ffb03d0d214224aabeeebcbda1a27468cc05f1,
+# tests/windows/debug_hook_fixture/Invoke-DebugHookFixtureBuild.ps1, MSVC
+# 19.44.35229, /W4 /WX /Od /TC, nonincremental link), evidence
+# build/runs/native-debughook-fixture-20261115T104212Z-c84316ed. The CT and
+# the AA program source are unchanged (the entry is an aobscanmodule AOB -
+# no fixed RVAs), so only the target hash moved; the metadata line contract
+# and the exact 12-byte entry pattern were re-proved against the fresh child.
 PROCESS_NAME = 'NativeDebugHookFixture-x86.exe'
-TARGET_SHA256 = '9bf7407ceabb72495f082b763f3b88e6be6a4b860ff1866312a272a667faa7c7'
+TARGET_SHA256 = '12f8304ef6857e08a67f5204dbdeff0456d6be3a4861561def8fe68d137c94cb'
 CT_SHA256 = '6d04714ec6729abf00798d6736eba687c9588c5d4c457c90d9f302f5e442f7c8'
 SOURCE_SHA256 = 'eacbbf87af4c98d7217a3bf0c27b783379a71bc8c0c73a932c08f7dd08553148'
 

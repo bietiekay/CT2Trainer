@@ -235,6 +235,39 @@ Full record in `tests/windows/string_fixture/README.md`. The frozen
 String gate is re-run at the next release cut; real-game,
 clean-machine and Deck / Proton / touch acceptance remain open.
 
+Verified owned x86 debug-hook gate (2026-11-15, source runtime, repo
+`main` @ `0367d7b` post-0.52 on Windows NT 10.0.26300.0 x64, MSVC
+`cl` 19.44.35229 BuildTools 2022): the 2026-10-07 repin build was
+cleaned, so the fixture was rebuilt from the unchanged source
+(`hook_stress_target.c` sha256
+`967e035a7aef7b213726d4fd80ffb03d0d214224aabeeebcbda1a27468cc05f1`,
+single git commit) through the directory's new first-party recipe
+`tests/windows/debug_hook_fixture/Invoke-DebugHookFixtureBuild.ps1`
+into run `native-debughook-fixture-20261115T104212Z-c84316ed`
+(`verification.json` passed). The re-pin is hash-only - the gate CT
+and AA program source are unchanged (the entry is an `aobscanmodule`
+AOB, no fixed RVAs), so only `x86_probe.py` `TARGET_SHA256` moved to
+the fresh x86 EXE
+(`12f8304ef6857e08a67f5204dbdeff0456d6be3a4861561def8fe68d137c94cb`);
+a read-only pre-flight spawn proved the fresh child's metadata line
+contract and the exact 12-byte entry pattern before the re-pin, and
+the hash gate still bounds every acceptance. Re-run through the
+source-runtime launcher (dev venv python, `PYTHONPATH=src`, `--plan`
+/ `--x86-fixture-target` / `--x86-fixture-report`, exit 0): report
+`ct2trainer-owned-x86/v1` status `passed`, `frozen_runtime: false`,
+`ce_inputs: []`, 6/6 checks (canonical x64 rebinding plan refused
+before any session or effect; 4->103 confirmed pushad/pushfd hook
+saved as ON; x86 Lua pointer width + remote export + coordinated
+literal write with independent readback; exact disable + retired
+executable retention; target exit finalizes receipts preserving
+saved ON; saved ON restores on a fresh identity with final disable +
+close - the debugger-coordinated hook carries 8 held thread-context
+observations). Plans + reports under
+`build\windows-fixture\x86-check-20261115T105517Z\`. Full record in
+`tests/windows/debug_hook_fixture/README.md`. The frozen x86 gate is
+re-run at the next release cut; real-game, clean-machine and Deck /
+Proton / touch acceptance remain open.
+
 ## 5. What is still open
 
 - **Runtime acceptance** stays `runtime_unverified: true` until

@@ -3121,6 +3121,75 @@ RT-6 acceptance. Full record in
 (2026-11-15, source runtime)") and
 `documentation/native-verification.md`.
 
+### Windows x86 debug-hook fixture runtime evidence (2026-11-15,
+owned x86 debug-hook gate verified in the source runtime after the
+0.52 cut)
+
+The owned x86 debug-hook fixture gate documented in
+`tests/windows/debug_hook_fixture/README.md` was executed on Windows
+`Microsoft Windows NT 10.0.26300.0` x64 (PowerShell
+5.1.26100.9818), repo `main` @ `0367d7b` (post-0.52; the 0.52
+content set is code-identical, so the dev venv python serves as the
+source-runtime interpreter with `PYTHONPATH=src`). The 2026-10-07
+repin build `build/runs/fixture-repin-20261007T115729Z` had been
+cleaned, so the fixture was rebuilt from the unchanged source
+(`hook_stress_target.c` sha256
+`967e035a7aef7b213726d4fd80ffb03d0d214224aabeeebcbda1a27468cc05f1`,
+single git commit) with the same MSVC `cl.exe` 19.44.35229
+(BuildTools 2022, `/W4 /WX /Od /TC`, nonincremental link) through the
+directory's new first-party recipe
+`tests/windows/debug_hook_fixture/Invoke-DebugHookFixtureBuild.ps1`
+(x86), into run
+`native-debughook-fixture-20261115T104212Z-c84316ed` (git-ignored):
+`verification.json` (schema
+`ct2trainer-owned-debughook-build/v1`) status `passed`.
+
+Unlike the String lane, this re-pin is hash-only: the gate CT is
+unchanged (sha256
+`6d04714ec6729abf00798d6736eba687c9588c5d4c457c90d9f302f5e442f7c8`,
+its entry is an `aobscanmodule` AOB - no fixed RVAs to move) and the
+AA program source is unchanged (`SOURCE_SHA256`
+`eacbbf87af4c98d7217a3bf0c27b783379a71bc8c0c73a932c08f7dd08553148`
+holds), so only `x86_probe.py` `TARGET_SHA256` moved to the fresh x86
+EXE (`12f8304ef6857e08a67f5204dbdeff0456d6be3a4861561def8fe68d137c94cb`).
+A read-only pre-flight spawn proved the fresh child before the
+re-pin (the metadata line contract - pid / pointer_size 4 /
+entry_size 9 / integer result/calls/bad/churn/stop - plus the exact
+12-byte entry pattern `8B 44 24 04 83 C0 01 90 90 C2 04 00` read back
+through the child's own reported entry address, with observed
+`result=4`, `calls>30`, `bad=0`); the `TARGET_SHA256` hash gate still
+bounds every acceptance, so a future rebuild with a different entry
+or protocol is refused before any child spawn.
+
+Re-run through the source-runtime launcher (dev venv python,
+`PYTHONPATH=src`, `ct2trainer.native.launcher.main` with `--plan` /
+`--x86-fixture-target` / `--x86-fixture-report`, exit 0), plan +
+report under `build\windows-fixture\x86-check-20261115T105517Z\`
+(git-ignored; plan file sha256
+`f1eed5ff928ac90a7cc87a652543b9f5b35d7cd98b6950daaa5f2729f73b0926`,
+canonical plan sha256
+`81bbc942c9b626af46c924a514f0af91e9da7ab914aba0cf91e18a25f3de7f0d`):
+report `ct2trainer-owned-x86/v1` status `passed`,
+`frozen_runtime: false`, `ce_inputs: []` - 6/6 checks passed:
+canonical_x64_source_plan_refused_before_target_session_or_effect,
+explicit_x86_ct_nasm_pushad_pushfd_hook_confirmed_4_to103_and_saved,
+x86_lua_pointer_remote_export_and_coordinated_literal_write_independent_readback,
+exact_x86_disable_and_retired_executable_retention,
+exact_x86_target_exit_finalizes_receipts_and_preserves_saved_on,
+saved_x86_on_restores_on_fresh_identity_and_final_disable_closes
+(the debugger-coordinated hook evidence carries 8 held thread-context
+observations; the restarted target obtained a fresh identity). The
+frozen x86 gate (the generated x86 trainer, `frozen_runtime: true`)
+is re-run at the next release cut. This closes the x86-fixture
+portion of the Windows runtime evidence only: real-game,
+clean-machine and Deck / Proton / touch acceptance remain open, so
+`runtime_unverified` stays set per
+`documentation/native-verification.md` section 5 and the roadmap RT-6
+acceptance. Full record in
+`tests/windows/debug_hook_fixture/README.md` ("Verified x86 gate
+(2026-11-15, source runtime)") and
+`documentation/native-verification.md`.
+
 ### 0.52 release build record (2026-11-15, run
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`)
 

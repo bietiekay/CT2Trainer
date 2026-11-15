@@ -190,9 +190,37 @@ game-facing action.
   (see the ledger section "Windows String fixture runtime
   evidence" in `documentation/native-progress.md` and the
   verified-String-gate record in
-  `tests/windows/string_fixture/README.md`). Full main suite
-  5,197 OK / 36 expected skips. Real-game and clean-machine /
-  Deck / Proton acceptance stay open.
+  `tests/windows/string_fixture/README.md`). The owned
+  x86 debug-hook gate (the fourth Windows function gate) was
+  verified 2026-11-15 in the source runtime (repo `main` @
+  `0367d7b`, post-String-lane; the fixture re-pinned after the
+  2026-10-07 repin build was cleaned - rebuilt from the
+  unchanged source through the directory's new first-party
+  recipe `Invoke-DebugHookFixtureBuild.ps1`, MSVC `cl`
+  19.44.35229, run
+  `native-debughook-fixture-20261115T104212Z-c84316ed`; the
+  re-pin is hash-only - the gate CT + AA program source are
+  unchanged (the entry is an `aobscanmodule` AOB, no fixed
+  RVAs), only `x86_probe.py` `TARGET_SHA256` moved to the
+  fresh x86 EXE
+  `12f8304ef6857e08a67f5204dbdeff0456d6be3a4861561def8fe68d137c94cb`;
+  a read-only pre-flight proved the metadata line contract +
+  the exact 12-byte entry pattern before the re-pin): report
+  `ct2trainer-owned-x86/v1` `passed`, 6/6 checks,
+  `ce_inputs: []` (canonical x64 rebinding plan refused before
+  any session or effect; 4->103 confirmed pushad/pushfd hook
+  saved as ON; x86 Lua pointer width + remote export +
+  coordinated literal write with independent readback; exact
+  disable + retired executable retention; target exit
+  finalizes receipts preserving saved ON; saved ON restores on
+  a fresh identity with final disable + close); the frozen
+  x86 gate re-runs at the next release cut (see the ledger
+  section "Windows x86 debug-hook fixture runtime evidence" in
+  `documentation/native-progress.md` and the verified-x86-gate
+  record in
+  `tests/windows/debug_hook_fixture/README.md`). Full main
+  suite 5,197 OK / 36 expected skips. Real-game and
+  clean-machine / Deck / Proton acceptance stay open.
 - 0.21 Master Trainer (2026-10-31, branch
   `native-0.20-master-trainer`, merged `main` @ `9a725a8`; released in
   build `native-20261031T211046Z-14707e12` - in-build suite 4,044 OK

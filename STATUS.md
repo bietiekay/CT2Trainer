@@ -68,9 +68,33 @@ repair, fresh held-freeze prefix repair, frozen
 prefix-overlap refusal, apply-updated freeze intent, live
 controller restart drops freeze, target restart attaches
 fresh, final close + owned exit); the frozen String gate
-re-runs at the next release cut; full main suite 5,197 OK
-/ 36 expected skips. Real-game, clean-machine and Deck /
-Proton / touch
+re-runs at the next release cut. The owned x86 debug-hook
+gate (the fourth Windows function gate) was verified
+2026-11-15 in the source runtime (repo `main` @ `0367d7b`,
+post-String-lane content; the fixture re-pinned after the
+2026-10-07 repin build was cleaned - rebuilt from the
+unchanged source through the directory's new first-party
+recipe `Invoke-DebugHookFixtureBuild.ps1`, MSVC `cl`
+19.44.35229, run
+`native-debughook-fixture-20261115T104212Z-c84316ed`; the
+re-pin is hash-only - the gate CT + AA program source are
+unchanged (the entry is an `aobscanmodule` AOB, no fixed
+RVAs), only `x86_probe.py` `TARGET_SHA256` moved to the
+fresh x86 EXE
+`12f8304ef6857e08a67f5204dbdeff0456d6be3a4861561def8fe68d137c94cb`;
+a read-only pre-flight proved the metadata line contract +
+the exact 12-byte entry pattern before the re-pin): report
+`ct2trainer-owned-x86/v1` passed, 6/6 checks,
+`ce_inputs: []` (canonical x64 rebinding plan refused before
+any session or effect, 4->103 confirmed pushad/pushfd hook
+saved as ON, x86 Lua pointer width + remote export +
+coordinated literal write with independent readback, exact
+disable + retired executable retention, target exit
+finalizes receipts preserving saved ON, saved ON restores
+on a fresh identity with final disable + close); the
+frozen x86 gate re-runs at the next release cut; full main
+suite 5,197 OK / 36 expected skips. Real-game,
+clean-machine and Deck / Proton / touch
 acceptance remain open, so `runtime_unverified` stays set
 per the RT-6 acceptance; see the 0.52 section below.
 Superseded 0.51 (build `native-20261115T023110Z-4ed2835e`,
