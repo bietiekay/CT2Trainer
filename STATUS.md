@@ -92,8 +92,29 @@ coordinated literal write with independent readback, exact
 disable + retired executable retention, target exit
 finalizes receipts preserving saved ON, saved ON restores
 on a fresh identity with final disable + close); the
-frozen x86 gate re-runs at the next release cut; full main
-suite 5,197 OK / 36 expected skips. Real-game,
+frozen x86 gate re-runs at the next release cut. The owned
+hook gate + owned Lua-record gate (shared fresh x64 target
+`NativeHookFixture.exe`, the fifth + sixth Windows function
+gates) were verified 2026-11-15 in the source runtime (repo
+`main` @ `cb04cc8`, post-x86-lane content; the 2026-10-02 pin
+build was cleaned, so the fixture was rebuilt from the
+unchanged source through the directory's new first-party
+recipe `tests/windows/hook_fixture/Invoke-HookFixtureBuild.ps1`,
+MSVC `cl` 19.44.35229, run
+`native-hook-fixture-20261115T112832Z-137263bc`; the re-pin
+is hash-only - both gate CTs + all three Lua-record source
+profiles are unchanged, only `lua_record_probe.py`
+`TARGET_SHA256` moved to the fresh x64 EXE
+`37c02a22bff3c1b46033e7ff8ef37338fb3f8c8fa70f8b5e6e3bb0fab1567421`
+(`hook_probe.py` pins no target hash by design); a read-only
+pre-flight proved the metadata line contract + the unique
+8-byte entry pattern + the packed export pair + one common
+implied image base before the re-pin): hook report
+`ct2trainer-frozen-hook/v1` passed, 7/7 checks,
+`ce_inputs: []`; Lua report
+`ct2trainer-frozen-lua-record/v1` passed, 4/4 checks,
+`ce_inputs: []`; both frozen gates re-run at the next release
+cut; full main suite 5,197 OK / 36 expected skips. Real-game,
 clean-machine and Deck / Proton / touch
 acceptance remain open, so `runtime_unverified` stays set
 per the RT-6 acceptance; see the 0.52 section below.

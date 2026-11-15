@@ -268,6 +268,47 @@ observations). Plans + reports under
 re-run at the next release cut; real-game, clean-machine and Deck /
 Proton / touch acceptance remain open.
 
+Verified owned hook gate + owned Lua-record gate (2026-11-15, source
+runtime, repo `main` @ `cb04cc8` post-0.52 on Windows NT
+10.0.26300.0 x64, MSVC `cl` 19.44.35229 BuildTools 2022): the
+2026-10-02 pin build of the shared x64-only fixture
+(`NativeHookFixture.exe`) was cleaned, so it was rebuilt from the
+unchanged source (`hook_target.c` sha256
+`ec84fbe293257a847e6eb14d5a56ca72dfd3acc466a4e75b979289c3795d0b7d`,
+single git commit) through the directory's new first-party recipe
+`tests/windows/hook_fixture/Invoke-HookFixtureBuild.ps1` into run
+`native-hook-fixture-20261115T112832Z-137263bc`
+(`verification.json` passed, EXE sha256
+`37c02a22bff3c1b46033e7ff8ef37338fb3f8c8fa70f8b5e6e3bb0fab1567421`,
+PE machine 0x8664). The re-pin is hash-only - both gate CTs and all
+three Lua-record source profiles are unchanged (the entry is an
+`aobscanmodule` AOB, no fixed RVAs), so only `lua_record_probe.py`
+`TARGET_SHA256` moved (`hook_probe.py` pins no target hash by design);
+a read-only pre-flight spawn proved the fresh child's bounded
+metadata line contract, the unique 8-byte entry pattern (RVA `0x26000`
+in `.tfnhook`), the packed `fixture_result` / `fixture_calls` export
+pair and one common implied image base before the re-pin, and the
+hash gate still bounds every acceptance. Re-run through the
+source-runtime launcher (dev venv python, `PYTHONPATH=src`, `--plan`
+/ `--hook-fixture-target` / `--hook-fixture-report` then `--plan` /
+`--lua-fixture-target` / `--lua-fixture-report`, both exit 0): hook
+report `ct2trainer-frozen-hook/v1` status `passed`,
+`frozen_runtime: false`, `ce_inputs: []`, 7/7 checks (remote-export
+value address + original effect; iced-debugger-confirmed hook saved;
+upstream-Lua53 record write + independent readback; exact disable +
+saved wish cleared; retired cave readable before target exit; target
+exit finalizes retained code; controller state ownership released) and
+Lua report `ct2trainer-frozen-lua-record/v1` status `passed`,
+`frozen_runtime: false`, `ce_inputs: []`, 4/4 checks (compiler-to-
+automatic-Lua receipts + owned write + cooperative worker; scoped
+provider + dependency refusal before cancellation; disable with
+inverse raw undo + callback cancellation; fresh activation, target
+exit finalization and confirmed saved-state restart). Plans + reports
+under `build\windows-fixture\hook-check-20261115T135250Z\`. Full
+record in `tests/windows/hook_fixture/README.md`. Both frozen gates
+re-run at the next release cut; real-game, clean-machine and Deck /
+Proton / touch acceptance remain open.
+
 ## 5. What is still open
 
 - **Runtime acceptance** stays `runtime_unverified: true` until

@@ -3190,6 +3190,97 @@ acceptance. Full record in
 (2026-11-15, source runtime)") and
 `documentation/native-verification.md`.
 
+### Windows hook + Lua-record fixture runtime evidence (2026-11-15,
+owned hook gate and owned Lua-record gate verified in the source
+runtime after the 0.52 cut)
+
+The owned executable-hook fixture gates documented in
+`tests/windows/hook_fixture/README.md` were executed on Windows
+`Microsoft Windows NT 10.0.26300.0` x64 (PowerShell
+5.1.26100.9818), repo `main` @ `cb04cc8` (post-0.52; the 0.52
+content set is code-identical, so the dev venv python serves as the
+source-runtime interpreter with `PYTHONPATH=src`). The 2026-10-02 pin
+build had been cleaned, so the shared x64-only fixture
+(`NativeHookFixture.exe`) was rebuilt from the unchanged source
+(`hook_target.c` sha256
+`ec84fbe293257a847e6eb14d5a56ca72dfd3acc466a4e75b979289c3795d0b7d`,
+single git commit) with the same MSVC `cl.exe` 19.44.35229
+(BuildTools 2022, `/W4 /WX /Od /TC`, nonincremental link) through the
+directory's new first-party recipe
+`tests/windows/hook_fixture/Invoke-HookFixtureBuild.ps1` (x64), into
+run `native-hook-fixture-20261115T112832Z-137263bc` (git-ignored):
+`verification.json` (schema `ct2trainer-owned-hook-build/v1`) status
+`passed`, EXE sha256
+`37c02a22bff3c1b46033e7ff8ef37338fb3f8c8fa70f8b5e6e3bb0fab1567421`,
+PE machine 0x8664.
+
+The re-pin is hash-only: both gate CTs are unchanged on disk
+(`hook_trainer.ct` sha256
+`41f98a015e72244e55e82cf7c2e09c26e87330f6ce800557a7362b409d1eff56`
+holds the `hook_probe.py` pin, `lua_trainer.ct` sha256
+`6779cb6ce8f7e03cc4aacf7fb18d6677ecb7e2e520e6ff64335f063c4c74654f`
+holds the `LUA_CT_SHA256` pin) and all three Lua-record source
+profiles (`LUA_SOURCE_SHA256` / `STATIC_SOURCE_SHA256` /
+`FLAG_SOURCE_SHA256`) are unchanged, so only `lua_record_probe.py`
+`TARGET_SHA256` moved to the fresh x64 EXE
+(`37c02a22bff3c1b46033e7ff8ef37338fb3f8c8fa70f8b5e6e3bb0fab1567421`);
+`hook_probe.py` pins no target hash by design (name-attach, the hash
+is recorded in the report evidence). A read-only pre-flight spawn
+proved the fresh child before the re-pin: the bounded metadata line
+contract (pid / entry / result / calls, all integers), the unique
+8-byte entry pattern on disk (file offset `0x22e00`, RVA `0x26000`
+in the dedicated `.tfnhook` section) read back through the child's
+own reported entry address, the packed export pair from the on-disk
+export directory (`fixture_result` RVA `0x22bc0`, `fixture_calls`
+RVA `0x22bc4`), one common implied image base across all three
+metadata addresses, and live callers observed at `result=4`,
+`calls>20`; the `TARGET_SHA256` hash gate still bounds every
+acceptance, so a future rebuild with a different entry or protocol is
+refused before any child spawn.
+
+Re-run through the source-runtime launcher (dev venv python,
+`PYTHONPATH=src`, `ct2trainer.native.launcher.main` with `--plan` /
+`--hook-fixture-target` / `--hook-fixture-report` and then `--plan` /
+`--lua-fixture-target` / `--lua-fixture-report`, both exit 0), plans
++ reports under `build\windows-fixture\hook-check-20261115T135250Z\`
+(git-ignored; hook plan file sha256
+`9234138b05e8337998255c32cbc7bacf467a7e3592c68ea8dd468e48346268dc`,
+canonical plan sha256
+`63b98c5ac105e5969d396bd2b0f629316189802e97515a9751df708db177bfcd`,
+2/2 supported - Lua plan file sha256
+`e15ec3481ba048c08e6788a444c408ba5acd2c5f4afdafe5dc0a4b2f91d5f30c`,
+canonical plan sha256
+`620f96597653151e1a69d235bc9a8ad15505c9e4012146f94c2986d08570433e`,
+2/2 supported, `validate_fixture_plan` OK):
+
+- Hook report `ct2trainer-frozen-hook/v1` status `passed`,
+  `frozen_runtime: false`, `ce_inputs: []` - 7/7 checks passed:
+  remote-export-value-address-and-original-effect,
+  embedded-ct-nasm-iced-debugger-hook-confirmed-and-saved,
+  embedded-upstream-lua53-record-write-independent-readback,
+  exact-disable-effect-and-saved-wish-cleared,
+  retired-cave-remains-readable-before-target-exit,
+  exact-target-exit-finalizes-retained-code,
+  controller-state-ownership-released (`game_unverified: true` stays
+  set per gate).
+- Lua report `ct2trainer-frozen-lua-record/v1` status `passed`,
+  `frozen_runtime: false`, `ce_inputs: []` - 4/4 checks passed:
+  ct_compiler_to_automatic_lua_receipts_owned_write_and_cooperative_worker,
+  scoped_code_data_provider_and_dependency_refusal_before_cancellation,
+  disable_lua_owned_receipt_main_inverse_raw_undo_and_callback_cancellation,
+  fresh_activation_exact_target_exit_finalization_and_confirmed_saved_state_restart.
+
+Both frozen gates (the generated trainer, `frozen_runtime: true`) are
+re-run at the next release cut. This closes the hook / Lua-record
+fixture portion of the Windows runtime evidence only: real-game,
+clean-machine and Deck / Proton / touch acceptance remain open, so
+`runtime_unverified` stays set per
+`documentation/native-verification.md` section 5 and the roadmap RT-6
+acceptance. Full record in
+`tests/windows/hook_fixture/README.md` ("Verified hook + Lua-record
+gates (2026-11-15, source runtime)") and
+`documentation/native-verification.md`.
+
 ### 0.52 release build record (2026-11-15, run
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`)
 

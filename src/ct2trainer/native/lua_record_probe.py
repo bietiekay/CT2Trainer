@@ -18,8 +18,19 @@ import threading
 import time
 
 
+# Re-pinned 2026-11-15 after the 2026-10-02 pin build was cleaned: rebuilt
+# from the unchanged source (hook_target.c sha256
+# ec84fbe293257a847e6eb14d5a56ca72dfd3acc466a4e75b979289c3795d0b7d,
+# tests/windows/hook_fixture/Invoke-HookFixtureBuild.ps1, MSVC 19.44.35229,
+# /W4 /WX /Od /TC, nonincremental link), evidence
+# build/runs/native-hook-fixture-20261115T112832Z-137263bc. Both gate CTs
+# and the three AA/Lua source profiles are unchanged (the entry is an
+# aobscanmodule AOB - no fixed RVAs), so only the target hash moved; the
+# metadata line contract, the exact 8-byte entry pattern, the packed
+# fixture_result/fixture_calls export pair and the common image base were
+# re-proved against the fresh child by a read-only pre-flight.
 LUA_CT_SHA256 = '6779cb6ce8f7e03cc4aacf7fb18d6677ecb7e2e520e6ff64335f063c4c74654f'
-TARGET_SHA256 = '948f3a77791761a9702757efad7fd2fb6708c0990f2e16392760efda3a648d1a'
+TARGET_SHA256 = '37c02a22bff3c1b46033e7ff8ef37338fb3f8c8fa70f8b5e6e3bb0fab1567421'
 LUA_SOURCE_SHA256 = '43913fc94f6cd753cbdc0a4a314b9f20bee229f82f5ea764320487332c24c84f'
 STATIC_SOURCE_SHA256 = '03581aeaf748fabeb7687d9be00f9ce4e67c058441c2119f05748e47cf0655ff'
 FLAG_SOURCE_SHA256 = '869d57807e8107bc65bbb8d22bf4df6bcd7bc13684280eecc0d34c091177eefa'

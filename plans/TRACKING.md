@@ -218,7 +218,41 @@ game-facing action.
   section "Windows x86 debug-hook fixture runtime evidence" in
   `documentation/native-progress.md` and the verified-x86-gate
   record in
-  `tests/windows/debug_hook_fixture/README.md`). Full main
+  `tests/windows/debug_hook_fixture/README.md`). The owned
+  hook gate + owned Lua-record gate (shared fresh x64 target
+  `NativeHookFixture.exe`, the fifth + sixth Windows function
+  gates) were verified 2026-11-15 in the source runtime (repo
+  `main` @ `cb04cc8`, post-x86-lane; the 2026-10-02 pin build
+  was cleaned, so the fixture was rebuilt from the unchanged
+  source through the directory's new first-party recipe
+  `tests/windows/hook_fixture/Invoke-HookFixtureBuild.ps1`,
+  MSVC `cl` 19.44.35229, run
+  `native-hook-fixture-20261115T112832Z-137263bc`; the re-pin
+  is hash-only - both gate CTs + all three Lua-record source
+  profiles are unchanged, only `lua_record_probe.py`
+  `TARGET_SHA256` moved to the fresh x64 EXE
+  `37c02a22bff3c1b46033e7ff8ef37338fb3f8c8fa70f8b5e6e3bb0fab1567421`
+  (`hook_probe.py` pins no target hash by design); a read-only
+  pre-flight proved the metadata line contract + the unique
+  8-byte entry pattern (RVA 0x26000 in `.tfnhook`) + the
+  packed export pair + one common implied image base before the
+  re-pin): hook report `ct2trainer-frozen-hook/v1` `passed`,
+  7/7 checks, `ce_inputs: []` (remote-export value address +
+  original effect; iced-debugger-confirmed hook saved;
+  upstream-Lua53 record write + independent readback; exact
+  disable + saved wish cleared; retired cave readable before
+  target exit; target exit finalizes retained code; controller
+  state ownership released) and Lua report
+  `ct2trainer-frozen-lua-record/v1` `passed`, 4/4 checks,
+  `ce_inputs: []` (compiler-to-automatic-Lua receipts + owned
+  write + cooperative worker; scoped provider + dependency
+  refusal before cancellation; disable with inverse raw undo +
+  callback cancellation; fresh activation, target exit
+  finalization and confirmed saved-state restart); both frozen
+  gates re-run at the next release cut (see the ledger section
+  "Windows hook + Lua-record fixture runtime evidence" in
+  `documentation/native-progress.md` and the verified-gates
+  record in `tests/windows/hook_fixture/README.md`). Full main
   suite 5,197 OK / 36 expected skips. Real-game and
   clean-machine / Deck / Proton acceptance stay open.
 - 0.21 Master Trainer (2026-10-31, branch
