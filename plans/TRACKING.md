@@ -284,9 +284,37 @@ game-facing action.
   runtime evidence" in `documentation/native-progress.md` and the
   verified-gates record in
   `tests/windows/global_fixture/README.md`); the frozen re-run
-  happens at the next release cut. Full main suite 5,197 OK / 36
-  expected skips. Real-game and clean-machine / Deck / Proton
-  acceptance stay open.
+  happens at the next release cut. The owned clock gate (fresh
+  x64 + x86 local fixtures, the eighth Windows function gate; no
+  pinned target image, so no re-pin - production clock sources
+  unchanged, the gate compares the fresh EXE's conversion vectors
+  against the in-process arbitrary-precision oracle) was
+  verified 2026-11-15 in the source runtime (repo `main` @
+  `fc20da5`, post-global-lane; MSVC `cl` 19.44.35229): the clock
+  EXE gate (run `native-clock-20261115T151926Z-a58a`,
+  `ct2trainer-clock-verification/v1` passed, x64 EXE
+  `ffc4403f4087abf5d0b054c3f08704cbb8f480ce0efee426ac8064a5529517cd`,
+  x86 EXE `8b4db62bf9b56ea1163e85cf54f5d776718d7ec8685e05f9d300e078a3bc1e5a`,
+  1,146 checks + 256 vectors per arch) with the env-gated oracle
+  tests (`test_native_clock.py`, `CT2TRAINER_CLOCK_FIXTURE`)
+  2/2 per architecture, and the owned local adapter DLL lane
+  (run `native-clock-adapter-20261115T153125Z-da22`,
+  `ct2trainer-clock-adapter-verification/v2` passed, production
+  build without the `-TestPlatformFault` export, 14 host runs -
+  7 modes per architecture, x64 DLL
+  `58ceeb327796a061f79fa8294f5a047bcbf032e1c95997d2adb122fee1d80e7d`,
+  x86 DLL
+  `b8174c4af4c89797ebc2670e75075c9f3bb9173cabedbe4765c7e74b09cf18d0`,
+  plus the same-day instrumented `-TestPlatformFault` lane
+  `native-clock-adapter-fault-20261115T160210Z-fcc5` passed, 16
+  host runs incl. the `platform` mode, production DLLs carry no
+  fault-injection export); see the ledger section "Windows clock
+  fixture runtime
+  evidence" in `documentation/native-progress.md` and the
+  verified-gates record in
+  `tests/windows/clock_fixture/README.md`). Full main suite
+  5,197 OK / 36 expected skips. Real-game and clean-machine /
+  Deck / Proton acceptance stay open.
 - 0.21 Master Trainer (2026-10-31, branch
   `native-0.20-master-trainer`, merged `main` @ `9a725a8`; released in
   build `native-20261031T211046Z-14707e12` - in-build suite 4,044 OK

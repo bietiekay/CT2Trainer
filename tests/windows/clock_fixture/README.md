@@ -116,3 +116,88 @@ Remote mailbox publication, patch admission, instruction relocation and remote
 module loading remain separate work; a debugger-held controller must never wait
 for this local clock lock. No safe live unhook/unload or game/Proton claim follows
 from the owned local DLL fixture.
+
+## Verified clock gate (2026-11-15, source runtime)
+
+First recorded pass, repo `main` @ `fc20da5` (post-0.52; the 0.52
+content set is code-identical, so the dev venv python serves as the
+source-runtime interpreter with `PYTHONPATH=src`) on Windows
+`Microsoft Windows NT 10.0.26300.0` x64 (PowerShell
+5.1.26100.9818). No re-pin is needed: this fixture consumes no
+pinned target image - the clock sources are production code under
+`src/ct2trainer/native/clock/` and are unchanged on disk
+(`clock_core.h` sha256
+`cdf229125da7bfc0da59dbe6e40ec5e55df2d7e9afa5ae08db79924987b4cb4d`,
+`clock_core.c` sha256
+`d97accc2dd9b30527689b284bea99c66af2f3c6484be795dda85c93191af0245`),
+and the gate compares the fresh EXE's integer-conversion vectors
+against an in-process arbitrary-precision oracle rather than against
+a byte-pinned binary.
+
+Clock EXE gate (`Invoke-ClockFixture.ps1`, both archs default, MSVC
+`cl.exe` 19.44.35229 BuildTools 2022, `/W4 /WX /O2`): run
+`build\runs\native-clock-20261115T151926Z-a58a\` (git-ignored),
+`verification.json` (schema `ct2trainer-clock-verification/v1`)
+status `passed` - x64 `NativeClockFixture.exe` sha256
+`ffc4403f4087abf5d0b054c3f08704cbb8f480ce0efee426ac8064a5529517cd`
+(PE machine 0x8664, 1,146 internal checks, 256 conversion vectors,
+exit 0) and x86 `NativeClockFixture.exe` sha256
+`8b4db62bf9b56ea1163e85cf54f5d776718d7ec8685e05f9d300e078a3bc1e5a`
+(PE machine 0x14C, 1,146 internal checks, 256 conversion vectors,
+exit 0). The env-gated oracle tests
+(`tests/test_native_clock.py`, run with
+`CT2TRAINER_CLOCK_FIXTURE` pointed at each fresh EXE, dev venv
+python, `PYTHONPATH=src`) passed 2/2 per architecture: the
+local rate / epoch / lease / fault / concurrency contract check and
+the 256-case integer-conversion check against the
+arbitrary-precision reference (including the overflow-into-
+`UINT64_MAX` statuses).
+
+Owned local adapter DLL lane
+(`Invoke-ClockAdapterFixture.ps1`, both archs default, production
+build without the `-TestPlatformFault` instrumented export,
+`/W4 /WX /O2 /MT`): run
+`build\runs\native-clock-adapter-20261115T153125Z-da22\`
+(git-ignored), `verification.json` (schema
+`ct2trainer-clock-adapter-verification/v2`) status `passed`,
+`test_only_platform_fault_export: false` - 14 host runs (7 modes
+per architecture: fake 79 checks, calibration 19, real 809,
+deadline 27, cancel 35, cancel_busy 27, fence_concurrency 25, each
+exit 0, each host loading only its exact freshly built DLL): x64
+`NativeClockAdapter.dll` sha256
+`58ceeb327796a061f79fa8294f5a047bcbf032e1c95997d2adb122fee1d80e7d`
+(host `NativeClockAdapterFixture.exe` sha256
+`15cef54b914a5e7974583ccdd25e7402bb909e7a053f82237768f68e0c58aba5`)
+and x86 `NativeClockAdapter.dll` sha256
+`b8174c4af4c89797ebc2670e75075c9f3bb9173cabedbe4765c7e74b09cf18d0`
+(host `NativeClockAdapterFixture.exe` sha256
+`2daf4a64203a4b54c6a783cf061ae8b49fa9161c707aad0047ac3d573fd42672`).
+
+Optional instrumented lane
+(`Invoke-ClockAdapterFixture.ps1 -TestPlatformFault`, same-day):
+run `build\runs\native-clock-adapter-fault-20261115T160210Z-fcc5\`
+(git-ignored), `verification.json` (schema
+`ct2trainer-clock-adapter-verification/v2`) status `passed`,
+`test_only_platform_fault_export: true` - 16 host runs (the 7
+production modes + the instrumented `platform` mode with 19 checks
+per architecture, each exit 0): the instrumented x64
+`NativeClockAdapter.dll` sha256
+`f51fdca389cda20349de9318fec75319d7ad68d196f16d898697757bf995e5ac`
+(host `NativeClockAdapterFixture.exe` sha256
+`4874eef3a4e2322eeb7db5c34fced9315f80cdfc8aa6bd2777f76da2832094ce`)
+and the instrumented x86 `NativeClockAdapter.dll` sha256
+`1aab919b266c31f2c11f3cf0df1413074356d2185f7a33b872000280000e0914`
+(host `NativeClockAdapterFixture.exe` sha256
+`e0a12c1e5438d19c8fb6c79e7639645de1d5d57beb9eb41bd8d0d59d076a2191`).
+Faulted submissions are rejected, and a fault during a pending
+command produces the explicit snapshot-less fault ACK. The
+production DLLs (above) carry no fault-injection export.
+
+Full main suite 5,197 OK / 36 expected skips (identical to the 0.52
+baseline; the two env-gated fixture tests stay skipped under the
+canonical run without `CT2TRAINER_CLOCK_FIXTURE`).
+
+This closes the clock-fixture portion of the Windows runtime
+evidence only: hook admission/relocation, remote control, static /
+dynamic API interception and the game / Proton claims remain open
+per the RT-6 acceptance (`runtime_unverified` stays set).

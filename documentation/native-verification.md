@@ -351,6 +351,52 @@ in `tests/windows/global_fixture/README.md`. The frozen re-run
 happens at the next release cut; real-game, clean-machine and Deck /
 Proton / touch acceptance remain open.
 
+Verified owned clock gate, both architectures (2026-11-15, source
+runtime, repo `main` @ `fc20da5` post-0.52 on Windows NT
+10.0.26300.0 x64, MSVC `cl` 19.44.35229 BuildTools 2022): the
+owned local clock fixture is production code under
+`src/ct2trainer/native/clock/` with no pinned target image, so no
+re-pin was needed - the clock EXE gate
+(`Invoke-ClockFixture.ps1`, both archs, `/W4 /WX /O2`) produced
+run `native-clock-20261115T151926Z-a58a` (`verification.json`
+schema `ct2trainer-clock-verification/v1` status `passed`, x64
+EXE sha256
+`ffc4403f4087abf5d0b054c3f08704cbb8f480ce0efee426ac8064a5529517cd`,
+x86 EXE sha256
+`8b4db62bf9b56ea1163e85cf54f5d776718d7ec8685e05f9d300e078a3bc1e5a`,
+1,146 internal checks + 256 conversion vectors per arch), and the
+env-gated oracle tests (`test_native_clock.py` with
+`CT2TRAINER_CLOCK_FIXTURE` set per EXE) passed 2/2 per
+architecture - the local rate / epoch / lease / fault /
+concurrency contract plus the 256-case integer conversion
+against the arbitrary-precision reference. The owned local
+adapter DLL lane (`Invoke-ClockAdapterFixture.ps1`, production
+build without the `-TestPlatformFault` export, `/W4 /WX /O2
+/MT`) produced run
+`native-clock-adapter-20261115T153125Z-da22` (`verification.json`
+schema `ct2trainer-clock-adapter-verification/v2` status
+`passed`, 14 host runs - 7 modes per architecture, each loading
+only its exact freshly built DLL; x64 DLL sha256
+`58ceeb327796a061f79fa8294f5a047bcbf032e1c95997d2adb122fee1d80e7d`,
+x86 DLL sha256
+`b8174c4af4c89797ebc2670e75075c9f3bb9173cabedbe4765c7e74b09cf18d0`),
+plus the optional instrumented
+(`-TestPlatformFault`) lane (run
+`native-clock-adapter-fault-20261115T160210Z-fcc5`, status
+`passed`, `test_only_platform_fault_export: true`, 16 host runs -
+the 7 production modes + the instrumented `platform` mode per
+architecture, instrumented x64 DLL
+`f51fdca389cda20349de9318fec75319d7ad68d196f16d898697757bf995e5ac`
+/ instrumented x86 DLL
+`1aab919b266c31f2c11f3cf0df1413074356d2185f7a33b872000280000e0914`;
+faulted submissions rejected, fault-during-pending produces the
+explicit snapshot-less fault ACK, production DLLs carry no
+fault-injection export).
+Full record in `tests/windows/clock_fixture/README.md`. Hook
+admission/relocation, remote control, static / dynamic API
+interception and the game / Proton claims remain open, so
+`runtime_unverified` stays set.
+
 ## 5. What is still open
 
 - **Runtime acceptance** stays `runtime_unverified: true` until

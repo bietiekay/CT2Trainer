@@ -129,8 +129,25 @@ contract + sentinel read-back + probe reply per child before
 the re-pin): both reports `ct2trainer-owned-global/v1`
 passed, 14/14 checks, `ce_inputs: []`,
 `owned_markers_absent: true`, plus the recorded live-close
-fence; the frozen re-run happens at the next release cut; full
-main suite 5,197 OK / 36 expected skips. Real-game,
+fence; the frozen re-run happens at the next release cut. The
+owned clock gate (fresh x64 + x86 local fixtures, the eighth
+Windows function gate; no pinned target image, so no re-pin -
+production clock sources unchanged, the gate compares the fresh
+EXE's conversion vectors against the in-process
+arbitrary-precision oracle) was verified 2026-11-15 in the
+source runtime (repo `main` @ `fc20da5`; MSVC `cl`
+19.44.35229): clock EXE gate
+(`ct2trainer-clock-verification/v1` passed, x64 EXE
+`ffc4403f4087abf5d0b054c3f08704cbb8f480ce0efee426ac8064a5529517cd`,
+x86 EXE
+`8b4db62bf9b56ea1163e85cf54f5d776718d7ec8685e05f9d300e078a3bc1e5a`,
+1,146 checks + 256 vectors per arch) with the env-gated oracle
+tests 2/2 per architecture, plus the owned local adapter DLL
+lane (`ct2trainer-clock-adapter-verification/v2` passed,
+production build, 14 host runs - 7 modes per architecture, plus
+the same-day instrumented `-TestPlatformFault` lane passed, 16
+host runs incl. the `platform` mode); full main suite
+5,197 OK / 36 expected skips. Real-game,
 clean-machine and Deck / Proton / touch
 acceptance remain open, so `runtime_unverified` stays set
 per the RT-6 acceptance; see the 0.52 section below.
