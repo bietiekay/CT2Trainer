@@ -926,6 +926,83 @@ game-facing action.
   17,070,681 bytes, ships next to the converter). Feature
   matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`).
+- 0.51 the post-0.50 residual-census ratification lane release
+  (2026-11-15, content commit `35542f4`, build record below): VERSION
+  0.51 + CHANGELOG 0.51 entry in the same change (incl. the
+  `__version__` package constant sync, guarded by
+  `test_version_matches_root_version_file`). Tests-only, zero catalog
+  delta: the five remaining unrated residual classes of the 193-row
+  catalog census (`blocked-catalog-050-provider21`) are pinned as
+  blocked by design, so every remaining residual row is now covered by
+  a documented gate or a 0.44-0.51 ratification lane.
+  `tests/test_native_residual_ratification.py` (13 tests, 6 clusters,
+  synthetic fixtures mirroring the real-table shapes, no real-table
+  path references) pins, per cluster, the exact block reason as
+  measured in the census + the counter-proof that the rows resolve
+  once the documented condition is met (no hidden second gate): DS2
+  `KeyHandlerThread` x11 (87498 / 87500 / 87502 / 87507 / 87508 /
+  87509 / 87510 / 87511 / 87513 / 87514 / 87516 - every record
+  allocates the SAME symbol name through a Lua-generated
+  `alloc(KeyHandlerThread, 0x1000, process)` line
+  (`process` is the CE module-name Lua global, ProcessHandlerUnit.pas
+  L186-189) and registers / releases it in the static `{$asm}`
+  envelope; the static program never lists the Lua-generated
+  allocation, so each record's own `dealloc` drops to
+  `unowned_cleanup_dropped` in the first pass, and the 0.42
+  cleanup-parity re-check then finds the name live-registered by
+  every other supported record and re-blocks each record with the
+  prefixed WP-37 handover refusal, owner = first other entry in entry
+  order (the mutual 87498 <-> 87500 attribution of the census); CE 7.5
+  breaks the same way at runtime - the later record's
+  `registersymbol` overwrites the shared name, so the earlier
+  record's disable-phase `dealloc` frees the later record's live
+  thread block: the table is a one-record-at-a-time test harness, and
+  the static model cannot prove multi-activation safety;
+  counter-proofs: a single record stays supported and per-record
+  unique alloc names resolve every record), AtomicHeart-Win64-Shipping
+  73 (the DISABLE line
+  `unregistersymbol(energyBkp)dealloc(newmem)` glues a second directive
+  onto the first - CE consumes the line at the first directive,
+  autoassembler.pas L2492-2525, and silently discards the glued
+  dealloc: a leaked block, the record works; CT2Trainer keeps the
+  named parse refusal because teaching the parser to swallow trailing
+  directive content would mask real authoring errors; counter-proof:
+  the split lines), P3R-v4 229 (`reassemble(moneylost_gain+4,5)` - CE
+  reassemble is single-argument, autoassembler.pas L2413-2452 /
+  rsWrongSyntaxReAssemble L113; counter-proof: the single-argument
+  form), Cyberpunk2077 159 (`assert(true)` - CE assert requires the
+  two-argument `assert(address, bytestring)` form,
+  autoassembler.pas L2023-2030,
+  rsWrongSyntaxASSERTAddress1122335566 for the comma-less line;
+  counter-proof: the two-argument form), TheSinkingCity Remastered
+  258084 (the DISABLE `bFastTravel: db 0` re-initializes the record's
+  own `globalalloc(bFastTravel,1,$process)` with changed bytes - the
+  O19 shared-global contract fails closed by design because the
+  engine's global-pool lifecycle and recovery journal do not journal a
+  changed re-initialization; counter-proof: the equal bytes), Little
+  Kitty, Big City 1 / 2 (`usemono()` on the first static envelope line
+  - the Static AA envelope prefix form of the documented
+  usemono > 7.5 out-of-parity-scope refusal; counter-proof: the
+  record without the directive). +13 tests, full main suite 5,184 OK /
+  36 expected skips (5,171 + 13). Catalog remeasure
+  `blocked-catalog-051-residual`: 117,809 total / 117,616 supported /
+  12,974 headings / 104,467 actionable / 193 blocked (zero delta vs
+  `blocked-catalog-050-provider21`: record-level diff per table - zero
+  count diffs, zero newly blocked, zero unblocked, zero reason
+  changes, all 151 tables byte-identical). The 0.51 build
+  `native-20261115T023110Z-4ed2835e` cut from `main` @ `35542f4`
+  (2026-11-15): in-build suite 5,184 OK / 36 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per gate;
+  source ZIP `CT2Trainer-0.51-source.zip` sha256
+  `a1cc1b3eb33aca8ff7a041d999f5714a84aec238e782f396f5e6eb7385d4f525`
+  (14,717,423 bytes), portable ZIP
+  `CT2Trainer-0.51-windows-portable.zip` sha256
+  `53923298adf229d526995274c98f3bd7476d124ca2d0fc13577392571395a675`
+  (49,894,393 bytes; the frozen `CT2Trainer-Master.exe`
+  sha256 `1dff59f006370da718ecf343e66d6cdf78ad7b462bb7468348a4dbbdeb5893bb`,
+  17,071,049 bytes, ships next to the converter). Feature matrix
+  unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`).
 - 0.50 the Provider-21 parity lane release (2026-11-14, content commit
   `4f747ce`, build record below): VERSION 0.50 + CHANGELOG 0.50 entry in
   the same change (incl. the `__version__` package constant sync,

@@ -1323,6 +1323,85 @@ source ZIP `CT2Trainer-0.50-source.zip` sha256
 sha256 `417708d985bfb0f84530b0fe3703aa7788db81e10e48915218fc875cf236aab6`,
 17,071,577 bytes, ships next to the converter).
 
+Residual-census ratification lane (2026-11-15, post-0.50 residual
+lane, main @ `35542f4`): the five remaining unrated residual
+classes of the 193-row `blocked-catalog-050-provider21` census are
+pinned as blocked by design - every other residual row is already
+covered by a documented gate or by a 0.44-0.50 ratification lane.
+`tests/test_native_residual_ratification.py` (13 tests, 6 clusters,
+synthetic fixtures mirroring the real-table shapes, no real-table
+path references) pins, per cluster, the exact block reason as
+measured in the census + the counter-proof that the rows resolve
+once the documented condition is met (no hidden second gate): DS2
+`KeyHandlerThread` x11 (every record allocates the SAME symbol name
+through a Lua-generated `alloc` line and registers / releases it in
+the static `{$asm}` envelope; the static program never lists the
+Lua-generated allocation, so each record's own `dealloc` drops to
+`unowned_cleanup_dropped` and the 0.42 cleanup-parity re-check
+re-blocks each record with the prefixed WP-37 handover refusal,
+owner = first other entry in entry order; CE 7.5 breaks the same
+way at runtime - the later record's `registersymbol` overwrites the
+shared name, so the earlier record's disable-phase `dealloc` frees
+the later record's live thread block: the table is a
+one-record-at-a-time test harness), AtomicHeart-Win64-Shipping 73
+(the glued `unregistersymbol(energyBkp)dealloc(newmem)` DISABLE line -
+CE consumes the line at the first directive and silently discards
+the glued dealloc: a leaked block, the record works), P3R-v4 229
+(`reassemble(moneylost_gain+4,5)` - CE reassemble is
+single-argument), Cyberpunk2077 159 (`assert(true)` - CE assert
+requires the two-argument `assert(address, bytestring)` form),
+TheSinkingCity Remastered 258084 (the changed DISABLE
+re-initialization of the record's own global - the O19
+shared-global contract fails closed by design), Little Kitty, Big
+City 1 / 2 (`usemono()` in the Static AA envelope prefix - targets
+a CE newer than 7.5, out of parity scope). Tests only, zero catalog
+delta; full main suite 5,184 OK / 36 expected skips; remeasure
+`blocked-catalog-051-residual`: zero delta (117,809 total /
+117,616 supported / 12,974 headings / 104,467 actionable / 193
+blocked - record-level diff: 0 count diffs, 0 newly blocked, 0
+unblocked, 0 reason changes, all 151 tables byte-identical). The
+remaining 193 blocked rows are the documented design / gate
+residuals (80 `BaseAddress` by design until the documented user
+import, 28 DS2 encoded-Lua + 15 CatValues out of scope, 17 class-d
+value-symbol rows ratified by the 0.49 lane, 2 HeroHealthVFTable
+out of scope, 17 no-unique-supported-provider rows ratified by the
+0.50 lane, 11 KeyHandlerThread WP-37 external ownership ratified by
+this lane, 6 RE2 AP-08.7 custom value types, 4 usemono > 7.5 out of
+parity scope (ForgottonAnne x2 by the 0.50 lane + Little Kitty x2
+by this lane), 2 + 2 relative-ancestor refusals kept by design,
+2 createthread / threadWait RT-5G, 1 pBase Cronos, 1 trailing-token
+(the rayman `Made by` row, by design), 5 single-row named
+AA-syntax / DISABLE re-init refusals (AtomicHeart 73 /
+Cyberpunk2077 159 / P3R-v4 229 / TheSinkingCity 258084 ratified by
+this lane; the Cyberpunk2077 259 `$proces` typo row by the 0.50
+lane) and AP-11 stays open by definition. Shipped as the 0.51
+release.
+
+0.51 release record (2026-11-15, run `native-20261115T023110Z-4ed2835e`
+cut from `main` @ `35542f4`): the post-0.50 residual-census
+ratification lane ships as the 0.51 release - tests only, zero
+catalog delta (the five remaining unrated residual classes of the
+193-row census pinned as blocked by design with counter-proofs;
+see the lane paragraph above); catalog remeasure
+`blocked-catalog-051-residual`: 117,616 supported / 193 blocked
+(zero delta vs `blocked-catalog-050-provider21`: record-level diff
+per table - zero count diffs, zero newly blocked, zero unblocked,
+zero reason changes, all 151 tables byte-identical); full main
+suite 5,184 OK / 36 expected skips; in-build suite 5,184 OK / 36
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; the build ran unsigned by default (no code-signing
+certificate on this machine; `build.json` `code_signing`:
+converter / master signed false, reason not-configured - the
+signed path activates with a user-supplied trusted-CA PFX); source
+ZIP `CT2Trainer-0.51-source.zip` sha256
+`a1cc1b3eb33aca8ff7a041d999f5714a84aec238e782f396f5e6eb7385d4f525`
+(14,717,423 bytes), portable ZIP
+`CT2Trainer-0.51-windows-portable.zip` sha256
+`53923298adf229d526995274c98f3bd7476d124ca2d0fc13577392571395a675`
+(49,894,393 bytes; the frozen `CT2Trainer-Master.exe`
+sha256 `1dff59f006370da718ecf343e66d6cdf78ad7b462bb7468348a4dbbdeb5893bb`,
+17,071,049 bytes, ships next to the converter).
+
 0.47 release record (2026-11-14, run `native-20261114T011046Z-ee5cecee`
 cut from `main` @ `6e1940e`): the optional code signing for the
 frozen and generated trainer executables (the Smart App

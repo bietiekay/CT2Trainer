@@ -101,6 +101,29 @@ zero unblocked, zero reason changes, all 151 tables
 byte-identical). +13 tests; full main suite 5,184 OK
 / 36 expected skips.
 
+- Build: 0.51 released as run
+  `native-20261115T023110Z-4ed2835e` (cut from `main` @
+  `35542f4`, 2026-11-15): in-build suite 5,184 OK / 36
+  expected skips, 0 failures - fully green at the
+  canonical build path, `ce_inputs: []`,
+  `runtime_unverified` deliberately kept per gate. The
+  build ran unsigned by default (no certificate on this
+  machine; `code_signing` report: converter / master
+  signed false, reason not-configured) - the signed path
+  activates with a user-supplied trusted-CA PFX. Source
+  ZIP `CT2Trainer-0.51-source.zip` sha256
+  `a1cc1b3eb33aca8ff7a041d999f5714a84aec238e782f396f5e6eb7385d4f525`
+  (14,717,423 bytes) - carries the post-0.50
+  residual-census ratification lane
+  (`tests/test_native_residual_ratification.py`) - and
+  portable ZIP
+  `CT2Trainer-0.51-windows-portable.zip` sha256
+  `53923298adf229d526995274c98f3bd7476d124ca2d0fc13577392571395a675`
+  (49,894,393 bytes; the frozen `CT2Trainer-Master.exe`
+  (sha256
+  `1dff59f006370da718ecf343e66d6cdf78ad7b462bb7468348a4dbbdeb5893bb`,
+  17,071,049 bytes) ships next to the converter).
+
 ## 0.50 (2026-11-14)
 
 The Provider-21 compatibility lane against the 21-row

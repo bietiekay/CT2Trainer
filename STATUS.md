@@ -1,6 +1,59 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-14. **0.50 released** (build
+**Updated:** 2026-11-15. **0.51 released** (build
+`native-20261115T023110Z-4ed2835e`, cut from `main` @ `35542f4`,
+2026-11-15) - the post-0.50 residual-census ratification
+lane (tests only, zero catalog delta): the five remaining
+unrated residual classes of the 193-row catalog census
+(`blocked-catalog-050-provider21`) are pinned as blocked
+by design - per cluster the exact block reason as
+measured in the census + the counter-proof that the rows
+resolve once the documented condition is met (no hidden
+second gate): DS2 `KeyHandlerThread` x11 (every record
+allocates the SAME symbol name through a Lua-generated
+`alloc` line and registers / releases it in the static
+`{$asm}` envelope; the static program never lists the
+Lua-generated allocation, so each record's own
+`dealloc` drops to `unowned_cleanup_dropped` and the 0.42
+cleanup-parity re-check re-blocks each record with the
+prefixed WP-37 handover refusal; CE 7.5 breaks the same
+way at runtime - the later record's `registersymbol`
+overwrites the shared name, so the earlier record's
+disable-phase `dealloc` frees the later record's live
+thread block), AtomicHeart-Win64-Shipping 73 (the
+DISABLE line `unregistersymbol(energyBkp)dealloc(newmem)`
+glues a second directive onto the first - CE consumes
+the line at the first directive and silently discards
+the glued dealloc, a leaked block; the record works),
+P3R-v4 229 (`reassemble(moneylost_gain+4,5)` - CE
+reassemble is single-argument, the trailing `,5` breaks
+the address expression even in CE), Cyberpunk2077 159
+(`assert(true)` - CE assert requires the two-argument
+`assert(address, bytestring)` form; the record is a debug
+helper whose Lua lookup runs first and whose assert then
+fails - broken in CE as well), TheSinkingCity Remastered
+258084 (the DISABLE phase writes `bFastTravel: db 0` to
+the record's own ENABLE
+`globalalloc(bFastTravel,1,$process)` with changed bytes
+- in CE the global persists session-lifetime and the line
+is a plain data write; CT2Trainer's O19 shared-global
+contract deliberately fails closed because the
+global-pool lifecycle and recovery journal do not
+journal a changed re-initialization), Little Kitty, Big
+City 1 / 2 (`usemono()` on the first static envelope
+line - targets a CE newer than 7.5, out of parity scope
+by design); +13 tests; full main suite 5,184 OK / 36
+expected skips; in-build suite 5,184 OK / 36 expected
+skips, `ce_inputs: []`; catalog remeasure
+`blocked-catalog-051-residual`: 117,809 total / 117,616
+supported / 12,974 headings / 104,467 actionable / 193
+blocked (zero delta vs `blocked-catalog-050-provider21`:
+record-level diff per table - zero count diffs, zero
+newly blocked, zero unblocked, zero reason changes, all
+151 tables byte-identical; every remaining residual row
+is now covered by a documented gate or a 0.44-0.51
+ratification lane); see the 0.51 section below.
+Superseded 0.50 (build
 `native-20261114T223759Z-086989d6`, cut from `main` @ `4f747ce`,
 2026-11-14) - the Provider-21 parity lane against the
 21-row "no unique supported provider" census of the
@@ -636,7 +689,26 @@ Superseded 0.24 (build
 `native-20261102T102029Z-fe358e35`, cut from `main` @ `a2777ed`,
 2026-11-02; trainer tick sounds, user field request 2026-11-01;
 branch `native-0.24-trainer-sounds`; see the 0.24 section below).
-**Latest verified release:** 0.50, build
+**Latest verified release:** 0.51, build
+`native-20261115T023110Z-4ed2835e` (cut from `main` @ `35542f4`,
+2026-11-15): the 0.51 post-0.50 residual-census ratification
+lane release - in-build suite 5,184 OK / 36 expected skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; the build ran unsigned by default (`code_signing`
+report: converter / master signed false, reason
+not-configured - no certificate on this machine; the signed
+path activates with a user-supplied trusted-CA PFX); source
+ZIP `CT2Trainer-0.51-source.zip` sha256
+`a1cc1b3eb33aca8ff7a041d999f5714a84aec238e782f396f5e6eb7385d4f525`
+(14,717,423 bytes) - carries the post-0.50
+residual-census ratification lane
+(`tests/test_native_residual_ratification.py`) -
+and portable ZIP
+`CT2Trainer-0.51-windows-portable.zip` sha256
+`53923298adf229d526995274c98f3bd7476d124ca2d0fc13577392571395a675`
+(49,894,393 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`1dff59f006370da718ecf343e66d6cdf78ad7b462bb7468348a4dbbdeb5893bb`,
+17,071,049 bytes) ships next to the converter). Superseded 0.50, build
 `native-20261114T223759Z-086989d6` (cut from `main` @ `4f747ce`,
 2026-11-14): the 0.50 Provider-21 parity lane release -
 in-build suite 5,171 OK / 36 expected skips, `ce_inputs: []`,
@@ -1410,6 +1482,136 @@ CE asset bytes are copied.
   (16,896,995 bytes) in the run folder, the payload inventory and
   the portable ZIP. Field test of the tick sounds on a live game
   is pending.
+
+**0.51 released (build `native-20261115T023110Z-4ed2835e`, cut from `main` @
+`35542f4`, 2026-11-15): the post-0.50 residual-census
+ratification lane (tests only, zero catalog delta) - the five
+remaining unrated residual classes of the 193-row catalog
+census (`blocked-catalog-050-provider21`) pinned as blocked
+by design, so every remaining residual row is now covered by
+a documented gate or a 0.44-0.51 ratification lane.**
+0.51 pins the five remaining unrated residual classes of
+the 193-row catalog census
+(`blocked-catalog-050-provider21`) as blocked by design -
+every other residual row is already covered by a
+documented gate or by a 0.44-0.50 ratification lane.
+`tests/test_native_residual_ratification.py` (13 tests,
+6 clusters, synthetic fixtures mirroring the real-table
+shapes, no real-table path references) pins, per
+cluster, the exact block reason as measured in the census
++ the counter-proof that the rows resolve once the
+documented condition is met (no hidden second gate):
+DS2 `KeyHandlerThread` x11 (87498 / 87500 / 87502 /
+87507 / 87508 / 87509 / 87510 / 87511 / 87513 / 87514 /
+87516 - every record allocates the SAME symbol name
+`KeyHandlerThread` through a Lua-generated
+`alloc(KeyHandlerThread, 0x1000, process)` line
+(`process` is the CE module-name Lua global,
+ProcessHandlerUnit.pas L186-189) and registers / releases
+it in the static `{$asm}` envelope; the static program
+never lists the Lua-generated allocation, so each
+record's own `dealloc` drops to `unowned_cleanup_dropped`
+in the first pass, and the 0.42 cleanup-parity re-check
+then finds the name live-registered by every other
+supported record and re-blocks each record with the
+prefixed WP-37 handover refusal, owner = first other
+entry in entry order (the mutual 87498 <-> 87500
+attribution of the census); CE 7.5 breaks the same way at
+runtime - the later record's `registersymbol` overwrites
+the shared name, so the earlier record's disable-phase
+`dealloc` frees the later record's live thread block: the
+table is a one-record-at-a-time test harness, and the
+static model cannot prove multi-activation safety;
+counter-proofs: a single record stays supported and
+per-record unique alloc names resolve every record),
+AtomicHeart-Win64-Shipping 73 "Unlimited Energy" (the
+DISABLE line
+`unregistersymbol(energyBkp)dealloc(newmem)` glues a second
+directive onto the first: CE 7.5 consumes the whole line
+at the first directive (the unregistersymbol handler,
+autoassembler.pas L2492-2525) and silently discards the
+glued dealloc - a leaked block, the record works - while
+CT2Trainer keeps the named parse refusal because teaching
+the parser to swallow trailing directive content would
+mask real authoring errors; counter-proof: the same
+record with the directives on separate lines), P3R-v4 229
+"No money lost weapon/crane?"
+(`reassemble(moneylost_gain+4,5)` - CE 7.5 reassemble is
+single-argument, autoassembler.pas L2413-2452;
+rsWrongSyntaxReAssemble "Wrong syntax.
+Reassemble(address)", L113, so the trailing `,5` breaks
+the address expression even in CE; counter-proof: the
+single-argument form), Cyberpunk2077 159 "Find Name"
+(`assert(true)` - CE 7.5 assert requires the two-argument
+`assert(address, bytestring)` form (autoassembler.pas
+L2023-2030) and raises
+rsWrongSyntaxASSERTAddress1122335566 for the comma-less
+line; the record is a debug helper whose Lua lookup runs
+first and whose assert then fails - broken in CE as well;
+counter-proof: the two-argument form), TheSinkingCity
+Remastered 258084 "Fast Travel" (the DISABLE phase writes
+`bFastTravel: db 0` to the record's own ENABLE
+`globalalloc(bFastTravel,1,$process)` with changed bytes:
+in CE the global persists session-lifetime and the line
+is a plain data write (the record works), while
+CT2Trainer's O19 shared-global contract (RT-4.5,
+`global_alloc.py` - a direct global cursor on an
+initialized global in DISABLE starts a reset that must
+repeat the exact ENABLE initializer bytes: equal or empty
+= CE no-op, changed = named changed-reinitialization
+refusal) deliberately fails closed because the engine's
+global-pool lifecycle and recovery journal do not journal
+a changed re-initialization; counter-proof: repeating the
+exact ENABLE initializer), Little Kitty, Big City 1 / 2
+(the `usemono()` directive on the first static envelope
+line targets a Cheat Engine newer than 7.5 - out of
+parity scope by design, here in the Static AA envelope
+prefix form (the plain form is pinned by the 0.50
+ForgottonAnne cluster); counter-proof: the record without
+the directive). +13 tests; full main suite 5,184 OK / 36
+expected skips; in-build suite 5,184 OK / 36 expected
+skips, `ce_inputs: []`; catalog remeasure
+`blocked-catalog-051-residual`: 117,809 total / 117,616
+supported / 12,974 headings / 104,467 actionable / 193
+blocked (zero delta vs `blocked-catalog-050-provider21`:
+record-level diff per table - zero count diffs, zero
+newly blocked, zero unblocked, zero reason changes, all
+151 tables byte-identical); the build ran unsigned by
+default (`code_signing` report: converter / master signed
+false, reason not-configured - no certificate on this
+machine; the signed path activates with a user-supplied
+trusted-CA PFX); source ZIP
+`CT2Trainer-0.51-source.zip` sha256
+`a1cc1b3eb33aca8ff7a041d999f5714a84aec238e782f396f5e6eb7385d4f525`
+(14,717,423 bytes) - carries the post-0.50
+residual-census ratification lane
+(`tests/test_native_residual_ratification.py`) - and
+portable ZIP
+`CT2Trainer-0.51-windows-portable.zip` sha256
+`53923298adf229d526995274c98f3bd7476d124ca2d0fc13577392571395a675`
+(49,894,393 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256
+`1dff59f006370da718ecf343e66d6cdf78ad7b462bb7468348a4dbbdeb5893bb`,
+17,071,049 bytes) ships next to the converter). The
+remaining 193 blocked rows are the documented design /
+gate residuals (80 `BaseAddress` by design until the
+documented user import, 28 DS2 encoded-Lua + 15
+CatValues out of scope, 17 class-d value-symbol rows
+ratified by the 0.49 import-ratification lane, 2
+HeroHealthVFTable out of scope, 17
+no-unique-supported-provider rows ratified by the 0.50
+Provider-21 lane, 11 KeyHandlerThread WP-37 external
+ownership ratified by the 0.51 lane, 6 RE2 AP-08.7
+custom value types, 4 usemono > 7.5 out of parity scope
+(ForgottonAnne x2 by the 0.50 lane + Little Kitty x2 by
+the 0.51 lane), 2 + 2 relative-ancestor refusals kept by
+design, 2 createthread / threadWait RT-5G, 1 pBase Cronos,
+1 trailing-token (the rayman `Made by` row, by design), 5
+single-row named AA-syntax / DISABLE re-init refusals
+(AtomicHeart 73 / Cyberpunk2077 159 / P3R-v4 229 /
+TheSinkingCity 258084 ratified by the 0.51 lane; the
+Cyberpunk2077 259 `$proces` typo row by the 0.50
+lane)).
 
 **0.50 released (build `native-20261114T223759Z-086989d6`, cut from `main` @
 `4f747ce`, 2026-11-14): the Provider-21 parity lane against the
