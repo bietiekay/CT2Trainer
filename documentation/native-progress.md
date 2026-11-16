@@ -3613,14 +3613,29 @@ exact originals and retain the `retired` terminal receipt; the
 normal close after exit confirms cleanup), plus the recorded
 live-close fence (see above). The x86 source-runtime run is
 **machine-gated pending**: the fresh unsigned x86 target fails
-`CreateProcess` with WinError 740 (Smart App Control first-launch
-review of this specific binary; prior x86 fixture binaries launch
-fine from Python) - the x86 pins are static-verified (target hash,
-independent bounded PE header re-check, plan fingerprint, RVAs
-cross-proven against the x64 runtime metadata) and the engine
-semantics are architecture-neutral. The x86 run is recorded after
-the pending SAC prompt is approved, or together with the frozen
-re-run.
+process creation with WinError 740 on this machine - a name +
+architecture launch-block heuristic, not a first-launch review
+of this specific binary: any x86 executable with a "patch"-like
+name is refused regardless of content, path, parent or caller
+context (the x86 gate target, a different x86 binary under the
+same name and the codepatch / mypatch / patchtool probes are
+refused - python, cmd and the WMI spawn alike - while x64
+binaries with the same names, x86 binaries with clean names and
+"dispatch" launch fine). The Smart App Control first-launch
+hypothesis is refuted: the SAC registry state is off / never
+enabled, there is no
+Microsoft-Windows-SmartAppControl/Operations log, no block
+events in any accessible log, and the user's prompt approval did
+not clear the block; AppLocker / WDAC / SRP are absent or empty,
+no MOTW/ADS, no elevation manifest in any fixture EXE, and no
+third-party AV/EDR service is present. The x86 pins are
+static-verified (target hash, independent bounded PE header
+re-check, plan fingerprint, RVAs cross-proven against the x64
+runtime metadata) and the engine semantics are
+architecture-neutral. The x86 run is recorded once the
+machine's name + architecture block is cleared (user machine
+action) or under the clean-machine protocol, together with the
+frozen re-run.
 
 +24 tests (`tests/test_native_codepatch_probe.py` 18 - plan / pin
 binding, PE admission, metadata / status contracts, bounded JSON

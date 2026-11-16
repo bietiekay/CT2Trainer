@@ -391,12 +391,25 @@ game-facing action.
   the target and preserves `state.lock` / `session.json` /
   `state.json` / the `enabled`-state executable journal
   across the target exit). The x86 source-runtime run is
-  machine-gated pending (WinError 740 Smart App Control
-  first-launch review of the fresh unsigned x86 target; the
-  x86 pins are static-verified and the engine semantics are
-  architecture-neutral); the x86 run and the frozen re-run
-  (the generated trainers, `frozen_runtime: true`) of both
-  architectures happen at the next release cut. +24 tests
+  machine-gated pending (WinError 740 at process creation on
+  this machine - a name + architecture launch-block
+  heuristic: any x86 executable with a "patch"-like name is
+  refused regardless of content, path, parent or caller
+  context (a different x86 binary under the same name and the
+  codepatch / mypatch / patchtool probes are refused, while
+  x64 binaries with the same names, x86 with clean names and
+  "dispatch" pass); the SAC first-launch hypothesis is
+  refuted - SAC registry state off / never enabled, no SAC
+  operations log, no block events, the user's prompt approval
+  did not clear the block - and AppLocker / WDAC / SRP are
+  absent or empty, no MOTW, no elevation manifest, no
+  third-party AV/EDR; the x86 pins are static-verified and
+  the engine semantics are architecture-neutral); the x86
+  run happens once the machine's name + architecture block is
+  cleared (user machine action) or under the clean-machine
+  protocol, together with the frozen re-run (the generated
+  trainers, `frozen_runtime: true`) of both architectures at
+  the next release cut. +24 tests
   (`tests/test_native_codepatch_probe.py` 18 - plan / pin
   binding, PE admission, metadata / status contracts,
   bounded JSON receive, owned-child cleanup authority,

@@ -165,17 +165,27 @@ git-ignored):
   `state.json` (both saved wishes) / the `enabled`-state executable
   journal all preserved across the subsequent target exit).
 - x86: **machine-gated pending** - the fresh unsigned x86 target fails
-  `CreateProcess` with WinError 740 (Smart App Control first-launch
-  review; prior x86 fixture binaries launch fine from Python, so the
-  block is the first-launch review of this specific binary, not a
-  machine-wide x86 restriction). The x86 pins are static-verified
-  (target hash, PE machine via the independent bounded header
-  re-check, plan fingerprint, RVAs cross-proven against the x64
-  runtime metadata), and the engine semantics are architecture-neutral
-  (the x64 run proves every check except the architecture-specific
-  probe prologue bytes and RVAs, which are byte-pinned). The x86
-  source-runtime run is to be recorded after the pending SAC prompt is
-  approved, or together with the frozen re-run.
+  process creation with WinError 740 on this machine. The block is a
+  name + architecture launch-block heuristic, not a first-launch
+  review of this specific binary: any x86 executable with a
+  "patch"-like name is refused regardless of content, path, parent or
+  caller context (the x86 gate target, a different x86 binary under
+  the same name and the codepatch / mypatch / patchtool probes are
+  refused, while x64 binaries with the same names, x86 binaries with
+  clean names and "dispatch" launch fine). The Smart App Control
+  first-launch hypothesis is refuted (SAC registry state off / never
+  enabled, no SAC operations log, no block events, the user's prompt
+  approval did not clear the block); AppLocker / WDAC / SRP are absent
+  or empty, no MOTW, no elevation manifest in any fixture EXE, no
+  third-party AV/EDR service. The x86 pins are static-verified (target
+  hash, PE machine via the independent bounded header re-check, plan
+  fingerprint, RVAs cross-proven against the x64 runtime metadata),
+  and the engine semantics are architecture-neutral (the x64 run
+  proves every check except the architecture-specific probe prologue
+  bytes and RVAs, which are byte-pinned). The x86 source-runtime run
+  is to be recorded once the machine's name + architecture block is
+  cleared (user machine action) or under the clean-machine protocol,
+  together with the frozen re-run.
 
 The frozen re-run (the generated trainers, `frozen_runtime: true`) of
 both architectures happens at the next release cut, following the

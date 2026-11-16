@@ -644,11 +644,23 @@ per `global_probe.py`) verified in the source runtime - x64 passed
 true`, `ce_implementation_inputs: []`, `owned_markers_absent:
 true`; full RT-5 item B `code_patch` lifecycle against a live
 owned target incl. the recorded live-close fence), the x86
-source-runtime run machine-gated pending (WinError 740 Smart App
-Control first-launch review of the fresh unsigned x86 target),
-+24 tests, full main suite 5,227 OK / 36 expected skips, catalog
-unchanged at the `blocked-catalog-luacall-binding` baseline,
-frozen re-run of both architectures at the next release cut;
+source-runtime run machine-gated pending (WinError 740 at
+process creation on this machine - a name + architecture
+launch-block heuristic: any x86 executable with a "patch"-like
+name is refused regardless of content, path, parent or caller
+context (a different x86 binary under the same name and the
+codepatch / mypatch / patchtool probes are refused while x64
+binaries with the same names, x86 with clean names and
+"dispatch" pass); the SAC first-launch hypothesis is refuted -
+SAC registry state off / never enabled, no SAC operations log,
+no block events, the user's prompt approval did not clear the
+block - and AppLocker / WDAC / SRP are absent or empty, no
+MOTW, no elevation manifest, no third-party AV/EDR; the x86
+pins are static-verified and the engine semantics are
+architecture-neutral), +24 tests, full main suite 5,227 OK / 36
+expected skips, catalog unchanged at the
+`blocked-catalog-luacall-binding` baseline, frozen re-run of
+both architectures at the next release cut;
 superseded 0.52, build `native-20261115T070952Z-14405931` cut
 from `main` @ `26e6ebc`, 2026-11-15, in-build suite 5,197 OK / 36
 expected skips, `ce_inputs:
@@ -1342,13 +1354,26 @@ target refuses with a `False` return and the exact
 "code-patch-restore-mismatch" reason, touches nothing and
 preserves `state.lock` / `session.json` / `state.json` / the
 `enabled`-state executable journal across the target exit);
-the x86 source-runtime run is machine-gated pending (WinError
-740 Smart App Control first-launch review of the fresh
-unsigned x86 target; the x86 pins are static-verified and the
-engine semantics are architecture-neutral) - the x86 run and
+the x86 source-runtime run is machine-gated pending
+(WinError 740 at process creation on this machine - a name +
+architecture launch-block heuristic: any x86 executable with
+a "patch"-like name is refused regardless of content, path,
+parent or caller context (a different x86 binary under the
+same name and the codepatch / mypatch / patchtool probes are
+refused while x64 binaries with the same names, x86 with
+clean names and "dispatch" pass); the SAC first-launch
+hypothesis is refuted - SAC registry state off / never
+enabled, no SAC operations log, no block events, the user's
+prompt approval did not clear the block - and AppLocker /
+WDAC / SRP are absent or empty, no MOTW, no elevation
+manifest, no third-party AV/EDR; the x86 pins are
+static-verified and the engine semantics are
+architecture-neutral) - the x86 run happens once the
+machine's name + architecture block is cleared (user machine
+action) or under the clean-machine protocol, together with
 the frozen re-runs (the generated trainers,
-`frozen_runtime: true`) of both architectures happen at the
-next release cut; +24 tests (`tests/test_native_codepatch_probe.py`
+`frozen_runtime: true`) of both architectures at the next
+release cut; +24 tests (`tests/test_native_codepatch_probe.py`
 18 + `tests/test_native_codepatch_launcher.py` 6); full main
 suite 5,227 OK / 36 expected skips; catalog unchanged
 (`blocked-catalog-luacall-binding`): 117,616 supported / 193

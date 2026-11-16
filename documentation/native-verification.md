@@ -512,13 +512,24 @@ fence (a blocked live close on a third owned target refuses with a
 `False` return and the exact "code-patch restore mismatch" reason,
 touches nothing in the target and preserves every receipt across
 the target exit). The x86 source-runtime run is machine-gated
-pending: the fresh unsigned x86 target fails `CreateProcess` with
-WinError 740 (Smart App Control first-launch review of this
-specific binary; prior x86 fixture binaries launch fine from
-Python) - the x86 pins are static-verified and the engine
-semantics are architecture-neutral; the x86 run is recorded after
-the pending SAC prompt is approved, or together with the frozen
-re-run. The frozen re-run (the generated trainers,
+pending: the fresh unsigned x86 target fails process creation
+with WinError 740 on this machine - a name + architecture
+launch-block heuristic, not a first-launch review of this
+specific binary: any x86 executable with a "patch"-like name is
+refused regardless of content, path, parent or caller context
+(the x86 gate target, a different x86 binary under the same name
+and the codepatch / mypatch / patchtool probes are refused while
+x64 binaries with the same names, x86 with clean names and
+"dispatch" launch fine); the Smart App Control first-launch
+hypothesis is refuted (SAC registry state off / never enabled,
+no SAC operations log, no block events, the user's prompt
+approval did not clear the block) and AppLocker / WDAC / SRP are
+absent or empty, no MOTW, no elevation manifest, no third-party
+AV/EDR - the x86 pins are static-verified and the engine
+semantics are architecture-neutral; the x86 run is recorded once
+the machine's name + architecture block is cleared (user machine
+action) or under the clean-machine protocol, together with the
+frozen re-run. The frozen re-run (the generated trainers,
 `frozen_runtime: true`) of both architectures happens at the next
 release cut, following the eight-lane precedent. Full record in
 `tests/windows/codepatch_fixture/README.md`. Real-game,
