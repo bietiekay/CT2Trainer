@@ -334,10 +334,89 @@ game-facing action.
   fixture runtime
   evidence" in `documentation/native-progress.md` and the
   verified-gates record in
-  `tests/windows/clock_fixture/README.md`). Full main suite
-  5,203 OK / 36 expected skips (the 0.52.1 content set: +6
-  global-gate launcher tests). Real-game and clean-machine /
-  Deck / Proton acceptance stay open.
+  `tests/windows/clock_fixture/README.md`). The owned
+  code-patch gate (fresh x64 + x86 targets
+  `NativeCodePatchFixture.exe`, the ninth Windows function
+  gate) was verified 2026-11-16 in the source runtime (repo
+  `main` @ `a4e805d`, post-0.52.1; both targets built from
+  the owned source through the directory's committed recipe
+  `tests/windows/codepatch_fixture/Invoke-CodePatchFixtureBuild.ps1`,
+  MSVC `cl` 19.44.35229, run
+  `native-codepatch-fixture-20261116T032022Z-bdd3`,
+  `build.json` schema
+  `ct2trainer-owned-codepatch-build/v1` status `passed`,
+  `ce_inputs: []`; x64 EXE sha256
+  `3f217da553159221216db43c6c8e83481d5da2869edcdf68ca4f66980a9b891f`
+  (147,456 B, PE machine 0x8664), x86 EXE sha256
+  `288855467feab361c2d27a64a4ff68bb73687923d8e3984003a3c7fe77ae6a85`
+  (PE machine 0x14C); the x64 RVAs were measured from the
+  live target's metadata line and the x86 RVAs measured
+  statically by a PE section walk cross-proven byte-exact
+  against the x64 runtime metadata): both pinned CTs
+  (`tests/fixtures/codepatch/` - four `<CodeEntry>`
+  `code_patch` records each, counts `{total: 4, supported:
+  4, actionable: 0, blocked: 0, headings: 0}`) compile to
+  the pinned canonical plans (x64 plan file sha256
+  `cef82a71b2cf082a7764f0fd203a47634106468001f3a0eee5496e1dde9360c8`,
+  plan fingerprint
+  `6b0ce466529127e1497cc1e47e7ca4d3bbaba198564c1bbb701b4c57155cffa3`;
+  x86 plan fingerprint
+  `c67846921cafeedb36387e465efa88fdaa95e80c7526bc485df817b8d6a28061`),
+  and the x64 gate re-run through the source-runtime
+  launcher (`--plan` / `--codepatch-fixture-target` /
+  `--codepatch-fixture-report`) passed 14/14 checks (report
+  `ct2trainer-owned-codepatch/v1` `passed`, `source_runtime:
+  true`, `frozen_runtime: false`,
+  `ce_implementation_inputs: []`, `owned_markers_absent:
+  true`; plan + report under
+  `build\windows-fixture\codepatch-check-20261116T082357Z\`):
+  data-page publish / capture / restore through the ordinary
+  transaction, the overlapping-record refusal with zero
+  writes, the target-changed refusal with zero writes, the
+  already-active adoption with no-write disable, the
+  executable-page routing through the verified hook
+  coordinator with the target's own protocol executing the
+  patched entry, the restore-mismatch engine block, the
+  blocked engine's action + second-controller refusals,
+  target-exit finalization of the blocked session through
+  `close-after-blocked` (journal unlinked on identity-
+  confirmed exit, `state.lock` / `session.json` released,
+  both saved wishes persisted), the saved-ON replay of both
+  routes on a fresh identity, the replayed disables with
+  the retained `retired` terminal receipt and the normal
+  close after exit - plus the dedicated recorded live-close
+  fence (a blocked live close on a third owned target
+  refuses with a `False` return and the exact
+  "code-patch-restore-mismatch" reason, touches nothing in
+  the target and preserves `state.lock` / `session.json` /
+  `state.json` / the `enabled`-state executable journal
+  across the target exit). The x86 source-runtime run is
+  machine-gated pending (WinError 740 Smart App Control
+  first-launch review of the fresh unsigned x86 target; the
+  x86 pins are static-verified and the engine semantics are
+  architecture-neutral); the x86 run and the frozen re-run
+  (the generated trainers, `frozen_runtime: true`) of both
+  architectures happen at the next release cut. +24 tests
+  (`tests/test_native_codepatch_probe.py` 18 - plan / pin
+  binding, PE admission, metadata / status contracts,
+  bounded JSON receive, owned-child cleanup authority,
+  failed-report guarantees;
+  `tests/test_native_codepatch_launcher.py` 6 - the house
+  admission pair, orphan / mixed-gate refusal, frozen
+  embedded-plan refusal); full main suite 5,227 OK / 36
+  expected skips; catalog unchanged at the
+  `blocked-catalog-luacall-binding` baseline (117,809 total
+  / 117,616 supported / 193 blocked - the lane touches no
+  table-parsing path; the release allowlist in
+  `tools/native_build.py` gains the two codepatch CTs + the
+  `tests/windows/codepatch_fixture` directory). See the
+  ledger section "Windows code-patch fixture runtime
+  evidence (2026-11-16, owned code-patch gate verified in
+  the source runtime, x64; x86 machine-gated pending)" in
+  `documentation/native-progress.md` and the
+  verified-gates record in
+  `tests/windows/codepatch_fixture/README.md`. Real-game and
+  clean-machine / Deck / Proton acceptance stay open.
 - 0.21 Master Trainer (2026-10-31, branch
   `native-0.20-master-trainer`, merged `main` @ `9a725a8`; released in
   build `native-20261031T211046Z-14707e12` - in-build suite 4,044 OK

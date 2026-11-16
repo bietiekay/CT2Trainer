@@ -634,10 +634,22 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-15, 0.52.1 released - build
+**CT2Trainer (status 2026-11-16, 0.52.1 released - build
 `native-20261115T181026Z-00f5dfe8` cut from `main` @ `dc138e0`,
 2026-11-15, in-build suite 5,203 OK / 36 expected skips, `ce_inputs:
-[]`; superseded 0.52, build `native-20261115T070952Z-14405931` cut
+[]`; post-0.52.1 (2026-11-16) the owned code-patch fixture gate
+(the 9th Windows function gate, RT-6 fixture-owned, house pattern
+per `global_probe.py`) verified in the source runtime - x64 passed
+14/14 (report `ct2trainer-owned-codepatch/v1`, `source_runtime:
+true`, `ce_implementation_inputs: []`, `owned_markers_absent:
+true`; full RT-5 item B `code_patch` lifecycle against a live
+owned target incl. the recorded live-close fence), the x86
+source-runtime run machine-gated pending (WinError 740 Smart App
+Control first-launch review of the fresh unsigned x86 target),
++24 tests, full main suite 5,227 OK / 36 expected skips, catalog
+unchanged at the `blocked-catalog-luacall-binding` baseline,
+frozen re-run of both architectures at the next release cut;
+superseded 0.52, build `native-20261115T070952Z-14405931` cut
 from `main` @ `26e6ebc`, 2026-11-15, in-build suite 5,197 OK / 36
 expected skips, `ce_inputs:
 []`; superseded 0.51, build `native-20261115T023110Z-4ed2835e` cut
@@ -1288,7 +1300,67 @@ user-supplied trusted-CA PFX; catalog unchanged
 blocked (zero delta vs the 0.52 baseline - this cycle touches no
 table-parsing path; the remaining 193 blocked rows are the
 documented design / gate residuals of the 0.51 residual census,
-unchanged). Superseded 0.52 build:
+unchanged). Post-0.52.1 (2026-11-16, lane work - no release
+cut): the owned code-patch fixture gate (the 9th Windows
+function gate, RT-6 fixture-owned, house pattern per
+`global_probe.py`) verified in the source runtime -
+`tests/windows/codepatch_fixture/codepatch_target.c` + the
+directory's committed recipe
+`Invoke-CodePatchFixtureBuild.ps1` (MSVC `cl` 19.44.35229, run
+`native-codepatch-fixture-20261116T032022Z-bdd3`,
+`ct2trainer-owned-codepatch-build/v1` status `passed`,
+`ce_inputs: []`; x64 EXE sha256
+`3f217da553159221216db43c6c8e83481d5da2869edcdf68ca4f66980a9b891f`
+147,456 B / x86 EXE sha256
+`288855467feab361c2d27a64a4ff68bb73687923d8e3984003a3c7fe77ae6a85`),
+the two pinned CTs in `tests/fixtures/codepatch/` (four
+`<CodeEntry>` `code_patch` records each, 4 supported / 0
+blocked; x64 plan file sha256
+`cef82a71b2cf082a7764f0fd203a47634106468001f3a0eee5496e1dde9360c8`),
+the new pure gate `src/ct2trainer/native/codepatch_probe.py`
+(report schema `ct2trainer-owned-codepatch/v1`) + the
+`--codepatch-fixture-target` / `--codepatch-fixture-report`
+launcher pair in `launcher.py` (orphan flag or a mixed gate
+refused before the plan is read): the x64 source-runtime run
+passed 14/14 checks (`source_runtime: true`,
+`frozen_runtime: false`, `ce_implementation_inputs: []`,
+`owned_markers_absent: true`; plan + report under
+`build\windows-fixture\codepatch-check-20261116T082357Z\`) -
+the full RT-5 item B `code_patch` lifecycle against a live
+owned target (data-page publish / capture / restore, overlap
+refusal, target-changed refusal, already-active adoption,
+executable-page routing through the verified hook coordinator
+with the target's own protocol executing the patched entry,
+the restore-mismatch engine block, the blocked engine's
+action + second-controller refusals, target-exit
+finalization of the blocked session through
+`close-after-blocked` with both saved wishes persisted,
+saved-ON replay of both routes on a fresh identity, replayed
+disables, normal close after exit) + the dedicated recorded
+live-close fence (a blocked live close on a third owned
+target refuses with a `False` return and the exact
+"code-patch-restore-mismatch" reason, touches nothing and
+preserves `state.lock` / `session.json` / `state.json` / the
+`enabled`-state executable journal across the target exit);
+the x86 source-runtime run is machine-gated pending (WinError
+740 Smart App Control first-launch review of the fresh
+unsigned x86 target; the x86 pins are static-verified and the
+engine semantics are architecture-neutral) - the x86 run and
+the frozen re-runs (the generated trainers,
+`frozen_runtime: true`) of both architectures happen at the
+next release cut; +24 tests (`tests/test_native_codepatch_probe.py`
+18 + `tests/test_native_codepatch_launcher.py` 6); full main
+suite 5,227 OK / 36 expected skips; catalog unchanged
+(`blocked-catalog-luacall-binding`): 117,616 supported / 193
+blocked (the lane touches no table-parsing path; the release
+allowlist in `tools/native_build.py` gains the two codepatch
+CTs + the `tests/windows/codepatch_fixture` directory); see
+the ledger section "Windows code-patch fixture runtime
+evidence (2026-11-16, owned code-patch gate verified in the
+source runtime, x64; x86 machine-gated pending)" in
+documentation/native-progress.md and the verified-gates
+record in `tests/windows/codepatch_fixture/README.md`.
+Superseded 0.52 build:
 `native-20261115T070952Z-14405931` (0.52, cut
 from `main` @ `26e6ebc`, 2026-11-15; in-build suite 5,197 OK / 36
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept

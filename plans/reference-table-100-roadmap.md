@@ -1553,6 +1553,101 @@ git-ignored `build\windows-fixture\frozen-check-20261115T183206Z\`;
 see the "Verified frozen ..." records in the string / x86
 debug-hook / hook / global fixture READMEs).
 
+Windows code-patch fixture runtime evidence (2026-11-16, RT-6
+fixture-owned portion, source runtime, repo `main` @ `a4e805d`
+(post-0.52.1; the code-patch lane is uncommitted at
+measurement time) on Windows NT 10.0.26300.0 x64, MSVC `cl`
+19.44.35229 BuildTools 2022): the 9th Windows function gate
+(house pattern per `global_probe.py`) - the owned code-patch
+fixture `tests/windows/codepatch_fixture/codepatch_target.c`
+(sha256
+`89f1bef4b4f59fbd6653bd9eb1ff6777d321c740bde30d2741f7af56fe7a52e9`,
+7,679 B; recipe
+`Invoke-CodePatchFixtureBuild.ps1` sha256
+`27f627e804c33f8214f3a6203ee90c75dad67dfa493c23224019413f7ef1c27d`)
+built for x64 + x86 into run
+`native-codepatch-fixture-20261116T032022Z-bdd3` (`build.json`
+schema `ct2trainer-owned-codepatch-build/v1` status `passed`,
+`ce_inputs: []`; x64 EXE sha256
+`3f217da553159221216db43c6c8e83481d5da2869edcdf68ca4f66980a9b891f`
+147,456 B / x86 EXE sha256
+`288855467feab361c2d27a64a4ff68bb73687923d8e3984003a3c7fe77ae6a85`),
+the two pinned CTs `tests/fixtures/codepatch/` (four
+`<CodeEntry>` `code_patch` records each, zero blocks /
+warnings; x64 CT sha256
+`3219ee42a0cab3f40a66fce762c62c6e0b49140e91fcff671759e8354d78bc31`,
+x64 plan file sha256
+`cef82a71b2cf082a7764f0fd203a47634106468001f3a0eee5496e1dde9360c8`,
+x86 plan fingerprint
+`c67846921cafeedb36387e465efa88fdaa95e80c7526bc485df817b8d6a28061`)
+and the new pure gate `src/ct2trainer/native/codepatch_probe.py`
+(report schema `ct2trainer-owned-codepatch/v1`) + the
+`--codepatch-fixture-target` / `--codepatch-fixture-report`
+launcher pair in `launcher.py` (orphan flag or a mixed gate
+refused before the plan is read, exit 2; the report reserved
+by `run_probe`). The gate exercises the full RT-5 item B
+`code_patch` record lifecycle against a live owned target -
+external-writer simulation through the target's own protocol
+(`setdata A|B <hex>`), effects re-proven by the independent
+`ProcessMemory` reader. Re-run through the source-runtime
+launcher (exit 0; plan + report under
+`build\windows-fixture\codepatch-check-20261116T082357Z\`):
+the x64 report `ct2trainer-owned-codepatch/v1` `passed`,
+`source_runtime: true`, `frozen_runtime: false`,
+`ce_implementation_inputs: []`, `owned_markers_absent: true`,
+14/14 checks (exact-child-image identity + module metadata;
+baseline sentinels; data enable publishes the Actual bytes
+and captures the original; the overlapping record is refused
+with zero writes; data disable restores the captured
+original; the target-changed enable is refused with zero
+writes; the already-active state is adopted without a write
+and the no-write disable leaves the dirty bytes in place; the
+executable enable patches the live entry and the target's own
+protocol executes it with exactly one hook journal; the
+restore mismatch keeps the record applied and blocks the
+engine; the blocked engine refuses actions and a second
+controller's live state claim; target exit finalizes the
+blocked session through `close-after-blocked` (journal
+unlinked on identity-confirmed exit, `state.lock` /
+`session.json` released, both saved wishes persisted); the
+saved-ON replay on a fresh identity re-applies both routes;
+the replayed disables restore the exact originals and retain
+the `retired` terminal receipt; the normal close after exit
+confirms cleanup) plus the dedicated recorded live-close
+fence (a blocked live close on a third owned target refuses
+with a `False` return and the exact
+"code-patch-restore-mismatch" reason, touches nothing in the
+target and preserves `state.lock` / `session.json` /
+`state.json` / the `enabled`-state executable journal across
+the target exit). The x86 source-runtime run is
+**machine-gated pending**: the fresh unsigned x86 target
+fails `CreateProcess` with WinError 740 (Smart App Control
+first-launch review of this specific binary; prior x86
+fixture binaries launch fine from Python) - the x86 pins are
+static-verified (target hash, PE machine via the independent
+bounded header re-check, plan fingerprint, RVAs cross-proven
+byte-exact against the x64 runtime metadata) and the engine
+semantics are architecture-neutral; the x86 run is recorded
+after the pending SAC prompt is approved, or together with
+the frozen re-run (the generated trainers,
+`frozen_runtime: true`) of both architectures at the next
+release cut. This is fixture-owned runtime evidence only:
+pinned-game-build observation, the clean-machine protocol and
+the Deck / Proton / touch protocol remain open per the RT-6
+acceptance, so `runtime_unverified` stays set. +24 tests
+(`tests/test_native_codepatch_probe.py` 18 +
+`tests/test_native_codepatch_launcher.py` 6); full main suite
+5,227 OK / 36 expected skips; catalog unchanged at the
+`blocked-catalog-luacall-binding` baseline (117,616
+supported / 193 blocked - the lane touches no table-parsing
+path; the release allowlist in `tools/native_build.py` gains
+the two codepatch CTs + the
+`tests/windows/codepatch_fixture` directory). Records:
+`tests/windows/codepatch_fixture/README.md` ("Verified owned
+code-patch gate (2026-11-16, source runtime, x64)"),
+`documentation/native-verification.md`, ledger section in
+`documentation/native-progress.md`.
+
 0.52 release record (2026-11-15, run `native-20261115T070952Z-14405931`
 cut from `main` @ `26e6ebc`): the owned luacall binding + the
 Windows scan-fixture lane ship as the 0.52 release - the

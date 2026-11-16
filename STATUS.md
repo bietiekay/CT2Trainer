@@ -1,6 +1,6 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-15. **0.52.1 released** (build
+**Updated:** 2026-11-16. **0.52.1 released** (build
 `native-20261115T181026Z-00f5dfe8`, cut from `main` @
 `dc138e0`, 2026-11-15) - the global-gate frozen-trainer
 launcher pair + the string-fixture re-pin + the release
@@ -47,7 +47,59 @@ Lua-record plan identity identical to the source runtime);
 real-game, clean-machine and Deck / Proton / touch
 acceptance remain open, so `runtime_unverified` stays set
 per the RT-6 acceptance; see the 0.52.1 section below.
-Superseded 0.52 (build
+Post-0.52.1 (2026-11-16): the owned code-patch fixture
+gate (the ninth Windows function gate, RT-6 fixture-owned,
+house pattern per `global_probe.py`) verified in the source
+runtime - `tests/windows/codepatch_fixture/codepatch_target.c`
++ the directory's committed recipe
+`Invoke-CodePatchFixtureBuild.ps1` (MSVC `cl` 19.44.35229,
+run `native-codepatch-fixture-20261116T032022Z-bdd3`,
+`ct2trainer-owned-codepatch-build/v1` status `passed`,
+`ce_inputs: []`; x64 EXE sha256
+`3f217da553159221216db43c6c8e83481d5da2869edcdf68ca4f66980a9b891f`
+147,456 B / x86 EXE sha256
+`288855467feab361c2d27a64a4ff68bb73687923d8e3984003a3c7fe77ae6a85`),
+the two pinned CTs in `tests/fixtures/codepatch/` (four
+`<CodeEntry>` `code_patch` records each, 4 supported / 0
+blocked), the new pure gate `codepatch_probe.py` (report
+schema `ct2trainer-owned-codepatch/v1`) + the
+`--codepatch-fixture-target` / `--codepatch-fixture-report`
+launcher pair in `launcher.py` (orphan flag or a mixed gate
+refused before the plan is read): the x64 source-runtime run
+passed 14/14 checks (`source_runtime: true`,
+`frozen_runtime: false`, `ce_implementation_inputs: []`,
+`owned_markers_absent: true`) - the full RT-5 item B
+`code_patch` lifecycle against a live owned target
+(data-page publish / capture / restore, overlap refusal,
+target-changed refusal, already-active adoption,
+executable-page routing through the verified hook
+coordinator with the target's own protocol executing the
+patched entry, the restore-mismatch engine block, the
+blocked engine's action + second-controller refusals,
+target-exit finalization of the blocked session through
+`close-after-blocked` with both saved wishes persisted,
+saved-ON replay of both routes on a fresh identity,
+replayed disables, normal close after exit) + the
+dedicated recorded live-close fence (a blocked live close
+on a third owned target refuses with a `False` return and
+the exact reason, touches nothing and preserves
+`state.lock` / `session.json` / `state.json` / the
+`enabled`-state executable journal across the target
+exit); the x86 source-runtime run is machine-gated pending
+(WinError 740 Smart App Control first-launch review of the
+fresh unsigned x86 target; the x86 pins are
+static-verified and the engine semantics are
+architecture-neutral) - the x86 run and the frozen
+re-runs of both architectures happen at the next release
+cut; +24 tests; full main suite 5,227 OK / 36 expected
+skips; catalog unchanged at the
+`blocked-catalog-luacall-binding` baseline (117,809 total /
+117,616 supported / 193 blocked - the lane touches no
+table-parsing path; the release allowlist in
+`tools/native_build.py` gains the two codepatch CTs + the
+`tests/windows/codepatch_fixture` directory); real-game,
+clean-machine and Deck / Proton / touch acceptance remain
+open, so `runtime_unverified` stays set. Superseded 0.52 (build
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`,
 2026-11-15) - the owned luacall binding + the Windows
 scan-fixture lane: the production `luacall_binding_factory`

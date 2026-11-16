@@ -465,6 +465,66 @@ admission/relocation, remote control, static / dynamic API
 interception and the game / Proton claims remain open, so
 `runtime_unverified` stays set.
 
+Verified owned code-patch gate, x64 (2026-11-16, source runtime,
+repo `main` @ `a4e805d` post-0.52.1 + the code-patch lane on
+Windows NT 10.0.26300.0 x64, MSVC `cl` 19.44.35229 BuildTools
+2022): the 9th Windows function gate (RT-6 fixture-owned, house
+pattern per `global_probe.py`). The owned code-patch fixture
+(`tests/windows/codepatch_fixture/codepatch_target.c` sha256
+`89f1bef4b4f59fbd6653bd9eb1ff6777d321c740bde30d2741f7af56fe7a52e9`)
+was built for x64 + x86 through the committed recipe
+`Invoke-CodePatchFixtureBuild.ps1` into run
+`build\runs\native-codepatch-fixture-20261116T032022Z-bdd3\`
+(`build.json` schema `ct2trainer-owned-codepatch-build/v1` status
+`passed`, `ce_inputs: []`; x64 EXE sha256
+`3f217da553159221216db43c6c8e83481d5da2869edcdf68ca4f66980a9b891f`,
+x86 EXE sha256
+`288855467feab361c2d27a64a4ff68bb73687923d8e3984003a3c7fe77ae6a85`).
+Both pinned CTs (`tests/fixtures/codepatch/`) compile to the pinned
+canonical plans (4 supported / selected `code_patch` records, zero
+blocks / warnings; x64 plan file sha256
+`cef82a71b2cf082a7764f0fd203a47634106468001f3a0eee5496e1dde9360c8`,
+plan fingerprint
+`6b0ce466529127e1497cc1e47e7ca4d3bbaba198564c1bbb701b4c57155cffa3`;
+x86 plan fingerprint
+`c67846921cafeedb36387e465efa88fdaa95e80c7526bc485df817b8d6a28061`).
+The x64 RVAs were measured from the live target's metadata line;
+the x86 RVAs were measured statically by a PE section walk
+cross-proven byte-exact against the x64 runtime metadata. Re-run
+through the source-runtime launcher (`--plan` /
+`--codepatch-fixture-target` / `--codepatch-fixture-report`, exit
+0; plan + report under
+`build\windows-fixture\codepatch-check-20261116T082357Z\`): the
+x64 report `ct2trainer-owned-codepatch/v1` status `passed`,
+`source_runtime: true`, `frozen_runtime: false`,
+`ce_implementation_inputs: []`, `owned_markers_absent: true`,
+14/14 checks (data-page publish / capture / restore, overlap
+refusal, target-changed refusal, already-active adoption,
+executable-page routing through the verified hook coordinator with
+the target's own protocol executing the patched entry, the
+restore-mismatch engine block, the blocked engine's action and
+second-controller refusals, target-exit finalization of the
+blocked session through `close-after-blocked` with both saved
+wishes persisted, saved-ON replay of both routes on a fresh
+identity, replayed disables with the retained `retired` terminal
+receipt, normal close after exit) plus the recorded live-close
+fence (a blocked live close on a third owned target refuses with a
+`False` return and the exact "code-patch restore mismatch" reason,
+touches nothing in the target and preserves every receipt across
+the target exit). The x86 source-runtime run is machine-gated
+pending: the fresh unsigned x86 target fails `CreateProcess` with
+WinError 740 (Smart App Control first-launch review of this
+specific binary; prior x86 fixture binaries launch fine from
+Python) - the x86 pins are static-verified and the engine
+semantics are architecture-neutral; the x86 run is recorded after
+the pending SAC prompt is approved, or together with the frozen
+re-run. The frozen re-run (the generated trainers,
+`frozen_runtime: true`) of both architectures happens at the next
+release cut, following the eight-lane precedent. Full record in
+`tests/windows/codepatch_fixture/README.md`. Real-game,
+clean-machine and Deck / Proton / touch acceptance remain open, so
+`runtime_unverified` stays set.
+
 ## 5. What is still open
 
 - **Runtime acceptance** stays `runtime_unverified: true` until
