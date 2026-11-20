@@ -1,6 +1,6 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-16. **0.52.1 released** (build
+**Updated:** 2026-11-20. **0.52.1 released** (build
 `native-20261115T181026Z-00f5dfe8`, cut from `main` @
 `dc138e0`, 2026-11-15) - the global-gate frozen-trainer
 launcher pair + the string-fixture re-pin + the release
@@ -47,8 +47,9 @@ Lua-record plan identity identical to the source runtime);
 real-game, clean-machine and Deck / Proton / touch
 acceptance remain open, so `runtime_unverified` stays set
 per the RT-6 acceptance; see the 0.52.1 section below.
-Post-0.52.1 (2026-11-16): the owned code-patch fixture
-gate (the ninth Windows function gate, RT-6 fixture-owned,
+Post-0.52.1 (2026-11-16 + 2026-11-20): the owned code-patch
+fixture gate (the ninth Windows function gate, RT-6
+fixture-owned,
 house pattern per `global_probe.py`) verified in the source
 runtime - `tests/windows/codepatch_fixture/codepatch_target.c`
 + the directory's committed recipe
@@ -85,25 +86,50 @@ on a third owned target refuses with a `False` return and
 the exact reason, touches nothing and preserves
 `state.lock` / `session.json` / `state.json` / the
 `enabled`-state executable journal across the target
-exit); the x86 source-runtime run is machine-gated pending
-(WinError 740 at process creation on this machine - a name +
-architecture launch-block heuristic: any x86 executable with
-a "patch"-like name is refused regardless of content, path,
-parent or caller context (a different x86 binary under the
-same name and the codepatch / mypatch / patchtool probes are
-refused, while x64 binaries with the same names, x86 with
-clean names and "dispatch" pass); the SAC first-launch
-hypothesis is refuted - SAC registry state off / never
-enabled, no SAC operations log, no block events, the user's
-prompt approval did not clear the block - and AppLocker /
-WDAC / SRP are absent or empty, no MOTW, no elevation
-manifest, no third-party AV/EDR; the x86 pins are
-static-verified and the engine semantics are
-architecture-neutral) - the x86 run happens once the
-machine's name + architecture block is cleared (user machine
-action) or under the clean-machine protocol, together with
-the frozen re-runs of both architectures at the next release
-cut; +24 tests; full main suite 5,227 OK / 36 expected
+exit); the x86 source-runtime run passed 14/14 on
+2026-11-20 (report stamp `20261119T235133Z` UTC; plan +
+report under
+`build\windows-fixture\codepatch-x86-check-20261119T235133Z\`,
+git-ignored): x86 report
+`ct2trainer-owned-codepatch/v1` status `passed`,
+`source_runtime: true`, `frozen_runtime: false`,
+`ce_implementation_inputs: []`, `owned_markers_absent:
+true` - the same 14 named checks as the x64 run, all
+passed, against the pinned x86 target (sha256
+`288855467feab361c2d27a64a4ff68bb73687923d8e3984003a3c7fe77ae6a85`,
+PE machine 0x14C / pointer width 32, canonical plan
+fingerprint
+`c67846921cafeedb36387e465efa88fdaa95e80c7526bc485df817b8d6a28061`;
+the live module metadata confirms the static x86 RVA
+measurement byte-exact - marker 0x16190, data_a 0x1D000,
+data_b 0x1D008, overlap 0x1D004, probe 0x11A0 - and the
+target's own protocol executed the patched probe entry
+through the verified hook coordinator with exactly one
+journal; the recorded live-close fence holds - a blocked
+live close on a third owned target refuses with the exact
+`code-patch-restore-mismatch` reason, touches nothing and
+preserves `state.lock` / `session.json` / `state.json` /
+the `enabled`-state executable journal across the target
+exit). Machine note: on this VM the x86 target launches
+only from an elevated parent - a non-elevated
+`CreateProcess` fails with Win32 740 (the name +
+architecture launch-block heuristic: any x86 executable
+with a "patch"-like name was refused regardless of
+content, path, parent or caller context, while x64
+binaries with the same names, x86 with clean names and
+"dispatch" launched fine); the SAC first-launch
+hypothesis is refuted (SAC registry state off / never
+enabled, no SAC operations log, no block events, prompt
+approval ineffective) and AppLocker / WDAC / SRP are
+absent or empty, no MOTW, no elevation manifest, no
+third-party AV/EDR; Windows Defender behavior monitoring
+is the active enforcer on this VM, a Defender exclusion
+for the fixture process + the run paths was added and read
+back as registered during the clearance, and the elevated
+source-runtime run is the recorded evidence; the frozen
+re-run (the generated trainers, `frozen_runtime: true`) of
+both architectures happens at the next release cut. +24
+tests; full main suite 5,227 OK / 36 expected
 skips; catalog unchanged at the
 `blocked-catalog-luacall-binding` baseline (117,809 total /
 117,616 supported / 193 blocked - the lane touches no

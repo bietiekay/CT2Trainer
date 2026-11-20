@@ -3514,9 +3514,9 @@ per the RT-6 acceptance, so `runtime_unverified` stays set per
 (2026-11-15, source runtime)") and
 `documentation/native-verification.md`.
 
-### Windows code-patch fixture runtime evidence (2026-11-16, owned
-code-patch gate verified in the source runtime, x64; x86
-machine-gated pending)
+### Windows code-patch fixture runtime evidence (2026-11-16 +
+2026-11-20, owned code-patch gate verified in the source runtime,
+x64 + x86)
 
 The 9th Windows function gate (RT-6 fixture-owned, house pattern per
 `global_probe.py`) landed as the code-patch fixture:
@@ -3611,31 +3611,51 @@ manager for the executable, transaction for the data, captured
 original still the baseline); the replayed disables restore the
 exact originals and retain the `retired` terminal receipt; the
 normal close after exit confirms cleanup), plus the recorded
-live-close fence (see above). The x86 source-runtime run is
-**machine-gated pending**: the fresh unsigned x86 target fails
-process creation with WinError 740 on this machine - a name +
-architecture launch-block heuristic, not a first-launch review
-of this specific binary: any x86 executable with a "patch"-like
-name is refused regardless of content, path, parent or caller
-context (the x86 gate target, a different x86 binary under the
-same name and the codepatch / mypatch / patchtool probes are
-refused - python, cmd and the WMI spawn alike - while x64
-binaries with the same names, x86 binaries with clean names and
-"dispatch" launch fine). The Smart App Control first-launch
-hypothesis is refuted: the SAC registry state is off / never
-enabled, there is no
-Microsoft-Windows-SmartAppControl/Operations log, no block
-events in any accessible log, and the user's prompt approval did
-not clear the block; AppLocker / WDAC / SRP are absent or empty,
-no MOTW/ADS, no elevation manifest in any fixture EXE, and no
-third-party AV/EDR service is present. The x86 pins are
-static-verified (target hash, independent bounded PE header
-re-check, plan fingerprint, RVAs cross-proven against the x64
-runtime metadata) and the engine semantics are
-architecture-neutral. The x86 run is recorded once the
-machine's name + architecture block is cleared (user machine
-action) or under the clean-machine protocol, together with the
-frozen re-run.
+live-close fence (see above). The x86 source-runtime run
+**passed 14/14** on 2026-11-20 (report stamp
+`20261119T235133Z` UTC; plan + report under
+`build\windows-fixture\codepatch-x86-check-20261119T235133Z\`,
+git-ignored): x86 report `ct2trainer-owned-codepatch/v1` status
+`passed`, `source_runtime: true`, `frozen_runtime: false`,
+`ce_implementation_inputs: []`, `owned_markers_absent: true`,
+launcher exit 0 - the same 14 checks as the x64 run, all
+passed, against the pinned x86 target (sha256
+`288855467feab361c2d27a64a4ff68bb73687923d8e3984003a3c7fe77ae6a85`,
+PE machine 0x14C, pointer width 32, canonical plan fingerprint
+`c67846921cafeedb36387e465efa88fdaa95e80c7526bc485df817b8d6a28061`;
+the live module metadata confirms the static PE-section-walk
+x86 RVA measurement byte-exact - marker 0x16190, data_a
+0x1D000, data_b 0x1D008, overlap 0x1D004, probe 0x11A0 - and
+the target's own protocol executed the patched probe entry
+0x46474849 through the verified hook coordinator with exactly
+one journal), plus the same recorded live-close fence (third
+owned target, `False` return with the exact "code-patch
+restore mismatch: bytes at 0xB8D008 changed externally;
+refusing to overwrite foreign bytes" reason, `data_retained:
+true`, `state.lock` / `session.json` / `state.json` / the
+`enabled`-state executable journal
+`9c23522729b64942bc874f4f302e89c2.json` preserved across the
+target exit). Machine note: on this VM the x86 target launches
+only from an elevated parent - a non-elevated `CreateProcess`
+fails with Win32 740 (the name + architecture launch-block
+heuristic documented above: any x86 executable with a
+"patch"-like name was refused regardless of content, path,
+parent or caller context while x64 binaries with the same
+names, x86 binaries with clean names and "dispatch" launched
+fine; the Smart App Control first-launch hypothesis is
+refuted - SAC registry state off / never enabled, no SAC
+operations log, no block events - AppLocker / WDAC / SRP are
+absent or empty, no MOTW/ADS, no elevation manifest in any
+fixture EXE, no third-party AV/EDR). Windows Defender
+behavior monitoring is the active enforcer on this VM
+(registered AV, PUA protection + realtime + NIS on); a
+Defender exclusion for the fixture process + the run paths was
+added and read back as registered during the clearance, and
+the elevated source-runtime run is the recorded evidence. The
+engine semantics are architecture-neutral; both architecture
+runs now stand as passing source-runtime evidence, and the
+frozen re-run of both architectures happens at the next
+release cut (below).
 
 +24 tests (`tests/test_native_codepatch_probe.py` 18 - plan / pin
 binding, PE admission, metadata / status contracts, bounded JSON
@@ -3658,7 +3678,8 @@ touch acceptance remain open, so `runtime_unverified` stays set per
 `documentation/native-verification.md` section 5 and the roadmap
 RT-6 acceptance. Full record in
 `tests/windows/codepatch_fixture/README.md` ("Verified owned
-code-patch gate (2026-11-16, source runtime, x64)").
+code-patch gate (2026-11-16 + 2026-11-20, source runtime,
+x64 + x86)").
 
 ### 0.52.1 release build record (2026-11-15, run
 `native-20261115T181026Z-00f5dfe8`, cut from `main` @ `dc138e0`)

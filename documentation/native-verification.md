@@ -465,11 +465,13 @@ admission/relocation, remote control, static / dynamic API
 interception and the game / Proton claims remain open, so
 `runtime_unverified` stays set.
 
-Verified owned code-patch gate, x64 (2026-11-16, source runtime,
-repo `main` @ `a4e805d` post-0.52.1 + the code-patch lane on
-Windows NT 10.0.26300.0 x64, MSVC `cl` 19.44.35229 BuildTools
-2022): the 9th Windows function gate (RT-6 fixture-owned, house
-pattern per `global_probe.py`). The owned code-patch fixture
+Verified owned code-patch gate, x64 (2026-11-16) + x86
+(2026-11-20), source runtime, repo `main` @ `a4e805d`
+post-0.52.1 + the code-patch lane (x64, lane uncommitted at
+measurement time) / `main` @ `24ddb71` (x86, lane committed
+`bf30313`) on Windows NT 10.0.26300.0 x64, MSVC `cl`
+19.44.35229 BuildTools 2022: the 9th Windows function gate
+(RT-6 fixture-owned, house pattern per `global_probe.py`). The owned code-patch fixture
 (`tests/windows/codepatch_fixture/codepatch_target.c` sha256
 `89f1bef4b4f59fbd6653bd9eb1ff6777d321c740bde30d2741f7af56fe7a52e9`)
 was built for x64 + x86 through the committed recipe
@@ -511,30 +513,54 @@ receipt, normal close after exit) plus the recorded live-close
 fence (a blocked live close on a third owned target refuses with a
 `False` return and the exact "code-patch restore mismatch" reason,
 touches nothing in the target and preserves every receipt across
-the target exit). The x86 source-runtime run is machine-gated
-pending: the fresh unsigned x86 target fails process creation
-with WinError 740 on this machine - a name + architecture
-launch-block heuristic, not a first-launch review of this
-specific binary: any x86 executable with a "patch"-like name is
-refused regardless of content, path, parent or caller context
-(the x86 gate target, a different x86 binary under the same name
-and the codepatch / mypatch / patchtool probes are refused while
+the target exit). The x86 source-runtime run **passed 14/14**
+on 2026-11-20 (report stamp `20261119T235133Z` UTC; plan +
+report under
+`build\windows-fixture\codepatch-x86-check-20261119T235133Z\`,
+git-ignored): x86 report `ct2trainer-owned-codepatch/v1` status
+`passed`, `source_runtime: true`, `frozen_runtime: false`,
+`ce_implementation_inputs: []`, `owned_markers_absent: true`,
+14/14 checks - the same named checks as the x64 run, against
+the pinned x86 target (sha256
+`288855467feab361c2d27a64a4ff68bb73687923d8e3984003a3c7fe77ae6a85`,
+PE machine 0x14C / pointer width 32, canonical plan
+fingerprint `c67846921cafeedb36387e465efa88fdaa95e80c7526bc485df817b8d6a28061`,
+plan file sha256
+`b5439d46b1febeacb3acc6c2068bca98de60ff00b2ca2943c85551cd2fa412b9`):
+the live module metadata confirms the static x86 RVA
+measurement byte-exact (marker 0x16190, data_a 0x1D000,
+data_b 0x1D008, overlap 0x1D004, probe 0x11A0), the
+executable-page enable routes through the verified hook
+coordinator and the target's own protocol executes the
+patched probe entry 0x46474849, and the dedicated recorded
+live-close fence holds (a blocked live close on a third owned
+target refuses with a `False` return and the exact "code-patch
+restore mismatch" reason, touches nothing in the target and
+preserves `state.lock` / `session.json` / `state.json` / the
+`enabled`-state executable journal across the target exit).
+Machine note: on this VM the x86 target launches only from an
+elevated parent - a non-elevated `CreateProcess` fails with
+Win32 740 (the name + architecture launch-block heuristic:
+any x86 executable with a "patch"-like name was refused
+regardless of content, path, parent or caller context, while
 x64 binaries with the same names, x86 with clean names and
 "dispatch" launch fine); the Smart App Control first-launch
-hypothesis is refuted (SAC registry state off / never enabled,
-no SAC operations log, no block events, the user's prompt
-approval did not clear the block) and AppLocker / WDAC / SRP are
-absent or empty, no MOTW, no elevation manifest, no third-party
-AV/EDR - the x86 pins are static-verified and the engine
-semantics are architecture-neutral; the x86 run is recorded once
-the machine's name + architecture block is cleared (user machine
-action) or under the clean-machine protocol, together with the
-frozen re-run. The frozen re-run (the generated trainers,
-`frozen_runtime: true`) of both architectures happens at the next
-release cut, following the eight-lane precedent. Full record in
+hypothesis is refuted (SAC registry state off / never
+enabled, no SAC operations log, no block events, prompt
+approval ineffective) and AppLocker / WDAC / SRP are absent or
+empty, no MOTW, no elevation manifest, no third-party
+AV/EDR. Windows Defender behavior monitoring is the active
+enforcer on this VM (registered AV, PUA protection +
+realtime + NIS on); a Defender exclusion for the fixture
+process + the run paths was added and read back as registered
+during the clearance, and the source-runtime run was
+performed from an elevated console. The frozen re-run (the
+generated trainers, `frozen_runtime: true`) of both
+architectures happens at the next release cut, following the
+eight-lane precedent. Full record in
 `tests/windows/codepatch_fixture/README.md`. Real-game,
-clean-machine and Deck / Proton / touch acceptance remain open, so
-`runtime_unverified` stays set.
+clean-machine and Deck / Proton / touch acceptance remain
+open, so `runtime_unverified` stays set.
 
 ## 5. What is still open
 
