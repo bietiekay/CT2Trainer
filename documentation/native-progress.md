@@ -3767,6 +3767,120 @@ sha256
 the string / x86 debug-hook / hook / global fixture
 READMEs.
 
+### Code-signing pipeline field verification + two production re-proof fixes (2026-11-21, post-0.52.1, no release cut)
+
+Field observation (2026-11-21, user machine: Windows 11 ROG
+Ally): the 0.52.1 generated trainer is refused by Smart App
+Control before any code executes - the unsigned-binary-by-hash
+refusal documented in the 0.47 field record (no per-app allow,
+the Win11 off switch is one-way). The user-requested UAC
+elevation cannot clear this block: the refusal happens before
+process start (an elevated unsigned binary is refused the same
+way), and the trainer needs no admin rights for a
+same-user-session game attach. The durable remedy stays the
+0.47 code-signing path with a trusted public CA certificate
+(OV or EV); the self-signed test certificate used here is a
+mechanism proof only (the 0.47 record: a self-signed
+certificate does NOT clear Smart App Control).
+
+Mechanical end-to-end verification of the 0.47 signing pipeline
+on this machine (SDK signtool 10.0.26100.0 x64 - discovered by
+the production `find_signtool` under the documented bin root,
+not on PATH; self-signed test PFX 2,638 B, CN=CT2Trainer Sign
+Test, RSA 2048, sha256
+`7980b5126f6031a8d042406353b1e5b2286b6b4c220f1074f55206d2be3988d3`;
+RFC3161 timestamp via the documented default
+`http://timestamp.digicert.com`):
+
+- the production environment seam
+  `code_signing.sign_if_configured` (the documented
+  `CT2TRAINER_SIGN_PFX` / `CT2TRAINER_SIGN_PFX_PASSWORD`
+  contract) signed both 0.52.1 artifacts through the documented
+  signtool argv (`sign /v /f <pfx> /p <pwd> /fd SHA256 /tr
+  <url> /td SHA256`): the frozen master (17,074,203 B, sha256
+  `bd0388cbe45b350ee11117b99e55262ade6906e81e72e28c286fa1e3ddfe8316`)
+  -> 17,081,584 B signed (sha256
+  `bd122cb2a2bed2ed01f3fbc770347e6da6d8c94c13db107424ba7aa418f695a1`),
+  and the frozen string-x64 trainer (16,923,275 B, sha256
+  `7943372c45f2521b93f65ecbe952ef387efa3612e4907b51fa899291e4120bcc`)
+  -> 16,930,656 B signed (sha256
+  `46414630a7234149ccd3e69336c8816dd439fb733e6640c1d4f536d190bafb38`);
+  signtool rc 0, "Number of warnings: 0, Number of errors: 0";
+- the pure `certificate_table` re-proof passed on both signed
+  artifacts (the production seam re-proves the table itself
+  after a reported signtool success): WIN_CERTIFICATE revision
+  0x0200, certificate type 0x0002 (PKCS#7 signed data - the
+  Authenticode type), declared length equal to the security
+  directory size; the certificate table is appended after the
+  PyInstaller overlay (5 bytes of null padding), the security
+  directory RVA carrying the table's file offset (master:
+  0x1048820, string trainer: 0x1023A90);
+- the PyInstaller CArchive cookie is unchanged by the signature
+  (master 0x10487C3, string trainer 0x1022355) and the embedded
+  plan survives behind the appended certificate table:
+  `bundle.read_embedded_plan` (the 0.47 bounded backwards
+  `CT2NATV1` footer scan) returns the identical canonical plan
+  sha256
+  `c0299324e87d1c47cc4fc3f39b9e1a9e90523bd85b0713f1ce6451548923c0f2`
+  as before signing;
+- Windows verifies the signature: `Get-AuthenticodeSignature`
+  on the signed master finds the certificate table, processes
+  the chain and fails only at the trust step (self-signed root -
+  expected for a test certificate; a trusted-CA certificate
+  passes that step, which is the durable SAC fix);
+- the signed master still boots (10 s smoke: PyInstaller onefile
+  extraction + Python + Tk running, no early exit) - the
+  appended certificate table does not disturb the onefile
+  overlay.
+
+Two production defects in the 0.47 pipeline were found by the
+verification and fixed (both fail-closed, both with regression
+tests in `tests/test_native_code_signing.py`):
+
+1. `sign_executable` signtool-argv merge: the resolved signtool
+   path was merged as `{"signtool_path": signtool, **config}` -
+   in a dict literal the later `**config` wins, so the
+   discovery config's own `signtool_path: None` overrode the
+   discovered path and the documented PFX-only contract raised
+   a raw `TypeError` instead of honoring the named-refusal
+   contract. Fixed to `sign_command({**config, "signtool_path":
+   signtool}, path)`; regression test
+   `test_discovered_signtool_path_reaches_the_argv`.
+2. `certificate_table` re-proof refused every real Authenticode
+   signature on two checks: (a) it required `wCertificateType`
+   0x0001 (X.509), but signtool Authenticode signatures carry
+   0x0002 (PKCS#7 signed data - the Authenticode type); (b) it
+   required the security directory RVA to map into a PE
+   section, but signtool's layout for PEs with a file overlay
+   (every frozen trainer is a PyInstaller onefile executable)
+   appends the certificate table after the overlay and sets the
+   security directory RVA to the table's file offset - no
+   section covers that RVA, yet Windows verifies the signature
+   there (proven above with `Get-AuthenticodeSignature`). The
+   walk now accepts type 0x0001 (X.509) or 0x0002 (PKCS#7
+   signed data) and, when no section covers the security
+   directory RVA, applies the same well-formed proof (revision
+   0x0200, declared length equal to the directory size,
+   bounds) to the file offset - a malformed or truncated table
+   at that offset is still the named
+   `sign-verification-failed` refusal. Regression tests:
+   `test_authenticode_pkcs7_certificate_is_proved`,
+   `test_overlay_certificate_appended_after_sections_is_proved`,
+   `test_overlay_fallback_refuses_malformed_certificate`,
+   `test_overlay_fallback_refuses_length_mismatch` (the
+   pre-existing wrong-type test re-pinned to 0x0003).
+
+Full main suite 5,232 OK / 36 expected skips (5,227 + 5 new
+tests; canonical build-env discovery). Catalog unchanged at the
+`blocked-catalog-luacall-binding` baseline (117,809 total /
+117,616 supported / 12,974 headings / 104,467 actionable / 193
+blocked - the lane touches no table-parsing path). No release
+cut: VERSION / CHANGELOG unchanged; the signed release cut
+activates with a user-supplied trusted-CA PFX through the
+documented environment contract (fail-closed: a configured
+signing that fails never ships an unsigned binary). The frozen
+re-runs of the gates stay scheduled for the next release cut.
+
 ### 0.52 release build record (2026-11-15, run
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`)
 

@@ -27,7 +27,13 @@ This module wires that optional signing step into the build
   ``sign-verification-failed``;
 - after a reported signtool success the certificate table of the PE is
   re-proven by the pure :func:`certificate_table` walk (WIN_CERTIFICATE
-  revision 0x0200, certificate type 0x0001).
+  revision 0x0200, certificate type 0x0001 X.509 or 0x0002 PKCS#7 signed
+  data - the Authenticode type - declared length equal to the security
+  directory size; the certificate may sit inside a section or, in the
+  signtool layout for PEs with a file overlay - every frozen trainer is
+  a PyInstaller onefile executable - after the overlay, where the
+  security directory RVA carries the certificate's file offset and the
+  same well-formed proof applies to that fallback).
 """
 from __future__ import annotations
 
@@ -184,7 +190,7 @@ def sign_executable(path, config: dict, run=None) -> dict:
     if not pfx.is_file():
         raise SigningRefusal("sign-certificate-missing",
                              "certificate store file %s does not exist" % pfx)
-    argv = sign_command({"signtool_path": signtool, **config}, path)
+    argv = sign_command({**config, "signtool_path": signtool}, path)
     runner = _subprocess_run if run is None else run
     try:
         result = runner(argv)
@@ -199,6 +205,32 @@ def sign_executable(path, config: dict, run=None) -> dict:
     return {"signtool": str(signtool), "evidence": _output_tail(getattr(result, "stdout", ""))}
 
 
+def _check_certificate(data: bytes, offset: int, size: int) -> dict:
+    """Re-prove the WIN_CERTIFICATE at a file offset.  Fail-closed.
+
+    The declared WIN_CERTIFICATE length must equal the security directory
+    size, the revision must be 0x0200 and the certificate type must be
+    0x0001 (X.509) or 0x0002 (PKCS#7 signed data - the Authenticode type
+    signtool produces).  Any malformation is the named
+    ``sign-verification-failed`` refusal.
+    """
+    if offset + 8 > len(data) or size > len(data) - offset:
+        raise SigningRefusal("sign-verification-failed",
+                             "certificate table is truncated (declared %d bytes)" % size)
+    declared = struct.unpack_from("<I", data, offset)[0]
+    if declared < 8 or declared != size:
+        raise SigningRefusal("sign-verification-failed",
+                             "certificate table length mismatch (declared %d, directory %d)" % (declared, size))
+    revision, certificate_type = struct.unpack_from("<HH", data, offset + 4)
+    if revision != 0x0200:
+        raise SigningRefusal("sign-verification-failed",
+                             "unexpected certificate revision 0x%04X (want 0x0200)" % revision)
+    if certificate_type not in (0x0001, 0x0002):
+        raise SigningRefusal("sign-verification-failed",
+                             "unexpected certificate type 0x%04X (want 0x0001 X.509 or 0x0002 PKCS#7 signed data)" % certificate_type)
+    return {"signed": True, "certificate_offset": offset, "certificate_length": declared}
+
+
 def certificate_table(data: bytes) -> dict:
     """Pure PE security-directory walk over raw file bytes.
 
@@ -206,10 +238,15 @@ def certificate_table(data: bytes) -> dict:
     directory (and for bytes that are not a PE at all), and
     ``{"signed": True, "certificate_offset": int, "certificate_length":
     int}`` for a well-formed WIN_CERTIFICATE (revision 0x0200, certificate
-    type 0x0001, declared length equal to the security directory size).
-    Raises :class:`SigningRefusal` (``sign-verification-failed``) when a
-    security directory exists but its certificate table is malformed or
-    out of bounds - the named condition a signed file must never carry.
+    type 0x0001 or 0x0002, declared length equal to the security directory
+    size).  The certificate is located through the section table; when no
+    section covers the security directory RVA - the signtool layout for
+    PEs with a file overlay, where the certificate table is appended
+    after the overlay and the RVA carries its file offset - the same
+    well-formed proof applies to that file offset.  Raises
+    :class:`SigningRefusal` (``sign-verification-failed``) when a security
+    directory exists but its certificate table is malformed or out of
+    bounds - the named condition a signed file must never carry.
     """
     if len(data) < 64 or data[:2] != b"MZ":
         return {"signed": False}
@@ -248,23 +285,14 @@ def certificate_table(data: bytes) -> dict:
             offset = raw_pointer + (rva - virtual_address)
             break
     if offset is None:
-        raise SigningRefusal("sign-verification-failed",
-                             "certificate RVA 0x%X does not map into a section" % rva)
-    if offset + 8 > len(data) or size > len(data) - offset:
-        raise SigningRefusal("sign-verification-failed",
-                             "certificate table is truncated (declared %d bytes)" % size)
-    declared = struct.unpack_from("<I", data, offset)[0]
-    if declared < 8 or size > len(data) - offset or declared != size:
-        raise SigningRefusal("sign-verification-failed",
-                             "certificate table length mismatch (declared %d, directory %d)" % (declared, size))
-    revision, certificate_type = struct.unpack_from("<HH", data, offset + 4)
-    if revision != 0x0200:
-        raise SigningRefusal("sign-verification-failed",
-                             "unexpected certificate revision 0x%04X (want 0x0200)" % revision)
-    if certificate_type != 0x0001:
-        raise SigningRefusal("sign-verification-failed",
-                             "unexpected certificate type 0x%04X (want 0x0001, PKCS#7)" % certificate_type)
-    return {"signed": True, "certificate_offset": offset, "certificate_length": declared}
+        # The signtool layout for PEs with a file overlay (every frozen
+        # trainer is a PyInstaller onefile executable): the certificate
+        # table is appended after the overlay and the security directory
+        # RVA carries its file offset.  The same well-formed proof applies
+        # to the fallback - a tampered or malformed table is still refused
+        # with the named condition.
+        offset = rva
+    return _check_certificate(data, offset, size)
 
 
 def sign_and_verify(path, config: dict, run=None) -> dict:

@@ -182,6 +182,27 @@ class SignExecutableTests(unittest.TestCase):
                 with self.assertRaisesRegex(SigningRefusal, r"sign-signtool-unavailable"):
                     sign_executable(Path(name) / "x.exe", config)
 
+    def test_discovered_signtool_path_reaches_the_argv(self):
+        # Field catch 2026-11-21: the documented PFX-only contract (signtool
+        # discovery, config["signtool_path"] None) used to let the None
+        # override the resolved path in the argv merge - a raw TypeError
+        # instead of the named contract.
+        with tempfile.TemporaryDirectory() as name:
+            target = Path(name) / "x.exe"
+            target.write_bytes(b"MZ" + b"\x00" * 64)
+            config = self._config(Path(name))
+            config["signtool_path"] = None
+            discovered = Path(name) / "sdk" / "10.0.26100.0" / "x64" / "signtool.exe"
+            discovered.parent.mkdir(parents=True)
+            discovered.write_bytes(b"fake")
+            recorder = _Recorder(SimpleNamespace(returncode=0, stdout="ok",
+                                                 stderr=""))
+            with mock.patch.object(code_signing, "find_signtool",
+                                   return_value=str(discovered)):
+                facts = sign_executable(target, config, run=recorder)
+            self.assertEqual(recorder.argv[0], str(discovered))
+            self.assertEqual(facts["signtool"], str(discovered))
+
     def test_missing_pfx_is_named(self):
         with tempfile.TemporaryDirectory() as name:
             config = self._config(Path(name), pfx=False)
@@ -308,6 +329,52 @@ class CertificateTableTests(unittest.TestCase):
         self.assertEqual(facts["certificate_offset"], 368 + 0x100)
         self.assertEqual(facts["certificate_length"], 72)
 
+    def test_authenticode_pkcs7_certificate_is_proved(self):
+        # Field catch 2026-11-21: signtool Authenticode signatures carry
+        # wCertificateType 0x0002 (PKCS#7 signed data), not 0x0001 - the
+        # 0.47 re-proof refused every real signature on that check alone.
+        facts = certificate_table(make_pe(with_certificate=make_cert(
+            cert_type=0x0002)))
+        self.assertTrue(facts["signed"])
+        self.assertEqual(facts["certificate_offset"], 368 + 0x100)
+        self.assertEqual(facts["certificate_length"], 72)
+
+    def test_overlay_certificate_appended_after_sections_is_proved(self):
+        # Field catch 2026-11-21: signtool's layout for PEs with a file
+        # overlay (every frozen trainer is a PyInstaller onefile
+        # executable) appends the certificate table after the overlay and
+        # sets the security directory RVA to its file offset - no section
+        # covers the RVA.  Windows verifies such signatures (proven with
+        # Get-AuthenticodeSignature on the signed 0.52.1 master), so the
+        # fallback must pass the same well-formed proof.
+        cert = make_cert(cert_type=0x0002)
+        data = bytearray(make_pe())
+        offset = len(data)
+        data += cert
+        struct.pack_into("<II", data, 232, offset, len(cert))
+        facts = certificate_table(bytes(data))
+        self.assertTrue(facts["signed"])
+        self.assertEqual(facts["certificate_offset"], offset)
+        self.assertEqual(facts["certificate_length"], len(cert))
+
+    def test_overlay_fallback_refuses_malformed_certificate(self):
+        data = bytearray(make_pe())
+        offset = len(data)
+        data += b"\xFF" * 72
+        struct.pack_into("<II", data, 232, offset, len(data) - offset)
+        with self.assertRaisesRegex(SigningRefusal, r"sign-verification-failed"):
+            certificate_table(bytes(data))
+
+    def test_overlay_fallback_refuses_length_mismatch(self):
+        cert = make_cert(cert_type=0x0002, declared_length=96)
+        data = bytearray(make_pe())
+        offset = len(data)
+        data += cert
+        struct.pack_into("<II", data, 232, offset, len(cert))
+        with self.assertRaisesRegex(SigningRefusal,
+                                    r"certificate table length mismatch"):
+            certificate_table(bytes(data))
+
     def test_unmapped_rva_is_named_refusal(self):
         with self.assertRaisesRegex(SigningRefusal, r"sign-verification-failed"):
             certificate_table(make_pe(with_certificate=make_cert(),
@@ -329,7 +396,7 @@ class CertificateTableTests(unittest.TestCase):
 
     def test_wrong_certificate_type_is_named_refusal(self):
         with self.assertRaisesRegex(SigningRefusal, r"sign-verification-failed"):
-            certificate_table(make_pe(with_certificate=make_cert(cert_type=0x0002)))
+            certificate_table(make_pe(with_certificate=make_cert(cert_type=0x0003)))
 
 
 class SignIfConfiguredTests(unittest.TestCase):

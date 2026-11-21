@@ -634,7 +634,7 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-20, 0.52.1 released - build
+**CT2Trainer (status 2026-11-21, 0.52.1 released - build
 `native-20261115T181026Z-00f5dfe8` cut from `main` @ `dc138e0`,
 2026-11-15, in-build suite 5,203 OK / 36 expected skips, `ce_inputs:
 []`; post-0.52.1 (2026-11-16 + 2026-11-20) the owned code-patch
@@ -674,6 +674,37 @@ the recorded evidence), +24 tests, full main suite 5,227 OK /
 36 expected skips, catalog unchanged at the
 `blocked-catalog-luacall-binding` baseline, frozen re-run of
 both architectures at the next release cut;
+post-0.52.1 (2026-11-21) the ROG Ally field observation (the
+0.52.1 trainer is refused by Smart App Control before any code
+executes - unsigned binary by hash, no per-app allow, one-way
+off switch; the requested UAC elevation cannot clear the block
+- the refusal happens before process start and the trainer
+needs no elevation for a same-user-session attach) + the
+mechanical end-to-end verification of the 0.47 code-signing
+pipeline on this machine with a self-signed test certificate
+(mechanism proof only - self-signed does not clear SAC, per the
+0.47 record): the production environment seam signed both
+0.52.1 artifacts with RFC3161 timestamping, the pure
+certificate-table re-proof passed (the PyInstaller onefile
+overlay layout - certificate table appended after the overlay,
+security directory RVA carrying its file offset, type 0x0002
+PKCS#7 - is now accepted with the same well-formed proof), the
+embedded plan is identical in canonical sha256 behind the
+appended certificate table, and the signed master boots; two
+production defects found and fixed (fail-closed, +5 tests: the
+resolved signtool discovery path was overridden by the
+discovery config's `None` in the argv merge - raw TypeError on
+the PFX-only contract; the pure re-proof refused every real
+Authenticode signature - required type 0x0001 instead of the
+Authenticode 0x0002 and required the security directory RVA to
+map into a section); full main suite 5,232 OK / 36 expected
+skips, catalog unchanged at the
+`blocked-catalog-luacall-binding` baseline; the durable SAC fix
+stays a user-supplied trusted-CA PFX through the documented
+`CT2TRAINER_SIGN_PFX` environment contract (fail-closed: a
+configured signing failure never ships an unsigned binary) -
+the signed release cut activates once the certificate is in
+hand;
 superseded 0.52, build `native-20261115T070952Z-14405931` cut
 from `main` @ `26e6ebc`, 2026-11-15, in-build suite 5,197 OK / 36
 expected skips, `ce_inputs:
@@ -1423,6 +1454,37 @@ evidence (2026-11-16 + 2026-11-20, owned code-patch gate
 verified in the source runtime, x64 + x86)" in
 documentation/native-progress.md and the verified-gates
 record in `tests/windows/codepatch_fixture/README.md`.
+Post-0.52.1 (2026-11-21, lane work - no release cut): the ROG
+Ally field observation + the code-signing pipeline
+verification (see the ledger section "Code-signing pipeline
+field verification + two production re-proof fixes
+(2026-11-21, post-0.52.1, no release cut)" in
+documentation/native-progress.md): the 0.47 signing pipeline
+is mechanically proven end-to-end on this machine (SDK
+signtool 10.0.26100.0 x64, self-signed test PFX 2,638 B
+CN=CT2Trainer Sign Test RSA 2048 sha256
+`7980b5126f6031a8d042406353b1e5b2286b6b4c220f1074f55206d2be3988d3`,
+RFC3161 timestamp via the documented default
+`http://timestamp.digicert.com`) - both 0.52.1 artifacts
+signed + re-proofed (frozen master 17,074,203 B ->
+17,081,584 B sha256
+`bd122cb2a2bed2ed01f3fbc770347e6da6d8c94c13db107424ba7aa418f695a1`;
+frozen string-x64 trainer 16,923,275 B -> 16,930,656 B sha256
+`46414630a7234149ccd3e69336c8816dd439fb733e6640c1d4f536d190bafb38`),
+the PyInstaller cookie is unchanged, the embedded plan is
+identical in canonical sha256 behind the appended certificate
+table, the signed master boots, and the field block stays
+diagnosed as Smart App Control (before any code executes -
+the requested UAC elevation cannot clear it); two production
+re-proof defects fixed (fail-closed, +5 tests in
+`tests/test_native_code_signing.py`), full main suite 5,232
+OK / 36 expected skips, catalog unchanged at the
+`blocked-catalog-luacall-binding` baseline; the durable SAC
+fix stays a user-supplied trusted-CA PFX through the
+documented environment contract (self-signed does not clear
+SAC, per the 0.47 record) - the signed release cut activates
+once the certificate is in hand, frozen re-runs of the gates
+stay scheduled for the next release cut.
 Superseded 0.52 build:
 `native-20261115T070952Z-14405931` (0.52, cut
 from `main` @ `26e6ebc`, 2026-11-15; in-build suite 5,197 OK / 36

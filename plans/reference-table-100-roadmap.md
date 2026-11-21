@@ -1674,6 +1674,66 @@ code-patch gate (2026-11-16, source runtime, x64)"),
 `documentation/native-verification.md`, ledger section in
 `documentation/native-progress.md`.
 
+Code-signing pipeline field verification + two production re-proof
+fixes (2026-11-21, post-0.52.1, no release cut, repo `main`): the
+ROG Ally field observation (the 0.52.1 trainer is refused by
+Smart App Control before any code executes - unsigned binary by
+hash, no per-app allow, one-way off switch; the requested UAC
+elevation cannot clear the block - the refusal happens before
+process start and the trainer needs no elevation for a
+same-user-session attach) + the mechanical end-to-end
+verification of the 0.47 code-signing pipeline on this machine
+(SDK signtool 10.0.26100.0 x64 discovered under the documented
+bin root; self-signed test PFX 2,638 B, CN=CT2Trainer Sign Test,
+RSA 2048, sha256
+`7980b5126f6031a8d042406353b1e5b2286b6b4c220f1074f55206d2be3988d3`;
+RFC3161 timestamp via the documented default
+`http://timestamp.digicert.com`): the production environment
+seam (`CT2TRAINER_SIGN_PFX` / `CT2TRAINER_SIGN_PFX_PASSWORD`)
+signed both 0.52.1 artifacts (frozen master 17,074,203 B ->
+17,081,584 B, sha256
+`bd122cb2a2bed2ed01f3fbc770347e6da6d8c94c13db107424ba7aa418f695a1`;
+frozen string-x64 trainer 16,923,275 B -> 16,930,656 B, sha256
+`46414630a7234149ccd3e69336c8816dd439fb733e6640c1d4f536d190bafb38`),
+the pure `certificate_table` re-proof passed on both (revision
+0x0200, type 0x0002 PKCS#7, declared length == security
+directory size; the PyInstaller onefile overlay layout -
+certificate table appended after the overlay, security
+directory RVA carrying its file offset - is accepted with the
+same well-formed proof), the PyInstaller cookie is unchanged,
+the embedded string-x64 plan is identical in canonical sha256
+behind the appended certificate table
+(`c0299324e87d1c47cc4fc3f39b9e1a9e90523bd85b0713f1ce6451548923c0f2`),
+`Get-AuthenticodeSignature` verifies the signature (failing
+only at the trust step - self-signed, expected), and the signed
+master boots (10 s smoke). Two production defects in the 0.47
+pipeline found and fixed (fail-closed, +5 tests in
+`tests/test_native_code_signing.py`): (1) `sign_executable`
+merged the resolved signtool path as
+`{"signtool_path": signtool, **config}` - the discovery
+config's `signtool_path: None` overrode the resolved path and
+the documented PFX-only contract raised a raw `TypeError` -
+now `sign_command({**config, "signtool_path": signtool}, path)`;
+(2) the pure re-proof required `wCertificateType` 0x0001 (the
+Authenticode PKCS#7 type is 0x0002) and required the security
+directory RVA to map into a PE section (signtool's overlay
+layout sets it to the table's file offset, no section covers
+it, Windows verifies it there) - now 0x0001 / 0x0002 are
+accepted and the section-unmapped RVA falls back to the file
+offset with the same well-formed proof (malformed / truncated
+tables stay the named `sign-verification-failed` refusal). Full
+main suite 5,232 OK / 36 expected skips; catalog unchanged at
+the `blocked-catalog-luacall-binding` baseline (117,616
+supported / 193 blocked - the lane touches no table-parsing
+path). This is signing-pipeline evidence only: the durable SAC
+fix stays a user-supplied trusted-CA PFX through the documented
+environment contract (self-signed does not clear SAC, per the
+0.47 record) - the signed release cut activates once the
+certificate is in hand; pinned-game-build observation, the
+clean-machine protocol and the Deck / Proton / touch protocol
+remain open per the RT-6 acceptance, so `runtime_unverified`
+stays set.
+
 0.52 release record (2026-11-15, run `native-20261115T070952Z-14405931`
 cut from `main` @ `26e6ebc`): the owned luacall binding + the
 Windows scan-fixture lane ship as the 0.52 release - the

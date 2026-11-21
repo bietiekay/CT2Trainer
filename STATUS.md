@@ -1,6 +1,6 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-20. **0.52.1 released** (build
+**Updated:** 2026-11-21. **0.52.1 released** (build
 `native-20261115T181026Z-00f5dfe8`, cut from `main` @
 `dc138e0`, 2026-11-15) - the global-gate frozen-trainer
 launcher pair + the string-fixture re-pin + the release
@@ -137,7 +137,36 @@ table-parsing path; the release allowlist in
 `tools/native_build.py` gains the two codepatch CTs + the
 `tests/windows/codepatch_fixture` directory); real-game,
 clean-machine and Deck / Proton / touch acceptance remain
-open, so `runtime_unverified` stays set. Superseded 0.52 (build
+open, so `runtime_unverified` stays set. Post-0.52.1 (2026-11-21):
+the ROG Ally field observation (the 0.52.1 trainer is refused by
+Smart App Control before any code executes - unsigned binary by
+hash, no per-app allow, one-way off switch; the requested UAC
+elevation cannot clear the block - the refusal happens before
+process start and the trainer needs no elevation for a
+same-user-session attach) + the mechanical end-to-end
+verification of the 0.47 code-signing pipeline on this machine
+with a self-signed test certificate (mechanism proof only -
+self-signed does not clear SAC, per the 0.47 record): the
+production environment seam signed both 0.52.1 artifacts with
+RFC3161 timestamping, the pure certificate-table re-proof passed
+(the PyInstaller onefile overlay layout - certificate table
+appended after the overlay, security directory RVA carrying its
+file offset, type 0x0002 PKCS#7 - is now accepted with the same
+well-formed proof), the embedded plan is identical in canonical
+sha256 behind the appended certificate table, and the signed
+master boots. Two production defects found and fixed
+(fail-closed, +5 tests): the resolved signtool discovery path
+was overridden by the discovery config's `None` in the argv
+merge (raw TypeError on the PFX-only contract), and the pure
+re-proof refused every real Authenticode signature (required
+type 0x0001 instead of the Authenticode 0x0002, and required the
+security directory RVA to map into a section). Full main suite
+5,232 OK / 36 expected skips; catalog unchanged at the
+`blocked-catalog-luacall-binding` baseline. No release cut (lane
+work): the durable SAC fix is a trusted-CA PFX through the
+documented `CT2TRAINER_SIGN_PFX` environment contract, the
+signed release cut ships it (fail-closed: a configured signing
+failure never ships an unsigned binary). Superseded 0.52 (build
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`,
 2026-11-15) - the owned luacall binding + the Windows
 scan-fixture lane: the production `luacall_binding_factory`
