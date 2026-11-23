@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -194,10 +195,21 @@ def run_tests(output):
     report_path = output / 'suite-tests.json'
     if log.exists() or report_path.exists():
         raise FileExistsError('Native suite evidence already exists in this run')
+    # The in-build suite is the deterministic unsigned baseline: the
+    # code-signing environment (CT2TRAINER_SIGN_*) is a build-time input,
+    # not a test input.  Strip it from the test subprocess so the
+    # trainer-building tests (source / frozen parity, the parity and
+    # bundle suites) never inherit an ambient signing configuration and
+    # try to sign their non-PE test stubs.  The code-signing tests manage
+    # their own environment explicitly (mock.patch.dict) and are
+    # unaffected; the build step (this process) keeps the signing
+    # environment and signs the produced executables.
+    test_env = {key: value for key, value in os.environ.items()
+                if not key.upper().startswith('CT2TRAINER_SIGN')}
     with log.open('x', encoding='utf-8') as stream:
         result = subprocess.run([sys.executable, '-m', 'unittest', 'discover',
             '-s', 'tests', '-p', 'test_native_*.py', '-q'], cwd=ROOT,
-            stdout=stream, stderr=subprocess.STDOUT)
+            stdout=stream, stderr=subprocess.STDOUT, env=test_env)
     raw = log.read_text(encoding='utf-8')
     count = re.search(r'^Ran (\d+) tests? in ', raw, re.MULTILINE)
     skips = re.search(r'^OK \(skipped=(\d+)\)', raw, re.MULTILINE)
