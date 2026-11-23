@@ -4060,6 +4060,125 @@ unchanged at the `blocked-catalog-luacall-binding` baseline
 104,467 actionable / 193 blocked). No release cut: VERSION /
 CHANGELOG unchanged.
 
+### RT-7 in-build suite determinism: per-test leaked Tk interpreters eliminated (2026-11-23, lane work, no release cut)
+
+The in-build suite (one process, ~5,200 tests) leaked one live Tk
+interpreter per trainer window that was torn down without the
+production close path - the v3 per-test leak scan baseline (2026-11-23,
+`build\tk-leak-scan3-20261123.log`) attributed 54 live roots across 7
+test modules (one-leak-per-TrainerWindow invariant). Every surviving
+interpreter is a `Tcl_AsyncDelete: async handler deleted by the wrong
+thread` abort risk: the 0.25 `native_tk_teardown.py` backstop covers
+test-side reference cycles, but not the C-command-table retention
+below. Proven mechanism (diagnostics v21-v32, 2026-11-23, against the
+exact leaking tests):
+
+- **The C command table outlives `destroy()`.** Every
+  Python-registered Tcl command entry holds a strong app reference in
+  C memory: `Variable._register` creates a `createcommand` entry whose
+  CallWrapper captures the root, and the entry is only removed by
+  `deletecommand` (i.e. `Variable.__del__`). The trainer's
+  search-field `StringVar` trace is recorded only in the variable's own
+  `_tclCommands` list - `Misc.destroy` deletes the root's list only,
+  so after a completed `destroy()` the trace entry is the single
+  C-table survivor. The C reference keeps app -> CallWrapper -> root ->
+  app alive across the GC-untracked `tkapp` object, so the cyclic
+  collector never sees the cycle and `Variable.__del__` never runs.
+  Measured: a bare root with one surviving `createcommand` entry holds
+  app refcount 3 instead of the free baseline 2, and only
+  `deletecommand` releases it.
+- **`tkinter._default_root` binds masterless variables to the first
+  root.** `_default_root` is set only for the FIRST `tk.Tk()` of the
+  process (tkinter `__init__.py` L2382-2383); a masterless
+  `StringVar()` in multi-root tests binds `var._root` to the wrong
+  (first) root and pins it forever. Fixed with explicit masters at all
+  four `TrainerWindow` variable sites in `ui.py` (drafts /
+  `_status_text` / `_search_text` / `_page_text`); `master_ui.py` was
+  already explicit; `converter.py` L141 is masterless but
+  single-root production, harmless.
+- **Test-side mock retention chains** (tray tests): the TrayIcon class
+  mock records its constructor args (incl. the window's
+  `_tray_restore` bound method) in `call_args`, and the patcher objects
+  stay alive in the TestCase's internal `_cleanups` list even after
+  `stop()`; `reset_mock()` clears the call storages but NOT
+  `side_effect`, and CPython attaches `__traceback__` to the raised
+  exception instance kept in `_mock_side_effect` (frames -> window
+  method locals -> window -> root). `reset_mock(side_effect=True)`
+  clears it and the flag propagates to child mocks (verified
+  `mock.py` L601-630) - but `return_value` is NOT part of
+  `_mock_children` in this Python build (proven empirically
+  2026-11-23), so the child recursion never reaches the instance mock's
+  own child methods (e.g. `show_balloon`) with the flag: the raised
+  `RuntimeError` survived in `show_balloon._mock_side_effect`
+  (diagnostic v32). Fix: explicit `return_value.reset_mock(
+  side_effect=True)` in `MasterTrayWiringBase._safe_close` plus the
+  extended clear tuple (root / window / app / icon_cls /
+  available_mock / icon_patch).
+
+Changes:
+
+- `src/ct2trainer/native/ui.py` (standalone trainer, ships in the next
+  cut): `TrainerWindow.release_search_trace()` (L360) - the
+  `trace_remove("write", cbname)` + `deletecommand` pair for the
+  search-field trace, idempotent, `TclError`-tolerant - called from
+  `close()` (L1276) before `destroy()`; explicit-master `StringVar`s
+  at all four sites (L144/167/168/172).
+- `src/ct2trainer/native/master_trainer/master_ui.py`:
+  `MasterWindow._back_to_master` releases the trainer window's search
+  trace before the window graph becomes garbage (MT-19 rebuilds the
+  trainer window per table in the shared, surviving interpreter;
+  otherwise the trace would keep firing on a destroyed widget and pin
+  the dead window for the rest of the session).
+- `tests/native_tk_teardown.py` (test-only backstop extension):
+  `force_root_release` now runs the production equivalent of
+  `release_search_trace()` generically (`_release_variable_traces` -
+  mimics `Variable.__del__` for every live variable bound to the app
+  being torn down), then verifies via a weakref that the root was
+  actually reclaimed; a still-pinned root triggers
+  `_drop_interpreter_and_collect` (drop every Python handle to the
+  interpreter - `root.tk` plus each widget's / variable's `tk` /
+  `_tk` - so the C dealloc runs, then collect again); a root that
+  survives even that is the fail-closed named refusal
+  `tk-teardown-refusal: tk-interpreter-release-failed` with holder
+  attribution (`_describe_holders`) - never a silent leak.
+- `tests/test_native_master_tray_geometry.py`: the mock-retention
+  fixes above in `_safe_close`; `TrayIconWindowsSmokeTests` now uses
+  the house teardown instead of a bare `destroy`.
+- `tests/test_native_code_signing.py`: +3 `RunTestsEnvStripTests`
+  pinning the `run_tests` env strip from the signed-build cycle
+  (subprocess env free of every `CT2TRAINER_SIGN*`, case-insensitive
+  and bounded to signing vars; the build process's own environment is
+  never mutated, snapshot captured while `run_tests` is executing).
+
+Verification:
+
+- all previously leaking modules green standalone:
+  `test_native_master_tray_geometry.py` 62 OK / 1 expected skip
+  (`build\tk-leak-tray5.log`), `test_native_master_ui_mt21.py` 14 OK,
+  `test_native_master_ui.py` 64 OK, `test_native_hotkey_session_switch.py`
+  10 OK, mt19 / sc2_crash_observability / trainer_sounds green;
+- full-suite per-test leak scan, single process like the in-build
+  suite, live-root count after every test (2026-11-23,
+  `build\tk-leak-scan4.log` / `-scan5.log` / `-scan6.log`):
+  START-ROOTS 0, **zero LEAK-DELTA lines, FINAL-ROOTS 0** - no leaked
+  interpreter anywhere in the suite, versus the 54 attributed roots
+  of the v3 baseline; (scan-harness artifacts only, no product
+  effect: the first run's 7 loader import errors + 3
+  `test_native_lua` child-process import errors were missing
+  `sys.path` / `PYTHONPATH` in the scan script itself, fixed in the
+  script; the module passes standalone at 64 OK / 1.7 s);
+- full main suite: 5,235 OK / 36 expected skips (5,232 + the 3
+  env-strip tests);
+- catalog unchanged, no table-parsing path touched:
+  `blocked-catalog-luacall-binding` baseline - 117,809 total /
+  117,616 supported / 12,974 headings / 104,467 actionable /
+  193 blocked; all 151/151 table paths load.
+
+No release cut (lane work; a cut would be 0.52.2): VERSION /
+CHANGELOG unchanged. The production `release_search_trace()` fixes
+ship with the next cut; the deterministic unsigned in-build baseline
+is restored.
+
 ### 0.52 release build record (2026-11-15, run
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`)
 

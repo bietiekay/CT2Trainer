@@ -1,6 +1,6 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-21. **0.52.1 released** (build
+**Updated:** 2026-11-23. **0.52.1 released** (build
 `native-20261115T181026Z-00f5dfe8`, cut from `main` @
 `dc138e0`, 2026-11-15) - the global-gate frozen-trainer
 launcher pair + the string-fixture re-pin + the release
@@ -166,7 +166,31 @@ security directory RVA to map into a section). Full main suite
 work): the durable SAC fix is a trusted-CA PFX through the
 documented `CT2TRAINER_SIGN_PFX` environment contract, the
 signed release cut ships it (fail-closed: a configured signing
-failure never ships an unsigned binary). Superseded 0.52 (build
+failure never ships an unsigned binary). Post-0.52.1 (2026-11-23): the
+RT-7 in-build suite determinism lane (lane work, no release cut - a
+cut would be 0.52.2): elimination of the per-test leaked Tk
+interpreters that left 54 live roots across 7 test modules in the v3
+leak-scan baseline (one-leak-per-TrainerWindow, each a
+`Tcl_AsyncDelete` wrong-thread abort risk) - proven mechanism: every
+Python-registered Tcl command entry holds a strong app reference in C
+memory and the trainer's search-field `StringVar` trace is the single
+C-table survivor after `destroy()` (only `trace_remove` /
+`deletecommand` releases it), `tkinter._default_root` bound
+masterless `StringVar`s to the process's first root (explicit masters
+now at all four `TrainerWindow` variable sites in `ui.py`), and the
+tray tests' mock chains (recorded `call_args` bound method,
+`side_effect` exception `__traceback__`, `return_value` not in
+`_mock_children`) pinned the window - fixed with
+`TrainerWindow.release_search_trace()` in `close()`, the
+`_back_to_master` trace release in the Master, the extended
+`force_root_release` backstop (generic variable-trace release +
+weakref verify + interpreter-handle drop + the named fail-closed
+`tk-teardown-refusal: tk-interpreter-release-failed`) and the
+mock-retention test fixes; the full-suite per-test leak scan now
+shows START-ROOTS 0 / FINAL-ROOTS 0 with zero LEAK-DELTA; +3
+env-strip tests pin the in-build suite's signing-env strip; full main
+suite 5,235 OK / 36 expected skips; catalog unchanged at the
+`blocked-catalog-luacall-binding` baseline. Superseded 0.52 (build
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`,
 2026-11-15) - the owned luacall binding + the Windows
 scan-fixture lane: the production `luacall_binding_factory`

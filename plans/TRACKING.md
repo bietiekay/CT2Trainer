@@ -125,6 +125,38 @@ game-facing action.
   ledger section 'Full documentation / README refresh to the 0.52.1
   state (2026-11-23, no release cut)' in
   `documentation/native-progress.md`.
+- RT-7 in-build suite determinism (2026-11-23, lane work, no release
+  cut): the per-test leaked-Tk-interpreter elimination - v3 leak-scan
+  baseline (2026-11-23) attributed 54 live roots across 7 test modules
+  (one-leak-per-TrainerWindow, each a `Tcl_AsyncDelete`
+  wrong-thread abort risk); the full-suite per-test scan (single
+  process, live-root count after every test) now shows START-ROOTS 0 /
+  FINAL-ROOTS 0, zero LEAK-DELTA. Proven mechanism: the C command
+  table outlives `destroy()` (every Python-registered Tcl command
+  entry holds a strong app reference in C memory; the trainer's
+  search-field `StringVar` trace is the single C-table survivor, only
+  `trace_remove`/`deletecommand` releases it), `tkinter._default_root`
+  bound masterless `StringVar`s to the process's first root (fixed:
+  explicit masters at all four `TrainerWindow` variable sites in
+  `ui.py`), and the tray tests' mock retention chains (recorded
+  `call_args` bound method, `side_effect` exception `__traceback__`,
+  `return_value` not part of `_mock_children` in this Python build)
+  pinned the window (fixed: patcher stop + `reset_mock(
+  side_effect=True)` incl. explicit `return_value` reset + extended
+  clear tuple). Production: `TrainerWindow.release_search_trace()` in
+  `close()` (`ui.py`) + the `_back_to_master` trace release
+  (`master_ui.py`) - ships with the next cut; test backstop:
+  `native_tk_teardown.py` `force_root_release` gains the generic
+  variable-trace release, weakref verify, interpreter-handle drop and
+  the fail-closed named refusal `tk-teardown-refusal:
+  tk-interpreter-release-failed`; +3 env-strip tests in
+  `tests/test_native_code_signing.py` (`RunTestsEnvStripTests`) pin
+  the in-build suite's signing-env strip; full main suite 5,235 OK /
+  36 expected skips; catalog unchanged at the
+  `blocked-catalog-luacall-binding` baseline (no table-parsing path
+  touched); see the ledger section 'RT-7 in-build suite determinism:
+  per-test leaked Tk interpreters eliminated (2026-11-23, lane work,
+  no release cut)' in `documentation/native-progress.md`.
 - Local original reference catalog re-verified after the trainer UI
   feature change (2026-10-24, run `blocked-catalog-ui-scripts`):
   per-table identical to `blocked-catalog-rt45main` - 151/151 load,
