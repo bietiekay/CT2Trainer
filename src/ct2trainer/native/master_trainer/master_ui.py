@@ -3457,6 +3457,13 @@ class MasterWindow:
         self._persist_sidecar()
         clean = self.engine.close()
         self.engine = None
+        # RT-7 (0.52.2 lane): the trainer's search-field trace is a
+        # C-command in this shared, surviving interpreter.  Release it
+        # before the window graph becomes garbage - otherwise the dead
+        # trainer window stays reachable for the rest of the session
+        # (and the trace would keep firing on a destroyed widget).
+        if self.trainer_window is not None:
+            self.trainer_window.release_search_trace()
         self.trainer_window = None
         if not clean:
             messagebox.showwarning(

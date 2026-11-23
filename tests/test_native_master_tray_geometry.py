@@ -314,6 +314,45 @@ class MasterTrayWiringBase(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _safe_close(self):
+        # RT-7 (0.52.2 lane): stop the OS-seam patches and drop the
+        # mock holders before the forced release - the TrayIcon
+        # class mock records its constructor arguments (including
+        # the window's ``_tray_restore`` bound method), so a live
+        # mock keeps the whole window graph - and with it the root -
+        # alive past the forced collection (proven 2026-11-23,
+        # diagnostic v29).  ``stop()`` is idempotent; the
+        # addCleanup stops below become no-ops.
+        self.icon_patch.stop()
+        self.available_mock.stop()
+        # RT-7 (0.52.2 lane): stopping the patcher is not enough -
+        # the patcher objects stay alive in the TestCase's internal
+        # cleanup list, and the TrayIcon class mock keeps its
+        # recorded constructor arguments (call_args / mock_calls),
+        # including the window's ``_tray_restore`` bound method, so
+        # the mock alone pins the whole window graph - and with it
+        # the root - past every forced collection (proven
+        # 2026-11-23, diagnostic v31: the method survived inside
+        # the mock call_args tuple).  reset_mock(side_effect=True)
+        # clears every recorded-call storage AND the side_effect
+        # exception instances (a side_effect exception raised by the
+        # mock carries __traceback__, whose frames hold the window
+        # method's locals - the only retention left after the
+        # call-args clear), and the flag propagates to child mocks
+        # such as show_balloon.
+        self.icon_cls.reset_mock(side_effect=True)
+        # return_value is NOT part of _mock_children in this Python build
+        # (proven 2026-11-23), so reset_mock's child recursion never
+        # reaches the instance mock's own child methods (show_balloon)
+        # with the side_effect flag - the raised exception instance
+        # (with its __traceback__ frames holding the window) survives
+        # in show_balloon._mock_side_effect (diagnostic v32). Reset the
+        # instance mock explicitly with the flag.
+        tray_mock = self.icon_cls.return_value
+        if hasattr(tray_mock, "reset_mock"):
+            tray_mock.reset_mock(side_effect=True)
+        available = getattr(self.available_mock, "new", None)
+        if available is not None and hasattr(available, "reset_mock"):
+            available.reset_mock()
         try:
             alive = self.root.winfo_exists()
         except Exception:
@@ -326,7 +365,19 @@ class MasterTrayWiringBase(unittest.TestCase):
                     self.root.destroy()
                 except Exception:
                     pass
-        force_root_release([self.root], ((self, "root"),))
+        # RT-7 (0.52.2 lane): clear every test-side holder, not just
+        # the root - ``self.window`` / ``self.app`` are per-test
+        # TestCase attributes (setUp keeps the live MasterWindow and
+        # the app) that would otherwise keep the destroyed window
+        # graph reachable past the forced collection; the mock /
+        # patcher holders are dropped the same way (they stay
+        # reachable through the cleanup list regardless, but no
+        # longer reference the window after the reset above).
+        force_root_release(
+            [self.root],
+            ((self, "root"), (self, "window"), (self, "app"),
+             (self, "icon_cls"), (self, "available_mock"),
+             (self, "icon_patch")))
 
     def _tray_state_file(self):
         return load_master_state(self.app.state_path())
@@ -801,7 +852,11 @@ class TrayIconWindowsSmokeTests(unittest.TestCase):
         self.assertTrue(icon.is_file(), str(icon))
         root = tk.Tk()
         root.withdraw()
-        self.addCleanup(root.destroy)
+        # RT-7 (0.52.2 lane): the house teardown, not a bare
+        # destroy - the interpreter must be released on this thread
+        # (a plain destroy defers the interpreter finalization to a
+        # later cyclic GC, possibly on a foreign thread).
+        self.addCleanup(force_root_release, [root])
         clicks = []
         try:
             tray = TrayIcon(str(icon), lambda: clicks.append(1))

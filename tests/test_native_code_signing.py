@@ -13,6 +13,8 @@ signing fails.
 """
 from __future__ import annotations
 
+import importlib.util
+import os
 import struct
 import subprocess
 import sys
@@ -38,6 +40,15 @@ from ct2trainer.native.code_signing import (
     sign_if_configured,
     SigningRefusal,
 )
+
+# tools/native_build.py is not a package import; load it from the
+# repository root with an owned spec (house pattern, cf.
+# test_native_build_boundary.py) under a distinct module name.
+BUILD_SPEC = importlib.util.spec_from_file_location(
+    'owned_native_build_signing',
+    Path(__file__).resolve().parents[1] / 'tools/native_build.py')
+BUILD = importlib.util.module_from_spec(BUILD_SPEC)
+BUILD_SPEC.loader.exec_module(BUILD)
 
 
 def _make_sdk_root(root: Path, versions, with_signtool=True):
@@ -477,6 +488,78 @@ class SignAndVerifyTests(unittest.TestCase):
             with self.assertRaises(SigningRefusal) as caught:
                 sign_and_verify(target, config, run=no_op_run)
             self.assertEqual(caught.exception.code, "sign-verification-failed")
+
+
+class RunTestsEnvStripTests(unittest.TestCase):
+    """The in-build suite subprocess never inherits the signing env.
+
+    RT-7 / 0.52.2 lane (root-cause fix for the 2026-11-23 signed-build
+    failure: the ambient ``CT2TRAINER_SIGN_*`` leaked from the build
+    shell into the test subprocess and ``build_trainer``'s default
+    ``sign_if_configured`` tried to sign non-PE test stubs - signtool
+    0x800700C1, 16 failed tests): ``run_tests`` strips every
+    ``CT2TRAINER_SIGN*`` variable (case-insensitive) from the test
+    subprocess environment, keeps every other variable, and never
+    mutates the build process's own environment (the build step keeps
+    the signing configuration and signs the produced executables).
+    """
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.output = Path(self.temporary.name)
+        self.captured = {}
+
+    def _run_with_ambient(self, ambient):
+        def fake_run(cmd, cwd=None, stdout=None, stderr=None, env=None):
+            self.captured["env"] = env
+            # Snapshot the build process's own env while run_tests is
+            # executing: the strip must live only in the subprocess env.
+            self.captured["process_env"] = dict(os.environ)
+            if stdout is not None:
+                stdout.write("Ran 1 test in 0.001s\n\nOK\n")
+            return SimpleNamespace(returncode=0)
+
+        with mock.patch.dict(os.environ, ambient), \
+                mock.patch.object(BUILD, "source_files", return_value=[]), \
+                mock.patch.object(BUILD.subprocess, "run",
+                                  side_effect=fake_run):
+            BUILD.run_tests(self.output)
+
+    def test_documented_signing_variables_are_stripped(self):
+        self._run_with_ambient({
+            SIGN_ENV_PFX: "C:/test.pfx",
+            SIGN_ENV_PFX_PASSWORD: "secret",
+            SIGN_ENV_SIGNTOOL: "C:/signtool.exe",
+            SIGN_ENV_TIMESTAMP_URL: "http://ts.example.com",
+        })
+        env = self.captured["env"]
+        for var in (SIGN_ENV_PFX, SIGN_ENV_PFX_PASSWORD,
+                    SIGN_ENV_SIGNTOOL, SIGN_ENV_TIMESTAMP_URL):
+            self.assertNotIn(var, env)
+
+    def test_strip_is_case_insensitive_and_bounded_to_signing(self):
+        self._run_with_ambient({
+            "ct2trainer_sign_pfx": "C:/lower.pfx",
+            "CT2TRAINER_KEEP_ME": "keep",
+        })
+        env = self.captured["env"]
+        self.assertNotIn("ct2trainer_sign_pfx", env)
+        self.assertEqual(env.get("CT2TRAINER_KEEP_ME"), "keep")
+
+    def test_build_process_environment_is_not_mutated(self):
+        ambient = {SIGN_ENV_PFX: "C:/test.pfx",
+                   "CT2TRAINER_KEEP_ME": "keep"}
+        self._run_with_ambient(ambient)
+        # Checked while run_tests was executing (inside the patched
+        # context): the strip must live only in the subprocess env, so
+        # the build process's own environment keeps the ambient values
+        # for the build step's own signing.
+        process_env = self.captured["process_env"]
+        self.assertEqual(process_env.get(SIGN_ENV_PFX), "C:/test.pfx")
+        self.assertEqual(process_env.get("CT2TRAINER_KEEP_ME"), "keep")
+        # And the same variables are absent from the subprocess env.
+        self.assertNotIn(SIGN_ENV_PFX, self.captured["env"])
 
 
 if __name__ == "__main__":

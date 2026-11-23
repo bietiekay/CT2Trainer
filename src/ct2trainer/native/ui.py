@@ -134,7 +134,14 @@ class TrainerWindow:
         self.columns_btn: tk.Button | None = None
         self.view = "Switches"
         self.page = 0
-        self.drafts = {i: tk.StringVar(value=str(entry.get("value_default") or entry.get("default_value") or ""))
+        # RT-7 (0.52.2 lane): every variable carries the explicit
+        # root - a masterless ``StringVar()`` binds to
+        # ``tkinter._default_root``, which is only the FIRST root of
+        # the process (``Tk._loadtk`` sets it while it is None), so
+        # in a multi-root flow the variable would pin the wrong
+        # (first) root through ``var._root`` across its whole
+        # lifetime (proven 2026-11-23, diagnostics v26/v27).
+        self.drafts = {i: tk.StringVar(root, value=str(entry.get("value_default") or entry.get("default_value") or ""))
                        for i, entry in engine.entries.items() if entry["kind"] == "value"}
         # Row-grid interaction state (the pure model mirrors it per render).
         self.expanded_values: frozenset = frozenset()
@@ -157,9 +164,12 @@ class TrainerWindow:
         self._drag_anchor: int | None = None
         self._longpress_job: int | None = None
         self._press_xy: tuple[int, int] | None = None  # last press, screen coords
-        self._status_text = tk.StringVar(value=engine.status)
-        self._search_text = tk.StringVar()
-        self._page_text = tk.StringVar()
+        self._status_text = tk.StringVar(root, value=engine.status)
+        self._search_text = tk.StringVar(root)
+        # RT-7 (0.52.2 lane): the search-field trace callback name
+        # (``trace_add`` returns it); None while no trace is registered.
+        self._search_trace: str | None = None
+        self._page_text = tk.StringVar(root)
         root.title(trainer_title(engine.plan["title"]))
         width, height = initial_window_size(root.winfo_screenwidth(), root.winfo_screenheight())
         root.geometry(f"{width}x{height}")
@@ -290,7 +300,8 @@ class TrainerWindow:
         tk.Entry(self.search_row, textvariable=self._search_text,
                  font=("Segoe UI", 12), bg=BG_CARD, fg=FG, insertbackground=FG,
                  relief="solid", bd=1).pack(side="left", fill="both", expand=True)
-        self._search_text.trace_add("write", self._search_changed)
+        self._search_trace = self._search_text.trace_add(
+            "write", self._search_changed)
         self._apply_filter_mode()
 
     def _apply_filter_mode(self):
@@ -345,6 +356,28 @@ class TrainerWindow:
     def _search_changed(self, *_):
         self.page = 0
         self.render()
+
+    def release_search_trace(self):
+        """RT-7: remove the search-field trace callback from the Tcl
+        interpreter's command table.
+
+        ``trace_add`` registers the callback in the interpreter's C
+        command table (``Variable._register``); that entry is only
+        cleared in ``Variable.__del__``, which never runs while the
+        C reference keeps the root/window reference cycle alive - so
+        an unreleased trace pins a live Tcl interpreter (and the whole
+        window) for the rest of the process.  The Master rebuilds the
+        trainer window per table (MT-19), so the trace is part of the
+        trainer teardown, not only of the process exit.  Idempotent;
+        a ``TclError`` from an already-dead interpreter is a no-op.
+        """
+        if self._search_trace is None:
+            return
+        try:
+            self._search_text.trace_remove("write", self._search_trace)
+        except tk.TclError:
+            pass
+        self._search_trace = None
 
     def set_view(self, name):
         self.view = name
@@ -1240,6 +1273,7 @@ class TrainerWindow:
         clean = self.engine.close()
         if not clean:
             messagebox.showwarning("Cleanup needs attention", self.engine.status + "\n\nThe state and session journals were preserved. Restart the target before manual recovery.", parent=self.root)
+        self.release_search_trace()
         self.root.destroy()
 
 
