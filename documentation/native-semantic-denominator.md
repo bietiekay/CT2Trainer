@@ -1,13 +1,15 @@
 # Native semantic denominator (AP-10)
 
-**Current run:** `w4b4-case30-20261020081722Z` · **Status:** October 20, 2026
-(0.16). **Current artifacts:** `gap_inventory/inventory.json`,
+**Current run:** `w4b4-case30-20261020081722Z` · **Status:** November 23, 2026
+(0.52.1). **Current artifacts:** `gap_inventory/inventory.json`,
 `gap_inventory/gap-report.json`, `gap_inventory/feature-coverage.json`, and
 `gap_inventory/ap11-campaign.json` (30 pinned synthetic tables; 6,143 expected
 actions). Feature coverage is 42/42 in-scope features (100%; 7,475/7,475
 action-weighted). AP-11 has 0 confirmed real-game actions. Runtime acceptance is
 `runtime_unverified: true`. The local-only full-reference static catalog still
-has 2,698 of 117,624 plan entries blocked. This metric is separate from the pinned
+has 193 of 117,809 plan entries blocked (baseline
+`blocked-catalog-luacall-binding`; all 151/151 table paths load). This
+metric is separate from the pinned
 synthetic denominator and its feature matrix.
 
 The detailed table list, count breakdown, and top-gap results in sections 2–3

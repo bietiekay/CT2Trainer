@@ -1,6 +1,6 @@
 # Steam Deck / Proton: Compatibility Matrix and D0/D1 Run Sheet
 
-**Status:** October 10, 2026 (re-issued for the independent edition). **All test cases and gates: OPEN; no Proton, Linux, or Steam Deck run has been performed.** This document is a protocol for later measurements, not a compatibility promise. Read the own [fixture manual](../windows/fixture_target/README.md) first. A green Windows run, a started window, or a visible process name does not yet prove access to the game process under Proton.
+**Status:** November 23, 2026 (re-issued October 10, 2026 for the independent edition). **All test cases and gates: OPEN; no Proton, Linux, or Steam Deck run has been performed (as of the 0.52.1 release, 2026-11-15).** This document is a protocol for later measurements, not a compatibility promise. Read the own [fixture manual](../windows/fixture_target/README.md) first. A green Windows run, a started window, or a visible process name does not yet prove access to the game process under Proton.
 
 ## 1. Goal, Sources, and Boundaries
 

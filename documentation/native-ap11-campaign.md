@@ -1,13 +1,15 @@
 # CT2Trainer: AP-11 Game Campaign Plan and Report Ingestion
 
-Status: **2026-10-20 current manifest** — 30 pinned synthetic tables,
+Status: **2026-11-23 current manifest** — 30 pinned synthetic tables,
 6,143 expected actions, 0 confirmed real-game effects (run
 `w4b4-case30-20261020081722Z`; `gap_inventory/ap11-campaign.json`). The
 feature matrix is complete at 42/42 and 7,475/7,475 action-weighted;
-AP-11 remains a separate open goal. The 13-table/5,967-action plan and
+AP-11 remains a separate open goal (current release 0.52.1, 2026-11-15).
+The 13-table/5,967-action plan and
 its older run-specific details below are historical snapshots, retained
 for audit context; the committed manifest is authoritative for current
-counts. Wave 4 is complete and the 0.16 field-fix re-cut is recorded in
+counts. The current reference-corpus state (193 of 117,809 plan entries
+blocked, baseline `blocked-catalog-luacall-binding`) is recorded in
 [`plans/TRACKING.md`](../plans/TRACKING.md). The next reference-corpus
 work is tracked in the
 [reference-table roadmap](../plans/reference-table-100-roadmap.md).
@@ -262,7 +264,8 @@ the first time; until then the denominator document stays
   byte-identical committed baseline regeneration, CT tamper/missing
   integrity, write refusal, report validation/dedup/replacement/state-
   binding (see the focused-suite log of the latest green build run).
-- Current 0.16 build suite: 3,398 OK / 25 expected skips; see
+- Current build suite: 5,232 OK / 36 expected skips (main, 2026-11-21);
+  see
   [`plans/TRACKING.md`](../plans/TRACKING.md) for pinned build evidence.
 - This lane proves nothing about actual game behavior: no game, process
   or trainer EXE was started here. The AP-11 campaign remains at

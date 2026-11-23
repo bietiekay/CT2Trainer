@@ -1,11 +1,13 @@
 # Reference-table 100% roadmap
 
-Status: 2026-10-24. Active plan after the 0.16 Wave 4 release; RT-3
-(legacy-binary CT loading) and RT-4.4 (value semantics) landed 2026-10-23,
-RT-4.1 (symbol provider fidelity) landed 2026-10-22, and RT-4.6 (input
-legacy & authoring gaps) and RT-4.5 (AA directive & script coverage)
-landed 2026-10-24. Catalog remeasure `blocked-catalog-rt45main`:
-1,743 blocked of 117,634 plan entries, 151/151 tables load. The older AP/WP plans record completed implementation
+Status: 2026-11-23. Active plan; RT-3, RT-4.1…RT-4.6 and RT-5 (items
+A–G) are complete (RT-5 complete 2026-10-31), the 0.44-0.51
+compatibility lanes closed the remaining census classes, and the
+current catalog baseline is `blocked-catalog-luacall-binding`:
+193 blocked of 117,809 plan entries, 151/151 tables load (current
+release 0.52.1, 2026-11-15). The remaining work is user/field-gated
+(RT-6 pinned-game observation, the AP-11 campaign, the Deck/Proton
+acceptance). The older AP/WP plans record completed implementation
 history; this document defines the next work.
 [TRACKING.md](TRACKING.md) is the status ledger.
 

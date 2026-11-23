@@ -1,6 +1,6 @@
 # CT2Trainer build guide
 
-Status: October 20, 2026 (0.16; current build `native-20261020T150115Z-c426fb92`).
+Status: November 23, 2026 (0.52.1; current build `native-20261115T181026Z-00f5dfe8`, cut from `main` @ `dc138e0`, 2026-11-15).
 
 This guide is self-contained: it covers the requirements, the single build
 entry point, the local native test suite, the corpus denominator tool, and
@@ -63,15 +63,15 @@ Fresh builds produce, in the run folder:
 Each build reports the exact output hashes in the run folder
 (`build.json`), e.g. for the current state:
 
-- `CT2Trainer-0.16-source.zip`
-- `CT2Trainer-0.16-windows-portable.zip`
+- `CT2Trainer-0.52.1-source.zip`
+- `CT2Trainer-0.52.1-windows-portable.zip`
 
 **Version:** the release version is the content of the root `VERSION`
 file; it is the single version source for Native builds, and
 `tools/native_build.py` refuses to run when the file is missing or
 empty. Fresh builds are named `CT2Trainer-<version>-source.zip` and
 `CT2Trainer-<version>-windows-portable.zip`, where `<version>` is the
-current content of `VERSION` (currently `0.16`).
+current content of `VERSION` (currently `0.52.1`).
 
 The build report deliberately keeps `runtime_unverified: true` until the
 broader acceptance gates pass; a green build is not a game-compatibility
@@ -114,12 +114,15 @@ $env:CT2TRAINER_NASM=(Resolve-Path .tools/native-tools/nasm.exe).Path
 & .tools\native-build-env\Scripts\python.exe -m unittest discover -s tests -p test_native_*.py -q
 ```
 
-Current in-build baseline: **3398 OK / 25 expected skips / 0 failures** for
-`native-20261020T150115Z-c426fb92` (0.16). The 30-table synthetic corpus
+Current in-build baseline: **5,203 OK / 36 expected skips / 0 failures** for
+`native-20261115T181026Z-00f5dfe8` (0.52.1). The 30-table synthetic corpus
 measures 6,143 expected actions; its feature matrix covers 42/42 in-scope
-features. This does not claim support for the full real reference corpus: 2,698
-of 117,624 plan entries remain blocked. AP-11 has 0 confirmed real-game actions,
-and the build keeps `runtime_unverified: true`.
+features. This does not claim support for the full real reference corpus: 193
+of 117,809 plan entries remain blocked in the local-only static catalog
+(baseline `blocked-catalog-luacall-binding`; all 151/151 table paths load,
+every remaining row covered by a documented gate or a 0.44-0.51 ratification
+lane). AP-11 has 0 confirmed real-game actions, and the build keeps
+`runtime_unverified: true`.
 
 Historical baseline: **2671 OK / 25 skips** in the 0.10 offline build
 `native-20261011T121914Z-bfc5fc11`.

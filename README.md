@@ -3,10 +3,13 @@
 For a short, plain-language view of progress and remaining work, read
 [Current status](STATUS.md).
 
-**Current status (0.16, 2026-10-20):** the 30-case synthetic feature matrix
-is 42/42, while the local 151-path original reference corpus still has
-2,698 blocked of 117,624 compiled entries and one legacy-binary load
-error. The active goal is [full reference-table support](plans/reference-table-100-roadmap.md).
+**Current status (0.52.1, 2026-11-15):** the 30-case synthetic feature
+matrix is 42/42, and all 151 local reference-table paths (143 distinct
+hashes) load and compile through the independent clean-room
+implementation; the local-only static catalog still classifies 193 of
+117,809 plan entries as blocked, every remaining row covered by a
+documented gate or a 0.44-0.51 ratification lane. The active goal is
+[full reference-table support](plans/reference-table-100-roadmap.md).
 Static coverage is separate from confirmed game effect (AP-11: 0/6,143).
 
 CT2Trainer is an independently authored converter and Windows trainer for
@@ -193,7 +196,10 @@ source CLI offers explicit `assess-recovery` / `recover` steps (see
 
 ## Verification status
 
-- Full native suite: **3393 OK / 25 expected skips, 0 failures**.
+- Full native suite: **5,232 OK / 36 expected skips, 0 failures** (full
+  main suite, 2026-11-21); the 0.52.1 release build
+  (`native-20261115T181026Z-00f5dfe8`) is green in-build at 5,203 OK /
+  36 expected skips.
 - Feature matrix: **42/42 in-scope features covered** (100%
   feature-weighted, 7475/7475 action-weighted) over the pinned corpus of
   6,143 expected actions (30 pinned case tables, run

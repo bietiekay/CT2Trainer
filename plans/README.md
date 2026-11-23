@@ -1,6 +1,6 @@
 # Active plans
 
-Status: 2026-10-20. This directory root contains only the active planning
+Status: 2026-11-23. This directory root contains only the active planning
 documents:
 
 For a quick overview, start with [Current status](../STATUS.md).

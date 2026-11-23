@@ -1,6 +1,6 @@
 # CT2Trainer: independent runtime and redistribution
 
-Status: October 20, 2026 (0.16; full Wave 4 feature set plus post-release field fixes).
+Status: November 23, 2026 (0.52.1).
 
 CT2Trainer independently implements the CT converter and Windows trainer.
 Its build and exported source use no CE implementation, patched Lua DLL, resources,
@@ -14,11 +14,16 @@ execution support. Measured attainment, open points and the verified
 integration boundary are summarized in
 [native-verification.md](native-verification.md) and
 [native-semantic-denominator.md](native-semantic-denominator.md).
-The 0.16 build includes the complete Wave 4 feature set and the post-release
-WP-58 UI startup fix and Sinking City 2 activation-chain evidence. Its full
-suite passed 3,398 tests with 25 expected skips. The 42/42 feature matrix is
-measured over the 30-table synthetic corpus; the separate local-only static
-catalog of the full real reference corpus has 2,698 of 117,624 plan entries blocked.
+The 0.52.1 build includes the full release line: RT-3 through RT-5
+complete, the 0.44-0.51 compatibility lanes, the Master Trainer
+(MT-1..MT-34) and the 0.47 code-signing package (verified
+end-to-end 2026-11-21, see the progress ledger). The full main suite
+passed 5,232 tests with 36 expected skips (2026-11-21); the 0.52.1
+in-build suite is 5,203/36. The 42/42 feature matrix is measured over
+the 30-table synthetic corpus; the separate local-only static catalog
+of the full real reference corpus has 193 of 117,809 plan entries
+blocked (baseline `blocked-catalog-luacall-binding`; all 151/151 table
+paths load).
 Static IL2CPP file analysis is available in the source CLI (`ct2trainer native
 il2cpp`) and as a frozen binary adapter
 (`--il2cpp-static-pe/--il2cpp-static-metadata/--il2cpp-static-report`);
@@ -114,7 +119,7 @@ The current 30-table synthetic corpus measures **6,143 expected actions**
 (records minus navigation; 1,291 groups counted separately) per
 `gap_inventory/gap-report.json`. The feature matrix covers 42/42 in-scope
 features (7,475/7,475 action-weighted), but the full real reference corpus is
-not fully supported: the local-only static catalog has 2,698 of 117,624 plan entries blocked. AP-11 has 0 confirmed real-game actions and runtime acceptance remains
+not fully supported: the local-only static catalog has 193 of 117,809 plan entries blocked (baseline `blocked-catalog-luacall-binding`; every remaining row is covered by a documented gate or a 0.44-0.51 ratification lane). AP-11 has 0 confirmed real-game actions and runtime acceptance remains
 `runtime_unverified: true`. Per-record and per-gap detail is in
 [native-semantic-denominator.md](native-semantic-denominator.md). Static
 admission and synthetic linking do not demonstrate game behavior. The October

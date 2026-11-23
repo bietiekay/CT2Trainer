@@ -1,6 +1,10 @@
 # CE trainer-behavior parity assessment
 
-Status: 2026-10-20. Initial general assessment for the user's 151 local
+Status: 2026-10-20 (initial assessment; current state as of the 0.52.1
+release, 2026-11-15: 193 of 117,809 plan entries blocked, baseline
+`blocked-catalog-luacall-binding`, 151/151 table paths load, every
+remaining block covered by a documented gate or a 0.44-0.51
+ratification lane). Initial general assessment for the user's 151 local
 reference-table paths and the CE 7.5 behavior reference. This is a
 **capability map**, not a claim that every CE feature or original table has
 been exercised. The active completion plan is

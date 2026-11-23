@@ -51,10 +51,13 @@ game-facing action.
   `w4b4-case30-20261020081722Z`). This does not measure original-table
   parity.
 - Local original reference catalog: 151 paths, 143 distinct hashes, all
-  151 load, 116,756 supported (60,161 staged) and 1,053 blocked of
-  117,809 plan entries; zero load errors (0.21 RT-5 item B/E remeasure,
-  2026-10-31, run `blocked-catalog-020-rt5-be`, frozen manifest
-  `gap_inventory/reference-manifest.json`; +175 supported vs
+  151 load, 117,616 supported and 193 blocked of 117,809 plan entries;
+  zero load errors (current baseline `blocked-catalog-luacall-binding`,
+  2026-11-15; every remaining block covered by a documented gate or a
+  0.44-0.51 ratification lane; closure chain 2,698 → 1,053 → 537 → 221
+  → 198 → 193, zero newly blocked; previously 0.21 RT-5 item B/E
+  remeasure, 2026-10-31, run `blocked-catalog-020-rt5-be`, frozen
+  manifest `gap_inventory/reference-manifest.json`; +175 supported vs
   `blocked-catalog-020-icons` — the 175 `CodeEntry` records of the 22
   CheatCodes tables now `code_patch` plan rows, zero newly blocked,
   zero reason changes; item E `messageDialog` no-op is a
@@ -109,6 +112,19 @@ game-facing action.
   (58,950 staged) / 2,698 blocked, post-Wave-4 catalog 2026-10-20,
   reproduced per table by the RT-1 re-run on the 0.16 source,
   2026-10-21).
+- Documentation / README refresh to the 0.52.1 state (2026-11-23, no
+  release cut, no catalog movement): the full documentation set, the
+  READMEs and the master-trainer review documents were brought up to
+  the current 0.52.1 state (the release docs in the
+  `RELEASE_DOC_FILES` allowlist, `master_trainer/UI.md` /
+  `CONCEPT.md` / `ROADMAP.md` advanced to the MT-34 state with the
+  in-app `ui_flow_text()` kept parallel, the local docs, and the
+  anchors in this tracker, `STATUS.md` and the progress ledger);
+  VERSION / CHANGELOG unchanged (a cut would be 0.52.2); full main
+  suite 5,232 OK / 36 expected skips on `main` @ `9a16d86`; see the
+  ledger section 'Full documentation / README refresh to the 0.52.1
+  state (2026-11-23, no release cut)' in
+  `documentation/native-progress.md`.
 - Local original reference catalog re-verified after the trainer UI
   feature change (2026-10-24, run `blocked-catalog-ui-scripts`):
   per-table identical to `blocked-catalog-rt45main` - 151/151 load,

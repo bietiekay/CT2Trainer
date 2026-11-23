@@ -1,6 +1,6 @@
 # CT2Trainer derivation and design intent
 
-Status: October 20, 2026 (0.16; current corpus run `w4b4-case30-20261020081722Z`).
+Status: November 23, 2026 (0.52.1; current corpus run `w4b4-case30-20261020081722Z`).
 
 This document explains why the CT2Trainer Native edition exists, how it was
 derived from the public Cheat Engine contract without using CE
@@ -48,7 +48,10 @@ supported.
 - The feature matrix covers **42/42 in-scope features** (100% feature-weighted;
   7,475/7,475 action-weighted). This is coverage against the pinned synthetic
   corpus and is not full support for the real reference corpus. The separate
-  full-corpus static catalog status is **2,698 of 117,624 plan entries blocked**.
+  full-corpus static catalog status is **193 of 117,809 plan entries blocked**
+  (baseline `blocked-catalog-luacall-binding`; all 151/151 table paths load,
+  every remaining row covered by a documented gate or a 0.44-0.51
+  ratification lane).
 - AP-11 remains separate: **0 of 6,143 expected actions** have confirmed real
   game effect. The metric excludes synthetic fixture/mock evidence.
 - The three proof gates are closed with tested evidence: per-table completeness

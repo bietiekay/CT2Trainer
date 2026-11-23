@@ -27,7 +27,29 @@ the details-window rows) with the 0.35 release (2026-11-09); MT-21
 (multi-column trainer grid: up to three side-by-side columns in
 trainer mode, the persisted "Columns: N" header cycle, the
 narrow-window clamp with the 320 px column floor, the byte-stable
-single-column standalone) with the 0.36 release (2026-11-09).
+single-column standalone) with the 0.36 release (2026-11-09); MT-28
+(per-table process binding persistence: the remembered explicit
+process choice, keyed by the table's content hash, live binding
+outranks the smallest-PID rule in auto mode, ask preselects the
+remembered row, stale / foreign PIDs fall back) with the 0.37
+release (2026-11-09); MT-29 (per-table auto-load policy: the
+persisted manual-only override, absent entry = the documented
+automatic default) and MT-30 (state folder / debug log quick
+access: the two named-refusal header buttons) with the 0.39 release
+(2026-11-10); MT-31 (process identification in picker + details:
+the bounded per-candidate enrichment, only the proved facts render,
+the name + PID row stays byte-stable) with the 0.40 release
+(2026-11-10); MT-32 (minimize-to-tray: the persisted "Tray: on/off"
+toggle behind the named fail-closed refusals, restore on tray click,
+the trainer-attach tray balloons) and MT-33 (window geometry
+persistence: size / position saved on the bounded cadence and on
+close, restored clamped, an invalid persisted geometry is the named
+refusal) with the 0.43 release (2026-11-11); MT-34 (the per-session
+hotkey switch: "Hotkeys: on/off" in every trainer releases /
+re-publishes the table hotkeys for the session, never persisted)
+with the 0.45 release (2026-11-13). MT-1..MT-34 are all done; the
+Master Trainer adds no new trainer functionality — every feature is
+the already-tested standalone-trainer engine.
 Design and
 implementation notes; the working plan is [ROADMAP.md](ROADMAP.md) and
 the reviewable UI-flow document is [UI.md](UI.md).

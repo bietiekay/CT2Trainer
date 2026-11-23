@@ -2,13 +2,14 @@
 
 **Analysis snapshot:** 2026-10-18 · **Base:** `main` @ `2fe08f9` (0.15,
 build `native-20261018T055505Z-39f20180`). This is a historical analysis
-that informed Wave 4. **Current status (2026-10-20):** Wave 4 is complete
-(WP-43…WP-58); the 0.16 field-fix re-cut is
-`native-20261020T150115Z-c426fb92`, based on `main` @ `7616edb`. The
-authoritative current reference catalog is 2,698 blocked of 117,624 plan
-entries (114,926 supported, including 58,950 staged; one whole-table
-error, SuperMeatBoy legacy binary), from `blocked-catalog-w4b4.json`.
-Current goals and planned follow-up live in [`plans/TRACKING.md`](../plans/TRACKING.md)
+that informed Wave 4. **Current status (2026-11-23):** the release line
+is at 0.52.1 (build `native-20261115T181026Z-00f5dfe8`, 2026-11-15); the
+authoritative current reference catalog is 193 blocked of 117,809 plan
+entries (baseline `blocked-catalog-luacall-binding`; 151/151 table
+paths load, the SuperMeatBoy legacy-binary load error cleared by RT-3).
+The 2026-10-20 measurement (2,698 of 117,624,
+`blocked-catalog-w4b4.json`) is historical. Current goals and planned
+follow-up live in [`plans/TRACKING.md`](../plans/TRACKING.md)
 and the [reference-table roadmap](../plans/reference-table-100-roadmap.md).
 Tables and wave plans below describe the 2026-10-18 snapshot unless
 explicitly marked current.

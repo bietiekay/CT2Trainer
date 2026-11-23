@@ -1,12 +1,14 @@
 # New CT test cases for CT2Trainer — 30.09.2026
 
-Status **2026-10-20**: historical corpus-selection document. The live
+Status **2026-11-23**: historical corpus-selection document. The live
 pinned corpus is now 30 synthetic clean-room tables (case-01 … case-31,
 with numbering gaps; see `TableReferences/README.md`), totaling 6,143
-AP-11 expected actions. Wave 4 and the 0.16 field-fix re-cut are complete;
-the 42-feature matrix is closed at 100%. The reference catalog currently
-measures 2,698 blocked of 117,624 plan entries (2026-10-20,
-`blocked-catalog-w4b4.json`). See [`plans/TRACKING.md`](../plans/TRACKING.md)
+AP-11 expected actions. The 42-feature matrix is closed at 100%
+(42/42, 7,475/7,475 action-weighted). The reference catalog currently
+measures 193 blocked of 117,809 plan entries (baseline
+`blocked-catalog-luacall-binding`, current release 0.52.1); the
+2026-10-20 measurement (2,698 of 117,624, `blocked-catalog-w4b4.json`)
+is historical. See [`plans/TRACKING.md`](../plans/TRACKING.md)
 and the [reference-table roadmap](../plans/reference-table-100-roadmap.md)
 for current gaps and next actions. The candidates and figures below
 remain historical evidence from earlier selection work.

@@ -1,6 +1,8 @@
 # Documentation index
 
-Status: October 20, 2026 (0.16; current release build `native-20261020T150115Z-c426fb92`). These files are the permanent project
+Status: November 23, 2026 (0.52.1; current release build
+`native-20261115T181026Z-00f5dfe8`, cut from `main` @ `dc138e0`,
+2026-11-15). These files are the permanent project
 documentation for humans and further agents. All documents refer to the
 **Native edition** (CE-free, independent implementation). All documentation
 is maintained in English.
