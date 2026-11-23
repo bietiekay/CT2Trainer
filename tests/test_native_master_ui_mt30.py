@@ -31,7 +31,8 @@ try:
 except ImportError:  # pragma: no cover - environment without Tcl/Tk
     tk = None
 
-from test_native_master_ui import CT_GAMEA, _FakeLister, _all_widgets
+from test_native_master_ui import (CT_GAMEA, _FakeLister,
+                                   _StubAnalysisWorker, _all_widgets)
 from native_tk_teardown import force_root_release
 
 from ct2trainer.native.master_trainer import state_access
@@ -238,6 +239,14 @@ class StateAccessUiTests(unittest.TestCase):
 
     def test_a_missing_state_folder_is_a_named_refusal(self):
         app = self._app(state_home=self.state_home / "never-created")
+        # MT-24 race guard (observed in an in-build suite run,
+        # 2026-11-23): the real analysis worker started by the waiting-
+        # view build persists table-analysis.json into the state home
+        # (mkdir) and can create the "never-created" folder before the
+        # refusal check, turning the named refusal into an open.  The
+        # stub records enqueues without the daemon thread, so the
+        # folder stays missing deterministically.
+        app.analysis_worker = _StubAnalysisWorker()
         window = self._window(app)
         opened = []
         with patch.object(state_access, "choose_opener",
