@@ -3977,6 +3977,89 @@ path touched): the full main suite is 5,232 OK / 36 expected
 skips (0 failures) on `main` @ `9a16d86` at the canonical path;
 `runtime_unverified` stays set per gate.
 
+### Full signed build - Path A mechanism proof (2026-11-23,
+post-0.52.1, no release cut)
+
+The first fully green signed build (the Path A mechanism proof
+against the documented SAC field block) was cut with
+`scripts/Build-Native.ps1` under the documented environment
+contract, run `native-20261123T062756Z-441cbd53` (cut from
+`main` @ `e1148df`, 2026-11-23; `CT2TRAINER_SIGN_PFX` /
+`CT2TRAINER_SIGN_PFX_PASSWORD` set in the build shell, the
+self-signed test PFX from the 2026-11-21 lane). Two
+determinism fixes were required before the in-build suite would
+pass under a live signing env:
+
+- the `run_tests` env-strip (commit `1c3a5a2`): the build
+  shell's `CT2TRAINER_SIGN_*` variables no longer leak into the
+  test subprocess env - without the strip, `build_trainer`'s
+  env-driven default `sign_if_configured` tried to sign the
+  non-PE test stubs (signtool `0x800700C1` badexeformat, 16
+  failed tests);
+- the MT-30 race guard (commit `e1148df`): the
+  `test_a_missing_state_folder_is_a_named_refusal` flake
+  (observed in an in-build suite run, 2026-11-23) - the MT-24
+  analysis worker started by the waiting-view build persists
+  `table-analysis.json` into the state home (mkdir) and could
+  create the test's "never-created" state folder before the
+  refusal check, turning the named refusal into an open; the
+  test now pre-installs the established `_StubAnalysisWorker`
+  race guard.
+
+Results (run `native-20261123T062756Z-441cbd53`):
+
+- in-build suite green under the live signing env (5,232 OK /
+  36 expected skips, 0 failures, `ce_inputs: []`) - the
+  env-strip fix is proven end-to-end;
+- `build.json` `code_signing` facts (SDK signtool 10.0.26100.0
+  x64, RFC3161 timestamp via
+  `http://timestamp.digicert.com`):
+  - `converter`: `signed: true` ("Number of warnings: 0,
+    Number of errors: 0"); the pure `certificate_table`
+    re-proof passed (offset 33,376,032, declared length
+    7,376); signed 33,383,408 B, sha256
+    `f5adeb15713eb94c415a67b6c832bc381f669c91f8eae8cc93e2355eff757c0f`;
+  - `master`: `signed: true`; the cert-table re-proof passed
+    (offset 17,073,448, declared length 7,376); signed
+    17,080,824 B, sha256
+    `4988aacec6eaf72b22be042d450cab09209267cd96157c73709bc4e9d4ab6c59`;
+  - `template`: not signed by design (a certificate table
+    after its `CT2BASE1` trailer would break the converter's
+    template check); 16,940,012 B, sha256
+    `d154a2da65e2a998f1c1499ed845004d5b1fb17aac26eecd1be496d2e4f03fdd`;
+- end-to-end generated-trainer signing through the production
+  `sign=None` -> `sign_if_configured` seam (`build_trainer`
+  against the new template + the fixture plan): `signed: true`,
+  and the embedded plan roundtrips through the appended
+  certificate table byte-identically - canonical plan sha256
+  `32f30aadc68a06f223be105faecd63c6a1ddf219664168b3ec730eba0e5e1c5c`
+  (4 entries) before and after signing; the signed trainer is
+  16,950,856 B, sha256
+  `a996a8c6e87595a26d8334219727708eca2366c407fec4bd749f0a653797bbac`;
+- release ZIPs (version stays `0.52.1` - no release cut on this
+  lane; a cut would be 0.52.2): source ZIP
+  `CT2Trainer-0.52.1-source.zip` sha256
+  `b0c1dcbc59a6861923a89c6a105fb66001af558a7fd4bad936c97c32b27bbb00`
+  (14,802,484 B) and portable ZIP
+  `CT2Trainer-0.52.1-windows-portable.zip` sha256
+  `c23744471643cac35693934073d6dc53c584d846fd22eb1e32e45104800d041d`
+  (49,954,974 B) - both carry the lane content (the env-strip,
+  the MT-30 race guard, the doc refresh, and this signed
+  build).
+
+This is a mechanism proof only: a self-signed certificate does
+NOT clear Smart App Control (the 0.47 record + the 2026-11-21
+field record). The durable SAC fix stays a user-supplied
+trusted-CA (OV / EV) PFX through the documented environment
+contract (fail-closed: a configured signing that fails never
+ships an unsigned binary) - the signed release cut activates
+once the certificate is in hand. No catalog, feature-matrix or
+AP-11 movement (no table-parsing path touched): catalog
+unchanged at the `blocked-catalog-luacall-binding` baseline
+(117,809 total / 117,616 supported / 12,974 headings /
+104,467 actionable / 193 blocked). No release cut: VERSION /
+CHANGELOG unchanged.
+
 ### 0.52 release build record (2026-11-15, run
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`)
 
