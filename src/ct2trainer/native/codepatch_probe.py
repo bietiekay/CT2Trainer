@@ -24,12 +24,21 @@ import tempfile
 import threading
 
 # Pinned 2026-11-16 for the first code-patch fixture build: MSVC
-# 19.44.35229, evidence build/runs/native-codepatch-fixture-20261116T032022Z-bdd3
+# 19.44.35229, evidence
+# build/runs/native-codepatch-fixture-20261116T032022Z-bdd3
 # (tests/windows/codepatch_fixture/Invoke-CodePatchFixtureBuild.ps1,
 # /W4 /WX /Od; marker + data_a + data_b + probe prologue occurrence == 1
 # each per EXE).  The x64 RVAs were measured from the live target's
 # metadata line; the x86 RVAs were measured statically by a PE section
 # walk cross-proven byte-exact against the x64 runtime metadata.
+# Re-pinned 2026-11-24 after the 2026-11-16 pin build was cleaned
+# (0.52.2 release cut, frozen gate re-runs): rebuilt from the unchanged
+# source (codepatch_target.c sha256
+# 89f1bef4b4f59fbd6653bd9eb1ff6777d321c740bde30d2741f7af56fe7a52e9) into
+# build/runs/native-codepatch-fixture-20261124T031403Z-76b8c44b. Both
+# pinned CTs are unchanged, so only the target hashes moved; the
+# canonical plan fingerprints (PLAN_SHA256) still hold against the
+# compiled plans, so no compiler drift.
 PROCESS_NAME = 'NativeCodePatchFixture.exe'
 FIXTURE_SOURCE_SHA256 = '89f1bef4b4f59fbd6653bd9eb1ff6777d321c740bde30d2741f7af56fe7a52e9'
 CT_SHA256 = {
@@ -37,8 +46,8 @@ CT_SHA256 = {
     'x86': 'de7be66c3ef09747a7a475539aed9afc2c77af0affb0e8d5ee4aaa50d61369d8',
 }
 TARGET_SHA256 = {
-    'x64': '3f217da553159221216db43c6c8e83481d5da2869edcdf68ca4f66980a9b891f',
-    'x86': '288855467feab361c2d27a64a4ff68bb73687923d8e3984003a3c7fe77ae6a85',
+    'x64': 'c00029cb983b7786477fb75804d277c04ce56a734d52647d08c5298f640eeb16',
+    'x86': 'f9027042f57f1b13e7ee4924011932c66028c31ef477a9749d1c64fa65d9428e',
 }
 PLAN_SHA256 = {
     'x64': '6b0ce466529127e1497cc1e47e7ca4d3bbaba198564c1bbb701b4c57155cffa3',

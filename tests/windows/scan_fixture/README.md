@@ -77,52 +77,53 @@ x86 plan sha256
   (`d66756a1...`), `target_architecture: x86`, `frozen_runtime: false`.
 
 The frozen scan gate (`frozen_runtime: true`, the generated
-`ScanTrainer.exe`) was re-run at the 0.52 release cut - see
-"Verified frozen scan gate (2026-11-15, 0.52 build cut)" below. This
-record closes the scan-fixture portion of the Windows runtime
+`ScanTrainer.exe`) was re-run at the 0.52.2 release cut - see
+"Verified frozen scan gate (2026-11-24, 0.52.2 build cut)" below.
+This record closes the scan-fixture portion of the Windows runtime
 evidence only: real-game, clean-machine and Deck / Proton acceptance
 remain open (`runtime_unverified` stays set).
 
-## Verified frozen scan gate (2026-11-15, 0.52 build cut)
+## Verified frozen scan gate (2026-11-24, 0.52.2 build cut)
 
-At the 0.52 release cut (run
-`native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`,
-2026-11-15), the two frozen scan trainers were regenerated from the
-gate-passed `plan.json` files under
-`build\windows-fixture\scan-check-20261115T044000Z-scan\` with the 0.52
-template stub (sha256
-`23e8fed027b0e50f5bc1f81f7b7b626b6df951f5de8ba2a0e7c43fefbbf2d4a9` -
-the pre-cut trainers carried the pre-binding 0.51 template
-`f14e079ccf246833353f5b7b2afa12793e87e0f125e923f1c6ede5cd01338996`,
-so regeneration was required) - both `.build.json` reports confirm
-the new template identity - and re-run against the same fresh
-fixture targets (x64 `NativeScanFixture.exe` sha256
-`e54b12801564aed37ad9ee3ed3283459e53f9f69ee8042af73730fc0784c5315`,
-x86 sha256 `d66756a12c741caf163823a26643bce5c0a0369c8b689fc00f0a3f52fa8a626e`;
-the CT unchanged at sha256
+At the 0.52.2 release cut (run
+`native-20261124T033652Z-1da5b40e`, cut from `main` @ `cbbd386`,
+2026-11-24), the two frozen scan trainers were regenerated from the
+gate-passed `plan.json` files with the 0.52.2 template stub (sha256
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25` -
+both `.build.json` reports confirm the new template identity) and
+re-run against the rebuilt fixture targets (x64
+`NativeScanFixture.exe` sha256
+`67b2e56acee6a9d55948d640700be670ae319c90a0fe97629bfa2880697bfb9d`,
+x86 sha256
+`a9f25c099334459022f22f0caa361713b1797e058882e053cd34398d345b3f15`,
+rebuilt from the unchanged source into
+`build\runs\native-scan-fixture-20261124T031403Z-76b8c44b\`; the CT
+unchanged at sha256
 `440a5bf3fdaaae5e2756eed16f8728efd3c65c7c40084e2a0685f2e2c83366db`):
 
 - x64: frozen `ScanTrainer.exe` sha256
-  `283e50759750774bcd3c3b8c04020a58f87ac3ff94e4f74f233a28305d7745f5`
-  (16,904,585 bytes); report `ct2trainer-owned-scan/v1` status
-  `passed`, `frozen_runtime: true`, `ce_inputs: []`,
+  `8f7cabdbe773f05e90a536af8ba508c843eb05e76667c3597e3b16e3f8e10694`
+  (16,945,727 bytes); embedded plan sha256
+  `20341aaaf462d720f7596856c64b22f23d82e2e0af98a6dc7fae6e7a7bd66b81`;
+  report `ct2trainer-owned-scan/v1` status `passed`,
+  `frozen_runtime: true`, `ce_inputs: []`,
   `owned_markers_absent: true` - 8/8 checks passed, the same check
-  set as the source-runtime record above; plan identity identical
-  to the source runtime (plan sha256
-  `1a84220daa1d98f62668ea1c7761e703e0229de2ea19b1952df9b11fe4b086e5`);
-  terminal receipts in schema-valid terminal states (1
-  `target-exited`, 3 `abandoned`).
+  set as the source-runtime record above.
 - x86: frozen `ScanTrainer.exe` sha256
-  `8ebc01935a3bb70bfac6439c30c3f3ec8d540368426a8e79c189009a4703cb12`
-  (16,904,585 bytes); report `ct2trainer-owned-scan/v1` status
-  `passed`, `frozen_runtime: true`, `ce_inputs: []`,
-  `owned_markers_absent: true` - 8/8 checks passed; plan identity
-  identical to the source runtime (plan sha256
-  `fa1939cd1213f3471cb1f6fcca97644c048b3f1c23d8a503adbdc6eb9b09554a`);
-  terminal receipts in schema-valid terminal states (1
-  `target-exited`, 3 `abandoned`).
+  `b32146ffeec23c0a121f79a06a59698e1673d23511afdc12d2d1810b0685f790`
+  (16,945,727 bytes); embedded plan sha256
+  `eb7366efbb471432deccc16e18bb9d7942964eef4fe09e6069f99056292fbafe`;
+  report `ct2trainer-owned-scan/v1` status `passed`,
+  `frozen_runtime: true`, `ce_inputs: []`,
+  `owned_markers_absent: true` - 8/8 checks passed. The first
+  attempt of this run was interrupted by a transient orphan
+  `NativeScanFixture.exe` from an earlier source check (the gate
+  refused with "expected exactly one fixture target, found 2");
+  the retry on a clean process table passed as recorded here.
 
-This closes the frozen scan gate at the 0.52 build cut. Real-game,
+Evidence under the git-ignored
+`build\windows-fixture\frozen-check-20261124T040411Z\`. This closes
+the frozen scan gate at the 0.52.2 build cut. Real-game,
 clean-machine and Deck / Proton / touch acceptance remain open
 (`runtime_unverified` stays set per
 `documentation/native-verification.md` section 5 and the roadmap

@@ -125,8 +125,9 @@ game-facing action.
   ledger section 'Full documentation / README refresh to the 0.52.1
   state (2026-11-23, no release cut)' in
   `documentation/native-progress.md`.
-- RT-7 in-build suite determinism (2026-11-23, lane work, no release
-  cut): the per-test leaked-Tk-interpreter elimination - v3 leak-scan
+- RT-7 in-build suite determinism (2026-11-23 lane; shipped as the
+  0.52.2 release cut, 2026-11-24): the per-test leaked-Tk-interpreter
+  elimination - v3 leak-scan
   baseline (2026-11-23) attributed 54 live roots across 7 test modules
   (one-leak-per-TrainerWindow, each a `Tcl_AsyncDelete`
   wrong-thread abort risk); the full-suite per-test scan (single
@@ -145,7 +146,7 @@ game-facing action.
   side_effect=True)` incl. explicit `return_value` reset + extended
   clear tuple). Production: `TrainerWindow.release_search_trace()` in
   `close()` (`ui.py`) + the `_back_to_master` trace release
-  (`master_ui.py`) - ships with the next cut; test backstop:
+  (`master_ui.py`) - shipped with the 0.52.2 cut; test backstop:
   `native_tk_teardown.py` `force_root_release` gains the generic
   variable-trace release, weakref verify, interpreter-handle drop and
   the fail-closed named refusal `tk-teardown-refusal:
@@ -1372,6 +1373,103 @@ game-facing action.
   sha256 `d3ada53a7ebc6c160be55608046a286ba98028a1858cc2d950a64327a529d63b`,
   17,070,681 bytes, ships next to the converter). Feature
   matrix unchanged (42/42, 7,475/7,475 over
+  `w4b4-case30-20261020081722Z`).
+- 0.52.2 the RT-7 in-build suite determinism release
+  (2026-11-24, content commits `dd0d213` + `e6296c3`, build
+  record below): VERSION 0.52.2 + CHANGELOG 0.52.2 entry in
+  the same change (incl. the `__version__` package constant
+  sync, guarded by
+  `test_version_matches_root_version_file`). The RT-7
+  content (the per-test leaked-Tk-interpreter elimination -
+  `TrainerWindow.release_search_trace()` in `close()` +
+  explicit root masters at all four `TrainerWindow`
+  variable sites in `ui.py`, the `_back_to_master` trace
+  release in `master_trainer/master_ui.py`, the extended
+  `tests/native_tk_teardown.py` backstop with the fail-
+  closed named refusal `tk-teardown-refusal:
+  tk-interpreter-release-failed`, the tray test
+  mock-retention fixes, +3 env-strip tests in
+  `tests/test_native_code_signing.py`; full-suite per-test
+  leak scan START-ROOTS 0 / FINAL-ROOTS 0, zero
+  LEAK-DELTA vs the 2026-11-23 v3 baseline of 54 live
+  roots). Fixture probe re-pin for the frozen gate re-runs
+  at this cut (verification only): the pinned fixture
+  builds from 2026-11-15/16 had been cleaned, so all six
+  fixture families were rebuilt from the unchanged sources
+  with the committed MSVC recipes (evidence runs
+  `native-{string,debughook,hook,global,scan,codepatch}-fixture-20261124T031403Z-76b8c44b`,
+  REBUILD-EXIT 0) and the probe `TARGET_SHA256` pins moved
+  hash-only in `string_probe.py` / `x86_probe.py` /
+  `lua_record_probe.py` / `global_probe.py` /
+  `scan_probe.py` / `codepatch_probe.py` (string x64
+  `612b8a7175487d50694ddf7bf2558fbb7cdac3ee154e9094045bdc987fec8106`
+  / x86
+  `49f01f5a47fe2f3fb1de927325010897c817bdb1c426d09716c48fab01fec30d`,
+  x86 debug-hook
+  `e17e2296c01274bb48c44a41b40f35fba70b4b6bd68c20a138ed320aa888ff5c`,
+  hook x64
+  `0f32e7d18670cb3eb3c95723f13e7d11c1742205c5988f8166784865ab9831a6`,
+  global x64
+  `757c00f7d0939eaba9233df94eb236a88cae01b60760d37e0eafc1b6907179d1`
+  / x86
+  `8d72d490c7967b4dbac811bf25e8f0b6c9d4060bb30fd3566e1d7403f6f41040`,
+  scan x64
+  `67b2e56acee6a9d55948d640700be670ae319c90a0fe97629bfa2880697bfb9d`
+  / x86
+  `a9f25c099334459022f22f0caa361713b1797e058882e053cd34398d345b3f15`,
+  codepatch x64
+  `c00029cb983b7786477fb75804d277c04ce56a734d52647d08c5298f640eeb16`
+  / x86
+  `f9027042f57f1b13e7ee4924011932c66028c31ef477a9749d1c64fa65d9428e`);
+  the pinned CTs, fixture sources and the canonical plan
+  fingerprints are unchanged, so no compiler drift; 10 of
+  the 11 gates re-verified in the source runtime against
+  the rebuilt targets (the codepatch x86 source run stopped
+  at the documented elevated-parent launch-block, Win32
+  740 - a launch refusal, not a pin failure). Full main
+  suite 5,235 OK / 36 expected skips. Catalog unchanged
+  (`blocked-catalog-luacall-binding`): 117,809 total /
+  117,616 supported / 12,974 headings / 104,467 actionable
+  / 193 blocked - no table-parsing path touched. The
+  0.52.2 build `native-20261124T033652Z-1da5b40e` cut from
+  `main` @ `cbbd386` (2026-11-24; the first 2026-11-24
+  attempt `native-20261124T023554Z-4511373b` failed the
+  version-sync check before the `__version__` bump landed,
+  and the pre-re-pin cut
+  `native-20261124T024745Z-68f463d1` is superseded by this
+  re-cut): in-build suite 5,235 OK / 36 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept
+  per gate; unsigned by default (`code_signing`
+  not-configured); source ZIP
+  `CT2Trainer-0.52.2-source.zip` sha256
+  `e372b142f40a026826212ce7f40e30ef5906a0e590dc116e4680db86b167757a`
+  (14,809,824 bytes), portable ZIP
+  `CT2Trainer-0.52.2-windows-portable.zip` sha256
+  `219db7e96b84958158ce1a26dd817393b3f887897969e381b2cdefbfea369727`
+  (49,942,786 bytes; the frozen `CT2Trainer-Master.exe`
+  sha256
+  `74550f1f621a84518f906cffd7dd17c3c27581a6687f6a07b48984dc260fabcd`,
+  17,072,404 bytes, ships next to the converter). Frozen
+  re-run at this cut: all eleven frozen trainers
+  regenerated with the 0.52.2 template stub (sha256
+  `20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`)
+  - every report status `passed` with `frozen_runtime: true`
+  (14/14 string per architecture, 6/6 x86 debug-hook, 7/7
+  hook, 4/4 Lua-record, 14/14 global per architecture, 8/8
+  scan per architecture, 14/14 code-patch per architecture;
+  x86 / hook / Lua-record / code-patch plan identity
+  identical to the source runtime; the scan x86 first
+  attempt failed against a transient orphan process and the
+  retry on a clean process table passed; the codepatch x86
+  run - the first frozen x86 code-patch run of the roadmap -
+  ran from an elevated parent per the documented VM
+  launch-block heuristic with the user-approved UAC
+  consent; trainers + reports under the git-ignored
+  `build\windows-fixture\frozen-check-20261124T040411Z\`;
+  real-game, clean-machine and Deck / Proton / touch
+  acceptance remain open, `runtime_unverified` stays set
+  per the RT-6 acceptance). Feature matrix unchanged
+  (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`).
 - 0.52.1 the global-gate frozen-trainer launcher pair + the
   string-fixture re-pin + the release allowlist fix release

@@ -3712,6 +3712,151 @@ RT-6 acceptance. Full record in
 code-patch gate (2026-11-16 + 2026-11-20, source runtime,
 x64 + x86)").
 
+### 0.52.2 release build record (2026-11-24, run
+`native-20261124T033652Z-1da5b40e`, cut from `main` @ `cbbd386`)
+
+0.52.2 is the release that ships the RT-7 in-build suite
+determinism content (the per-test leaked Tk interpreter
+elimination - `TrainerWindow.release_search_trace()` in
+`close()` + explicit root masters at all four `TrainerWindow`
+variable sites in `ui.py`, the `_back_to_master` trace release
+in `master_trainer/master_ui.py`, the extended
+`tests/native_tk_teardown.py` backstop with the fail-closed
+named refusal `tk-teardown-refusal:
+tk-interpreter-release-failed`, the tray test mock-retention
+fixes, +3 env-strip tests in
+`tests/test_native_code_signing.py`; full-suite per-test leak
+scan START-ROOTS 0 / FINAL-ROOTS 0, zero LEAK-DELTA, versus
+the 54 attributed live roots of the 2026-11-23 v3 baseline;
+see the RT-7 ledger section below) together with the
+six-family fixture rebuild + re-pin for the frozen gate
+re-runs at this cut (the pinned fixture builds from
+2026-11-15/16 had been cleaned: all six families rebuilt from
+the unchanged sources with the committed MSVC recipes into
+evidence runs
+`build\runs\native-{string,debughook,hook,global,scan,codepatch}-fixture-20261124T031403Z-76b8c44b`
+(driver `build\tmp-fixture-rebuild-0.52.2.ps1`, REBUILD-EXIT
+0); the probe `TARGET_SHA256` pins moved hash-only - string
+x64
+`612b8a7175487d50694ddf7bf2558fbb7cdac3ee154e9094045bdc987fec8106`
+/ x86
+`49f01f5a47fe2f3fb1de927325010897c817bdb1c426d09716c48fab01fec30d`,
+x86 debug-hook
+`e17e2296c01274bb48c44a41b40f35fba70b4b6bd68c20a138ed320aa888ff5c`,
+hook x64
+`0f32e7d18670cb3eb3c95723f13e7d11c1742205c5988f8166784865ab9831a6`,
+global x64
+`757c00f7d0939eaba9233df94eb236a88cae01b60760d37e0eafc1b6907179d1`
+/ x86
+`8d72d490c7967b4dbac811bf25e8f0b6c9d4060bb30fd3566e1d7403f6f41040`,
+scan x64
+`67b2e56acee6a9d55948d640700be670ae319c90a0fe97629bfa2880697bfb9d`
+/ x86
+`a9f25c099334459022f22f0caa361713b1797e058882e053cd34398d345b3f15`,
+codepatch x64
+`c00029cb983b7786477fb75804d277c04ce56a734d52647d08c5298f640eeb16`
+/ x86
+`f9027042f57f1b13e7ee4924011932c66028c31ef477a9749d1c64fa65d9428e`;
+the pinned CTs, fixture sources and the canonical plan
+fingerprints are unchanged, so no compiler drift; 10 of the 11
+gates re-verified in the source runtime against the rebuilt
+targets under `build\windows-fixture\srccheck-20261124\` - the
+codepatch x86 source run stopped at the documented
+elevated-parent launch-block (Win32 740), a launch refusal,
+not a pin failure). The build was cut offline with
+`scripts/Build-Native.ps1` (the first 2026-11-24 attempt
+`native-20261124T023554Z-4511373b` failed the version-sync
+check before the `__version__` bump landed; the pre-re-pin
+cut `native-20261124T024745Z-68f463d1` is superseded by this
+re-cut): in-build suite 5,235 OK / 36 expected skips, 0
+failures - fully green at the canonical build path,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate. Source ZIP `CT2Trainer-0.52.2-source.zip` sha256
+`e372b142f40a026826212ce7f40e30ef5906a0e590dc116e4680db86b167757a`
+(14,809,824 bytes) - carries the RT-7 determinism content and
+the six probe re-pins - and portable ZIP
+`CT2Trainer-0.52.2-windows-portable.zip` sha256
+`219db7e96b84958158ce1a26dd817393b3f887897969e381b2cdefbfea369727`
+(49,942,786 bytes; the frozen `CT2Trainer-Master.exe` sha256
+`74550f1f621a84518f906cffd7dd17c3c27581a6687f6a07b48984dc260fabcd`,
+17,072,404 bytes, ships next to the converter; both ZIPs
+verified to carry the exact artifacts). The build ran
+unsigned by default (no code-signing certificate on this
+machine; `build.json` `code_signing`: converter / master
+signed false, reason not-configured; template not signed by
+design) - the signed path activates with a user-supplied
+trusted-CA PFX. Catalog state at release: unchanged at the
+`blocked-catalog-luacall-binding` baseline 117,809 total /
+117,616 supported / 12,974 headings / 104,467 actionable /
+193 blocked (no table-parsing path touched). The frozen
+re-runs of all eleven owned gates ran at this cut - the
+eleven frozen trainers regenerated with the 0.52.2 template
+stub (sha256
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`),
+every report status `passed` with `frozen_runtime: true`
+under `build\windows-fixture\frozen-check-20261124T040411Z\`:
+string x64 trainer sha256
+`7bc9b637b330d71ddd866490d5d2324b421d86b2fb208cbfa13f8ac9a15f47df`
+(plan sha256
+`c0299324e87d1c47cc4fc3f39b9e1a9e90523bd85b0713f1ce6451548923c0f2`,
+14/14), string x86 trainer sha256
+`631a81deb14394cc669906fe478a5c8283b7315ac686e102fd8e21871dbd541e`
+(plan sha256
+`c8af1df0086741635f8d252f5d0269729fe58574a0c91d3b7aa30feb571c5643`,
+14/14), x86 debug-hook trainer sha256
+`4acf53af9a24b72a7d6686a7dc7add2f75475db0af25a8c135188178df5ea927`
+(canonical plan sha256
+`81bbc942c9b626af46c924a514f0af91e9da7ab914aba0cf91e18a25f3de7f0d`
+- plan identity identical to the source runtime - 6/6),
+hook trainer sha256
+`39425a0fcd2af08229729258956fa7f8b5d8c7f8193fe589fe6987a262fe5c31`
+(canonical plan sha256
+`63b98c5ac105e5969d396bd2b0f629316189802e97515a9751df708db177bfcd`
+- plan identity identical - 7/7), Lua-record trainer
+sha256
+`ba487ef5c0441ab3ad49c44b851c84e37cbeefc36f0eb673b26fd6aea9459ff1`
+(canonical plan sha256
+`620f96597653151e1a69d235bc9a8ad15505c9e4012146f94c2986d08570433e`
+- plan identity identical - 4/4), global x64 trainer
+sha256
+`b8ebc7e868be9482fe1d15c6f473ec5dd1dd91e00ceb4ccdd2e93a338c3a6ac3`
+(plan sha256
+`bd89b62363e1800424a66efdf5f31b9459d5cc0ee7e9730a081d9773e8601865`,
+14/14), global x86 trainer sha256
+`11e171e9be4a2b224839eadad0c05c5eba86093c92787755fd0a93e12193c9c6`
+(plan sha256
+`2f443b73f0ab4e9b7a827f433a20fd4d248ec0f67f541b92553735e9f1af191e`,
+14/14), scan x64 trainer sha256
+`8f7cabdbe773f05e90a536af8ba508c843eb05e76667c3597e3b16e3f8e10694`
+(plan sha256
+`20341aaaf462d720f7596856c64b22f23d82e2e0af98a6dc7fae6e7a7bd66b81`,
+8/8), scan x86 trainer sha256
+`b32146ffeec23c0a121f79a06a59698e1673d23511afdc12d2d1810b0685f790`
+(plan sha256
+`eb7366efbb471432deccc16e18bb9d7942964eef4fe09e6069f99056292fbafe`,
+8/8; the first attempt failed against a transient orphan
+`NativeScanFixture.exe` - "Expected exactly one ... found
+2" - the retry on a clean process table passed),
+codepatch x64 trainer sha256
+`b3bbb3eb68d8cb965c317ca9a14c884741bc6171dfe70dcf74045cf14e96241b`
+(canonical plan sha256
+`6b0ce466529127e1497cc1e47e7ca4d3bbaba198564c1bbb701b4c57155cffa3`
+- plan identity identical to the source runtime - 14/14) and
+codepatch x86 trainer sha256
+`d7898c4b73d59d036795d1b729b555f583fd19725d9613aaac93bd9e47b499ad`
+(canonical plan sha256
+`c67846921cafeedb36387e465efa88fdaa95e80c7526bc485df817b8d6a28061`
+- plan identity identical to the 2026-11-20 source-runtime
+run - 14/14; the first frozen x86 code-patch run of the
+roadmap, run from an elevated parent per the documented VM
+launch-block heuristic with the user-approved UAC consent -
+the probe requires the pinned target file name
+`NativeCodePatchFixture.exe`, so no clean-name workaround
+applies). Feature matrix unchanged (42/42, 7,475/7,475 over
+`w4b4-case30-20261020081722Z`); real-game, clean-machine and
+Deck / Proton / touch acceptance remain open,
+`runtime_unverified` stays set per the RT-6 acceptance.
+
 ### 0.52.1 release build record (2026-11-15, run
 `native-20261115T181026Z-00f5dfe8`, cut from `main` @ `dc138e0`)
 

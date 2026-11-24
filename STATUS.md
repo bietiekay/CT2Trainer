@@ -1,52 +1,56 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-23. **0.52.1 released** (build
-`native-20261115T181026Z-00f5dfe8`, cut from `main` @
-`dc138e0`, 2026-11-15) - the global-gate frozen-trainer
-launcher pair + the string-fixture re-pin + the release
-allowlist fix: the `--global-fixture-target` /
-`--global-fixture-report` pair joins the frozen-trainer entry
-point in `launcher.py` (house pattern: pairs entry, the
-report-without-target orphan check, the single-mode dispatch
-after the lua dispatch); the global gate has no string-style
-plan-load failure reservation - an orphan flag or a mixed
-gate is refused before the plan is read (exit 2), a frozen
-embedded-plan failure is exit 2 without reserving a report,
-the report itself reserved by `global_probe.run_probe` after
-the fixture-plan validation; +6 tests in
-`tests/test_native_global_launcher.py`; the release
-allowlist fix adds the two global gate CTs +
-`tests/windows/global_fixture` to the source ZIP allowlist
-(the global gate was the only owned gate whose fixture
-inputs were missing while the shipped
-`test_native_global_probe.py` compiles the CTs); the string
-lane re-pinned after its pin build was cleaned (rebuilt from
-the unchanged source, MSVC `cl` 19.44.35229, run
-`native-string-fixture-20261115T174324Z-45f4`;
-`string_probe.py` `TARGET_SHA256` x64
-`7b815ff5148180b434a7ebe543411b54e4d5ce90399ed83e4bf8ecc5f77eb0fd`
-/ x86
-`7876bf70a8feab52a5774802708d82f1eab36f435231ba3045c59a7b7a7f0668`,
-both pinned CTs + the plan fingerprints unchanged - no
-compiler drift; both string gates re-verified 14/14 in the
-source runtime); +6 tests; full main suite 5,203 OK / 36
-expected skips; in-build suite 5,203 OK / 36 expected
+**Updated:** 2026-11-24. **0.52.2 released** (build
+`native-20261124T033652Z-1da5b40e`, cut from `main` @
+`cbbd386`, 2026-11-24) - the RT-7 in-build suite
+determinism release: the per-test leaked Tk interpreters
+are eliminated - `TrainerWindow.release_search_trace()`
+removes the search-field `StringVar` trace from the Tcl
+interpreter's command table on close (a plain `destroy()`
+never deletes it; the C command-table entry kept the app
+alive past the GC-untracked `tkapp` reference), all four
+`TrainerWindow` variables carry the explicit root master,
+the Master releases the trainer's search trace in
+`_back_to_master`, the `tests/native_tk_teardown.py`
+backstop gains the generic variable-trace release +
+weakref verify + interpreter-handle drop + the fail-closed
+named refusal `tk-teardown-refusal:
+tk-interpreter-release-failed`, the tray tests'
+mock-retention fixes, and +3 env-strip tests pin the
+in-build suite's signing-env strip; the full-suite
+per-test leak scan now shows START-ROOTS 0 / FINAL-ROOTS 0,
+zero LEAK-DELTA (versus the 54 attributed live roots of
+the 2026-11-23 v3 baseline); full main suite 5,235 OK / 36
+expected skips; in-build suite 5,235 OK / 36 expected
 skips, `ce_inputs: []`; catalog unchanged
 (`blocked-catalog-luacall-binding`): 117,809 total /
 117,616 supported / 12,974 headings / 104,467 actionable /
-193 blocked - this cycle touches no table-parsing path. The
-frozen re-runs of the string (x64 + x86), x86 debug-hook,
-hook + Lua-record and global (x64 + x86) gates shipped with
-this build - the seven frozen trainers regenerated with the
-0.52.1 template stub (sha256
-`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`),
+193 blocked - no table-parsing path touched. The
+six-family fixture rebuild + re-pin shipped with the cut
+(the pinned fixture builds from 2026-11-15/16 had been
+cleaned: all six families rebuilt from the unchanged
+sources into
+`build\runs\native-*-fixture-20261124T031403Z-76b8c44b`,
+the probe `TARGET_SHA256` pins moved hash-only - pinned
+CTs, fixture sources and canonical plan fingerprints
+unchanged, no compiler drift). The frozen re-runs of all
+eleven owned gates shipped with this build - the eleven
+frozen trainers regenerated with the 0.52.2 template stub
+(sha256
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`),
 every report passed with `frozen_runtime: true` (14/14
 string per architecture, 6/6 x86 debug-hook, 7/7 hook, 4/4
-Lua-record, 14/14 global per architecture; x86 / hook /
-Lua-record plan identity identical to the source runtime);
-real-game, clean-machine and Deck / Proton / touch
-acceptance remain open, so `runtime_unverified` stays set
-per the RT-6 acceptance; see the 0.52.1 section below.
+Lua-record, 14/14 global per architecture, 8/8 scan per
+architecture, 14/14 code-patch per architecture; x86 /
+hook / Lua-record / code-patch plan identity identical to
+the source runtime; the first frozen x86 code-patch run of
+the roadmap - run from an elevated parent per the
+documented VM launch-block heuristic with the
+user-approved UAC consent); real-game, clean-machine and
+Deck / Proton / touch acceptance remain open, so
+`runtime_unverified` stays set per the RT-6 acceptance;
+see the 0.52.2 release build record in
+`documentation/native-progress.md`.
 Post-0.52.1 (2026-11-16 + 2026-11-20): the owned code-patch
 fixture gate (the ninth Windows function gate, RT-6
 fixture-owned,
@@ -127,8 +131,15 @@ is the active enforcer on this VM, a Defender exclusion
 for the fixture process + the run paths was added and read
 back as registered during the clearance, and the elevated
 source-runtime run is the recorded evidence; the frozen
-re-run (the generated trainers, `frozen_runtime: true`) of
-both architectures happens at the next release cut. +24
+re-runs (the generated trainers, `frozen_runtime: true`)
+of both architectures ran at the 0.52.2 release cut
+(2026-11-24, template stub sha256
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`):
+both reports status `passed` with 14/14 checks and plan
+identity identical to the source runtime (the x86 run
+from an elevated parent per the documented heuristic with
+the user-approved UAC consent; see the 0.52.2 release
+build record). +24
 tests; full main suite 5,227 OK / 36 expected
 skips; catalog unchanged at the
 `blocked-catalog-luacall-binding` baseline (117,809 total /
@@ -167,8 +178,8 @@ work): the durable SAC fix is a trusted-CA PFX through the
 documented `CT2TRAINER_SIGN_PFX` environment contract, the
 signed release cut ships it (fail-closed: a configured signing
 failure never ships an unsigned binary). Post-0.52.1 (2026-11-23): the
-RT-7 in-build suite determinism lane (lane work, no release cut - a
-cut would be 0.52.2): elimination of the per-test leaked Tk
+RT-7 in-build suite determinism lane (shipped as the 0.52.2
+release cut, 2026-11-24): elimination of the per-test leaked Tk
 interpreters that left 54 live roots across 7 test modules in the v3
 leak-scan baseline (one-leak-per-TrainerWindow, each a
 `Tcl_AsyncDelete` wrong-thread abort risk) - proven mechanism: every
@@ -4618,7 +4629,7 @@ defines the work and completion gates.
 
 | Area | Achieved | Still needed |
 | --- | --- | --- |
-| Independently built product | The 0.52.1 source and Windows portable ZIPs passed the offline build (build `native-20261115T181026Z-00f5dfe8`, cut from `main` @ `dc138e0`, 2026-11-15) with **5,203 tests OK, 36 expected skips** in-build (full main suite 5,232 OK / 36 expected skips on `main` @ `9a16d86`, 2026-11-21) and `ce_inputs: []`; the global-gate frozen-trainer launcher pair + the string-fixture re-pin + the release allowlist fix ship in the source ZIP; the `master_trainer` subpackage + user-provided `Master_Trainer` icons ship in the source ZIP, and the frozen `CT2Trainer-Master.exe` ships in the portable ZIP next to the converter; the 0.20/0.20.1 branding icons remain embedded in the frozen converter EXE and the generated-trainer template EXE (verified by PE icon-resource extraction against the committed ICOs); the 0.47 code-signing package (optional, env-driven) is wired into the build + generation path (unsigned by default; activates with a user-supplied trusted-CA PFX). | Keep the clean-room build and release checks green after each change. |
+| Independently built product | The 0.52.2 source and Windows portable ZIPs passed the offline build (build `native-20261124T033652Z-1da5b40e`, cut from `main` @ `cbbd386`, 2026-11-24) with **5,235 tests OK, 36 expected skips** in-build (identical to the full main suite on the 0.52.2 content set) and `ce_inputs: []`; the RT-7 in-build suite determinism content + the six probe re-pins ship in the source ZIP; the 0.52.1 global-gate frozen-trainer launcher pair + the string-fixture re-pin + the release allowlist fix remain shipped in the source ZIP; the `master_trainer` subpackage + user-provided `Master_Trainer` icons ship in the source ZIP, and the frozen `CT2Trainer-Master.exe` ships in the portable ZIP next to the converter; the 0.20/0.20.1 branding icons remain embedded in the frozen converter EXE and the generated-trainer template EXE (verified by PE icon-resource extraction against the committed ICOs); the 0.47 code-signing package (optional, env-driven) is wired into the build + generation path (unsigned by default; activates with a user-supplied trusted-CA PFX). | Keep the clean-room build and release checks green after each change. |
 | Master Trainer (released in 0.21; the MT roadmap MT-1..MT-34 complete across the 0.21-0.45 releases) | Full MT-1..MT-34 feature set on `main` (branch `native-0.20-master-trainer` merged at `9a725a8`; branch `native-0.23-master-roadmap` merged at `b2d0344`; load-gate branch `native-0.23-load-gate` merged at `98a9226`): incremental table index (folder + sub-folders, sha256-bound JSON in the state home, foreign-schema/tamper refusal), cross-platform read-only process watch, pure orchestrator (unique-match auto-load, multi-table picker, fail-closed loop guard, live `running` tick feedback, no picker re-issue for a failed pair), waiting UI (metadata line, live "Running now" line, running/PID tree markers) + handoff into the exact standalone trainer with `master_back`, per-table on/off persistence via the engine state store, MT-6 per-table settings sidecar keyed by table content sha256 (restore-on-load / save-on-close, named refusals), MT-7 documented SteamOS/CheatDeck target route (named fail-closed non-Windows attach refusals; NOT a Linux attach backend), MT-8 frozen `CT2Trainer-Master.exe` in every build, MT-9 load-time table compatibility & size gate (stable named refusals, graceful named load failure even when the target process was found, no hot-retry, Rescan / Retry re-arm), ask-on-first-start table-folder parameter (`master-settings.json` in the state home; explicit folder argument wins), `master` CLI subcommand, `Master_Trainer` icon contract. 306 master-trainer tests; full main suite 4,176 OK / 30 expected skips; catalog zero delta `blocked-catalog-023-field-fixes` (all three 0.23 remeasures). 0.25 content on main (2026-11-02, root-direct): MT-10 explicit table load, MT-11 process picker + persisted attach mode, MT-12 detach / user attach (details in the 0.25 section above); online feature evaluation record in `master_trainer/ROADMAP.md` (MT-10/11/12 adopted; global hotkeys / auto-update / concurrent multi-table sessions deliberately deferred); Tcl test-harness hardening (test-only `tests/native_tk_teardown.py`); in-build reliability fix (state-home isolation in the `run_master` cancel test + explicit-master Tk variables in `master_ui.py`; first in-build run `native-20261102T181843Z-ddfb63f0` exposed the dependence). 372 master-trainer tests (306 + 66: 16 process picker + 13 explicit load + 5 attach pause + 24 master UI MT-12 + 7 schema-2 + 1 state-home isolation); full main suite 4,259 OK / 30 expected skips; catalog zero delta `blocked-catalog-025-master-ui` (vs `blocked-catalog-024-sounds`). | User field test of the 0.25 content (explicit table load / process picker / detach; the 0.25 build is pending cut - 0.24 remains the latest verified build); MT-7 owned Linux attach backend + the real Deck protocol run with exact build hashes (root/user field work). |
 | Synthetic feature coverage | **42/42** declared feature classes and **7,475/7,475** action weight covered across **30 synthetic tables**. | This metric does not establish support for every original table or a real game effect. Add synthetic cases when a new behavior is found. |
 | Original reference tables | All **151/151** table paths load after the RT-3 legacy-binary CT loader (2026-10-23). Local static catalog (current baseline `blocked-catalog-luacall-binding`, 2026-11-15, frozen manifest `gap_inventory/reference-manifest.json`) classifies **117,616 supported** out of **117,809 plan entries**; the closure chain ran 2,698 (Wave-4 baseline) → 1,053 (RT-4.2) → 537 (0.43) → 221 (Lane B, 0.44) → 198 (0.49) → 193 (0.50), zero newly blocked at each step, with the 0.44-0.51 compatibility + ratification lanes closing the census classes. | **193 entries are blocked** (the documented design / gate residuals of the 0.51 residual census - every remaining row covered by a documented gate or a 0.44-0.51 ratification lane; the historical remeasures: 1,053 after RT-4.2, 537 after 0.43, 221 after Lane B (0.44), 198 after 0.49, 193 after 0.50 - zero newly blocked, zero reason changes beyond the documented lanes). Staged entries still need their runtime conditions proved. |

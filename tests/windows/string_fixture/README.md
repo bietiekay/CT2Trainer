@@ -162,30 +162,39 @@ both `ct2trainer-owned-string/v1` status `passed`, 14/14 checks per
 architecture, `source_runtime: true`, `ce_inputs: []`,
 `owned_markers_absent: true`.
 
-## Verified frozen String gate (2026-11-15, 0.52.1 build cut)
+## Verified frozen String gate (2026-11-24, 0.52.2 build cut)
 
 Both frozen String gates (`frozen_runtime: true`, the generated
-string trainers) were re-run at the 0.52.1 release cut (run
-`native-20261115T181026Z-00f5dfe8`, cut from `main` @ `dc138e0`): the
+string trainers) were re-run at the 0.52.2 release cut (run
+`native-20261124T033652Z-1da5b40e`, cut from `main` @ `cbbd386`): the
 two frozen trainers regenerated from the gate-passed plans with the
-0.52.1 template stub (sha256
-`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`) -
+0.52.2 template stub (sha256
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`) -
 frozen x64 trainer sha256
-`7943372c45f2521b93f65ecbe952ef387efa3612e4907b51fa899291e4120bcc`
-(plan sha256
-`c0299324e87d1c47cc4fc3f39b9e1a9e90523bd85b0713f1ce6451548923c0f2`),
-frozen x86 trainer sha256
-`e225c9adc45997a820ef0871341a087d1a0c5b885c645c4954e6a7f7e5d238b5`
-(plan sha256
-`c8af1df0086741635f8d252f5d0269729fe58574a0c91d3b7aa30feb571c5643`) -
-each ran with `--string-fixture-target` / `--string-fixture-report`
-(exit 0) against the live owned target it spawned itself: both
-reports `ct2trainer-owned-string/v1` status `passed`,
-`frozen_runtime: true`, 14/14 checks each. Evidence under the
-git-ignored `build\windows-fixture\frozen-check-20261115T183206Z\`.
-This record closes the String-fixture portion of the Windows runtime
-evidence only: real-game, clean-machine and Deck / Proton acceptance
-remain open (`runtime_unverified` stays set).
+`7bc9b637b330d71ddd866490d5d2324b421d86b2fb208cbfa13f8ac9a15f47df`
+(embedded plan sha256
+`c0299324e87d1c47cc4fc3f39b9e1a9e90523bd85b0713f1ce6451548923c0f2`,
+plan identity identical to the source runtime and the 0.52.1 frozen
+record), frozen x86 trainer sha256
+`631a81deb14394cc669906fe478a5c8283b7315ac686e102fd8e21871dbd541e`
+(embedded plan sha256
+`c8af1df0086741635f8d252f5d0269729fe58574a0c91d3b7aa30feb571c5643`,
+plan identity identical) - against the rebuilt owned targets
+(string x64 sha256
+`612b8a7175487d50694ddf7bf2558fbb7cdac3ee154e9094045bdc987fec8106`,
+x86 sha256
+`49f01f5a47fe2f3fb1de927325010897c817bdb1c426d09716c48fab01fec30d`,
+rebuilt from the unchanged source into
+`build\runs\native-string-fixture-20261124T031403Z-76b8c44b\`; the
+pinned CTs are unchanged, so only the target hashes moved): each ran
+with `--string-fixture-target` / `--string-fixture-report` (exit 0)
+against the live owned target it spawned itself: both reports
+`ct2trainer-owned-string/v1` status `passed`, `frozen_runtime: true`,
+14/14 checks each. Evidence under the git-ignored
+`build\windows-fixture\frozen-check-20261124T040411Z\`. This record
+closes the String-fixture portion of the Windows runtime evidence
+only: real-game, clean-machine and Deck / Proton acceptance remain
+open (`runtime_unverified` stays set).
 
 The module/RVA interpretation follows the public Microsoft
 [PE format](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format).

@@ -51,6 +51,16 @@ touched, no catalog movement).
   strip (subprocess env free of every ``CT2TRAINER_SIGN*``,
   case-insensitive and bounded to signing vars; the build process's
   own environment is never mutated).
+- Fixture probe re-pin for the frozen gate re-runs at this cut: the
+  pinned fixture builds from 2026-11-15/16 had been cleaned, so all
+  six fixture families were rebuilt from the unchanged sources with
+  the committed MSVC recipes (evidence
+  ``build\runs\native-*-fixture-20261124T031403Z-76b8c44b``) and the
+  probe ``TARGET_SHA256`` pins moved to the fresh targets (hash-only;
+  the pinned CTs, fixture sources and the canonical plan
+  fingerprints are unchanged, so no compiler drift) -
+  ``string_probe.py`` / ``x86_probe.py`` / ``lua_record_probe.py`` /
+  ``global_probe.py`` / ``scan_probe.py`` / ``codepatch_probe.py``.
 - Full main suite 5,235 OK / 36 expected skips (5,232 + 3
   env-strip tests). Full-suite per-test leak scan (single process,
   live-root count after every test): START-ROOTS 0, FINAL-ROOTS 0,

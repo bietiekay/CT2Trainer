@@ -107,23 +107,28 @@ report `ct2trainer-owned-x86/v1` status `passed`,
 The debugger-coordinated hook evidence carries 8 held thread-context
 observations; the restarted target obtained a fresh identity.
 
-## Verified frozen x86 gate (2026-11-15, 0.52.1 build cut)
+## Verified frozen x86 gate (2026-11-24, 0.52.2 build cut)
 
 The frozen x86 gate (`frozen_runtime: true`, the generated x86
-trainer) was re-run at the 0.52.1 release cut (run
-`native-20261115T181026Z-00f5dfe8`, cut from `main` @ `dc138e0`): the
-frozen trainer regenerated from the gate-passed plan with the 0.52.1
+trainer) was re-run at the 0.52.2 release cut (run
+`native-20261124T033652Z-1da5b40e`, cut from `main` @ `cbbd386`): the
+frozen trainer regenerated from the gate-passed plan with the 0.52.2
 template stub (sha256
-`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`) -
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`) -
 frozen trainer sha256
-`425e81bf49743a09c91df76f5283dda60c89cb844d59a918c0abaf4231bb1813`,
-plan identity identical to the source runtime (canonical plan sha256
-`81bbc942c9b626af46c924a514f0af91e9da7ab914aba0cf91e18a25f3de7f0d`) -
+`4acf53af9a24b72a7d6686a7dc7add2f75475db0af25a8c135188178df5ea927`,
+embedded plan sha256
+`81bbc942c9b626af46c924a514f0af91e9da7ab914aba0cf91e18a25f3de7f0d` -
+plan identity identical to the source runtime - against the rebuilt
+x86 target (sha256
+`e17e2296c01274bb48c44a41b40f35fba70b4b6bd68c20a138ed320aa888ff5c`,
+rebuilt from the unchanged source into
+`build\runs\native-debughook-fixture-20261124T031403Z-76b8c44b\`):
 ran with `--x86-fixture-target` / `--x86-fixture-report` (exit 0)
 against the live x86 target it spawned itself: report
 `ct2trainer-owned-x86/v1` status `passed`, `frozen_runtime: true`,
 6/6 checks. Evidence under the git-ignored
-`build\windows-fixture\frozen-check-20261115T183206Z\`. This record
+`build\windows-fixture\frozen-check-20261124T040411Z\`. This record
 closes the x86-fixture portion of the Windows runtime evidence only:
 real-game, clean-machine and Deck / Proton acceptance remain open
 (`runtime_unverified` stays set).

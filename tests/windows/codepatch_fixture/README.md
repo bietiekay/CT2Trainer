@@ -208,9 +208,52 @@ git-ignored):
   read-back confirmed), and the source-runtime run was performed
   from an elevated console.
 
-The frozen re-run (the generated trainers, `frozen_runtime: true`) of
-both architectures happens at the next release cut, following the
-eight-lane precedent; until then this record (x64 + x86 source
-runtime, 14/14 each) is the Windows runtime evidence for the
-code-patch gate. Real-game, clean-machine and Deck / Proton / touch
-acceptance remain open (`runtime_unverified` stays set).
+## Verified frozen code-patch gate (2026-11-24, 0.52.2 build cut)
+
+The frozen re-run (the generated trainers, `frozen_runtime: true`)
+of both architectures ran at the 0.52.2 release cut (run
+`native-20261124T033652Z-1da5b40e`, cut from `main` @ `cbbd386`):
+the two frozen trainers regenerated from the gate-passed plans with
+the 0.52.2 template stub (sha256
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`)
+- frozen x64 trainer sha256
+`b3bbb3eb68d8cb965c317ca9a14c884741bc6171dfe70dcf74045cf14e96241b`
+(canonical plan sha256
+`6b0ce466529127e1497cc1e47e7ca4d3bbaba198564c1bbb701b4c57155cffa3`,
+plan identity identical to the 2026-11-16 source-runtime run),
+frozen x86 trainer sha256
+`d7898c4b73d59d036795d1b729b555f583fd19725d9613aaac93bd9e47b499ad`
+(canonical plan sha256
+`c67846921cafeedb36387e465efa88fdaa95e80c7526bc485df817b8d6a28061`,
+plan identity identical to the 2026-11-20 source-runtime run) -
+against the rebuilt owned targets (x64 sha256
+`c00029cb983b7786477fb75804d277c04ce56a734d52647d08c5298f640eeb16`,
+x86 sha256
+`f9027042f57f1b13e7ee4924011932c66028c31ef477a9749d1c64fa65d9428e`,
+rebuilt from the unchanged source into
+`build\runs\native-codepatch-fixture-20261124T031403Z-76b8c44b\`;
+the pinned CTs and canonical plan fingerprints are unchanged, so
+only the target hashes moved): each ran with
+`--codepatch-fixture-target` / `--codepatch-fixture-report`
+(exit 0) against the live owned target it spawned itself: both
+reports `ct2trainer-owned-codepatch/v1` status `passed`,
+`frozen_runtime: true`, `ce_implementation_inputs: []`,
+`owned_markers_absent: true`, 14/14 checks each - the full RT-5
+item B `code_patch` lifecycle through the frozen trainer
+(data-page publish / capture / restore, the overlap and
+target-changed refusals, already-active adoption, executable-page
+routing through the verified hook coordinator with the target's
+own protocol executing the patched probe entry 0x46474849, the
+restore-mismatch engine block, the blocked engine's action +
+second-controller refusals, target-exit finalization of the
+blocked session, saved-ON replay of both routes on a fresh
+identity, replayed disables, normal close after exit, plus the
+recorded live-close fence). The x86 run is the first frozen x86
+code-patch run of the roadmap: it ran from an elevated parent per
+the documented VM launch-block heuristic (non-elevated
+`CreateProcess` fails with Win32 740 for the x86 "patch"-like
+fixture name) with the user-approved UAC consent. Evidence under
+the git-ignored `build\windows-fixture\frozen-check-20261124T040411Z\`.
+This closes the frozen code-patch gate at the 0.52.2 build cut.
+Real-game, clean-machine and Deck / Proton / touch acceptance
+remain open (`runtime_unverified` stays set).

@@ -13,15 +13,16 @@ import threading
 
 from .luacall_binding import owned_luacall_binding_factory
 
-# Re-pinned 2026-11-15: the git-ignored repin build
-# build/runs/fixture-repin-20261007T115729Z was cleaned, so the fixture was
-# rebuilt from the unchanged source (scan_target.c sha256
+# Re-pinned 2026-11-24 after the 2026-11-15 pin build was cleaned
+# (0.52.2 release cut, frozen gate re-runs): the fixture was rebuilt from
+# the unchanged source (scan_target.c sha256
 # 4c939ab3c42aeea7eb2211253af8f7bbb374646afd12d744d06685bb7b72808f,
 # single git commit b6c48cc; the CT is unchanged at CT_SHA256) with the
 # same MSVC 19.44.35229 (BuildTools 2022, /W4 /WX /Od /TC,
 # /INCREMENTAL:NO) - evidence
-# build/runs/native-scan-fixture-20261115T043627Z-cfea6da9
-# (verification.json status passed, ce_inputs []). Previous repin:
+# build/runs/native-scan-fixture-20261124T031403Z-76b8c44b
+# (verification.json status passed, ce_inputs []). Previous repins:
+# 2026-11-15 (build/runs/native-scan-fixture-20261115T043627Z-cfea6da9) and
 # 2026-10-07 after the CT2Trainer rename (CT lua helper name, schema
 # strings) and the fixture rebuild, evidence
 # build/runs/fixture-repin-20261007T115729Z.
@@ -31,8 +32,8 @@ SOURCE_SHA256 = {
     1: 'a78b5e66e44d058c3e6c704395ccccfb2cbcca661b4cd1a141a5f1e97b33f69b',
     2: 'fc233329b1d143b7687f10a365d9de00eca5fb5933d4b8de49307f81cb336080'}
 TARGET_SHA256 = {
-    'x64': 'e54b12801564aed37ad9ee3ed3283459e53f9f69ee8042af73730fc0784c5315',
-    'x86': 'd66756a12c741caf163823a26643bce5c0a0369c8b689fc00f0a3f52fa8a626e'}
+    'x64': '67b2e56acee6a9d55948d640700be670ae319c90a0fe97629bfa2880697bfb9d',
+    'x86': 'a9f25c099334459022f22f0caa361713b1797e058882e053cd34398d345b3f15'}
 PRIVATE_PATTERN = bytes.fromhex('44 33 22 11 78 49 9A EB 3C 0D 5E AF F0 C1 12 63 B4 85 D6 27 08 59 AA FB CC 1D 6E BF 80 D1 22 73')
 NTH_PATTERN = bytes.fromhex('11 00 00 00 11 32 D7 C8 ED 8E A3 44 79 1A 3F D0')
 

@@ -129,31 +129,34 @@ canonical plan sha256
   disable_lua_owned_receipt_main_inverse_raw_undo_and_callback_cancellation,
   fresh_activation_exact_target_exit_finalization_and_confirmed_saved_state_restart.
 
-## Verified frozen hook + Lua-record gates (2026-11-15, 0.52.1
+## Verified frozen hook + Lua-record gates (2026-11-24, 0.52.2
 build cut)
 
 Both frozen gates (the generated trainers, `frozen_runtime: true`)
-were re-run at the 0.52.1 release cut (run
-`native-20261115T181026Z-00f5dfe8`, cut from `main` @ `dc138e0`): the
+were re-run at the 0.52.2 release cut (run
+`native-20261124T033652Z-1da5b40e`, cut from `main` @ `cbbd386`): the
 two frozen trainers regenerated from the gate-passed plans with the
-0.52.1 template stub (sha256
-`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`) -
+0.52.2 template stub (sha256
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`) -
 frozen hook trainer sha256
-`272f3c755970baf1259e75f98e6ee16c5a16eb6e613b4f4d6692fc16cf96e944`,
+`39425a0fcd2af08229729258956fa7f8b5d8c7f8193fe589fe6987a262fe5c31`,
 frozen Lua-record trainer sha256
-`65d2ce70da27281e94b6a9ccbfc2668be2f499922e44437d3351ca8020653c70`,
-plan identity identical to the source runtime (canonical plan sha256
+`ba487ef5c0441ab3ad49c44b851c84e37cbeefc36f0eb673b26fd6aea9459ff1`,
+embedded plan identity identical to the source runtime (plan sha256
 `63b98c5ac105e5969d396bd2b0f629316189802e97515a9751df708db177bfcd`
 hook, `620f96597653151e1a69d235bc9a8ad15505c9e4012146f94c2986d08570433e`
-Lua-record) - each ran with its `--hook-fixture-target` /
-`--hook-fixture-report` or `--lua-fixture-target` /
-`--lua-fixture-report` pair (exit 0) against the shared live
-`NativeHookFixture.exe` target it spawned itself: hook report
-`ct2trainer-frozen-hook/v1` status `passed`, `frozen_runtime: true`,
-7/7 checks; Lua report `ct2trainer-frozen-lua-record/v1` status
-`passed`, `frozen_runtime: true`, 4/4 checks. Evidence under the
-git-ignored `build\windows-fixture\frozen-check-20261115T183206Z\`.
-This record closes the hook / Lua-record fixture portion of the
-Windows runtime evidence only: real-game, clean-machine and
-Deck / Proton acceptance remain open (`runtime_unverified` stays
-set).
+Lua-record) - against the rebuilt shared target (sha256
+`0f32e7d18670cb3eb3c95723f13e7d11c1742205c5988f8166784865ab9831a6`,
+rebuilt from the unchanged source into
+`build\runs\native-hook-fixture-20261124T031403Z-76b8c44b\`): each
+ran with its `--hook-fixture-target` / `--hook-fixture-report` or
+`--lua-fixture-target` / `--lua-fixture-report` pair (exit 0)
+against the shared live `NativeHookFixture.exe` target it spawned
+itself: hook report `ct2trainer-frozen-hook/v1` status `passed`,
+`frozen_runtime: true`, 7/7 checks; Lua report
+`ct2trainer-frozen-lua-record/v1` status `passed`,
+`frozen_runtime: true`, 4/4 checks. Evidence under the git-ignored
+`build\windows-fixture\frozen-check-20261124T040411Z\`. This record
+closes the hook / Lua-record fixture portion of the Windows runtime
+evidence only: real-game, clean-machine and Deck / Proton acceptance
+remain open (`runtime_unverified` stays set).

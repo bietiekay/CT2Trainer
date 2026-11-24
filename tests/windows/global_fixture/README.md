@@ -142,27 +142,36 @@ git-ignored):
   `ce_implementation_inputs: []`, `owned_markers_absent: true` - the
   same 14/14 checks passed, plus the same recorded live-close fence.
 
-## Verified frozen global gate (2026-11-15, 0.52.1 build cut)
+## Verified frozen global gate (2026-11-24, 0.52.2 build cut)
 
 Both frozen global gates (the generated trainers,
-`frozen_runtime: true`) were re-run at the 0.52.1 release cut (run
-`native-20261115T181026Z-00f5dfe8`, cut from `main` @ `dc138e0`): the
+`frozen_runtime: true`) were re-run at the 0.52.2 release cut (run
+`native-20261124T033652Z-1da5b40e`, cut from `main` @ `cbbd386`): the
 two frozen trainers regenerated from the gate-passed plans with the
-0.52.1 template stub (sha256
-`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`) -
+0.52.2 template stub (sha256
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`) -
 frozen x64 trainer sha256
-`a96d407911a4223a5d93fc4f706e6c0820ac15674f343bda71d019736e31030e`
-(plan sha256
-`bd89b62363e1800424a66efdf5f31b9459d5cc0ee7e9730a081d9773e8601865`),
-frozen x86 trainer sha256
-`eef0cea97a3f2666df340a6e80981a2b6a8492c37092007df2c504c5fe09e683`
-(plan sha256
-`2f443b73f0ab4e9b7a827f433a20fd4d248ec0f67f541b92553735e9f1af191e`) -
-each ran with `--global-fixture-target` / `--global-fixture-report`
-(exit 0) against the live owned target it spawned itself: both
-reports `ct2trainer-owned-global/v1` status `passed`,
-`frozen_runtime: true`, 14/14 checks each. Evidence under the
-git-ignored `build\windows-fixture\frozen-check-20261115T183206Z\`.
-This record closes the global-fixture portion of the Windows runtime
-evidence only: real-game, clean-machine and Deck / Proton / touch
-acceptance remain open (`runtime_unverified` stays set).
+`b8ebc7e868be9482fe1d15c6f473ec5dd1dd91e00ceb4ccdd2e93a338c3a6ac3`
+(embedded plan sha256
+`bd89b62363e1800424a66efdf5f31b9459d5cc0ee7e9730a081d9773e8601865`,
+plan identity identical to the source runtime and the 0.52.1 frozen
+record), frozen x86 trainer sha256
+`11e171e9be4a2b224839eadad0c05c5eba86093c92787755fd0a93e12193c9c6`
+(embedded plan sha256
+`2f443b73f0ab4e9b7a827f433a20fd4d248ec0f67f541b92553735e9f1af191e`,
+plan identity identical) - against the rebuilt owned targets (x64
+sha256
+`757c00f7d0939eaba9233df94eb236a88cae01b60760d37e0eafc1b6907179d1`,
+x86 sha256
+`8d72d490c7967b4dbac811bf25e8f0b6c9d4060bb30fd3566e1d7403f6f41040`,
+rebuilt from the unchanged source into
+`build\runs\native-global-fixture-20261124T031403Z-76b8c44b\`; the
+pinned CTs are unchanged, so only the target hashes moved): each ran
+with `--global-fixture-target` / `--global-fixture-report` (exit 0)
+against the live owned target it spawned itself: both reports
+`ct2trainer-owned-global/v1` status `passed`, `frozen_runtime: true`,
+14/14 checks each. Evidence under the git-ignored
+`build\windows-fixture\frozen-check-20261124T040411Z\`. This record
+closes the global-fixture portion of the Windows runtime evidence
+only: real-game, clean-machine and Deck / Proton / touch acceptance
+remain open (`runtime_unverified` stays set).

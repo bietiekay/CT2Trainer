@@ -634,10 +634,25 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-21, 0.52.1 released - build
-`native-20261115T181026Z-00f5dfe8` cut from `main` @ `dc138e0`,
-2026-11-15, in-build suite 5,203 OK / 36 expected skips, `ce_inputs:
-[]`; post-0.52.1 (2026-11-16 + 2026-11-20) the owned code-patch
+**CT2Trainer (status 2026-11-24, 0.52.2 released - build
+`native-20261124T033652Z-1da5b40e` cut from `main` @ `cbbd386`,
+2026-11-24, in-build suite 5,235 OK / 36 expected skips, `ce_inputs:
+[]` - the RT-7 in-build suite determinism release (the per-test
+leaked-Tk-interpreter elimination; full-suite per-test leak scan
+START-ROOTS 0 / FINAL-ROOTS 0, zero LEAK-DELTA vs the 2026-11-23
+v3 baseline) + the six-family fixture rebuild + re-pin for the
+frozen gate re-runs at this cut (the probe `TARGET_SHA256` pins
+moved hash-only, no compiler drift); the frozen re-runs of all
+eleven owned gates ran at this cut on the 0.52.2 template stub
+(sha256
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`),
+every report passed with `frozen_runtime: true` (14/14 string per
+architecture, 6/6 x86 debug-hook, 7/7 hook, 4/4 Lua-record, 14/14
+global per architecture, 8/8 scan per architecture, 14/14
+code-patch per architecture; the first frozen x86 code-patch run
+of the roadmap ran from an elevated parent per the documented VM
+launch-block heuristic with the user-approved UAC consent);
+post-0.52.1 (2026-11-16 + 2026-11-20) the owned code-patch
 fixture gate (the 9th Windows function gate, RT-6 fixture-owned,
 house pattern per `global_probe.py`) verified in the source
 runtime - x64 passed 14/14 on 2026-11-16 (report
@@ -672,8 +687,15 @@ process + the run paths was added and read back as registered
 during the clearance, and the elevated source-runtime run is
 the recorded evidence), +24 tests, full main suite 5,227 OK /
 36 expected skips, catalog unchanged at the
-`blocked-catalog-luacall-binding` baseline, frozen re-run of
-both architectures at the next release cut;
+`blocked-catalog-luacall-binding` baseline; the frozen re-runs
+(the generated trainers, `frozen_runtime: true`) of both
+architectures ran at the 0.52.2 release cut (2026-11-24, template
+stub sha256
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`):
+both reports status `passed` with 14/14 checks and plan identity
+identical to the source runtime (the x86 run from an elevated
+parent per the documented heuristic with the user-approved UAC
+consent; see the 0.52.2 release build record);
 post-0.52.1 (2026-11-21) the ROG Ally field observation (the
 0.52.1 trainer is refused by Smart App Control before any code
 executes - unsigned binary by hash, no per-app allow, one-way
@@ -705,7 +727,10 @@ stays a user-supplied trusted-CA PFX through the documented
 configured signing failure never ships an unsigned binary) -
 the signed release cut activates once the certificate is in
 hand;
-superseded 0.52, build `native-20261115T070952Z-14405931` cut
+superseded 0.52.1, build `native-20261115T181026Z-00f5dfe8` cut
+from `main` @ `dc138e0`, 2026-11-15, in-build suite 5,203 OK / 36
+expected skips, `ce_inputs: []; superseded 0.52, build
+`native-20261115T070952Z-14405931` cut
 from `main` @ `26e6ebc`, 2026-11-15, in-build suite 5,197 OK / 36
 expected skips, `ce_inputs:
 []`; superseded 0.51, build `native-20261115T023110Z-4ed2835e` cut
@@ -1312,51 +1337,67 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261115T181026Z-00f5dfe8` (0.52.1, cut
-from `main` @ `dc138e0`, 2026-11-15; in-build suite 5,203 OK / 36
-expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
-per gate; source ZIP `CT2Trainer-0.52.1-source.zip` sha256
-`c65883bf5a5161a0e4846ba4ed9a5c1725678ec363b94728f4d1dbbe603723a6`
-(14,763,924 bytes) - carries the global-gate frozen-trainer
-launcher pair (`src/ct2trainer/native/launcher.py` +
-`tests/test_native_global_launcher.py`), the release allowlist fix
-(`tools/native_build.py`: the two global gate CTs + the
-`tests/windows/global_fixture` directory) and the string-fixture
-re-pin (`string_probe.py`) - and
-portable ZIP `CT2Trainer-0.52.1-windows-portable.zip` sha256
-`35b43cc56da28fc29b7663ee3efb61a953f4b085496176b21016365a1f26056e`
-(49,918,368 bytes; the frozen `CT2Trainer-Master.exe` (sha256
-`bd0388cbe45b350ee11117b99e55262ade6906e81e72e28c286fa1e3ddfe8316`,
-17,074,203 bytes) ships next to the converter)). 0.52.1 ships the
-global-gate frozen-trainer launcher pair (the
-`--global-fixture-target` / `--global-fixture-report` pair in
-`launcher.py` in the house pattern - the global gate has no
-string-style plan-load failure reservation: an orphan flag or a
-mixed gate is refused before the plan is read, exit 2, a frozen
-embedded-plan failure is exit 2 without reserving a report, the
-report reserved by `global_probe.run_probe`) + the string-fixture
-re-pin (the pin build had been cleaned; rebuild
-`native-string-fixture-20261115T174324Z-45f4` from the unchanged
-source, both string gates re-verified 14/14 in the source
-runtime) + the release allowlist fix; the frozen re-runs of the
-string (x64 + x86), x86 debug-hook, hook + Lua-record and global
-(x64 + x86) gates re-ran at the release cut on the 0.52.1
-template stub (sha256
-`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`)
-- all seven frozen trainers passed with `frozen_runtime: true`
+**Latest verified build:** `native-20261124T033652Z-1da5b40e` (0.52.2,
+cut from `main` @ `cbbd386`, 2026-11-24; in-build suite 5,235 OK / 36
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate; source ZIP `CT2Trainer-0.52.2-source.zip` sha256
+`e372b142f40a026826212ce7f40e30ef5906a0e590dc116e4680db86b167757a`
+(14,809,824 bytes) - carries the RT-7 in-build suite
+determinism content and the six probe re-pins - and
+portable ZIP `CT2Trainer-0.52.2-windows-portable.zip` sha256
+`219db7e96b84958158ce1a26dd817393b3f887897969e381b2cdefbfea369727`
+(49,942,786 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`74550f1f621a84518f906cffd7dd17c3c27581a6687f6a07b48984dc260fabcd`,
+17,072,404 bytes) ships next to the converter)). 0.52.2 ships the
+RT-7 in-build suite determinism release (the per-test
+leaked-Tk-interpreter elimination -
+`TrainerWindow.release_search_trace()` in `close()` + explicit
+root masters at all four `TrainerWindow` variable sites in
+`ui.py`, the `_back_to_master` trace release in
+`master_trainer/master_ui.py`, the extended
+`tests/native_tk_teardown.py` backstop with the fail-closed
+named refusal `tk-teardown-refusal:
+tk-interpreter-release-failed`, the tray test mock-retention
+fixes, +3 env-strip tests in
+`tests/test_native_code_signing.py`; full-suite per-test leak
+scan START-ROOTS 0 / FINAL-ROOTS 0, zero LEAK-DELTA vs the
+2026-11-23 v3 baseline of 54 live roots) + the six-family
+fixture rebuild + re-pin for the frozen gate re-runs at this
+cut (the pinned fixture builds from 2026-11-15/16 had been
+cleaned: all six families rebuilt from the unchanged sources
+with the committed MSVC recipes into
+`build\runs\native-{string,debughook,hook,global,scan,codepatch}-fixture-20261124T031403Z-76b8c44b`;
+the probe `TARGET_SHA256` pins moved hash-only in
+`string_probe.py` / `x86_probe.py` / `lua_record_probe.py` /
+`global_probe.py` / `scan_probe.py` / `codepatch_probe.py` - the
+pinned CTs, fixture sources and canonical plan fingerprints
+unchanged, so no compiler drift; 10 of the 11 gates
+re-verified in the source runtime against the rebuilt targets,
+the codepatch x86 source run stopped at the documented
+elevated-parent launch-block, Win32 740 - a launch refusal,
+not a pin failure); the frozen re-runs of all eleven owned
+gates re-ran at this cut on the 0.52.2 template stub (sha256
+`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`)
+- all eleven frozen trainers passed with `frozen_runtime: true`
 (14/14 string per architecture, 6/6 x86 debug-hook, 7/7 hook,
-4/4 Lua-record, 14/14 global per architecture; x86 / hook /
-Lua-record plan identity identical to the source runtime; see the
-0.52.1 content section and the "0.52.1 release build record"
-section in documentation/native-progress.md); the build ran
-unsigned by default (`code_signing` report: signed false /
-not-configured) and the signed path activates with a
+4/4 Lua-record, 14/14 global per architecture, 8/8 scan per
+architecture, 14/14 code-patch per architecture; x86 / hook /
+Lua-record / code-patch plan identity identical to the source
+runtime; the scan x86 first attempt failed against a transient
+orphan process and the retry on a clean process table passed;
+the codepatch x86 run - the first frozen x86 code-patch run of
+the roadmap - ran from an elevated parent per the documented
+VM launch-block heuristic with the user-approved UAC consent;
+trainers + reports under the git-ignored
+`build\windows-fixture\frozen-check-20261124T040411Z\`); the
+build ran unsigned by default (`code_signing` report: signed
+false / not-configured) and the signed path activates with a
 user-supplied trusted-CA PFX; catalog unchanged
 (`blocked-catalog-luacall-binding`): 117,616 supported / 193
-blocked (zero delta vs the 0.52 baseline - this cycle touches no
-table-parsing path; the remaining 193 blocked rows are the
-documented design / gate residuals of the 0.51 residual census,
-unchanged). Post-0.52.1 (2026-11-16, lane work - no release
+blocked (zero delta vs the 0.52.1 baseline - this cycle
+touches no table-parsing path; the remaining 193 blocked rows
+are the documented design / gate residuals of the 0.51
+residual census, unchanged). Post-0.52.1 (2026-11-16, lane work - no release
 cut): the owned code-patch fixture gate (the 9th Windows
 function gate, RT-6 fixture-owned, house pattern per
 `global_probe.py`) verified in the source runtime -
@@ -1442,7 +1483,8 @@ fixture process + the run paths was added and read back as
 registered during the clearance, and the elevated
 source-runtime run is the recorded evidence; the frozen
 re-runs (the generated trainers, `frozen_runtime: true`) of
-both architectures happen at the next release cut; +24 tests (`tests/test_native_codepatch_probe.py`
+both architectures ran at the 0.52.2 release cut (2026-11-24);
++24 tests (`tests/test_native_codepatch_probe.py`
 18 + `tests/test_native_codepatch_launcher.py` 6); full main
 suite 5,227 OK / 36 expected skips; catalog unchanged
 (`blocked-catalog-luacall-binding`): 117,616 supported / 193
@@ -1483,9 +1525,54 @@ OK / 36 expected skips, catalog unchanged at the
 fix stays a user-supplied trusted-CA PFX through the
 documented environment contract (self-signed does not clear
 SAC, per the 0.47 record) - the signed release cut activates
-once the certificate is in hand, frozen re-runs of the gates
-stay scheduled for the next release cut.
-Superseded 0.52 build:
+once the certificate is in hand; the frozen re-runs of the gates
+ran at the 0.52.2 release cut (2026-11-24).
+Superseded 0.52.1 build:
+`native-20261115T181026Z-00f5dfe8` (0.52.1, cut
+from `main` @ `dc138e0`, 2026-11-15; in-build suite 5,203 OK / 36
+expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
+per gate; source ZIP `CT2Trainer-0.52.1-source.zip` sha256
+`c65883bf5a5161a0e4846ba4ed9a5c1725678ec363b94728f4d1dbbe603723a6`
+(14,763,924 bytes) - carries the global-gate frozen-trainer
+launcher pair (`src/ct2trainer/native/launcher.py` +
+`tests/test_native_global_launcher.py`), the release allowlist fix
+(`tools/native_build.py`: the two global gate CTs + the
+`tests/windows/global_fixture` directory) and the string-fixture
+re-pin (`string_probe.py`) - and
+portable ZIP `CT2Trainer-0.52.1-windows-portable.zip` sha256
+`35b43cc56da28fc29b7663ee3efb61a953f4b085496176b21016365a1f26056e`
+(49,918,368 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`bd0388cbe45b350ee11117b99e55262ade6906e81e72e28c286fa1e3ddfe8316`,
+17,074,203 bytes) ships next to the converter)). 0.52.1 ships the
+global-gate frozen-trainer launcher pair (the
+`--global-fixture-target` / `--global-fixture-report` pair in
+`launcher.py` in the house pattern - the global gate has no
+string-style plan-load failure reservation: an orphan flag or a
+mixed gate is refused before the plan is read, exit 2, a frozen
+embedded-plan failure is exit 2 without reserving a report, the
+report reserved by `global_probe.run_probe`) + the string-fixture
+re-pin (the pin build had been cleaned; rebuild
+`native-string-fixture-20261115T174324Z-45f4` from the unchanged
+source, both string gates re-verified 14/14 in the source
+runtime) + the release allowlist fix; the frozen re-runs of the
+string (x64 + x86), x86 debug-hook, hook + Lua-record and global
+(x64 + x86) gates re-ran at the release cut on the 0.52.1
+template stub (sha256
+`df004f1afeea2d73fffe1747bb24e8139318311ac59893ea65759a9bf365e040`)
+- all seven frozen trainers passed with `frozen_runtime: true`
+(14/14 string per architecture, 6/6 x86 debug-hook, 7/7 hook,
+4/4 Lua-record, 14/14 global per architecture; x86 / hook /
+Lua-record plan identity identical to the source runtime; see the
+0.52.1 content section and the "0.52.1 release build record"
+section in documentation/native-progress.md); the build ran
+unsigned by default (`code_signing` report: signed false /
+not-configured) and the signed path activates with a
+user-supplied trusted-CA PFX; catalog unchanged
+(`blocked-catalog-luacall-binding`): 117,616 supported / 193
+blocked (zero delta vs the 0.52 baseline - this cycle touches no
+table-parsing path; the remaining 193 blocked rows are the
+documented design / gate residuals of the 0.51 residual census,
+unchanged). Superseded 0.52 build:
 `native-20261115T070952Z-14405931` (0.52, cut
 from `main` @ `26e6ebc`, 2026-11-15; in-build suite 5,197 OK / 36
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately kept
