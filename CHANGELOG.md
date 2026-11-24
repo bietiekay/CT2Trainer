@@ -2,6 +2,63 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.52.2 (2026-11-24)
+
+RT-7 in-build suite determinism: the per-test leaked Tk
+interpreters are eliminated (patch release; no table-parsing path
+touched, no catalog movement).
+
+- ``ui.py`` (standalone trainer): ``TrainerWindow.
+  release_search_trace()`` removes the search-field ``StringVar``
+  trace from the Tcl interpreter's command table (``trace_remove``
+  + ``deletecommand``) - called from ``close()`` before
+  ``destroy()``. The trace entry registered via
+  ``Variable._register`` is tracked only in the variable's own
+  ``_tclCommands`` list, so a plain ``destroy()`` never deletes it;
+  the C command-table entry keeps the app -> CallWrapper -> root ->
+  app cycle alive past the GC-untracked ``tkapp`` reference
+  (proven 2026-11-23, diagnostics v21-v25). All four
+  ``TrainerWindow`` variables carry the explicit root master
+  (a masterless ``StringVar()`` binds ``var._root`` to
+  ``tkinter._default_root`` - the first ``tk.Tk()`` of the process
+  - and pins it in multi-root tests).
+- ``master_trainer/master_ui.py``: ``MasterWindow._back_to_master``
+  releases the trainer window's search trace before the window graph
+  becomes garbage (MT-19 rebuilds the trainer window per table in
+  the shared, surviving interpreter).
+- ``tests/native_tk_teardown.py``: ``force_root_release`` gains the
+  backstop - ``_release_variable_traces`` (mimics
+  ``Variable.__del__`` for every live variable bound to the app
+  being torn down), weakref verification of the root reclamation,
+  ``_drop_interpreter_and_collect`` (drops every Python handle to
+  the interpreter so the C dealloc runs, then collects), and the
+  fail-closed named refusal ``tk-teardown-refusal:
+  tk-interpreter-release-failed`` with holder attribution
+  (``_describe_holders``) for a root that survives even that.
+- ``tests/test_native_master_tray_geometry.py``: the
+  ``MasterTrayWiringBase._safe_close`` mock-retention fix - stop the
+  OS-seam patchers before close, ``reset_mock(side_effect=True)`` on
+  the TrayIcon class mock AND on its ``return_value`` instance mock
+  (``return_value`` is not part of ``_mock_children`` in this
+  Python build, so the child recursion never reaches the instance
+  mock's ``show_balloon`` side_effect - the raised exception with
+  its ``__traceback__`` frames holding the window was the last
+  retention, diagnostic v32), extended clear tuple;
+  ``TrayIconWindowsSmokeTests`` uses the house teardown instead of a
+  bare ``destroy``.
+- ``tests/test_native_code_signing.py``: +3
+  ``RunTestsEnvStripTests`` pin the in-build suite's signing-env
+  strip (subprocess env free of every ``CT2TRAINER_SIGN*``,
+  case-insensitive and bounded to signing vars; the build process's
+  own environment is never mutated).
+- Full main suite 5,235 OK / 36 expected skips (5,232 + 3
+  env-strip tests). Full-suite per-test leak scan (single process,
+  live-root count after every test): START-ROOTS 0, FINAL-ROOTS 0,
+  zero LEAK-DELTA - versus the 54 attributed live roots of the
+  2026-11-23 v3 baseline. Catalog unchanged
+  (``blocked-catalog-luacall-binding``): 117,809 total / 117,616
+  supported / 12,974 headings / 104,467 actionable / 193 blocked.
+
 ## 0.52.1 (2026-11-15)
 
 The Global-gate frozen-trainer launcher pair + the string-fixture
