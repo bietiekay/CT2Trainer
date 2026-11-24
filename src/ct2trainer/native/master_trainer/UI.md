@@ -1,7 +1,7 @@
 # CT2Trainer Master Trainer — UI flow (reviewable)
 
 Status: 0.45 (2026-11-13, MT-34 hotkey switch; the Master Trainer UI
-has not changed in the later releases up to 0.52.1). This document is
+has not changed in the later releases up to 0.52.2). This document is
 the reviewable copy of the
 in-app "UI flow" dialog (the `ui_flow_text()` function in
 `master_ui.py`; keep both aligned when the flow changes). It describes
