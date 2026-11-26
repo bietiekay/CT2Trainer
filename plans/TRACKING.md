@@ -52,10 +52,14 @@ game-facing action.
   parity.
 - Local original reference catalog: 151 paths, 143 distinct hashes, all
   151 load, 117,616 supported and 193 blocked of 117,809 plan entries;
-  zero load errors (current baseline `blocked-catalog-luacall-binding`,
-  2026-11-15; every remaining block covered by a documented gate or a
-  0.44-0.51 ratification lane; closure chain 2,698 → 1,053 → 537 → 221
-  → 198 → 193, zero newly blocked; previously 0.21 RT-5 item B/E
+  zero load errors (current baseline `blocked-catalog-0523-great-circle`,
+  2026-11-26 - zero delta vs `blocked-catalog-luacall-binding`: all 151
+  tables byte-identical, zero newly blocked, zero unblocked, zero reason
+  changes; previously 0.52 remeasure
+  `blocked-catalog-luacall-binding`, 2026-11-15; every remaining block
+  covered by a documented gate or a 0.44-0.51 ratification lane; closure
+  chain 2,698 → 1,053 → 537 → 221 → 198 → 193, zero newly blocked;
+  previously 0.21 RT-5 item B/E
   remeasure, 2026-10-31, run `blocked-catalog-020-rt5-be`, frozen
   manifest `gap_inventory/reference-manifest.json`; +175 supported vs
   `blocked-catalog-020-icons` — the 175 `CodeEntry` records of the 22

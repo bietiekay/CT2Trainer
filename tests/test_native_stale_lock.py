@@ -180,3 +180,72 @@ class StaleRecoveryFailureTests(StaleLockStartupTests):
         self.assertFalse(ok, detail)
         self.assertTrue((self.state / "state.lock").exists())  # no silent release
         self.assertEqual(before, (self.state / "state.json").read_bytes())
+
+
+@unittest.skipUnless(sys.platform == "win32", "Windows held-file recovery required")
+class StaleRecoveryRetryTests(StaleLockStartupTests):
+    """Bounded re-assessment after a transient mid-proof inventory change.
+
+    Field case 2026-11-24 (Great Circle 0.52.2 first launch): the startup
+    assessment was interrupted by a transient directory inventory change
+    during the process proof, so the second observation round never ran
+    and every recorded process was left with a single observation. The
+    strict two-observation death proof then failed with a misleading
+    'not proven dead in both observations (absent)' refusal; six seconds
+    later the same state was cleanly classified as recoverable. The probe
+    below simulates the transient write by touching the state directory
+    during the first observation round of the first assessment only.
+    """
+
+    def test_transient_interruption_reassesses_once_and_recovers(self):
+        from unittest.mock import patch
+        self._write_state()
+        state_bytes = (self.state / "state.json").read_bytes()
+        calls = {"n": 0}
+
+        def probe(identity):
+            calls["n"] += 1
+            if calls["n"] == 2:
+                # The first observation of the first assessment (call 1 is
+                # the single-owner pre-probe): a transient touch of the
+                # state directory (identical content, new mtime) between
+                # the two inventory snapshots. A new file would add an
+                # "Unknown recovery artifact" reason instead.
+                (self.state / "state.json").write_bytes(state_bytes)
+            return _probe("dead")(identity)
+
+        with self.assertRaises(StaleStateRecoverable) as ctx, \
+                patch("ct2trainer.native.engine.time.sleep") as sleep:
+            self._engine(probe)
+        assessment = ctx.exception.assessment
+        self.assertTrue(assessment.eligible, assessment.reasons)
+        # One bounded wait and exactly one re-assessment: 1 owner pre-probe
+        # + 2 observations of the interrupted first assessment + 4 of the
+        # clean retry (2 identities x 2 rounds).
+        self.assertEqual(calls["n"], 7)
+        sleep.assert_called_once_with(1.5)
+
+    def test_persistent_interruption_keeps_first_assessment_after_one_retry(self):
+        from unittest.mock import patch
+        self._write_state()
+        state_bytes = (self.state / "state.json").read_bytes()
+        calls = {"n": 0}
+
+        def probe(identity):
+            calls["n"] += 1
+            if calls["n"] >= 2:
+                # Every observation touches state.json, so both the first
+                # assessment and its single bounded retry are interrupted
+                # by an inventory change during the process proof.
+                (self.state / "state.json").write_bytes(state_bytes)
+            return _probe("dead")(identity)
+
+        with self.assertRaises(StateError) as ctx, \
+                patch("ct2trainer.native.engine.time.sleep") as sleep:
+            self._engine(probe)
+        self.assertNotIsInstance(ctx.exception, StaleStateRecoverable)
+        self.assertIn("inventory changed during process proof", str(ctx.exception))
+        # 1 owner pre-probe + 2 + 2 observations: the retry is bounded to
+        # exactly one re-assessment - no loop.
+        self.assertEqual(calls["n"], 5)
+        sleep.assert_called_once_with(1.5)
