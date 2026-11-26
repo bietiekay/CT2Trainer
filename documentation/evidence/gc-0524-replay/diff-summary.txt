@@ -1,0 +1,17 @@
+OK   connected
+OK   wishes
+OK   final
+OK   scans
+OK   writes
+OK   resolves
+OK   allocs(size,near)
+OK   allocs(addrs)
+OK   alloc_contents
+OK   module_diff
+OK   module_diff_applied
+OK   protects
+OK   releases
+OK   scan_counts
+OK   read_counts
+
+TOTAL DIFFERENCES: 0

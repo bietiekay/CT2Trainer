@@ -2,6 +2,51 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.52.4 (2026-11-26)
+
+Great Circle crash case: static target-traffic replay proof +
+crash-forensics instrumentation (patch release; the 0.52.3 D1/D2
+fixes remain in force, this is the follow-up on the crash itself,
+against the user-overruled 0.52.3 "game-side" attribution — the
+game build is unchanged and the table worked with the 0.41
+trainer; no table-parsing path touched, catalog unchanged at the
+`blocked-catalog-luacall-binding` baseline):
+
+- **Deterministic target-traffic replay (negative result,
+  machine-generated):** `documentation/evidence/gc-0524-replay/`
+  — the 0.41 code (`main` @ `c724a7e`) and the 0.52.3 code
+  (`main` @ `421d7c7`) produce byte-identical target operations
+  for the failing table (local-only, referenced by sha256
+  `4e0dc0b54a5d96526d680042fe323bcfc4421327559c201f0b688279fff18c2b`) and the field wish set: 22 scans (identical
+  patterns / match counts / addresses / order), 34 writes
+  (22 module + 12 cave, identical address/size/data), 6
+  identical cave allocations with identical contents, the same
+  11 applied patch ranges, and a clean close (post-close module
+  diff = 0; diff `TOTAL DIFFERENCES: 0`). A crash caused by the
+  trainer writing different bytes, to different addresses, in a
+  different order is ruled out; the hunk-by-hunk static window
+  analysis of every runtime file changed in `c724a7e..cbbd386`
+  is a fully-enumerated negative result — every changed hunk is
+  read-side transient handling, trainer-local, or
+  table-irrelevant (see the ledger section for the full evidence
+  chain and the field test protocol: A/B control against the
+  0.41 trainer, entry bisection, WER dump request).
+- **Crash-forensics debug logging (`engine.py`):** the new
+  `entry-applied` debug event fires once per enabled entry,
+  after the target writes, with the exact patch ranges
+  (address, captured original bytes, replacement bytes), the
+  cave allocations (address, size, content sha256, hex content
+  bounded at 16 KiB) and the module base/size; `rearm-attempt`
+  events gain `duration_ms` and the game-module `scan_range`.
+  Field builds with the debug log on (the user's setting) now
+  yield a cross-referenceable record for the next crash.
+- +5 tests in `tests/test_native_entry_forensics.py`; full main
+  suite 5,255 OK / 36 expected skips; catalog unchanged at the
+  `blocked-catalog-luacall-binding` baseline (117,809 total /
+  117,616 supported / 12,974 headings / 104,467 actionable /
+  193 blocked — the forensics logging touches no table-parsing
+  path).
+
 ## 0.52.3 (2026-11-26)
 
 Great Circle field fix (patch release; two proven trainer-side

@@ -1378,6 +1378,63 @@ game-facing action.
   17,070,681 bytes, ships next to the converter). Feature
   matrix unchanged (42/42, 7,475/7,475 over
   `w4b4-case30-20261020081722Z`).
+- 0.52.3 the Great Circle field fix release (2026-11-26, content
+  commit `2f08f8c`, build record below): VERSION 0.52.3 +
+  CHANGELOG 0.52.3 entry in the same change (incl. the
+  `__version__` package constant sync). D1 the direction-aware
+  prefix-cut close validation (`validate_entry_prefix_cut`
+  keyword-only `expect_live_original`, receipt-driven in
+  `debug_coordinator._check_overwrite_windows`; the 0.52.1
+  deterministic "Entry patch bytes changed before validation"
+  close refusal on the Great Circle prefix-cut entries), D2 the
+  bounded startup re-assessment (`_StateStore
+  ._assess_recovery_with_retry`, one retry after 1.5 s on a
+  transient state-directory inventory interruption, wired into
+  all three stale probes). +7 tests, full main suite 5,250 OK /
+  36 expected skips, catalog remeasure
+  `blocked-catalog-0523-great-circle` zero delta vs
+  `blocked-catalog-luacall-binding` (117,809 total / 117,616
+  supported / 12,974 headings / 104,467 actionable / 193
+  blocked, all 151 tables byte-identical). The build
+  `native-20261126T030208Z-a082e323` cut from `main` @ `421d7c7`
+  (2026-11-26): in-build suite 5,250 OK / 36 expected skips,
+  `ce_inputs: []`, `runtime_unverified` deliberately kept per
+  gate, unsigned by default (`code_signing` not-configured);
+  source ZIP `CT2Trainer-0.52.3-source.zip` sha256
+  `d9643b3c847b6b109ddb2f924df9200e80594082775be5b3092fa2351815a7c5`
+  (14,814,477 bytes), portable ZIP
+  `CT2Trainer-0.52.3-windows-portable.zip` sha256
+  `0ea6e59e38e62bbab4da87c348a957b41867c453809623f335bb98f6eb3e50d8`
+  (49,951,182 bytes; the frozen `CT2Trainer-Master.exe` sha256
+  `74e1548a9d1ddb4581419fa423eade1a46680bc96e7da53cb6e3a82bebf6c49b`,
+  17,076,637 bytes, ships next to the converter).
+- 0.52.4 the Great Circle crash case: static target-traffic
+  replay proof + crash-forensics instrumentation release
+  (2026-11-26, branch `native-0.52.4-gc-forensics`, build record
+  below): VERSION 0.52.4 + CHANGELOG 0.52.4 entry in the same
+  change (incl. the `__version__` package constant sync). The
+  user overruled the 0.52.3 "game-side" crash attribution
+  (game build unchanged, table worked with the 0.41 trainer);
+  the hunk-by-hunk static window analysis of
+  `c724a7e..cbbd386` and the deterministic target-traffic replay
+  (`documentation/evidence/gc-0524-replay/`) are
+  fully-enumerated negative results — 0.41 and 0.52.3 produce
+  byte-identical target operations for the failing table (22
+  scans, 34 writes, 6 cave allocations, the same 11 patch
+  ranges, clean close; diff `TOTAL DIFFERENCES: 0`), ruling out
+  a trainer-side write/allocation difference for this table;
+  0.52.4 ships the `entry-applied` forensics debug event (exact
+  patch ranges + cave contents + module base) and the
+  `rearm-attempt` timing / scan-range fields so the next field
+  crash yields a cross-referenceable record, plus the
+  documented field test protocol (A/B control vs the 0.41
+  trainer, entry bisection, WER dump request, Resonance
+  cross-table check). +5 tests in
+  `tests/test_native_entry_forensics.py`, full main suite 5,255
+  OK / 36 expected skips; catalog unchanged at the
+  `blocked-catalog-luacall-binding` /
+  `blocked-catalog-0523-great-circle` baseline (no
+  table-parsing path touched).
 - 0.52.2 the RT-7 in-build suite determinism release
   (2026-11-24, content commits `dd0d213` + `e6296c3`, build
   record below): VERSION 0.52.2 + CHANGELOG 0.52.2 entry in

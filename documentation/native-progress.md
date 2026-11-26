@@ -4560,6 +4560,174 @@ two proven field defects (D1 + D2); the field logs already carry
 No release cut in this section; the 0.52.3 release build record
 follows the merge.
 
+### Great Circle crash case: static target-traffic replay proof + crash-forensics instrumentation (2026-11-26, branch `native-0.52.4-gc-forensics`)
+
+Follow-up to the 0.52.3 Great Circle field fixes after the user
+overruled the "game-side" crash attribution: the game build did not
+change and the table worked with the 0.41 trainer, so the regression
+is in the trainer runtime between 0.41 (`main` @ `c724a7e`) and
+0.52.3. The 0.52.3 D1/D2 fixes stand as proven trainer-side defects,
+but they do not explain the in-game crash (observed on 0.52.1 and
+0.52.2, before D1/D2 existed).
+
+**Static window analysis `c724a7e..cbbd386` — fully-enumerated
+negative result.** Every changed runtime file in the window was
+diffed hunk-by-hunk. The engine/runtime hunks are read-side
+transient handling (0.39 transient-read retry, 0.40 transient-write
+retry, 0.43 TGC verify-skip streak), trainer-local (tray, MT-34
+hotkey session switch defaulting on with the same published
+bindings, state journal, 0.52.3 D1/D2 close/startup paths) or
+table-irrelevant (Lane A/B/C grammar, 0.46 register/size keywords,
+0.48 trailing offsets, the 0.52 luacall binding factory — the GC
+table is pure AA, no record references a Lua call).
+`link_program` (the runtime assembler) is hunk-free in the window;
+`memory.allocate()` / `HookManager.allocate()` / `global_alloc.py` /
+`aob_scan.py` are unchanged; the 0.42 cleanup-parity change only
+adds the inert `unowned_cleanup_dropped` program field;
+`lua_host.py` is additive-only (no Lua part of this table executes);
+the 0.47 `bundle.py` footer back-scan is a no-op for unsigned
+builds. Evidence files (git-ignored `side/evidence/`):
+`alloc-diff-041.txt`, `lua_host_diff.txt`, `link-diff-041.txt`. The
+`debug_coordinator.py` window diff (12+/3-) is ONLY the 0.52.3 D1
+close-path fix (receipt-driven `expect_live_original` in
+`_check_overwrite_windows`) — it affects the disable/close
+validation of prefix-cut entries and cannot cause an
+activation-phase crash.
+
+**Deterministic target-traffic replay — byte-identical negative
+result.** The git-tracked harness in
+`documentation/evidence/gc-0524-replay/` (`gc_replay.py`,
+parameterized: tree root + table path + output JSON) drives one
+tree's `TrainerEngine` with the GC table, the field wish set
+`[1, 6, 7, 12, 13, 16, 19, 20, 21, 24, 31]` and an identical
+synthetic module image (the field module size 122,609,664 B; the 11
+known AOB patterns planted at their exact field RVAs from the 0.52.2
+session log — the 9 enabled wishes scan 11 anchors because No Reload
+(`aobreload_1` + `aobreload_2`) and Items Won't Decrease
+(`aobfood` + `aobuseitem`) each carry two; the A/B-variant patterns
+`aobhealth2` / `aobammo2` deliberately absent → ScanMiss, exactly as
+in the field). Every
+target-memory call is recorded (scans, writes, resolves,
+allocations, protects, releases, module diff). Run against clean
+worktrees at `c724a7e` (0.41) and `421d7c7` (0.52.3):
+
+- connected in both; 9 of the 11 wishes enabled in both; wishes 6 and
+  16 (the alternate A/B builds) ScanMiss in both — by design, as in
+  the field;
+- 22 scans: identical patterns, match counts, first-match
+  addresses and order;
+- 34 writes: 22 module patches + 12 cave writes, identical
+  address / size / data in the same order;
+- 6 allocations: identical sizes (4096 B) and near-targets,
+  deterministic addresses, identical contents;
+- 0 resolves; identical protects / releases; identical
+  `scan_counts` (24) / `read_counts` (1005);
+- 11 applied patch ranges, identical before/after bytes:
+  stealth-mode prefix-cut `0x11f0cf3 0f87→90e9`, health
+  `0x13ffa46 f30f101c82→e9b5e50f06`, reload_1
+  `0x1461d19 8b501403d6→e9e2c20c06`, reload_2 prefix-cut
+  `0x14672e8 0f84→90e9`, oxygen `0x15120d5 7606→eb04`, use-item
+  `0x1a60123 ffcb→6690`, currency `0x1a60bdb
+  418bf0488bda→e920d4ae0590`, ammo `0x1c7947f
+  8b5720488bcb→e97c4b8a0590`, durability `0x1c79592
+  f30f58420c→e9694a8c05`, stamina `0x1d1eeba
+  4103400c660f6ec0→e941f17e05909090`, food `0x1e0308c
+  ffc8→6690`;
+- clean close in both: post-close module diff = 0, `applied: []`,
+  `blocked: false`.
+
+`diff-summary.txt` records **TOTAL DIFFERENCES: 0** (artifacts
+`replay-041.json` + `replay-main.json`, ~72 KB each; the compiled
+plans are functionally identical — canonical serialization
+byte-identical apart from the empty 0.42-era
+`unowned_cleanup_dropped: []` markers and generation metadata).
+
+Because the crash window (48–68 s read-only-idle after restore) is
+inside the steady-state tick loop and not covered by the replay, the
+tick / verification / value-read path was diffed separately
+(`steady-tick-path-diff.txt`, extracted methods `poll` /
+`_check_patches` / `read_value` / `_run_rearm`): the only difference
+is the 0.43 TGC transient-read-skip handling (a read-side error
+path — transient Win32 read failures skip the verification tick,
+bounded by `VERIFY_SKIP_STREAK_LIMIT=30`, fail-closed) and the
+matching streak reset on attach. No write, allocation, scan,
+protect or release behavior differs in the steady-state path — in
+both trees the trainer performs only verification reads and the
+armed re-arm scans while idle.
+
+**Conclusion and remaining candidate classes.** For this table the
+trainer's target traffic — the content and order of every read,
+scan, write, allocation, protection and restore — is unchanged
+between 0.41 and 0.52.3. A crash caused by the trainer writing
+different bytes, to different addresses, in a different order is
+ruled out. What the replay cannot prove: process-level
+timing/environment differences (the replay uses a synthetic module
+base `0x140000000`; the field base was `0x7ff70b2a0000`, field
+address = `0x7ff70b2a0000 + rva`; kernel allocation addresses are
+nondeterministic in both versions) and non-memory causes. In both
+crash sessions the trainer's last side activity before the exit was
+rearm scanning + verification reads (read-only idle); the trailing
+Win32 299 verify-skip is a symptom of the dying process, not a
+cause.
+
+**0.52.4 forensics instrumentation (`engine.py`).** To make the
+next field crash cross-referenceable:
+
+- `entry-applied` debug event, fired once per enabled entry in
+  `_install_program` after both the allocation-only commit and the
+  stage+publish branch (i.e. after the target writes): `patches`
+  (address, captured original hex, replacement hex from the live
+  receipt) + `allocations` (address, size, content sha256, hex
+  content bounded at 16 KiB, `content_truncated` marker above) +
+  `module_base` / `module_size`; gated on the plan `debug_log`
+  flag (on in the user's field builds).
+- `rearm-attempt` events (ScanMiss / other-failure / ok) gain
+  `duration_ms` (bounded timing around the re-arm pass) and the
+  game-module `scan_range` (`"hexbase-hexend"`).
+
++5 tests in `tests/test_native_entry_forensics.py` (enable logs the
+exact patch + cave with sha256 / live-content match; disable
+restores without a second `entry-applied`; no event without the
+`debug_log` flag; both rearm attempt shapes carry timing + range).
+Full main suite **5,255 OK / 36 expected skips, 0 failures** (+5).
+Catalog unchanged at the `blocked-catalog-luacall-binding` /
+`blocked-catalog-0523-great-circle` baseline (117,809 total /
+117,616 supported / 12,974 headings / 104,467 actionable / 193
+blocked — the forensics logging touches no table-parsing path).
+
+**Field test protocol (requested of the Hauswolke machine,
+2026-11-26).**
+
+1. WER dump / crash log of the two known crash windows
+   (0.52.1: 2026-11-24 00:23:53; 0.52.2: 2026-11-24 11:33:37) —
+   `C:\ProgramData\Microsoft\Windows\WER\ReportArchive|Queue`
+   (`TheGreatCircle-*.wer` / minidump). An AV address near a
+   patched RVA cross-references the replay's 11 patch ranges
+   (field address = `0x7ff70b2a0000 + rva`); an AV in a cave
+   region points at allocation placement.
+2. A/B control: the 0.41 trainer
+   (`native-20261110T210856Z-5811040c`) with the same 11 wishes
+   and the same in-game behavior, idling ≥ 3 minutes after
+   activation. The ~60–77 s delayed crash timing makes in-game
+   behavior a confound that must be controlled.
+3. Entry bisection with the 0.52.4 trainer (debug log on): prime
+   suspects entry 13 "Infinite Ammo" (`aobammo`, patch
+   `0x1c7947f`) and entry 21 "Infinite Item Durability"
+   (`aobdurability` anchor `0x1c79584`, patch `0x1c79592` — the
+   two patch sites sit inside the same code block, anchors 261 B
+   apart), entry 24 "Stealth Mode" prefix-cut (`0x11f0cf3`),
+   entry 31 "AP & Currencies Multiplier" (`0x1a60bdb`); enable
+   subsets to isolate the crash trigger. The 0.52.4
+   `entry-applied` events record the exact patch bytes of every
+   enabled entry in the debug log.
+4. Cross-table check: does the Resonance 0.52.2 trainer also
+   crash? (Its `build.json` arrived with the field artifacts; no
+   crash debug log exists for it.) Separates table-specific from
+   build-specific causes.
+
+No release cut in this section; the 0.52.4 release build record
+follows the merge.
+
 ### 0.52 release build record (2026-11-15, run
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`)
 

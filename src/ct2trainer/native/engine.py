@@ -2983,22 +2983,38 @@ class TrainerEngine:
                 continue
             label = entry["label"]
             attempt_no = arm["attempts"] + 1
+            # 0.52.4 crash-forensics lane (field case 2026-11-24, The
+            # Great Circle): the re-arm scans run while the trainer is
+            # otherwise read-only-idle, so their duration and target range
+            # show which scan was in flight when the target died.
+            # Evidence side only - no target operations.
+            attempt_started = time.monotonic()
+            scan_range = None
+            try:
+                rbase, rsize = self.memory.module(self.plan["process_name"])
+                scan_range = f"{hex(rbase)}-{hex(rbase + rsize)}"
+            except Exception:
+                pass
+            rearm_details = {"identifier": identifier, "label": label,
+                             "attempt": attempt_no, "max": arm["max"]}
+            if scan_range is not None:
+                rearm_details["scan_range"] = scan_range
             try:
                 self._dependencies(entry, persist=False)
                 self._enable(entry, persist=True)
             except Exception as exc:
                 self.entry_errors[identifier] = str(exc)
+                rearm_details["duration_ms"] = int((time.monotonic()
+                                                    - attempt_started) * 1000)
                 if isinstance(exc, ScanMiss):
                     self.enable_failures[identifier] = str(exc)
-                    self.debug_log.log("rearm-attempt", identifier=identifier,
-                                       label=label, attempt=attempt_no,
-                                       max=arm["max"], result="ScanMiss")
+                    self.debug_log.log("rearm-attempt",
+                                       result="ScanMiss", **rearm_details)
                     self._apply_rearm_result(identifier, exc, fresh_attempt=True)
                 else:
-                    self.debug_log.log("rearm-attempt", identifier=identifier,
-                                       label=label, attempt=attempt_no,
-                                       max=arm["max"],
-                                       result=type(exc).__name__)
+                    self.debug_log.log("rearm-attempt",
+                                       result=type(exc).__name__,
+                                       **rearm_details)
                     self.rearm.pop(identifier, None)
                     if isinstance(exc, (PatchConflict, StateError)):
                         self._block(exc)
@@ -3008,9 +3024,10 @@ class TrainerEngine:
             self.enable_failures.pop(identifier, None)
             self.entry_errors.pop(identifier, None)
             self.status = f"{label}: re-armed and enabled (attempt {attempt_no})"
-            self.debug_log.log("rearm-attempt", identifier=identifier,
-                               label=label, attempt=attempt_no,
-                               max=arm["max"], result="ok")
+            rearm_details["duration_ms"] = int((time.monotonic()
+                                               - attempt_started) * 1000)
+            self.debug_log.log("rearm-attempt",
+                               result="ok", **rearm_details)
             self.debug_log.log("rearm-succeeded", identifier=identifier,
                                label=label)
 
@@ -5595,6 +5612,41 @@ class TrainerEngine:
                     if restored!=expected:
                         raise NativeRuntimeError('Assembler disable must restore the captured original entry bytes')
                 manager.publish()
+            # 0.52.4 crash-forensics lane (field case 2026-11-24, The
+            # Great Circle): record the exact target traffic of this
+            # enable so a crash dump can be cross-referenced against
+            # the patched ranges and the owned cave contents.
+            # Evidence side only - no target operations.
+            if self.debug_log is not None and self.debug_log.enabled:
+                forensics: dict[str, Any] = {
+                    "entry_id": owner,
+                    "patches": [
+                        {"addr": hex(b["address"]), "before": b["original"],
+                         "after": b["bytes"]}
+                        for b in live
+                    ],
+                    "allocations": [],
+                }
+                for block in linked["blocks"]:
+                    if block.get("is_allocation"):
+                        content = bytes.fromhex(block["bytes"])
+                        alloc: dict[str, Any] = {
+                            "addr": hex(block["address"]),
+                            "size": len(content),
+                            "content_sha256": hashlib.sha256(content).hexdigest(),
+                        }
+                        if len(content) <= 16384:
+                            alloc["content_hex"] = content.hex()
+                        else:
+                            alloc["content_truncated"] = True
+                        forensics["allocations"].append(alloc)
+                try:
+                    base, size = link_memory.module(self.plan["process_name"])
+                    forensics["module_base"] = hex(base)
+                    forensics["module_size"] = size
+                except Exception:
+                    pass
+                self.debug_log.log("entry-applied", **forensics)
             return manager, linked, live
         except Exception as exc:
             if manager.uncertain or isinstance(exc,HookUncertain):
