@@ -634,17 +634,33 @@ records known gaps and the measurement method.
 artifact string is maintained in English from now on, regardless of the
 language used in chat.
 
-**CT2Trainer (status 2026-11-24, 0.52.2 released - build
+**CT2Trainer (status 2026-11-26, 0.52.3 released - build
+`native-20261126T030208Z-a082e323` cut from `main` @ `421d7c7`,
+2026-11-26, in-build suite 5,250 OK / 36 expected skips, `ce_inputs:
+[]` - the Great Circle field fix release (D1: direction-aware
+prefix-cut close validation - `validate_entry_prefix_cut` gains
+keyword-only `expect_live_original`, so at disable the live
+prefix is compared against the replacement instead of the
+captured original, fixing the deterministic "Entry patch bytes
+changed before validation" close refusal on prefix-cut entries;
+D2: bounded startup re-assessment - one re-assessment after a
+1.5 s wait when a transient state-directory inventory change
+aborts the process proof, fixing the misleading "not proven dead
+in both observations (absent)" refusal on a stable state); +7
+tests, catalog zero delta `blocked-catalog-0523-great-circle`,
+the game crash attributed game-side - byte-identical compiled
+plans vs 0.41, trainer read-only in both crash windows; see the
+Great Circle field fix ledger section; superseded 0.52.2 (build
 `native-20261124T033652Z-1da5b40e` cut from `main` @ `cbbd386`,
-2026-11-24, in-build suite 5,235 OK / 36 expected skips, `ce_inputs:
-[]` - the RT-7 in-build suite determinism release (the per-test
-leaked-Tk-interpreter elimination; full-suite per-test leak scan
-START-ROOTS 0 / FINAL-ROOTS 0, zero LEAK-DELTA vs the 2026-11-23
-v3 baseline) + the six-family fixture rebuild + re-pin for the
-frozen gate re-runs at this cut (the probe `TARGET_SHA256` pins
-moved hash-only, no compiler drift); the frozen re-runs of all
-eleven owned gates ran at this cut on the 0.52.2 template stub
-(sha256
+2026-11-24, in-build suite 5,235 OK / 36 expected skips,
+`ce_inputs: []` - the RT-7 in-build suite determinism release
+(the per-test leaked-Tk-interpreter elimination; full-suite
+per-test leak scan START-ROOTS 0 / FINAL-ROOTS 0, zero
+LEAK-DELTA vs the 2026-11-23 v3 baseline) + the six-family
+fixture rebuild + re-pin for the frozen gate re-runs at that cut
+(the probe `TARGET_SHA256` pins moved hash-only, no compiler
+drift); the frozen re-runs of all eleven owned gates ran at that
+cut on the 0.52.2 template stub (sha256
 `20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`),
 every report passed with `frozen_runtime: true` (14/14 string per
 architecture, 6/6 x86 debug-hook, 7/7 hook, 4/4 Lua-record, 14/14
@@ -1337,18 +1353,56 @@ is verified by the in-build CE-content scan. Agent tooling (`AGENTS.md`,
 `plans/`, `tools/agent_load.py` and the agent docs under `documentation/`)
 is local-only by design and excluded from distributed ZIPs.
 
-**Latest verified build:** `native-20261124T033652Z-1da5b40e` (0.52.2,
-cut from `main` @ `cbbd386`, 2026-11-24; in-build suite 5,235 OK / 36
+**Latest verified build:** `native-20261126T030208Z-a082e323` (0.52.3,
+cut from `main` @ `421d7c7`, 2026-11-26; in-build suite 5,250 OK / 36
 expected skips, `ce_inputs: []`, `runtime_unverified` deliberately
-kept per gate; source ZIP `CT2Trainer-0.52.2-source.zip` sha256
+kept per gate; source ZIP `CT2Trainer-0.52.3-source.zip` sha256
+`d9643b3c847b6b109ddb2f924df9200e80594082775be5b3092fa2351815a7c5`
+(14,814,477 bytes) - carries the Great Circle field fixes D1
+(direction-aware prefix-cut close validation) + D2 (bounded startup
+re-assessment) + the +7 tests - and portable ZIP
+`CT2Trainer-0.52.3-windows-portable.zip` sha256
+`0ea6e59e38e62bbab4da87c348a957b41867c453809623f335bb98f6eb3e50d8`
+(49,951,182 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+`74e1548a9d1ddb4581419fa423eade1a46680bc96e7da53cb6e3a82bebf6c49b`,
+17,076,637 bytes) ships next to the converter)). 0.52.3 ships the
+Great Circle field fix (patch release; two proven trainer-side
+defects from the 2026-11-24 field sessions on the user's "Indiana
+Jones and the Great Circle" table, which worked up to 0.41): D1 the
+close-path prefix-cut false positive (at disable the held receipt
+`expected` is the replacement bytes, so the live prefix is compared
+against the replacement instead of the captured original, with the
+dedicated "Entry patch bytes changed before disable" refusal; the
+stage direction keeps the original comparison and the boundary walk
++ the caller's live==expected receipt check stay direction-agnostic)
+and D2 the bounded startup re-assessment (one re-assessment after a
+1.5 s wait when a transient state-directory inventory change aborts
+the process proof, fixing the misleading "not proven dead in both
+observations (absent)" refusal on a stable state; wired into all
+three stale probes, genuine ineligibility never retried); full main
+suite 5,250 OK / 36 expected skips; catalog remeasure
+`blocked-catalog-0523-great-circle` zero delta vs
+`blocked-catalog-luacall-binding` (117,809 total / 117,616
+supported / 12,974 headings / 104,467 actionable / 193 blocked,
+all 151 tables byte-identical); the Great Circle crash is attributed
+game-side (byte-identical compiled plans vs the 0.41 compiler, the
+trainer read-only after the initial 9/11 wish restore in both crash
+windows, the post-`target-exited` close reporting
+`still_applied: []`); the build ran unsigned by default
+(`code_signing` not-configured - no certificate on this machine, the
+signed path activates with a user-supplied trusted-CA PFX; see the
+Great Circle field fix section and the 0.52.3 release build record
+in `documentation/native-progress.md`). Superseded 0.52.2 (build
+`native-20261124T033652Z-1da5b40e` cut from `main` @ `cbbd386`,
+2026-11-24; in-build suite 5,235 OK / 36 expected skips,
+`ce_inputs: []`; source ZIP `CT2Trainer-0.52.2-source.zip` sha256
 `e372b142f40a026826212ce7f40e30ef5906a0e590dc116e4680db86b167757a`
-(14,809,824 bytes) - carries the RT-7 in-build suite
-determinism content and the six probe re-pins - and
-portable ZIP `CT2Trainer-0.52.2-windows-portable.zip` sha256
+(14,809,824 bytes), portable ZIP
+`CT2Trainer-0.52.2-windows-portable.zip` sha256
 `219db7e96b84958158ce1a26dd817393b3f887897969e381b2cdefbfea369727`
-(49,942,786 bytes; the frozen `CT2Trainer-Master.exe` (sha256
+(49,942,786 bytes; frozen `CT2Trainer-Master.exe` sha256
 `74550f1f621a84518f906cffd7dd17c3c27581a6687f6a07b48984dc260fabcd`,
-17,072,404 bytes) ships next to the converter)). 0.52.2 ships the
+17,072,404 bytes)). 0.52.2 shipped the
 RT-7 in-build suite determinism release (the per-test
 leaked-Tk-interpreter elimination -
 `TrainerWindow.release_search_trace()` in `close()` + explicit
@@ -1362,7 +1416,7 @@ fixes, +3 env-strip tests in
 `tests/test_native_code_signing.py`; full-suite per-test leak
 scan START-ROOTS 0 / FINAL-ROOTS 0, zero LEAK-DELTA vs the
 2026-11-23 v3 baseline of 54 live roots) + the six-family
-fixture rebuild + re-pin for the frozen gate re-runs at this
+fixture rebuild + re-pin for the frozen gate re-runs at that
 cut (the pinned fixture builds from 2026-11-15/16 had been
 cleaned: all six families rebuilt from the unchanged sources
 with the committed MSVC recipes into
@@ -1376,7 +1430,7 @@ re-verified in the source runtime against the rebuilt targets,
 the codepatch x86 source run stopped at the documented
 elevated-parent launch-block, Win32 740 - a launch refusal,
 not a pin failure); the frozen re-runs of all eleven owned
-gates re-ran at this cut on the 0.52.2 template stub (sha256
+gates re-ran at that cut on the 0.52.2 template stub (sha256
 `20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`)
 - all eleven frozen trainers passed with `frozen_runtime: true`
 (14/14 string per architecture, 6/6 x86 debug-hook, 7/7 hook,

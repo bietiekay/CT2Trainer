@@ -1,55 +1,103 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-24. **0.52.2 released** (build
-`native-20261124T033652Z-1da5b40e`, cut from `main` @
-`cbbd386`, 2026-11-24) - the RT-7 in-build suite
-determinism release: the per-test leaked Tk interpreters
-are eliminated - `TrainerWindow.release_search_trace()`
-removes the search-field `StringVar` trace from the Tcl
-interpreter's command table on close (a plain `destroy()`
-never deletes it; the C command-table entry kept the app
-alive past the GC-untracked `tkapp` reference), all four
-`TrainerWindow` variables carry the explicit root master,
-the Master releases the trainer's search trace in
-`_back_to_master`, the `tests/native_tk_teardown.py`
-backstop gains the generic variable-trace release +
-weakref verify + interpreter-handle drop + the fail-closed
-named refusal `tk-teardown-refusal:
-tk-interpreter-release-failed`, the tray tests'
-mock-retention fixes, and +3 env-strip tests pin the
-in-build suite's signing-env strip; the full-suite
-per-test leak scan now shows START-ROOTS 0 / FINAL-ROOTS 0,
-zero LEAK-DELTA (versus the 54 attributed live roots of
-the 2026-11-23 v3 baseline); full main suite 5,235 OK / 36
-expected skips; in-build suite 5,235 OK / 36 expected
-skips, `ce_inputs: []`; catalog unchanged
-(`blocked-catalog-luacall-binding`): 117,809 total /
-117,616 supported / 12,974 headings / 104,467 actionable /
-193 blocked - no table-parsing path touched. The
-six-family fixture rebuild + re-pin shipped with the cut
-(the pinned fixture builds from 2026-11-15/16 had been
-cleaned: all six families rebuilt from the unchanged
-sources into
-`build\runs\native-*-fixture-20261124T031403Z-76b8c44b`,
-the probe `TARGET_SHA256` pins moved hash-only - pinned
-CTs, fixture sources and canonical plan fingerprints
-unchanged, no compiler drift). The frozen re-runs of all
-eleven owned gates shipped with this build - the eleven
-frozen trainers regenerated with the 0.52.2 template stub
+**Updated:** 2026-11-26. **0.52.3 released** (build
+`native-20261126T030208Z-a082e323`, cut from `main` @
+`421d7c7`, 2026-11-26) - the Great Circle field fix
+release (patch; two proven trainer-side defects from the
+2026-11-24 field sessions on the user's "Indiana Jones and
+the Great Circle" table,
+`TheGreatCircle_Plus21_extracted.ct`, which worked up to
+0.41): **D1** the close-path prefix-cut false positive -
+at disable the held receipt `expected` is the replacement
+bytes, so the live-prefix check in
+`validate_entry_prefix_cut` compared against the captured
+original while the site legitimately held the replacement
+⇒ deterministic "Entry patch bytes changed before
+validation; recompile without mutating." on every
+prefix-cut entry at close (the 0.52.1 trainer could not
+close a running session of this table); fixed with the
+keyword-only `expect_live_original` direction flag - the
+disable direction compares the live prefix against the
+replacement with the dedicated "changed before disable"
+refusal, the stage direction keeps the original
+comparison, and the boundary walk + the caller's
+live==expected receipt check stay direction-agnostic.
+**D2** the startup assessment transient interruption - a
+transient state-directory inventory change ("Recovery
+hashes, file identities, or directory inventory changed
+during process proof") aborted the second process-proof
+observation round, leaving every recorded process with
+one observation and the misleading "not proven dead in
+both observations (absent)" refusal on a stable state
+(observed live on the 0.52.2 first launch, six seconds
+before the same state classified
+`StaleStateRecoverable`); fixed with one bounded
+re-assessment after a 1.5 s wait
+(`_StateStore._assess_recovery_with_retry`), wired into
+all three stale probes, genuine ineligibility never
+retried. +7 tests (5 D1 in
+`tests/test_native_debug_coordinator.py`, 2 D2 in
+`tests/test_native_stale_lock.py`); full main suite
+5,250 OK / 36 expected skips; in-build suite 5,250 OK /
+36 expected skips, `ce_inputs: []`, `runtime_unverified`
+deliberately kept per gate; catalog remeasure
+`blocked-catalog-0523-great-circle` zero delta vs
+`blocked-catalog-luacall-binding` (117,809 total /
+117,616 supported / 12,974 headings / 104,467
+actionable / 193 blocked, all 151 tables byte-identical);
+source ZIP `CT2Trainer-0.52.3-source.zip` sha256
+`d9643b3c847b6b109ddb2f924df9200e80594082775be5b3092fa2351815a7c5`
+(14,814,477 bytes) and portable ZIP
+`CT2Trainer-0.52.3-windows-portable.zip` sha256
+`0ea6e59e38e62bbab4da87c348a957b41867c453809623f335bb98f6eb3e50d8`
+(49,951,182 bytes; the frozen `CT2Trainer-Master.exe`
 (sha256
-`20c17ee135c9bfb388612ade31e1cad5ee032768044f29d4099344017c34ce25`),
-every report passed with `frozen_runtime: true` (14/14
-string per architecture, 6/6 x86 debug-hook, 7/7 hook, 4/4
-Lua-record, 14/14 global per architecture, 8/8 scan per
-architecture, 14/14 code-patch per architecture; x86 /
-hook / Lua-record / code-patch plan identity identical to
-the source runtime; the first frozen x86 code-patch run of
-the roadmap - run from an elevated parent per the
-documented VM launch-block heuristic with the
-user-approved UAC consent); real-game, clean-machine and
-Deck / Proton / touch acceptance remain open, so
+`74e1548a9d1ddb4581419fa423eade1a46680bc96e7da53cb6e3a82bebf6c49b`,
+17,076,637 bytes) ships next to the converter). The game
+crash itself is attributed game-side (the compiled plan
+is byte-identical between the last working 0.41
+compiler and current `main` apart from the empty 0.42-era
+`unowned_cleanup_dropped` markers; the 0.42→0.52.2
+engine diff is defensive / compile-time only; the
+trainer performed no target writes after the initial
+9/11 wish restore in both crash sessions; the
+post-`target-exited` close reports `still_applied: []`;
+leading hypothesis: a game update past the trainer's
+v20251014 baseline - field check requested: confirm the
+installed game version and, as a control, run the
+original FLiNG trainer against the same build); the
+build ran unsigned by default (`code_signing`
+not-configured - no certificate on this machine, the
+durable Smart App Control fix stays a user-supplied
+trusted-CA PFX via `CT2TRAINER_SIGN_PFX`, self-signed
+does not clear SAC); real-game, clean-machine and Deck /
+Proton / touch acceptance remain open, so
 `runtime_unverified` stays set per the RT-6 acceptance;
-see the 0.52.2 release build record in
+see the Great Circle field fix section and the 0.52.3
+release build record in
+`documentation/native-progress.md`.
+Post-0.52.2 (2026-11-24, released as 0.52.2, build
+`native-20261124T033652Z-1da5b40e` cut from `main` @
+`cbbd386`): the RT-7 in-build suite determinism release
+(the per-test leaked Tk interpreter elimination -
+`TrainerWindow.release_search_trace()` in `close()` +
+explicit root masters at all four `TrainerWindow`
+variable sites in `ui.py`, the `_back_to_master` trace
+release in `master_trainer/master_ui.py`, the extended
+`tests/native_tk_teardown.py` backstop with the
+fail-closed named refusal `tk-teardown-refusal:
+tk-interpreter-release-failed`, the tray tests'
+mock-retention fixes, +3 env-strip tests; full-suite
+per-test leak scan START-ROOTS 0 / FINAL-ROOTS 0, zero
+LEAK-DELTA vs the 2026-11-23 v3 baseline) + the
+six-family fixture rebuild + re-pin (the probe
+`TARGET_SHA256` pins moved hash-only, no compiler
+drift) + the frozen re-runs of all eleven owned gates on
+the 0.52.2 template stub (every report passed with
+`frozen_runtime: true`); in-build suite 5,235 OK / 36
+expected skips, `ce_inputs: []`, catalog unchanged
+(`blocked-catalog-luacall-binding`); see the 0.52.2
+release build record in
 `documentation/native-progress.md`.
 Post-0.52.1 (2026-11-16 + 2026-11-20): the owned code-patch
 fixture gate (the ninth Windows function gate, RT-6
