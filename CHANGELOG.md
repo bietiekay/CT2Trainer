@@ -2,6 +2,52 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.52.3 (2026-11-26)
+
+Great Circle field fix (patch release; two proven trainer-side
+defects from the 2026-11-24 field sessions, no table-parsing path
+touched, zero catalog delta):
+
+- **Close-path prefix-cut false positive (D1):** disabling a
+  prefix-cut byte patch (e.g. the Great Circle Stealth Mode / No
+  Reload `db 90 E9` over a 6-byte conditional jump) failed
+  deterministically with "Entry patch bytes changed before
+  validation; recompile without mutating." — the live-prefix check in
+  `validate_entry_prefix_cut` compared against the captured original
+  while at disable time the site legitimately holds the replacement
+  bytes the trainer just wrote. New keyword-only
+  `expect_live_original` flag: the disable direction (receipt
+  `expected` == replacement) compares the live prefix against the
+  replacement with the dedicated "Entry patch bytes changed before
+  disable" refusal; the stage direction keeps the original
+  comparison; the boundary walk and the caller's receipt check are
+  direction-agnostic, so external mutation is still refused in both
+  directions. +5 tests in `tests/test_native_debug_coordinator.py`.
+- **Startup re-assessment after a transient interruption (D2):** the
+  read-only recovery assessment aborts its second process-proof
+  observation round on a transient state-directory inventory change
+  ("Recovery hashes, file identities, or directory inventory changed
+  during process proof"), leaving every recorded process with one
+  observation and producing the misleading "not proven dead in both
+  observations (absent)" refusal on a stable state — observed live on
+  the 0.52.2 first launch, six seconds before the same state was
+  classified recoverable. `_StateStore` now re-assesses exactly once
+  after a bounded 1.5 s wait when the assessment was interrupted
+  (inventory-change reason or any process with fewer than two
+  observations); genuine ineligibility (live/unprovable owner, live
+  target) is never retried. Wired into all three stale probes
+  (`_stale_fence_probe` / `_stale_lock_probe` /
+  `_stale_artifacts_probe`). +2 tests in
+  `tests/test_native_stale_lock.py`.
+- Full main suite 5,250 OK / 36 expected skips (the +7 tests);
+  catalog remeasure `blocked-catalog-0523-great-circle`: zero delta vs
+  `blocked-catalog-luacall-binding` — 117,809 total / 117,616
+  supported / 12,974 headings / 104,467 actionable / 193 blocked, all
+  151 tables byte-identical. The Great Circle crash itself is
+  attributed game-side (byte-identical compiled plans vs 0.41,
+  trainer read-only after the initial restore in both crash
+  sessions); see the ledger section for the full evidence chain.
+
 ## 0.52.2 (2026-11-24)
 
 RT-7 in-build suite determinism: the per-test leaked Tk

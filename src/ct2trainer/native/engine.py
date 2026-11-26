@@ -1167,6 +1167,63 @@ class _StateStore:
                     f"State directory: {self.directory}. Delete that folder to start fresh.") from exc
             raise
 
+    # Transient assessment-interruption reasons (recovery.assess_recovery):
+    # a directory or hash inventory change mid-assessment aborts the
+    # second observation round of the process proof, leaving every
+    # recorded process with a single observation. That alone fails the
+    # strict two-observation death proof and produces a misleading
+    # "not proven dead in both observations" refusal even though the
+    # state may be stable (field case 2026-11-24, Great Circle 0.52.2
+    # first launch: refusal on a transient inventory change, six seconds
+    # later the same state classified recoverable).
+    _ASSESSMENT_INTERRUPT_REASONS = (
+        "Recovery hashes, file identities, or directory inventory changed during process proof",
+        "Recovery hashes or inventory changed after the final process proof",
+    )
+
+    @classmethod
+    def _assessment_interrupted(cls, assessment) -> bool:
+        """True when a transient interruption, not a genuine ineligibility,
+        blocked the assessment: one of the inventory-change reasons, or any
+        recorded process left with fewer than the two required observations
+        (the second round never ran)."""
+        if any(reason in cls._ASSESSMENT_INTERRUPT_REASONS
+               for reason in assessment.reasons):
+            return True
+        return any(len(process.observations) < 2 for process in assessment.processes)
+
+    def _assess_recovery_with_retry(self, probe, exclusive_controller_claim: bool = False):
+        """Read-only recovery assessment with one bounded re-assessment.
+
+        A transient mid-assessment interruption (an inventory change during
+        the process proof) aborts the second observation round and yields an
+        ineligible assessment although the state is stable. Re-assess
+        exactly once after a bounded wait; keep the first assessment when
+        the retry raises or is itself still interrupted. Genuine
+        ineligibility (a live or unprovable owner, a live target) is never
+        retried - only transient interruptions are.
+        """
+        from .recovery import assess_recovery
+        assessment = assess_recovery(self.directory, self.process_lock_dir,
+                                     process_probe=probe,
+                                     expected_trainer_id=self.plan["trainer_id"],
+                                     expected_table_sha256=self.plan["table_sha256"],
+                                     exclusive_controller_claim=exclusive_controller_claim)
+        if not self._assessment_interrupted(assessment):
+            return assessment
+        time.sleep(1.5)
+        try:
+            retried = assess_recovery(self.directory, self.process_lock_dir,
+                                      process_probe=probe,
+                                      expected_trainer_id=self.plan["trainer_id"],
+                                      expected_table_sha256=self.plan["table_sha256"],
+                                      exclusive_controller_claim=exclusive_controller_claim)
+        except Exception:
+            return assessment
+        if self._assessment_interrupted(retried):
+            return assessment
+        return retried
+
     def _stale_fence_probe(self, exc: Exception):
         """Classify a leftover recovery fence without touching it.
 
@@ -1188,12 +1245,8 @@ class _StateStore:
             from .recovery import WindowsProcessProbe
             probe = WindowsProcessProbe()
         try:
-            from .recovery import assess_recovery
-            assessment = assess_recovery(self.directory, self.process_lock_dir,
-                                         process_probe=probe,
-                                         expected_trainer_id=self.plan["trainer_id"],
-                                         expected_table_sha256=self.plan["table_sha256"],
-                                         exclusive_controller_claim=True)
+            assessment = self._assess_recovery_with_retry(probe,
+                                                          exclusive_controller_claim=True)
         except Exception:
             return None
         if not assessment.eligible:
@@ -1241,7 +1294,7 @@ class _StateStore:
             from .recovery import WindowsProcessProbe
             probe = WindowsProcessProbe()
         try:
-            from .recovery import ProcessIdentity, assess_recovery
+            from .recovery import ProcessIdentity
             document = json.loads(self.lock.read_bytes())
             identity = None
             if isinstance(document, dict):
@@ -1265,9 +1318,7 @@ class _StateStore:
                                          detail=observation.detail)
             if not observation.proven_dead:
                 return None
-            assessment = assess_recovery(self.directory, self.process_lock_dir, process_probe=probe,
-                                         expected_trainer_id=self.plan["trainer_id"],
-                                         expected_table_sha256=self.plan["table_sha256"])
+            assessment = self._assess_recovery_with_retry(probe)
         except Exception:
             return None
         if not assessment.eligible:
@@ -1323,12 +1374,8 @@ class _StateStore:
             from .recovery import WindowsProcessProbe
             probe = WindowsProcessProbe()
         try:
-            from .recovery import assess_recovery
-            assessment = assess_recovery(self.directory, self.process_lock_dir,
-                                         process_probe=probe,
-                                         expected_trainer_id=self.plan["trainer_id"],
-                                         expected_table_sha256=self.plan["table_sha256"],
-                                         exclusive_controller_claim=True)
+            assessment = self._assess_recovery_with_retry(probe,
+                                                          exclusive_controller_claim=True)
         except Exception:
             return None
         if not assessment.eligible:

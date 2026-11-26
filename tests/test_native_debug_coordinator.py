@@ -257,6 +257,75 @@ class EntryWindowTests(unittest.TestCase):
             _check_overwrite_windows(memory, [(0x1000, 2)],
                                      ((0x1000, original, replacement, original),))
 
+    def test_prefix_cut_fragment_disable_direction_passes_with_live_replacement(self):
+        # Field case (2026-11-24, Great Circle 0.52.1 session 2): at disable
+        # time the expected receipt is the replacement bytes, and the live
+        # site still holds exactly that. The prefix proof must compare the
+        # live prefix against the replacement, not the captured original —
+        # the direction-blind original comparison produced a deterministic
+        # "Entry patch bytes changed before validation" false positive that
+        # blocked the close path on every prefix-cut entry.
+        original = bytes.fromhex("0F87")
+        replacement = bytes.fromhex("90E9")
+        live = bytes.fromhex("90E983000000") + bytes(64)
+        memory = _Memory()
+        memory.is_executable = lambda address, size: True
+        memory.read = lambda address, size: live[:size]
+        _check_overwrite_windows(memory, [(0x1000, 2)],
+                                 ((0x1000, original, replacement, replacement),))
+
+    def test_prefix_cut_fragment_disable_direction_refuses_drifted_live_bytes(self):
+        # Disable direction, receipt drift: the live site no longer holds
+        # the replacement bytes -> the owned-receipt check refuses before
+        # any instruction validation (fail-closed behavior unchanged).
+        original = bytes.fromhex("0F87")
+        replacement = bytes.fromhex("90E9")
+        live = bytes.fromhex("FF9083000000") + bytes(64)
+        memory = _Memory()
+        memory.is_executable = lambda address, size: True
+        memory.read = lambda address, size: live[:size]
+        with self.assertRaisesRegex(HookError, "receipt differs"):
+            _check_overwrite_windows(memory, [(0x1000, 2)],
+                                     ((0x1000, original, replacement, replacement),))
+
+    def test_prefix_cut_direct_disable_check_passes_with_intact_replacement(self):
+        # The direction-aware live prefix check called directly with the
+        # disable flag: an intact patched site (live == replacement) passes.
+        from ct2trainer.native.hooks import validate_entry_prefix_cut
+        original = bytes.fromhex("0F87")
+        replacement = bytes.fromhex("90E9")
+        live = bytes.fromhex("90E983000000") + bytes(64)
+        memory = _Memory()
+        memory.read = lambda address, size: live[:size]
+        validate_entry_prefix_cut(memory, 0x1000, replacement, original, 64,
+                                  expect_live_original=False)
+
+    def test_prefix_cut_direct_disable_check_refuses_drifted_live_prefix(self):
+        # Direct disable-direction call, drifted live prefix: refused with
+        # the disable-specific message (the trainer did not write this).
+        from ct2trainer.native.hooks import validate_entry_prefix_cut
+        original = bytes.fromhex("0F87")
+        replacement = bytes.fromhex("90E9")
+        live = bytes.fromhex("FF9083000000") + bytes(64)
+        memory = _Memory()
+        memory.read = lambda address, size: live[:size]
+        with self.assertRaisesRegex(HookError, "changed before disable"):
+            validate_entry_prefix_cut(memory, 0x1000, replacement, original, 64,
+                                      expect_live_original=False)
+
+    def test_prefix_cut_stage_direction_still_refuses_already_patched_site(self):
+        # The stage direction (default flag) keeps the original comparison:
+        # an already-patched site (holding the replacement) is refused with
+        # the historical stage wording - the 0.15-ext2 contract unchanged.
+        from ct2trainer.native.hooks import validate_entry_prefix_cut
+        original = bytes.fromhex("0F87")
+        replacement = bytes.fromhex("90E9")
+        live = bytes.fromhex("90E983000000") + bytes(64)
+        memory = _Memory()
+        memory.read = lambda address, size: live[:size]
+        with self.assertRaisesRegex(HookError, "changed before validation"):
+            validate_entry_prefix_cut(memory, 0x1000, replacement, original, 64)
+
 
 @unittest.skipUnless(sys.platform == "win32", "Win32 debugger cleanup API contract")
 class DebugCoordinatorTests(unittest.TestCase):

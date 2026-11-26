@@ -217,9 +217,18 @@ def _check_overwrite_windows(memory, ranges, entry_windows=None):
                 # The live proof re-validates against the quiesced target
                 # under the held context; a complete original fast-paths
                 # back into the full two-sided strict contract, so a call
-                # or interrupt entry keeps its return-context refusal.
-                validate_entry_prefix_cut(memory, address, replacement, original,
-                                          memory.pointer_size * 8)
+                # or interrupt entry keeps its return-context refusal. The
+                # direction follows the receipt: at disable time
+                # (expected == replacement) the live site still holds the
+                # replacement bytes, so the prefix proof compares against
+                # the replacement instead of the captured original
+                # (field case 2026-11-24, Great Circle 0.52.1 session 2:
+                # deterministic close refusal on prefix-cut entries); the
+                # stage direction keeps the original comparison.
+                validate_entry_prefix_cut(
+                    memory, address, replacement, original, memory.pointer_size * 8,
+                    expect_live_original=not (expected == replacement
+                                              and expected != original))
         else:
             validate_entry_control_flow(address, memory.read(address, length), memory.pointer_size * 8)
 

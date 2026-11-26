@@ -4324,6 +4324,152 @@ CHANGELOG unchanged. The production `release_search_trace()` fixes
 ship with the next cut; the deterministic unsigned in-build baseline
 is restored.
 
+### Great Circle field fix: close-path prefix-cut validation + bounded startup re-assessment (2026-11-26, branch `native-0.52.3-great-circle-field-fix`)
+
+Field report (Hauswolke machine, 2026-11-24): the user's
+"Indiana Jones and the Great Circle" table
+(`TheGreatCircle_Plus21_extracted.ct` sha256
+`4e0dc0b54a5d96526d680042fe323bcfc4421327559c201f0b688279fff18c2b`,
+29,888 B, process `TheGreatCircle.exe`, extracted from the FLiNG
+"Indiana Jones and the Great Circle v20250508-v20251014 Plus 21
+Trainer") crashes the game on activation with the 0.52.2 build, and
+the 0.52.1 trainer fails its close path deterministically; the same
+table worked up to 0.41. Field debug logs (local-only evidence, never
+shipped): `Indiana Jones and the great Circle
+(0.52.1).ct2debug.log` (2026-11-24 00:20Z, two sessions) and
+`Indiana Jones and the Great Circle (0.52.2).ct2debug.log`
+(2026-11-24 11:32Z) in the user's `Resilio Sync\cheats\Trainers\`.
+
+**D1 — close-path prefix-cut false positive (trainer-side, proven,
+deterministic).** 0.52.1 session 2 (re-attach 00:24:03, user close
+00:24:14): `engine-close-failed` with the traceback
+`close()` → `_disable` → `_coordinated` →
+`debug_coordinator._hold/_run` → `_check_overwrite_windows` →
+`hooks.validate_entry_prefix_cut`. The table's Stealth Mode / No
+Reload entries are 2-byte prefix-cut patches (`db 90 E9` over a 6-byte
+conditional jump, the 0.15 shape). At disable time the held receipt
+`expected` is the replacement bytes (hooks.py `_coordinated` receipt
+construction: `bytes` if `state == "enabled"`, else `original`), so
+the receipt check (live == expected) in
+`_check_overwrite_windows` passes, but the live-prefix comparison
+inside `validate_entry_prefix_cut` was direction-blind — it compared
+the live site against the captured `original` while the site
+legitimately still holds the replacement ⇒ deterministic
+"Entry patch bytes changed before validation; recompile without
+mutating." on every prefix-cut entry at close, i.e. the trainer could
+not close a running session of this table at all. Fix: keyword-only
+`expect_live_original: bool = True` on `validate_entry_prefix_cut`
+(`hooks.py`; the stage default is unchanged); in the disable
+direction (`False`) the live prefix is compared against `raw`
+(replacement) with the disable-specific message "Entry patch bytes
+changed before disable; recompile without mutating." The boundary
+walk + post-patch decode are direction-agnostic (in the disable
+direction the walk decodes the replacement stream — no false
+rejection; external mutation stays caught in both directions by the
+caller's live == expected receipt check, which runs first).
+`_check_overwrite_windows` now passes
+`expect_live_original=not (expected == replacement and expected !=
+original)` (receipt-driven; an `original == replacement` receipt
+keeps the stage comparison). The stage call site in `hooks.py` keeps
+the default.
+
+**D2 — startup assessment transient interruption (trainer-side,
+proven).** 0.52.2 first launch (11:32:18): the read-only recovery
+assessment was interrupted by a transient state-directory inventory
+change ("Recovery hashes, file identities, or directory inventory
+changed during process proof", `recovery.py` L1012, raised as
+`_AssessmentError(ValueError)` and converted to a reason) — the
+second observation round of the process proof never ran, so every
+recorded process (owner, target) was left with a single observation.
+`ProcessEvidence.proven_dead` requires exactly two observations ⇒
+the misleading "Exact process … is not proven dead in both
+observations (absent)" refusal, even though the state was stable:
+six seconds later (relaunch 11:32:24) the same state classified
+`StaleStateRecoverable` and the trainer attached cleanly at
+11:32:38. Fix (engine.py `_StateStore`): `_ASSESSMENT_INTERRUPT_REASONS`
+(the two inventory-change reason strings) + `_assessment_interrupted`
+(True iff an interrupt reason is present or any recorded process has
+fewer than two observations) + `_assess_recovery_with_retry(probe,
+exclusive_controller_claim=False)` — on an interrupted assessment,
+re-assess exactly once after `time.sleep(1.5)`, keeping the first
+assessment when the retry raises or is itself still interrupted;
+genuine ineligibility (a live or unprovable owner, a live target) is
+never retried. Wired into all three probes: `_stale_fence_probe` and
+`_stale_artifacts_probe` with `exclusive_controller_claim=True`,
+`_stale_lock_probe` with the default claim-less read-only assessment.
+
+**Crash attribution (game-side, needs field confirmation).** The
+compiled plan of the table is byte-identical between the last working
+0.41 compiler (`c724a7e`) and current `main` (`f43a99c`): 46 entries /
+40 supported / 38 actionable / 6 blocked / 2 headings; after dropping
+the empty `unowned_cleanup_dropped: []` markers the 0.42 cleanup-parity
+change added to 15 script entries, the canonical serializations are
+byte-identical (evidence `side/evidence/greatcircle-plan-diff.json`,
+raw sha256 `042fe6f7…` vs `a36a16b1…`, normalized
+`934c33ce…` in both; raw plan files `greatcircle-plan-041.json` /
+`greatcircle-plan-current.json`). The 0.42→0.52.2 engine diff was
+triaged in full: every change is defensive / compile-time, no new
+target writes. In both crash sessions the trainer performed no target
+writes after the initial wish restore (9/11 restored; ids 6/16 are the
+alternate-build ScanMiss pair, consistent with the table's own
+"Enable only one of each A/B variant" heading), the last pre-exit
+event is a transient Win32 299 verify-skip (symptom, not cause), and
+the post-`target-exited` `engine-close` reports `still_applied: []`
+(both module bases — 0x7ff70b2a0000 / 0x7ff6d7b30000, ASLR — and the
+122,609,664-byte module size match). The game is not installed on
+this VM (no live repro); the leading hypothesis is a game update past
+the trainer's v20251014 baseline. Field check requested: confirm the
+installed game version and, as a control, run the FLiNG trainer
+against the same build.
+
+**Tests + measurement.** +7 tests: 5 D1 in
+`tests/test_native_debug_coordinator.py` `EntryWindowTests` (disable
+direction passes with live == replacement; drifted live is still
+refused by the "receipt differs" receipt check; direct
+disable-direction calls pass on an intact replacement and are refused
+with the disable-specific message on drift; the stage direction still
+refuses an already-patched site with the historical message; note:
+for the 2-byte `90 E9` shape the tail check is vacuous in the disable
+direction — `E9` always consumes its 4-byte displacement, so the
+boundary walk always completes), and 2 D2 in
+`tests/test_native_stale_lock.py` `StaleRecoveryRetryTests` (a
+transient identical-content rewrite of `state.json` on exactly the
+second probe call ⇒ `StaleStateRecoverable`, exactly 7 probe calls —
+1 owner pre-probe + 2 of the interrupted first assessment + 4 of the
+clean retry — and one `sleep(1.5)`; a persistent churn ⇒ both
+assessments interrupted ⇒ `StateError` with the inventory-change
+reason, exactly 5 probe calls, proving the retry is bounded to one).
+Targeted: `test_native_debug_coordinator` 32 OK, `test_native_stale_lock`
+12 OK; recovery-adjacent modules (global_recovery /
+live_target_takeover / recovery / recovery_assessment /
+stale_artifacts / stale_lock_selfheal / state_force / state_takeover)
+140 OK / 1 skip; full main suite **5,250 OK / 36 expected skips, 0
+failures** (+7: the D1 + D2 tests). Catalog remeasure
+`blocked-catalog-0523-great-circle` (2026-11-26, the 0.40 three-chunk
+151-table spec): 117,809 total / 117,616 supported / 12,974 headings
+/ 104,467 actionable / 193 blocked — **zero delta vs
+`blocked-catalog-luacall-binding`**: all three chunk outputs
+byte-identical to the 0.51 chunks (sha256 chunk1
+`bf1768ca52a7c3c40108a89b0577d8f17a1b136afb84f1646f6f49bc81c04429`,
+chunk2 `70b82023e72d41038080b35cd7967396e967dce9c7aa4e29bc57bdb6419e82eb`,
+chunk3 `51bfdfa32ef1bca2fb5f44fb6c80f43c2a88b71afa70ebce5b169145b4e6aec8`),
+zero newly blocked, zero unblocked, zero reason changes, all 151
+tables byte-identical. GC static audit
+`side/evidence/greatcircle-audit-0523.json`
+(`ct2trainer-static-corpus-audit/v1`, spec
+`greatcircle-audit-spec.json`): 46 / 40 / 38 / 6 / 2, the 6 blocked
+rows are all `GetCurrency` user-symbol rows (blocked by design — the
+table requires the symbol import; the audit names the remedy), no
+Lua executed, no remote writes, `runtime_verified: false`.
+
+Scope decision: the optional `target-exited` `exit-verify`
+observability event was **not** included — 0.52.3 stays strictly the
+two proven field defects (D1 + D2); the field logs already carry
+`target-exited` plus the post-exit `engine-close` with `still_applied`.
+
+No release cut in this section; the 0.52.3 release build record
+follows the merge.
+
 ### 0.52 release build record (2026-11-15, run
 `native-20261115T070952Z-14405931`, cut from `main` @ `26e6ebc`)
 

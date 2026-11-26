@@ -132,7 +132,7 @@ def validate_entry_control_flow(address: int, raw: bytes, bitness: int,
 
 
 def validate_entry_prefix_cut(memory, address: int, raw: bytes, original: bytes,
-                              bitness: int) -> None:
+                              bitness: int, *, expect_live_original: bool = True) -> None:
     """Live verification for a linked prefix-cut byte patch.
 
     Called only for executable entry blocks whose captured original bytes do
@@ -144,6 +144,15 @@ def validate_entry_prefix_cut(memory, address: int, raw: bytes, original: bytes,
     ``nop; jmp`` with the original displacement). Fails closed on
     unreadable targets, byte drift, unresolvable boundaries, decode
     failures, and call/interrupt hazards in the resulting entry stream.
+
+    ``expect_live_original`` selects which receipt the live site must still
+    hold: the default (``True``, stage direction) requires the live prefix
+    to match the captured original; the disable direction (``False``) has
+    the site still holding the replacement bytes, so the live prefix is
+    compared against ``raw`` instead. The boundary walk and the post-patch
+    decode are direction-agnostic. External mutation stays caught in both
+    directions by the caller's live==expected receipt check, which runs
+    before this proof.
     """
     if (bitness not in {32, 64} or not raw or not original
             or len(raw) != len(original) or len(raw) > MAX_ENTRY_BYTES):
@@ -173,9 +182,18 @@ def validate_entry_prefix_cut(memory, address: int, raw: bytes, original: bytes,
         raise HookError(
             "Entry patch cuts an instruction that cannot be fully read "
             "back for validation.") from exc
-    if len(window) < len(raw) or bytes(window[:len(raw)]) != original:
+    # Which receipt must the live site still hold?  Stage direction: the
+    # captured original (the patch has not been written yet). Disable
+    # direction: the replacement bytes we applied (the patch is still in
+    # place).  The boundary walk below is direction-agnostic: it proves the
+    # complete instruction stream the same way in both cases.
+    held = original if expect_live_original else raw
+    if len(window) < len(raw) or bytes(window[:len(raw)]) != held:
+        if expect_live_original:
+            raise HookError(
+                "Entry patch bytes changed before validation; recompile without mutating.")
         raise HookError(
-            "Entry patch bytes changed before validation; recompile without mutating.")
+            "Entry patch bytes changed before disable; recompile without mutating.")
     boundary = 0
     for instruction in Decoder(bitness, window, ip=address):
         if instruction.is_invalid:
