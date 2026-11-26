@@ -1,81 +1,80 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-26. **0.52.3 released** (build
-`native-20261126T030208Z-a082e323`, cut from `main` @
-`421d7c7`, 2026-11-26) - the Great Circle field fix
-release (patch; two proven trainer-side defects from the
-2026-11-24 field sessions on the user's "Indiana Jones and
-the Great Circle" table,
-`TheGreatCircle_Plus21_extracted.ct`, which worked up to
-0.41): **D1** the close-path prefix-cut false positive -
-at disable the held receipt `expected` is the replacement
-bytes, so the live-prefix check in
-`validate_entry_prefix_cut` compared against the captured
-original while the site legitimately held the replacement
-⇒ deterministic "Entry patch bytes changed before
-validation; recompile without mutating." on every
-prefix-cut entry at close (the 0.52.1 trainer could not
-close a running session of this table); fixed with the
-keyword-only `expect_live_original` direction flag - the
-disable direction compares the live prefix against the
-replacement with the dedicated "changed before disable"
-refusal, the stage direction keeps the original
-comparison, and the boundary walk + the caller's
-live==expected receipt check stay direction-agnostic.
-**D2** the startup assessment transient interruption - a
-transient state-directory inventory change ("Recovery
-hashes, file identities, or directory inventory changed
-during process proof") aborted the second process-proof
-observation round, leaving every recorded process with
-one observation and the misleading "not proven dead in
-both observations (absent)" refusal on a stable state
-(observed live on the 0.52.2 first launch, six seconds
-before the same state classified
-`StaleStateRecoverable`); fixed with one bounded
-re-assessment after a 1.5 s wait
-(`_StateStore._assess_recovery_with_retry`), wired into
-all three stale probes, genuine ineligibility never
-retried. +7 tests (5 D1 in
-`tests/test_native_debug_coordinator.py`, 2 D2 in
-`tests/test_native_stale_lock.py`); full main suite
-5,250 OK / 36 expected skips; in-build suite 5,250 OK /
+**Updated:** 2026-11-26. **0.52.4 released** (build
+`native-20261126T125152Z-c8a75b03`, cut from `main` @
+`7585cc8`, 2026-11-26) - the Great Circle crash
+re-analysis + forensics release (patch; the user-overruled
+0.52.3 "game-side" crash attribution re-analyzed at byte
+level): the 0.41 → 0.52.3 window is byte-identical in
+activation AND steady-state tick-path target traffic (deep
+replay diff: TOTAL DIFFERENCES: 0 across 15 categories;
+the steady-state tick path - the actual 48-68 s
+read-only-idle crash window - differs only in the 0.43
+read-side transient-read-skip + the streak reset on
+attach; the `ui.py` tick loop is unchanged in cadence or
+target traffic, and the GC plan declares no per-record
+hotkeys, so the MT-34 hotkey path is inert for this
+table); the field logs show the trainer read-only-idle
+before each crash, the trailing Win32 299 verify-skip
+~260 ms before `target-exited` being a symptom, not a
+cause; no statically provable trainer-side crash
+mechanism in the window ⇒ the release ships (a) the
+byte-level replay proof (git-tracked at
+`documentation/evidence/gc-0524-replay/`, deliberately
+outside the release allowlist), (b) the crash-forensics
+debug logging (`entry-applied` event per installed
+program - patch addresses / before / after bytes,
+allocation addresses / sizes / content sha256 + bounded
+content hex, module base / size, gated on the plan
+`debug_log` flag which was ON in the field builds;
+`_run_rearm` duration + the game-module scan range on
+every rearm-attempt) and (c) the documented field test
+protocol (WER dump harvest, the 0.41 A/B control run,
+entry bisection on 0.52.4, the cross-table Resonance
+check); +5 tests in
+`tests/test_native_entry_forensics.py`; full main suite
+5,255 OK / 36 expected skips; in-build suite 5,255 OK /
 36 expected skips, `ce_inputs: []`, `runtime_unverified`
-deliberately kept per gate; catalog remeasure
-`blocked-catalog-0523-great-circle` zero delta vs
-`blocked-catalog-luacall-binding` (117,809 total /
-117,616 supported / 12,974 headings / 104,467
-actionable / 193 blocked, all 151 tables byte-identical);
-source ZIP `CT2Trainer-0.52.3-source.zip` sha256
+deliberately kept per gate; catalog unchanged at the
+`blocked-catalog-luacall-binding` /
+`blocked-catalog-0523-great-circle` baseline (117,809
+total / 117,616 supported / 12,974 headings / 104,467
+actionable / 193 blocked - the forensics touch no
+table-parsing path); source ZIP
+`CT2Trainer-0.52.4-source.zip` sha256
+`6438cf8138af3fde79bc9123bf4a6a1031cbcde8d621a3c387506b45690960d4`
+(14,819,531 bytes) and portable ZIP
+`CT2Trainer-0.52.4-windows-portable.zip` sha256
+`d083ba7ec55f8c124ab91a947dbc1dfb1e2c5a643f7a417dce9f2d5d76771420`
+(49,952,762 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256
+`5181c50512465b7fe5dbf6ff039addab40dd8791678d2ce19d4c70c2f370e0ba`,
+17,076,611 bytes) ships next to the converter); the build
+ran unsigned by default (`code_signing` not-configured -
+no certificate on this machine, the durable Smart App
+Control fix stays a user-supplied trusted-CA PFX via
+`CT2TRAINER_SIGN_PFX`, self-signed does not clear SAC);
+the actual crash fix awaits the requested field data; see
+the Great Circle crash case section and the 0.52.4
+release build record in
+`documentation/native-progress.md`. Superseded 0.52.3
+(build `native-20261126T030208Z-a082e323` cut from `main`
+@ `421d7c7`, 2026-11-26; in-build suite 5,250 OK / 36
+expected skips, `ce_inputs: []`; source ZIP
+`CT2Trainer-0.52.3-source.zip` sha256
 `d9643b3c847b6b109ddb2f924df9200e80594082775be5b3092fa2351815a7c5`
-(14,814,477 bytes) and portable ZIP
+(14,814,477 bytes), portable ZIP
 `CT2Trainer-0.52.3-windows-portable.zip` sha256
 `0ea6e59e38e62bbab4da87c348a957b41867c453809623f335bb98f6eb3e50d8`
-(49,951,182 bytes; the frozen `CT2Trainer-Master.exe`
-(sha256
+(49,951,182 bytes; frozen `CT2Trainer-Master.exe` sha256
 `74e1548a9d1ddb4581419fa423eade1a46680bc96e7da53cb6e3a82bebf6c49b`,
-17,076,637 bytes) ships next to the converter). The game
-crash itself is attributed game-side (the compiled plan
-is byte-identical between the last working 0.41
-compiler and current `main` apart from the empty 0.42-era
-`unowned_cleanup_dropped` markers; the 0.42→0.52.2
-engine diff is defensive / compile-time only; the
-trainer performed no target writes after the initial
-9/11 wish restore in both crash sessions; the
-post-`target-exited` close reports `still_applied: []`;
-leading hypothesis: a game update past the trainer's
-v20251014 baseline - field check requested: confirm the
-installed game version and, as a control, run the
-original FLiNG trainer against the same build); the
-build ran unsigned by default (`code_signing`
-not-configured - no certificate on this machine, the
-durable Smart App Control fix stays a user-supplied
-trusted-CA PFX via `CT2TRAINER_SIGN_PFX`, self-signed
-does not clear SAC); real-game, clean-machine and Deck /
-Proton / touch acceptance remain open, so
-`runtime_unverified` stays set per the RT-6 acceptance;
-see the Great Circle field fix section and the 0.52.3
-release build record in
-`documentation/native-progress.md`.
+17,076,637 bytes) - the Great Circle field fixes D1
+(direction-aware prefix-cut close validation) + D2
+(bounded startup re-assessment), which stand as proven
+real defects but do not address the crash; the 0.52.3
+"game-side" crash attribution is overruled by the user
+and re-analyzed in 0.52.4; see the 0.52.3 release build
+record in `documentation/native-progress.md`).
 Post-0.52.2 (2026-11-24, released as 0.52.2, build
 `native-20261124T033652Z-1da5b40e` cut from `main` @
 `cbbd386`): the RT-7 in-build suite determinism release
