@@ -29,7 +29,9 @@ def _scan_memory(regions):
         raise AssertionError("Scan queried outside the exclusive range")
     memory._query = query
     memory.read_calls = []
-    def read(address, size):
+    def read(address, size, **_kwargs):
+        # The real scan loop passes retry_transient=False (0.52.5); this
+        # fixture models the byte read itself and ignores the retry contract.
         memory.read_calls.append((address, size))
         for start, raw, protection, state in regions:
             if start <= address and address + size <= start + len(raw):

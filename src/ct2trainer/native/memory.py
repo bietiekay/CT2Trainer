@@ -493,13 +493,21 @@ class ProcessMemory:
             raise ProcessMemoryError("VirtualQueryEx returned a nonprogressing memory region.")
         return information
 
-    def _read_exact(self, address: int, size: int) -> bytes:
+    def _read_exact(self, address: int, size: int, *, retry_transient: bool = True) -> bytes:
         # 0.39 reliability lane: the bounded transient-read retry.
         # The sleep stays under the caller's self._lock (every caller
         # holds it; the snapshot-retry precedent), so no other
         # read/write interleaves a transient retry.  A partial result
         # (a successful call that transferred less) is NOT retried -
         # it is an unexpected state, not a transient error code.
+        # 0.52.5 Great Circle field fix: retry_transient=False restores
+        # the pre-0.39 abort-on-first-transient-read behaviour for the
+        # bounded scan paths.  The 0.39 retry added up to three extra
+        # transient reads plus backoff sleeps under the lock per scan
+        # chunk - the one new target-touching behaviour in the 0.41+
+        # crash window of the 122 MB rearm module scan.  One-shot reads
+        # (patch verification, pointer chains, readback) keep the retry
+        # default.  Non-transient codes fail immediately in both modes.
         buffer = ctypes.create_string_buffer(size)
         transferred = ctypes.c_size_t()
         attempt = 0
@@ -511,16 +519,17 @@ class ProcessMemory:
                 return buffer.raw
             error = ctypes.get_last_error()
             if (error not in _READ_TRANSIENT_ERRORS
-                    or attempt >= _READ_MAX_ATTEMPTS):
+                    or attempt >= _READ_MAX_ATTEMPTS
+                    or not retry_transient):
                 raise _windows_error("ReadProcessMemory")
             time.sleep(min(_READ_RETRY_BASE_SECONDS * (2 ** (attempt - 1)),
                            _READ_RETRY_MAX_SECONDS))
 
-    def read(self, address: int, size: int) -> bytes:
+    def read(self, address: int, size: int, *, retry_transient: bool = True) -> bytes:
         with self._lock:
             self._range(address, size)
             self._require_alive()
-            result = self._read_exact(address, size)
+            result = self._read_exact(address, size, retry_transient=retry_transient)
             self._require_alive()
             return result
 
@@ -992,6 +1001,7 @@ class ProcessMemory:
             cursor, end, tail = base, base + size, b""
             matches: set[int] = set()
             candidates = 0
+            scanned = 0
             deadline = time.monotonic() + remaining_seconds(MAX_SCAN_SECONDS)
             while cursor < end:
                 broker_checkpoint()
@@ -1007,7 +1017,25 @@ class ProcessMemory:
                 while cursor < region_end:
                     broker_checkpoint()
                     length = min(SCAN_CHUNK_SIZE, region_end - cursor)
-                    data = tail + self.read(cursor, length)
+                    # 0.52.5 (Great Circle field fix): scan chunks abort on
+                    # the first transient read failure instead of the 0.39
+                    # retry - pre-0.39 behaviour for the scan path; the
+                    # abort context lands in last_scan_diagnostics.
+                    try:
+                        data = tail + self.read(cursor, length, retry_transient=False)
+                    except ProcessMemoryError as exc:
+                        self.last_scan_diagnostics = {
+                            "match_count": 0,
+                            "match_addresses": [],
+                            "module": name,
+                            "module_base": base,
+                            "bytes_scanned": scanned,
+                            "aborted_at": hex(cursor),
+                            "aborted_offset": hex(cursor - base),
+                            "aborted_win32": getattr(exc, "win32_code", None),
+                        }
+                        raise
+                    scanned += length
                     start = cursor - len(tail)
                     for candidate in _candidate_offsets(data, anchor, anchor_offset):
                         candidates += 1
@@ -1030,6 +1058,7 @@ class ProcessMemory:
                 "match_addresses": addresses[:MAX_SCAN_RESULTS],
                 "module": name,
                 "module_base": base,
+                "bytes_scanned": scanned,
             }
             if not addresses:
                 raise ScanMiss("The module byte pattern was not found in readable committed memory.")
@@ -1134,7 +1163,21 @@ class ProcessMemory:
                     scanned += length
                     if scanned > MAX_PROCESS_SCAN_BYTES:
                         raise ScanMiss("Process scan exceeded its byte-read bound; no partial results returned.")
-                    data = tail + self.read(cursor, length)
+                    # 0.52.5 (Great Circle field fix): scan chunks abort on
+                    # the first transient read failure instead of the 0.39
+                    # retry - pre-0.39 behaviour for the scan path; the
+                    # abort context lands in last_scan_diagnostics.
+                    try:
+                        data = tail + self.read(cursor, length, retry_transient=False)
+                    except ProcessMemoryError as exc:
+                        self.last_scan_diagnostics = {
+                            "match_count": 0,
+                            "match_addresses": [],
+                            "bytes_scanned": scanned - length,
+                            "aborted_at": hex(cursor),
+                            "aborted_win32": getattr(exc, "win32_code", None),
+                        }
+                        raise
                     beginning = cursor - len(tail)
                     for candidate in _candidate_offsets(data, anchor, anchor_offset):
                         candidates += 1

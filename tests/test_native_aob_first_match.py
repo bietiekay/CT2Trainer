@@ -43,7 +43,7 @@ class ModuleScanFirstMatchTests(unittest.TestCase):
         memory = _memory()
         memory.module = Mock(return_value=(0x1000, len(data)))
         memory._query = Mock(side_effect=lambda address: _region(0x1000, len(data)))
-        memory.read = Mock(side_effect=lambda address, length:
+        memory.read = Mock(side_effect=lambda address, length, **_kwargs:
                            data[address - 0x1000:address - 0x1000 + length])
         return memory
 
@@ -54,14 +54,16 @@ class ModuleScanFirstMatchTests(unittest.TestCase):
         self.assertEqual(memory.last_scan_diagnostics,
                          {"match_count": 3,
                           "match_addresses": [0x1000, 0x1004, 0x1008],
-                          "module": "game.exe", "module_base": 0x1000})
+                          "module": "game.exe", "module_base": 0x1000,
+                          "bytes_scanned": 12})
 
     def test_single_match_records_count_one(self):
         memory = self.scanner(b"xxxABxxx")
         self.assertEqual(memory.scan_module("game.exe", "41 42"), 0x1003)
         self.assertEqual(memory.last_scan_diagnostics,
                          {"match_count": 1, "match_addresses": [0x1003],
-                          "module": "game.exe", "module_base": 0x1000})
+                          "module": "game.exe", "module_base": 0x1000,
+                          "bytes_scanned": 8})
 
     def test_zero_match_keeps_exact_not_found_message(self):
         memory = self.scanner(b"xxxxxxxx")

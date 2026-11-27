@@ -2,6 +2,82 @@
 
 Single maintained changelog for CT2Trainer releases.
 
+## 0.52.5 (2026-11-27)
+
+Great Circle crash case: trainer-side regression fix + widened 0.33
+baseline proof (patch release; the user-overruled 0.52.3 "game-side"
+attribution is settled by a static analysis of the 0.33→0.52.3 window:
+the ONLY new target-touching behaviour in the window is the 0.39
+bounded transient-read retry, which until now also applied to the
+bounded rearm module scans — the 122 MB GC module read in ~1 MiB chunks.
+The fix restores the pre-0.39 abort-on-first-transient-read for the
+scan paths only; no table-parsing path touched, catalog unchanged at
+the `blocked-catalog-luacall-binding` /
+`blocked-catalog-0523-great-circle` baseline):
+
+- **Scan-path abort-on-transient read restored (the fix,
+  `memory.py`):** `read()` / `_read_exact()` gain the keyword-only
+  `retry_transient` (default `True`, so one-shot reads — patch
+  verification, pointer chains, write readback — keep the 0.39
+  bounded retry). The scan loops `scan_module` / `scan_matches` now
+  read every chunk with `retry_transient=False`: a transient
+  ReadProcessMemory failure (299/119/1116/24) aborts the scan on the
+  first attempt — no extra kernel reads, no backoff sleep under the
+  memory lock — and records the abort context (chunk address, module
+  offset, Win32 code, bytes read) in `last_scan_diagnostics`.
+  Non-transient codes and partial transfers fail immediately in both
+  modes; a completed scan records `bytes_scanned` and replaces any
+  stale abort context (the identity check the engine forensics rely on).
+- **Widened scan forensics in the debug log (`engine.py`):** the
+  `rearm-scan-start` event brackets every rearm attempt (identifier,
+  label, attempt, max, module scan range) before the attempt runs; the
+  `rearm-attempt` end event carries `scan_transient_abort`
+  (address / offset / Win32 code / bytes read) when the attempt's own
+  scan died on a read failure, or the completed scan's `bytes_scanned`
+  otherwise — restricted by an object-identity check against a
+  per-attempt snapshot, so a stale abort from an earlier scan is never
+  reported; the byte-patch `_operations` scan branch and the
+  program-preflight scan path emit the named `scan-transient-abort`
+  event for a fresh abort context and keep the plain `scan-failed`
+  shape otherwise. Evidence side only: no target operations, every
+  log call a no-op when the plan's `debug_log` flag is off (field
+  builds have it on).
+- **Widened 0.33 baseline proof (evidence,
+  `documentation/evidence/gc-0525-baseline-033/`):** deterministic
+  replay at 0.33 (`main` @ `6e71739`, worktree `side/wt-033`) vs 0.41
+  and vs current main — after normalising the by-design ScanMiss
+  traceback path/line-number artifact, TOTAL DIFFERENCES: 0 in both
+  comparisons (22 scans / 34 writes / 6 allocations, identical
+  patterns, counts, addresses and order; identical module diff, clean
+  close `applied: []` / `blocked: false`). The 0.33 plan is
+  byte-identical to the 0.41 plan (canonical sha
+  `33fba361396b8ad11e0c97d188be61b0426e140c4b73c159db6c2ba52bcc416f`);
+  the only plan delta vs main is the 15 empty
+  `unowned_cleanup_dropped: []` fields added by the 0.42
+  cleanup-parity change (inert for this table, main canonical sha
+  `bbf91f7cf9810d3367a1e1ff846ead49e2c3327559d8365130002c42f4e6df45`);
+  the 0.33→main window touched 46 files, and the only
+  coordinator/hook changes are failure- and validation-path only
+  (0.43 transient re-raise, 0.52.3 direction-aware prefix-cut close
+  validation). The replay is deterministic with a synthetic memory and
+  cannot exhibit transient kernel errors, so the read-attempt delta
+  (1 vs up to 4 per failed chunk) is argued statically, not re-proven
+  in the replay — the widened field forensics are the closing
+  instrumentation, and field confirmation (WER dumps + 0.31-vs-0.52.5
+  A/B run) is requested.
+- +16 tests (new `tests/test_native_scan_transient_abort.py` —
+  memory-layer abort + retry-contract tests, kernel
+  ReadProcessMemory mocked via `ctypes.set_last_error` — and
+  `tests/test_native_scan_forensics.py` — engine-event tests for
+  `rearm-scan-start`, `scan_transient_abort`, stale-diagnostics guard
+  and the `_operations` scan branch; fixture updates in
+  `test_native_memory.py` / `test_native_scan.py` /
+  `test_native_aob_first_match.py` / `test_native_process_aob.py` /
+  `test_native_hooks.py` / `test_native_lua_work_budget.py`);
+  full main suite 5,271 OK / 36 expected skips; catalog unchanged
+  (117,809 total / 117,616 supported / 12,974 headings / 104,467
+  actionable / 193 blocked).
+
 ## 0.52.4 (2026-11-26)
 
 Great Circle crash case: static target-traffic replay proof +

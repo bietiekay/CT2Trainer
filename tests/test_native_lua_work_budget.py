@@ -259,7 +259,7 @@ class PrimitiveBudgetTests(unittest.TestCase):
         memory = _memory()
         memory.module = lambda *args: (0x1000, 16)
         memory._query = lambda *args: _region(0x1000, 16)
-        def read(*args):
+        def read(*args, **_kwargs):
             self.clock.advance(0.6)
             return bytes.fromhex('AA BB') + bytes(14)
         memory.read = read

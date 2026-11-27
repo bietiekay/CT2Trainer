@@ -35,7 +35,7 @@ class _Memory:
     def is_alive(self):
         return self.alive
 
-    def read(self, address, size):
+    def read(self, address, size, **_kwargs):
         for base, raw in self.data.items():
             if base <= address and address + size <= base + len(raw):
                 return raw[address - base:address - base + size]

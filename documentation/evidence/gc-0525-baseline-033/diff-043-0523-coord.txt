@@ -1,0 +1,76 @@
+diff --git a/src/ct2trainer/native/debug_coordinator.py b/src/ct2trainer/native/debug_coordinator.py
+index 7e61922..815b5ee 100644
+--- a/src/ct2trainer/native/debug_coordinator.py
++++ b/src/ct2trainer/native/debug_coordinator.py
+@@ -217,9 +217,18 @@ def _check_overwrite_windows(memory, ranges, entry_windows=None):
+                 # The live proof re-validates against the quiesced target
+                 # under the held context; a complete original fast-paths
+                 # back into the full two-sided strict contract, so a call
+-                # or interrupt entry keeps its return-context refusal.
+-                validate_entry_prefix_cut(memory, address, replacement, original,
+-                                          memory.pointer_size * 8)
++                # or interrupt entry keeps its return-context refusal. The
++                # direction follows the receipt: at disable time
++                # (expected == replacement) the live site still holds the
++                # replacement bytes, so the prefix proof compares against
++                # the replacement instead of the captured original
++                # (field case 2026-11-24, Great Circle 0.52.1 session 2:
++                # deterministic close refusal on prefix-cut entries); the
++                # stage direction keeps the original comparison.
++                validate_entry_prefix_cut(
++                    memory, address, replacement, original, memory.pointer_size * 8,
++                    expect_live_original=not (expected == replacement
++                                              and expected != original))
+         else:
+             validate_entry_control_flow(address, memory.read(address, length), memory.pointer_size * 8)
+ 
+diff --git a/src/ct2trainer/native/hooks.py b/src/ct2trainer/native/hooks.py
+index a0d2ad1..a8a6621 100644
+--- a/src/ct2trainer/native/hooks.py
++++ b/src/ct2trainer/native/hooks.py
+@@ -132,7 +132,7 @@ def validate_entry_control_flow(address: int, raw: bytes, bitness: int,
+ 
+ 
+ def validate_entry_prefix_cut(memory, address: int, raw: bytes, original: bytes,
+-                              bitness: int) -> None:
++                              bitness: int, *, expect_live_original: bool = True) -> None:
+     """Live verification for a linked prefix-cut byte patch.
+ 
+     Called only for executable entry blocks whose captured original bytes do
+@@ -144,6 +144,15 @@ def validate_entry_prefix_cut(memory, address: int, raw: bytes, original: bytes,
+     ``nop; jmp`` with the original displacement). Fails closed on
+     unreadable targets, byte drift, unresolvable boundaries, decode
+     failures, and call/interrupt hazards in the resulting entry stream.
++
++    ``expect_live_original`` selects which receipt the live site must still
++    hold: the default (``True``, stage direction) requires the live prefix
++    to match the captured original; the disable direction (``False``) has
++    the site still holding the replacement bytes, so the live prefix is
++    compared against ``raw`` instead. The boundary walk and the post-patch
++    decode are direction-agnostic. External mutation stays caught in both
++    directions by the caller's live==expected receipt check, which runs
++    before this proof.
+     """
+     if (bitness not in {32, 64} or not raw or not original
+             or len(raw) != len(original) or len(raw) > MAX_ENTRY_BYTES):
+@@ -173,9 +182,18 @@ def validate_entry_prefix_cut(memory, address: int, raw: bytes, original: bytes,
+         raise HookError(
+             "Entry patch cuts an instruction that cannot be fully read "
+             "back for validation.") from exc
+-    if len(window) < len(raw) or bytes(window[:len(raw)]) != original:
++    # Which receipt must the live site still hold?  Stage direction: the
++    # captured original (the patch has not been written yet). Disable
++    # direction: the replacement bytes we applied (the patch is still in
++    # place).  The boundary walk below is direction-agnostic: it proves the
++    # complete instruction stream the same way in both cases.
++    held = original if expect_live_original else raw
++    if len(window) < len(raw) or bytes(window[:len(raw)]) != held:
++        if expect_live_original:
++            raise HookError(
++                "Entry patch bytes changed before validation; recompile without mutating.")
+         raise HookError(
+-            "Entry patch bytes changed before validation; recompile without mutating.")
++            "Entry patch bytes changed before disable; recompile without mutating.")
+     boundary = 0
+     for instruction in Decoder(bitness, window, ip=address):
+         if instruction.is_invalid:

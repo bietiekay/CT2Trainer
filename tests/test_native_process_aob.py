@@ -131,8 +131,8 @@ class ProcessScanTests(unittest.TestCase):
         self.assertGreater(len(calls), 2)
         memory, _, _ = _scan_memory([(0x1000, b'AB', 0x04, MEM_COMMIT)])
         raw_read = memory._read_exact
-        def changed(address, size):
-            raw = raw_read(address, size)
+        def changed(address, size, **_kwargs):
+            raw = raw_read(address, size, **_kwargs)
             memory._creation_time += 1
             return raw
         memory._read_exact = changed
@@ -315,8 +315,8 @@ class ProcessBudgetTests(unittest.TestCase):
     def test_process_backend_refuses_success_after_late_read(self):
         memory, _, _ = _scan_memory([(0x1000, b'ABC', 0x04, MEM_COMMIT)])
         read = memory.read
-        def late_read(*args):
-            raw = read(*args)
+        def late_read(*args, **kwargs):
+            raw = read(*args, **kwargs)
             self.clock.advance(0.6)
             return raw
         memory.read = late_read

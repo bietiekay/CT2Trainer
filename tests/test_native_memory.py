@@ -193,7 +193,7 @@ class ModuleScanTests(unittest.TestCase):
         memory = _memory()
         memory.module = Mock(return_value=(0x1000, size))
         memory._query = Mock(side_effect=lambda address: next(region for region in regions if int(region.BaseAddress) <= address < int(region.BaseAddress) + region.RegionSize))
-        memory.read = Mock(side_effect=lambda address, length: bytes_by_address[address][:length])
+        memory.read = Mock(side_effect=lambda address, length, **_kwargs: bytes_by_address[address][:length])
         return memory
 
     def test_scan_carries_overlap_across_contiguous_readable_regions(self):
@@ -233,7 +233,8 @@ class ModuleScanTests(unittest.TestCase):
         self.assertEqual(memory.scan_module("game.exe", "41 42"), 0x1000)
         self.assertEqual(memory.last_scan_diagnostics,
                          {"match_count": 2, "match_addresses": [0x1000, 0x1004],
-                          "module": "game.exe", "module_base": 0x1000})
+                          "module": "game.exe", "module_base": 0x1000,
+                          "bytes_scanned": 8})
         memory = self.scanner([_region(0x1000, 8)], {0x1000: b"ABxxxxxx"})
         memory.module.side_effect = [(0x1000, 8), (0x2000, 8)]
         with self.assertRaisesRegex(ProcessMemoryError, "changed"):
@@ -243,7 +244,9 @@ class ModuleScanTests(unittest.TestCase):
         memory = self.scanner([_region(0x1000, 4096)], {0x1000: b"xxxxxxxABC"})
         with self.assertRaisesRegex(ProcessMemoryError, "not found"):
             memory.scan_module("game.exe", "41 42 43")
-        memory.read.assert_called_once_with(0x1000, 8)
+        # 0.52.5: scan chunks read with the retry opt-out, so the call now
+        # carries retry_transient=False.
+        memory.read.assert_called_once_with(0x1000, 8, retry_transient=False)
         memory.module.return_value = (0x1000, MAX_SCAN_SIZE + 1)
         memory.read.reset_mock()
         with self.assertRaises(ValueError):

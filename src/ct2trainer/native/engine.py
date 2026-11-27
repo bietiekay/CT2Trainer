@@ -2999,6 +2999,13 @@ class TrainerEngine:
                              "attempt": attempt_no, "max": arm["max"]}
             if scan_range is not None:
                 rearm_details["scan_range"] = scan_range
+            # 0.52.5 (Great Circle field fix): the rearm attempt runs the
+            # module scan while the trainer is otherwise read-only-idle.
+            # A start event brackets it, so a field log that ends before
+            # the matching rearm-attempt end event proves the scan was in
+            # flight when the target died.
+            self.debug_log.log("rearm-scan-start", **rearm_details)
+            diag_before = getattr(self.memory, "last_scan_diagnostics", None)
             try:
                 self._dependencies(entry, persist=False)
                 self._enable(entry, persist=True)
@@ -3006,6 +3013,21 @@ class TrainerEngine:
                 self.entry_errors[identifier] = str(exc)
                 rearm_details["duration_ms"] = int((time.monotonic()
                                                     - attempt_started) * 1000)
+                diagnostics = getattr(self.memory, "last_scan_diagnostics", None)
+                if diagnostics is not diag_before and isinstance(diagnostics, dict):
+                    # A scan ran during this attempt.  If it died mid-scan on
+                    # a read failure, record the abort context (chunk address,
+                    # offset, Win32 code, bytes read) in the end event; a
+                    # completed scan contributes its read-byte total.
+                    if "aborted_at" in diagnostics:
+                        rearm_details["scan_transient_abort"] = {
+                            "address": diagnostics.get("aborted_at"),
+                            "offset": diagnostics.get("aborted_offset"),
+                            "win32": diagnostics.get("aborted_win32"),
+                            "bytes_scanned": diagnostics.get("bytes_scanned"),
+                        }
+                    elif diagnostics.get("bytes_scanned") is not None:
+                        rearm_details["bytes_scanned"] = diagnostics["bytes_scanned"]
                 if isinstance(exc, ScanMiss):
                     self.enable_failures[identifier] = str(exc)
                     self.debug_log.log("rearm-attempt",
@@ -3026,6 +3048,11 @@ class TrainerEngine:
             self.status = f"{label}: re-armed and enabled (attempt {attempt_no})"
             rearm_details["duration_ms"] = int((time.monotonic()
                                                - attempt_started) * 1000)
+            diagnostics = getattr(self.memory, "last_scan_diagnostics", None)
+            if (diagnostics is not diag_before
+                    and isinstance(diagnostics, dict)
+                    and diagnostics.get("bytes_scanned") is not None):
+                rearm_details["bytes_scanned"] = diagnostics["bytes_scanned"]
             self.debug_log.log("rearm-attempt",
                                result="ok", **rearm_details)
             self.debug_log.log("rearm-succeeded", identifier=identifier,
@@ -3334,18 +3361,35 @@ class TrainerEngine:
             operation = op["op"]
             if operation == "scan":
                 module = self.plan["process_name"] if op["module"] == "$process" else op["module"]
+                scan_details = {"entry_id": entry["id"], "symbol": op["symbol"],
+                                "module": module,
+                                "pattern": op["pattern"], "section": section}
+                diag_before = getattr(self.memory, "last_scan_diagnostics", None)
                 try:
                     address = self.memory.scan_module(module, op["pattern"])
                 except Exception as exc:
-                    self.debug_log.error("scan-failed", exc, entry_id=entry["id"],
-                                         symbol=op["symbol"],
-                                         module=module, pattern=op["pattern"],
-                                         section=section)
+                    # 0.52.5 (Great Circle field fix): the scan path aborts on
+                    # the first transient read failure; the memory layer then
+                    # records the abort context, which is logged as a named
+                    # event (address, offset, Win32 code, bytes read so far).
+                    # The identity check restricts the report to a diagnostics
+                    # record fresh from this very scan, so a stale abort from
+                    # an earlier scan cannot mislabel this failure. The
+                    # scan-failed error event keeps its shape otherwise.
+                    diagnostics = getattr(self.memory, "last_scan_diagnostics", None)
+                    if (diagnostics is not diag_before
+                            and isinstance(diagnostics, dict)
+                            and "aborted_at" in diagnostics):
+                        scan_details["transient_abort"] = {
+                            "address": diagnostics.get("aborted_at"),
+                            "offset": diagnostics.get("aborted_offset"),
+                            "win32": diagnostics.get("aborted_win32"),
+                            "bytes_scanned": diagnostics.get("bytes_scanned"),
+                        }
+                        self.debug_log.log("scan-transient-abort", **scan_details)
+                    self.debug_log.error("scan-failed", exc, **scan_details)
                     raise
-                scan_details = {"entry_id": entry["id"], "symbol": op["symbol"],
-                                "module": module,
-                                "pattern": op["pattern"], "address": hex(address),
-                                "section": section}
+                scan_details["address"] = hex(address)
                 # Multi-match module scans resolve to the lowest address (CE
                 # parity): record the full match evidence; single-match scans
                 # keep the 0.14 log shape byte-identical.
@@ -5472,6 +5516,22 @@ class TrainerEngine:
             if extra:
                 details.update(extra)
             if error is not None:
+                # 0.52.5 (Great Circle field fix): same transient-abort
+                # forensics as the byte-patch scan path - program preflight
+                # scans run through the shared memory layer.  The identity
+                # check against the program-start snapshot keeps the report
+                # scoped to this program run.
+                diagnostics = getattr(link_memory, "last_scan_diagnostics", None)
+                if (diagnostics is not scan_diag_before
+                        and isinstance(diagnostics, dict)
+                        and "aborted_at" in diagnostics):
+                    details["transient_abort"] = {
+                        "address": diagnostics.get("aborted_at"),
+                        "offset": diagnostics.get("aborted_offset"),
+                        "win32": diagnostics.get("aborted_win32"),
+                        "bytes_scanned": diagnostics.get("bytes_scanned"),
+                    }
+                    self.debug_log.log("scan-transient-abort", **details)
                 self.debug_log.error("scan-failed", error, **details)
                 return
             details["address"] = hex(address)
@@ -5492,6 +5552,7 @@ class TrainerEngine:
                 except Exception:
                     pass
             self.debug_log.log("scan", **details)
+        scan_diag_before = getattr(link_memory, "last_scan_diagnostics", None)
         preflight = preflight_program(program, link_memory, symbols,
                                       disassembler=disassembler,
                                       thread_model=thread_model,

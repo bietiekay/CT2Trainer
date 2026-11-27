@@ -1,0 +1,21 @@
+﻿OK   wishes(label,result,normalized-trace)
+OK   connected
+OK   final
+OK   scans
+OK   writes
+OK   resolves
+OK   allocs(size,near)
+OK   allocs(addrs)
+OK   alloc_contents
+OK   module_diff
+OK   module_diff_applied
+OK   protects
+OK   releases
+OK   scan_counts
+OK   read_counts
+OK   holds
+
+plan sha a: 33fba361396b8ad11e0c97d188be61b0426e140c4b73c159db6c2ba52bcc416f
+plan sha b: bbf91f7cf9810d3367a1e1ff846ead49e2c3327559d8365130002c42f4e6df45
+
+TOTAL DIFFERENCES: 0
