@@ -1,8 +1,80 @@
 # CT2Trainer: where we stand
 
-**Updated:** 2026-11-26. **0.52.4 released** (build
-`native-20261126T125152Z-c8a75b03`, cut from `main` @
-`7585cc8`, 2026-11-26) - the Great Circle crash
+**Updated:** 2026-11-27. **0.52.5 released** (build
+`native-20261127T153032Z-826c36d0`, cut from `main` @
+`1595bae`, 2026-11-27) - Great Circle crash case: the
+trainer-side regression fix + widened 0.33 baseline proof
+(patch; the widened deterministic replay settles the
+user-overruled 0.52.3 "game-side" attribution: replay at
+0.33 (`main` @ `6e71739`) vs 0.41 and vs current main is
+byte-identical in activation and steady-state target
+traffic - 22 scans / 34 writes / 6 allocations, identical
+patterns, counts, addresses and order, clean close; the
+0.33 plan is byte-identical to the 0.41 plan, the only plan
+delta vs main being the 15 empty `unowned_cleanup_dropped:
+[]` fields added by the 0.42 cleanup-parity change - and
+the ONLY new target-touching behavior in the 0.33→0.52.3
+window is the 0.39 bounded transient-read retry, which
+until now also applied to the bounded rearm module scans:
+the 122 MB GC module read in ~1 MiB chunks. The fix
+restores pre-0.39 abort-on-first-transient-read for the
+scan paths only): `read()` / `_read_exact()` gain the
+keyword-only `retry_transient` (default `True`, so one-shot
+reads - patch verification, pointer chains, write readback
+- keep the 0.39 bounded retry); `scan_module` /
+`scan_matches` now read every chunk with
+`retry_transient=False` - a transient ReadProcessMemory
+failure (299/119/1116/24) aborts the scan on the first
+attempt (no extra kernel reads, no backoff sleep under the
+memory lock) and records the abort context (chunk address,
+module offset, Win32 code, bytes read) in
+`last_scan_diagnostics`; a completed scan records
+`bytes_scanned` and replaces the stale abort context
+(object-identity check, so stale aborts are never
+reported); widened debug-log forensics - `rearm-scan-start`
+brackets every rearm attempt, the `rearm-attempt` end
+event carries `scan_transient_abort` / `bytes_scanned`
+(fresh only), and the byte-patch `_operations` scan branch
++ program-preflight scan path emit the named
+`scan-transient-abort` event (evidence-side only, no-op
+with the plan's `debug_log` off, on in field builds);
+proof git-tracked at
+`documentation/evidence/gc-0525-baseline-033/` (normalized
+deep diff TOTAL DIFFERENCES: 0 in both comparisons); the
+mechanical doubt stays on record (kernel-mediated
+ReadProcessMemory cannot crash the target; the read-attempt
+delta is argued statically) - field confirmation requested:
+WER dumps + a 0.31-vs-0.52.5 A/B run with the rearm scan
+forensics on; +16 tests (new
+`tests/test_native_scan_transient_abort.py` +
+`tests/test_native_scan_forensics.py`, fixture re-pins in
+six test files); full main suite 5,271 OK / 36 expected
+skips; in-build suite 5,271 OK / 36 expected skips,
+`ce_inputs: []`, `runtime_unverified` deliberately kept per
+gate; catalog unchanged at the
+`blocked-catalog-luacall-binding` /
+`blocked-catalog-0523-great-circle` baseline (117,809
+total / 117,616 supported / 12,974 headings / 104,467
+actionable / 193 blocked - the scan-abort change touches no
+table-parsing path); source ZIP
+`CT2Trainer-0.52.5-source.zip` sha256
+`3389b89b880642fc7f972cce03337f15361e24dd07fc9aff2f95d90eef2b7cec`
+(14,829,450 bytes) and portable ZIP
+`CT2Trainer-0.52.5-windows-portable.zip` sha256
+`644883c867554633f037d3a4bec35bf3a760d31c266262eefb7490751ad8d1f5`
+(49,960,185 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256
+`204e3a8f86a6b2f0951a3f17160de6c5f5afd61d2fc1ffafaba8550582d8349e`,
+17,077,588 bytes) ships next to the converter); the build
+ran unsigned by default (`code_signing` not-configured - no
+certificate on this machine, the durable Smart App Control
+fix stays a user-supplied trusted-CA PFX via
+`CT2TRAINER_SIGN_PFX`, self-signed does not clear SAC); see
+the Great Circle crash case section (0.52.5 entry) and the
+0.52.5 release build record in
+`documentation/native-progress.md`. Superseded 0.52.4
+(build `native-20261126T125152Z-c8a75b03` cut from `main`
+@ `7585cc8`, 2026-11-26) - the Great Circle crash
 re-analysis + forensics release (patch; the user-overruled
 0.52.3 "game-side" crash attribution re-analyzed at byte
 level): the 0.41 → 0.52.3 window is byte-identical in

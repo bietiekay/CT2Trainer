@@ -3757,6 +3757,81 @@ RT-6 acceptance. Full record in
 code-patch gate (2026-11-16 + 2026-11-20, source runtime,
 x64 + x86)").
 
+### 0.52.5 release build record (2026-11-27, run
+`native-20261127T153032Z-826c36d0`, cut from `main` @ `1595bae`)
+
+0.52.5 is the Great Circle crash case trainer-side
+regression fix + widened 0.33 baseline proof release
+(patch - see the Great Circle crash case ledger
+section "0.52.5: scan-path abort-on-first-transient +
+widened 0.33 baseline proof (2026-11-27)" below for the
+full evidence chain and the field test protocol): the
+widened deterministic replay at 0.33 (`main` @
+`6e71739`) is byte-identical vs 0.41 and vs current
+main (22 scans / 34 writes / 6 allocations, identical
+patterns / counts / addresses / order, clean close;
+normalized deep diff TOTAL DIFFERENCES: 0 in both
+comparisons; plan canonical sha 0.33 == 0.41
+`33fba361396b8ad11e0c97d188be61b0426e140c4b73c159db6c2ba52bcc416f`,
+the only plan delta vs main the 15 empty
+`unowned_cleanup_dropped: []` fields added by the 0.42
+cleanup-parity change, main
+`bbf91f7cf9810d3367a1e1ff846ead49e2c3327559d8365130002c42f4e6df45`)
+- isolating the 0.39 bounded transient-read retry as
+the ONLY new target-touching behavior in the
+0.33->0.52.3 window, which until now also applied to
+the bounded rearm module scans (the 122 MB GC module,
+read in ~1 MiB chunks). The release ships (a) the fix
+in `memory.py` - keyword-only `retry_transient` on
+`read()` / `_read_exact()` (default `True`, one-shot
+reads keep the 0.39 bounded retry) and
+`scan_module` / `scan_matches` reading every chunk
+with `retry_transient=False`: a transient
+ReadProcessMemory failure (299/119/1116/24) aborts
+the scan on the first attempt (no extra kernel reads,
+no backoff sleep under the memory lock) and records
+the abort context in `last_scan_diagnostics`; a
+completed scan records `bytes_scanned` and replaces
+the stale abort context; (b) the widened scan
+forensics in `engine.py` (`rearm-scan-start`
+bracketing every rearm attempt, `scan_transient_abort`
+/ `bytes_scanned` on the rearm-attempt end event
+identity-gated, the named `scan-transient-abort`
+event on the byte-patch `_operations` +
+program-preflight scan paths; no-op with the plan's
+`debug_log` off, on in field builds) and (c) the
+widened 0.33 replay proof (git-tracked at
+`documentation/evidence/gc-0525-baseline-033/`,
+deliberately outside the release allowlist). The
+build was cut offline with `scripts/Build-Native.ps1`:
+in-build suite 5,271 OK / 36 expected skips, 0
+failures - fully green at the canonical build path,
+`ce_inputs: []`, `runtime_unverified` deliberately
+kept per gate. Source ZIP
+`CT2Trainer-0.52.5-source.zip` sha256
+`3389b89b880642fc7f972cce03337f15361e24dd07fc9aff2f95d90eef2b7cec`
+(14,829,450 bytes) - carries the scan-abort fix, the
+widened scan forensics, the +16 tests and the
+widened 0.33 baseline proof - and portable ZIP
+`CT2Trainer-0.52.5-windows-portable.zip` sha256
+`644883c867554633f037d3a4bec35bf3a760d31c266262eefb7490751ad8d1f5`
+(49,960,185 bytes; the frozen `CT2Trainer-Master.exe`
+(sha256
+`204e3a8f86a6b2f0951a3f17160de6c5f5afd61d2fc1ffafaba8550582d8349e`,
+17,077,588 bytes) ships next to the converter). The
+build ran unsigned by default (`code_signing` report:
+signed false / not-configured - no certificate on
+this machine, the signed path activates with a
+user-supplied trusted-CA PFX); catalog unchanged at
+the `blocked-catalog-luacall-binding` /
+`blocked-catalog-0523-great-circle` baseline
+(117,809 total / 117,616 supported / 12,974 headings
+/ 104,467 actionable / 193 blocked - the
+scan-abort change touches no table-parsing path, the
+0.52.4 precedent). The actual crash fix awaits the
+field data requested in the field test protocol
+(WER dumps + the 0.31-vs-0.52.5 A/B run).
+
 ### 0.52.4 release build record (2026-11-26, run
 `native-20261126T125152Z-c8a75b03`, cut from `main` @ `7585cc8`)
 
@@ -4628,6 +4703,168 @@ two proven field defects (D1 + D2); the field logs already carry
 
 No release cut in this section; the 0.52.3 release build record
 follows the merge.
+
+### Great Circle crash case: 0.52.5 scan-path abort-on-first-transient + widened 0.33 baseline proof (2026-11-27, branch `native-0.52.5-gc-scanfix`)
+
+Follow-up to the 0.52.4 crash-case release after the user
+re-confirmed the regression is trainer-side ("a version
+after 0.4 does something different and indeed crashed
+the game"; the game itself is unchanged, and the table
+worked with pre-0.4 builds). The 0.52.4 replay
+(0.41 vs 0.52.3) had already proven byte-identical
+target traffic, so this cycle widened the comparison
+window to the last reliably field-proven 0.33-era
+state (Resilio carries 0.31+ builds, so 0.33 is the
+practical oldest comparable tree; 0.33 = `main` @
+`6e71739`, worktree `side/wt-033`).
+
+**Widened 0.33 baseline replay - byte-identical vs
+0.41 and vs current main.** A deterministic replay of
+the GC table (sha256
+`4e0dc0b54a5d96526d680042fe323bcfc4421327559c201f0b688279fff18c2b`)
+against the synthetic memory was generated at 0.33 and
+deep-diffed against the 0.41 and main replays from the
+0.52.4 cycle. Artifacts are git-tracked at
+`documentation/evidence/gc-0525-baseline-033/`
+(README, replay harness `gc_replay.py`, normalized
+diff harness `gc_replay_diff_norm.py`,
+`replay-033.json`, both normalized diffs, the 46-file
+window filestat, and the coordinator-window diffs):
+22 scans / 34 writes / 6 allocations / 0 resolves /
+18 protects, identical patterns, counts, addresses
+and order; identical module diff (0); identical
+`scan_counts` (24) / `read_counts` (1005); clean
+close in all three (`applied: []`, `blocked: false`).
+The normalized deep diff (wishes compared on
+label/result; the by-design ScanMiss traceback
+tree-path/line-number artifact normalized) reports
+**TOTAL DIFFERENCES: 0** for 033 vs 041 and 033 vs
+main. Plan canonical shas: 0.33 == 0.41 =
+`33fba361396b8ad11e0c97d188be61b0426e140c4b73c159db6c2ba52bcc416f`;
+main = `bbf91f7cf9810d3367a1e1ff846ead49e2c3327559d8365130002c42f4e6df45`
+(the only plan delta is the 15 empty
+`unowned_cleanup_dropped: []` fields added by the
+0.42 cleanup-parity change - inert for this table,
+see `plan-diff-041-main.txt`).
+
+**The only new target-touching behavior in the
+0.33 -> 0.52.3 window.** 0.39 introduced the bounded
+transient-read retry in `memory._read_exact`
+(transient set {299, 119, 1116, 24}, up to 4
+attempts, 0.05 -> 0.25 s backoff). It was intended
+for one-shot reads (patch verification, pointer
+chains, write readback), but the scan loops run
+through the same `read()`, so it also applies to the
+bounded rearm module scan (the GC game module is
+122,609,664 bytes, read in ~1 MiB chunks, field
+duration ~0.2-0.9 s per attempt). On a transient
+kernel read failure during that scan: 0.33 aborted
+the scan on the first attempt; 0.52.x retried the
+failed chunk up to three extra times with backoff
+sleeps while the engine memory lock was held. Both
+crashes (0.52.1 session 1, 0.52.2) occurred in
+steady-state idle between rearm scans, ~60-77 s
+after attach, the last logged events being
+`patch-verify-skipped` (Win32 299, streak 1) ~260 ms
+before `target-exited`, with zero trainer writes in
+either session.
+
+**Mechanical doubt (on record).** Kernel-mediated
+ReadProcessMemory cannot crash the target; the retry
+delta changes the number of read attempts and
+timing, not the bytes touched. The synthetic replay
+cannot exhibit it (the synthetic memory never fails
+transiently), so the read-attempt delta (1 vs up to
+4 per failed chunk + backoff sleeps under the lock)
+is the single statically defensible, testable
+difference in the window - and is fixed
+conservatively.
+
+**The fix (`memory.py`, shipped in 0.52.5).**
+`read()` / `_read_exact()` gain keyword-only
+`retry_transient` (default `True`, so all existing
+one-shot callers - incl. the `_write_checked`
+readback - keep the 0.39 bounded retry). The
+`scan_module` / `scan_matches` loops read every
+chunk with `retry_transient=False`: a transient
+failure aborts the scan on the first attempt and
+records the abort context (chunk address, module
+offset, Win32 code, bytes read) in
+`last_scan_diagnostics`; non-transient codes and
+partial transfers fail immediately in both modes; a
+completed scan records `bytes_scanned` and replaces
+any stale abort context. The 0.43 TGC
+verify-skip streak in `_check_patches` is kept
+(read-side, trainer-local state only, no kernel
+traffic delta vs 0.33).
+
+**Widened scan forensics (`engine.py`, shipped in
+0.52.5).** `rearm-scan-start` brackets every rearm
+attempt (identifier, label, attempt, max, module
+scan range); the `rearm-attempt` end event carries
+`scan_transient_abort` (address / offset / Win32
+code / bytes read) when the attempt's own scan died
+on a read failure, otherwise the completed scan's
+`bytes_scanned` - restricted by an object-identity
+check (`is not`) against a per-attempt snapshot, so a
+stale abort from an earlier scan is never reported;
+the byte-patch `_operations` scan branch and the
+program-preflight scan path emit the named
+`scan-transient-abort` event with a `transient_abort`
+detail for a fresh abort context and keep the plain
+`scan-failed` shape otherwise. Evidence-side only:
+no target operations, and every log call is a no-op
+when the plan's `debug_log` flag is off (field
+builds have it on).
+
+**Tests and measurement.** +16 tests: new
+`tests/test_native_scan_transient_abort.py` (10 -
+retry contract: disabled mode aborts on the first
+attempt with exactly one kernel call and no sleep,
+default mode keeps the 0.39 retry (299 then 119 then
+success -> 3 calls, sleeps 0.05/0.1 s), non-transient
+Win32 5 fails immediately in both modes, partial
+results are never retried; scan layer: exact
+`scan_module` abort-diagnostics dict, immediate
+non-transient abort, `bytes_scanned` on success,
+stale-abort replacement guard, `scan_matches`
+aborts in the first chunk and after a successful
+chunk) and `tests/test_native_scan_forensics.py`
+(6 - `rearm-scan-start` ordering, fresh-abort
+`scan_transient_abort` on the rearm end event with
+arm drop, preflight `scan-transient-abort` +
+`entry_errors`, stale-abort not reported via the
+identity guard, success rearm carries
+`bytes_scanned`, `_operations` scan-branch log
+shapes fresh/stale/success). Fixture re-pins in
+`test_native_memory.py`, `test_native_scan.py`,
+`test_native_aob_first_match.py`,
+`test_native_process_aob.py`, `test_native_hooks.py`
+and `test_native_lua_work_budget.py`. Full main
+suite 5,271 OK / 36 expected skips (5,255 + 16);
+catalog not remeasured - the change touches no
+table-parsing path, so the baseline stays
+`blocked-catalog-0523-great-circle` /
+`blocked-catalog-luacall-binding` (117,809 total /
+117,616 supported / 193 blocked).
+
+**Field confirmation requested.** (a) WER dumps for
+the 00:23:53 (0.52.1) and 11:33:37 (0.52.2) crash
+sessions - not present in Resilio as of 2026-11-27;
+(b) A/B field run: 0.31 (control, last known
+good) vs 0.52.5, same table and wish set, multiple
+sessions - the 0.52.5 debug log now emits
+`rearm-scan-start` and `scan_transient_abort` /
+`bytes_scanned` per rearm attempt, so any transient
+kernel failure during a scan is pinpointed
+(address, offset, Win32 code, bytes read, scan
+in flight at crash time); (c) cross-table
+Resonance check to rule out GC-specific
+interactions. If 0.52.5 runs crash-free where
+0.52.1/0.52.2 crashed, the scan-retry delta is
+confirmed as the regression; if a crash persists,
+the new scan forensics + WER dumps narrow the
+remaining candidate classes.
 
 ### Great Circle crash case: static target-traffic replay proof + crash-forensics instrumentation (2026-11-26, branch `native-0.52.4-gc-forensics`)
 
